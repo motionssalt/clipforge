@@ -1,0 +1,11 @@
+{
+  "job_id": "20260804-235232-30961441743",
+  "stage": "stage_a_running",
+  "message": "Downloading source video from Drive",
+  "release_tag": "clipforge-20260804-235232-30961441743",
+  "assets": {},
+  "created_at_epoch": 1785887580,
+  "updated_at_epoch": 1785887580,
+  "expires_at_epoch": 1785930780,
+  "extra": {}
+}
