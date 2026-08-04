@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+work/
+work_release.json
+*.mkv
+*.mp4
+*.wav
+*.zip
+!scripts/*.py
