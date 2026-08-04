@@ -1,0 +1,401 @@
+# ClipForge — Frontend Build Prompt
+
+You are building a single-page static site that drives the ClipForge
+pipeline. The backend is already in place: three GitHub Actions
+workflows in this same repo, plus a set of Python scripts they call.
+There is **no server**. This site talks directly to the GitHub REST API
+using a personal access token the user pastes in and we store in
+`localStorage`. The repo itself is the database — job status lives in
+`jobs/<job-id>/status.json` on the default branch, and job artifacts
+live as assets on a GitHub Release tagged `clipforge-<job-id>`.
+
+Build the site now, fully, with no stubs. Match every contract in this
+document exactly — the workflows are already coded against these
+filenames, JSON shapes, and field names, and any drift will break the
+pipeline silently.
+
+---
+
+## 1. Where the finished files go
+
+Place all built files at the **repo root** (`/`), not in `/docs`. GitHub
+Pages for this repo is served from the root of the default branch.
+
+Deliver at minimum:
+
+- `index.html`
+- `styles.css`
+- `app.js`
+- Any small assets (favicon, logo) inline or under `/assets/`
+
+Do not introduce a build step (no bundler, no framework, no TypeScript
+compile step). Plain HTML + CSS + vanilla JS only. One `<script>` tag
+loading `app.js` at the end of `<body>`.
+
+---
+
+## 2. What the site is for (one paragraph)
+
+Single-user personal tool. The user pastes a GitHub personal access
+token once, pastes a public Google Drive link to an anime episode
+video, and clicks "Start Stage A". The site dispatches the Stage A
+workflow via the GitHub API, then polls the repo for a
+`jobs/<job-id>/status.json` file that Stage A writes. When status
+transitions to `awaiting_json_upload`, the UI shows the Release
+download links (READ_THIS_FIRST first, then transcript, then
+screenshots) and a `cuts.json` file upload control. The user takes
+those artifacts to an external AI agent, gets a `cuts.json` back, and
+uploads it here. The site commits that file to the job folder, then
+dispatches Stage B. Stage B updates status through `stage_b_running`
+to `complete`, at which point the UI shows a download button for the
+final zip.
+
+---
+
+## 3. Personal access token — required scopes and storage
+
+Store the token in `localStorage` under key **`clipforge_token`**. Also
+persist:
+
+- `clipforge_owner` — GitHub username / org that owns the repo
+- `clipforge_repo` — repo name
+
+Show these three fields in a "Settings" panel (collapsible). A "Save"
+button writes them to localStorage. A "Clear" button wipes all three
+keys and reloads.
+
+Required scopes for the token (document these in the UI next to the
+token field):
+
+- `repo` (full — needed to create commits, dispatch workflows, read/write
+  private release assets)
+- `workflow` (needed to trigger `workflow_dispatch`)
+
+Never send the token anywhere except `api.github.com`. Never log it.
+Never put it in a URL. Always in the `Authorization: Bearer <token>`
+header.
+
+---
+
+## 4. Stage states the UI must reflect
+
+The `status.json` file's `stage` field is the single source of truth.
+Handle exactly these values:
+
+| stage                    | What UI shows |
+|--------------------------|---------------|
+| *(no status.json yet)*   | "Waiting for Stage A to start…" spinner |
+| `queued`                 | "Queued" |
+| `stage_a_running`        | "Stage A running — downloading, transcribing, extracting frames" + spinner + link to workflow run |
+| `awaiting_json_upload`   | Show Release download links (READ_THIS_FIRST prominently at top), plus a file input for `cuts.json` and a "Start Stage B" button |
+| `stage_b_running`        | "Stage B running — cutting and concatenating" + spinner |
+| `complete`               | Big "Download final zip" button pointing at `assets.final_zip` |
+| `error`                  | Red banner with `message` field, plus a "Start over" button |
+
+Any unknown stage → render as `error` with the raw JSON dumped in a
+`<pre>` for debugging.
+
+---
+
+## 5. status.json shape (contract — must match exactly)
+
+The workflows write this file. The site reads it, never writes it
+except indirectly by triggering workflows. Shape:
+
+```json
+{
+  "job_id": "20260804-121530-1234567",
+  "stage": "awaiting_json_upload",
+  "message": "Stage A complete. Upload cuts.json to start Stage B.",
+  "release_tag": "clipforge-20260804-121530-1234567",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/.../releases/download/.../00_READ_THIS_FIRST.txt",
+    "transcript.json":       "https://github.com/.../releases/download/.../transcript.json",
+    "screenshots.zip":       "https://github.com/.../releases/download/.../screenshots.zip",
+    "original.mkv":          "https://github.com/.../releases/download/.../original.mkv",
+    "final_zip":             "https://github.com/.../releases/download/.../clipforge-<jobid>-final.zip"
+  },
+  "created_at_epoch": 1785456930,
+  "updated_at_epoch": 1785457200,
+  "expires_at_epoch": 1785500130,
+  "extra": {
+    "duration_seconds": "1423",
+    "screenshot_count": "1423",
+    "original_asset_name": "original.mkv"
+  }
+}
+```
+
+Notes for the site:
+
+- `assets` keys are the literal asset filenames from the Release, plus
+  a `final_zip` key added by Stage B. Do not hardcode which keys are
+  present — iterate the object.
+- Always render `00_READ_THIS_FIRST.txt` at the top of the assets list
+  with a distinct "READ THIS FIRST" callout.
+- `expires_at_epoch` is when the cleanup workflow will delete this job.
+  Show a countdown ("expires in 11h 42m") once we reach
+  `awaiting_json_upload` or later.
+
+---
+
+## 6. The exact GitHub API calls the site must make
+
+Base URL: `https://api.github.com`
+Common headers on every call:
+
+```
+Authorization: Bearer <token>
+Accept: application/vnd.github+json
+X-GitHub-Api-Version: 2022-11-28
+```
+
+### 6.1 Trigger Stage A (workflow_dispatch)
+
+```
+POST /repos/{owner}/{repo}/actions/workflows/stage-a.yml/dispatches
+Content-Type: application/json
+
+{
+  "ref": "main",
+  "inputs": {
+    "drive_link": "<user-pasted Drive URL>",
+    "job_id": "<optional short slug, or empty string to auto-generate>",
+    "whisper_model": "base",
+    "language": "auto"
+  }
+}
+```
+
+Success = HTTP 204. There is **no response body**, and the dispatch
+does not return a run id. To find the run that was just started:
+
+```
+GET /repos/{owner}/{repo}/actions/workflows/stage-a.yml/runs?event=workflow_dispatch&per_page=10
+```
+
+Take the newest run whose `created_at` is later than the moment of
+dispatch and whose `status` is `queued` or `in_progress`. Store its
+`html_url` (for the "View workflow run" link) and its `id`. Poll:
+
+```
+GET /repos/{owner}/{repo}/actions/runs/{run_id}
+```
+
+until `status == "completed"`, but do **not** rely on this alone —
+use it only to detect early workflow failures. The authoritative
+source of stage state remains `status.json`.
+
+If the user did not pre-choose a `job_id`, the site does not know the
+job id yet. Poll the `jobs/` folder on the default branch until a new
+folder appears (whose creation time is after the dispatch), then treat
+that folder name as the job id.
+
+### 6.2 Read status.json (poll every 5s while running)
+
+Prefer the **contents API** with cache-busting:
+
+```
+GET /repos/{owner}/{repo}/contents/jobs/{jobId}/status.json?ref=main
+    &_={Date.now()}
+```
+
+The response has a base64-encoded `content` field. Decode with
+`atob(content.replace(/\n/g,''))`, then `JSON.parse`.
+
+On 404: means Stage A has not created the folder yet — keep polling.
+
+Poll every **5 seconds**. Back off to 15s after 10 minutes to avoid
+rate limits. Stop polling when `stage` is `complete` or `error`.
+
+### 6.3 List `jobs/` to discover a new job id
+
+```
+GET /repos/{owner}/{repo}/contents/jobs?ref=main
+```
+
+Response is an array. Filter to entries with `type === "dir"` and
+`name !== ".gitkeep"`. Diff against the pre-dispatch snapshot to find
+the new one.
+
+### 6.4 Read Release assets (already in status.json, but as backup)
+
+The Stage A workflow writes every asset URL into `status.json` under
+`assets`. Prefer reading that. If it's missing:
+
+```
+GET /repos/{owner}/{repo}/releases/tags/clipforge-{jobId}
+```
+
+Response has `assets: [{name, browser_download_url, id, ...}, ...]`.
+For any asset with a browser_download_url pointing at
+`github.com/.../releases/download/...`, that URL requires
+authentication on private repos — use:
+
+```
+GET /repos/{owner}/{repo}/releases/assets/{asset_id}
+Accept: application/octet-stream
+```
+
+with the bearer token to download. For public repos the
+`browser_download_url` opens directly in a new tab.
+
+### 6.5 Upload cuts.json for Stage B
+
+Two-step: commit the file into `jobs/<jobId>/cuts.json` on `main`, then
+dispatch Stage B pointing at that path.
+
+Commit (create or update):
+
+```
+PUT /repos/{owner}/{repo}/contents/jobs/{jobId}/cuts.json
+
+{
+  "message": "clipforge: upload cuts.json for job {jobId}",
+  "content": "<base64 of file contents>",
+  "branch": "main"
+}
+```
+
+If the file already exists (user re-uploads), first:
+
+```
+GET /repos/{owner}/{repo}/contents/jobs/{jobId}/cuts.json?ref=main
+```
+
+grab the `sha`, and include it in the PUT body as `"sha": "..."`. On
+201 Created / 200 OK, continue.
+
+**Validate cuts.json client-side before upload.** Required shape:
+
+```json
+{
+  "video_duration_seconds": <int>,
+  "cuts": [
+    { "start_seconds": <int>, "end_seconds": <int>, "raw_narration": "<string>" },
+    ...
+  ],
+  "target_total_duration_seconds": <int>
+}
+```
+
+Reject if: `cuts` empty, any `end_seconds <= start_seconds`, any cut
+overlaps the previous, any cut is out of `[0, video_duration_seconds]`,
+or cuts are not sorted ascending. Show a specific error message before
+uploading.
+
+### 6.6 Trigger Stage B
+
+```
+POST /repos/{owner}/{repo}/actions/workflows/stage-b.yml/dispatches
+
+{
+  "ref": "main",
+  "inputs": {
+    "job_id": "{jobId}",
+    "cuts_ref": "path:jobs/{jobId}/cuts.json"
+  }
+}
+```
+
+Same 204-no-body response. Resume polling `status.json`. The stage
+will move through `stage_b_running` → `complete`.
+
+### 6.7 Download the final zip (stage == complete)
+
+Read `status.data.assets.final_zip`. Present as a big download link.
+On private repos, download via the asset-id path (§ 6.4). On public
+repos, the direct URL works.
+
+---
+
+## 7. UI structure
+
+One page, single flow, three visible sections vertically stacked and
+progressively revealed:
+
+**Section 1 — Settings** (collapsible; open by default until a token is
+saved). Fields: GitHub owner, repo name, PAT token, "Save", "Clear".
+
+**Section 2 — Start Stage A** (visible once token is saved). Fields:
+Google Drive link (required), optional job slug, dropdown for whisper
+model (`tiny` / `base` / `small`, default `base`), language hint text
+input (default `auto`). A single "Start Stage A" button. Shows the
+active job's job id + "View workflow run" link once dispatched.
+
+**Section 3 — Job status** (visible once a job is active). Renders per
+the state table in § 4. If `awaiting_json_upload`: list of Release
+assets (READ_THIS_FIRST prominently at top, then the others), plus a
+`<input type="file" accept="application/json,.json">` and "Start
+Stage B" button. If `complete`: big download button.
+
+At all times, a "Show raw status.json" toggle at the bottom that
+pretty-prints the current status document — useful for debugging.
+
+---
+
+## 8. Persistence across browser sessions
+
+Because the state lives on GitHub, the site is naturally resumable.
+On page load, if `localStorage.clipforge_active_job_id` is set,
+resume polling that job immediately. If it is not set, look at the
+`jobs/` folder on GitHub and offer the most recent non-expired job
+to resume. Store the active job id in localStorage as soon as it is
+discovered after a dispatch.
+
+Keys used in localStorage (all string):
+
+- `clipforge_token`
+- `clipforge_owner`
+- `clipforge_repo`
+- `clipforge_active_job_id`
+
+Wipe `clipforge_active_job_id` when the user clicks "Start over" or
+when a job hits `complete` / `error` and the user acknowledges.
+
+---
+
+## 9. Styling & feel
+
+Dark theme by default (this is a MOTIONSALT tool — treat it as a
+utility, not a brand marketing page). Monospace for status and JSON
+blocks. Sans-serif for UI. Colors: near-black background, high-contrast
+foreground, one accent color for interactive elements. No animations
+beyond a plain spinner. Mobile-tolerant but desktop-first.
+
+Header: "ClipForge" title, small "MOTIONSALT" tag underneath.
+
+Footer: a one-liner reminding the user that every job auto-deletes 12
+hours after creation.
+
+---
+
+## 10. Error handling requirements
+
+- Any 401/403 from the GitHub API → surface as "Your token is invalid
+  or lacks required scopes (`repo`, `workflow`)." Prompt user to
+  re-enter in Settings.
+- Rate limit (403 with `X-RateLimit-Remaining: 0`) → back off polling
+  to 60s and show a subtle banner.
+- Network errors → retry the request up to 3 times with 2s backoff
+  before surfacing.
+- If the workflow dispatch returns 204 but no matching run appears
+  within 30s, surface "Workflow may not be enabled. Check
+  `.github/workflows/stage-a.yml` in the repo Actions tab."
+- If `status.json` shows `stage == "error"`, show the `message` field
+  verbatim and offer a "View workflow run" link if available.
+
+---
+
+## 11. Do NOT
+
+- Do not add a login page, OAuth flow, or any server-side component.
+- Do not try to render the video in the browser.
+- Do not attempt to parse the `screenshots.zip` client-side — just
+  hand the user the download link.
+- Do not modify `jobs/<jobId>/status.json` directly from the site.
+  Only the workflows write it.
+- Do not commit the token, ever, to the repo. It lives only in
+  `localStorage`.
+- Do not add analytics, telemetry, or any third-party requests.
+- Do not add a build step, framework, or package.json.
