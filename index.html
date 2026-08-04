@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClipForge — MOTIONSALT</title>
+<meta name="description" content="ClipForge job console: dispatch Stage A, hand off artifacts, upload cuts.json, run Stage B.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <h1 id="app-title">ClipForge</h1>
+    <p class="brand-tag">MOTIONSALT</p>
+  </div>
+  <div class="header-right">
+    <span id="repo-indicator" class="repo-indicator" aria-live="polite">no repo configured</span>
+  </div>
+</header>
+
+<!-- global banners -->
+<div id="banner-stack" class="banner-stack" aria-live="polite"></div>
+
+<main id="main-content">
+
+  <!-- ============ SECTION 1 — SETTINGS ============ -->
+  <section id="settings-section" class="panel" aria-labelledby="settings-heading">
+    <button type="button" id="settings-toggle" class="panel-head" aria-expanded="true" aria-controls="settings-body">
+      <span class="panel-step">1</span>
+      <h2 id="settings-heading">Settings</h2>
+      <span id="settings-state" class="panel-badge">not configured</span>
+      <span class="chevron" aria-hidden="true">▾</span>
+    </button>
+
+    <div id="settings-body" class="panel-body">
+      <form id="settings-form" autocomplete="off">
+        <div class="field-row">
+          <div class="field">
+            <label for="owner-input">GitHub owner</label>
+            <input type="text" id="owner-input" name="owner" placeholder="motionssalt" spellcheck="false" autocapitalize="off" required>
+            <p class="hint">Username or org that owns the repo.</p>
+          </div>
+          <div class="field">
+            <label for="repo-input">Repo name</label>
+            <input type="text" id="repo-input" name="repo" placeholder="clipforge" spellcheck="false" autocapitalize="off" required>
+            <p class="hint">Repo holding <code>.github/workflows/stage-a.yml</code>.</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="token-input">Personal access token</label>
+          <div class="token-wrap">
+            <input type="password" id="token-input" name="token" placeholder="ghp_… / github_pat_…" spellcheck="false" autocapitalize="off" required>
+            <button type="button" id="token-reveal" class="btn btn-ghost btn-small" aria-pressed="false">Show</button>
+          </div>
+          <p class="hint">
+            Required scopes: <code>repo</code> (full — commits, dispatches, release assets) and
+            <code>workflow</code> (needed for <code>workflow_dispatch</code>).
+            Stored only in this browser's <code>localStorage</code>; sent only to
+            <code>api.github.com</code> as a bearer header.
+          </p>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="settings-save" class="btn btn-accent">Save</button>
+          <button type="button" id="settings-clear" class="btn btn-danger-ghost">Clear</button>
+          <span id="settings-msg" class="inline-msg" aria-live="polite"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2 — START STAGE A ============ -->
+  <section id="stage-a-section" class="panel is-hidden" aria-labelledby="stage-a-heading">
+    <div class="panel-head static">
+      <span class="panel-step">2</span>
+      <h2 id="stage-a-heading">Start Stage A</h2>
+    </div>
+
+    <div class="panel-body">
+      <form id="stage-a-form" autocomplete="off">
+        <div class="field">
+          <label for="drive-link-input">Google Drive link <span class="req">required</span></label>
+          <input type="url" id="drive-link-input" name="drive_link" placeholder="https://drive.google.com/file/d/…/view?usp=sharing" spellcheck="false" required>
+          <p class="hint">Public (anyone-with-link) Drive URL for the episode video.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="job-slug-input">Job slug <span class="opt">optional</span></label>
+            <input type="text" id="job-slug-input" name="job_id" placeholder="leave blank to auto-generate" spellcheck="false" autocapitalize="off">
+            <p class="hint">Blank sends <code>""</code> and Stage A generates the id.</p>
+          </div>
+          <div class="field">
+            <label for="whisper-model-select">Whisper model</label>
+            <select id="whisper-model-select" name="whisper_model">
+              <option value="tiny">tiny</option>
+              <option value="base" selected>base</option>
+              <option value="small">small</option>
+            </select>
+            <p class="hint">Default <code>base</code>.</p>
+          </div>
+          <div class="field">
+            <label for="language-input">Language hint</label>
+            <input type="text" id="language-input" name="language" value="auto" spellcheck="false" autocapitalize="off">
+            <p class="hint">Default <code>auto</code>.</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="start-stage-a" class="btn btn-accent">Start Stage A</button>
+          <span id="stage-a-msg" class="inline-msg" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <div id="active-job-bar" class="active-job-bar is-hidden">
+        <div class="ajb-item">
+          <span class="ajb-label">Active job</span>
+          <code id="active-job-id" class="job-id">—</code>
+        </div>
+        <div class="ajb-item">
+          <a id="run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">View workflow run ↗</a>
+        </div>
+        <div class="ajb-item ajb-right">
+          <button type="button" id="resume-btn" class="btn btn-ghost btn-small is-hidden">Resume polling</button>
+          <button type="button" id="start-over-btn" class="btn btn-danger-ghost btn-small">Start over</button>
+        </div>
+      </div>
+
+      <div id="resume-offer" class="resume-offer is-hidden">
+        <p>Found an existing job on GitHub: <code id="resume-offer-id">—</code></p>
+        <button type="button" id="resume-offer-btn" class="btn btn-accent btn-small">Resume this job</button>
+        <button type="button" id="resume-dismiss-btn" class="btn btn-ghost btn-small">Ignore</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 3 — JOB STATUS ============ -->
+  <section id="status-section" class="panel is-hidden" aria-labelledby="status-heading">
+    <div class="panel-head static">
+      <span class="panel-step">3</span>
+      <h2 id="status-heading">Job status</h2>
+      <span id="stage-badge" class="stage-badge stage-unknown">—</span>
+      <span id="expiry-countdown" class="expiry is-hidden" aria-live="off"></span>
+    </div>
+
+    <div class="panel-body">
+
+      <!-- live stage line -->
+      <div id="stage-line" class="stage-line">
+        <span id="stage-spinner" class="spinner is-hidden" role="status" aria-label="working"></span>
+        <p id="stage-text" class="stage-text">Waiting for Stage A to start…</p>
+      </div>
+
+      <!-- error banner -->
+      <div id="error-block" class="error-block is-hidden" role="alert">
+        <p class="error-title">Error</p>
+        <p id="error-message" class="error-message"></p>
+        <div class="actions">
+          <a id="error-run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">View workflow run ↗</a>
+          <button type="button" id="error-start-over" class="btn btn-danger-ghost btn-small">Start over</button>
+        </div>
+      </div>
+
+      <!-- awaiting_json_upload: artifacts + upload -->
+      <div id="handoff-block" class="handoff-block is-hidden">
+
+        <div id="read-first-callout" class="read-first is-hidden">
+          <p class="rf-kicker">READ THIS FIRST</p>
+          <p class="rf-body">Open <code>00_READ_THIS_FIRST.txt</code> before anything else — it contains the
+            instructions and constraints your external agent needs to produce a valid <code>cuts.json</code>.</p>
+          <a id="read-first-link" class="btn btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download 00_READ_THIS_FIRST.txt</a>
+        </div>
+
+        <h3 class="sub-heading">Release assets</h3>
+        <p class="hint" id="release-tag-line"></p>
+        <ul id="asset-list" class="asset-list"></ul>
+
+        <h3 class="sub-heading">Upload <code>cuts.json</code></h3>
+        <p class="hint">Validated in-browser, committed to
+          <code id="cuts-path-hint">jobs/&lt;job-id&gt;/cuts.json</code>, then Stage B is dispatched.</p>
+        <div class="upload-row">
+          <input type="file" id="cuts-file-input" accept="application/json,.json">
+          <button type="button" id="start-stage-b" class="btn btn-accent" disabled>Start Stage B</button>
+        </div>
+        <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
+      </div>
+
+      <!-- complete -->
+      <div id="complete-block" class="complete-block is-hidden">
+        <p class="done-kicker">Job complete</p>
+        <a id="final-zip-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download final zip</a>
+        <p class="hint" id="final-zip-hint"></p>
+        <button type="button" id="complete-ack" class="btn btn-ghost btn-small">Acknowledge &amp; clear job</button>
+      </div>
+
+      <!-- job facts -->
+      <dl id="job-facts" class="job-facts is-hidden"></dl>
+
+      <!-- raw status -->
+      <div class="raw-wrap">
+        <button type="button" id="raw-toggle" class="btn btn-ghost btn-small" aria-expanded="false" aria-controls="raw-status">Show raw status.json</button>
+        <pre id="raw-status" class="raw-status is-hidden"><code id="raw-status-code">(nothing yet)</code></pre>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Every job auto-deletes 12 hours after creation — download your artifacts before they expire.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
