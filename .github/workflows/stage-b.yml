@@ -1,0 +1,262 @@
+name: Stage B — Cut & Concat Final Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "Job id (must match an existing Stage A release: clipforge-<job_id>)"
+        required: true
+        type: string
+      cuts_ref:
+        description: "Where cuts.json lives. One of: path:<repo-path> | asset:<asset-name> | url:<https-url>"
+        required: true
+        type: string
+        default: "path:jobs/<JOB_ID>/cuts.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clipforge-stage-b-${{ github.event.inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  stage_b:
+    name: Stage B
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve inputs
+        id: jid
+        shell: bash
+        run: |
+          set -euo pipefail
+          jid="${{ github.event.inputs.job_id }}"
+          jid="$(echo "$jid" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
+          echo "job_id=$jid" >> "$GITHUB_OUTPUT"
+          echo "release_tag=clipforge-$jid" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install Python deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r scripts/requirements.txt
+          ffmpeg -version | head -n 1
+
+      - name: Write stage_b_running status
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_b_running" \
+            --message "Stage B started: cutting original video" \
+            --release-tag "${{ steps.jid.outputs.release_tag }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
+          git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} stage B running" || echo "nothing to commit"
+          git push || true
+
+      - name: Load release metadata (find original video asset)
+        id: relmeta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.jid.outputs.release_tag }}"
+          repo="${GITHUB_REPOSITORY}"
+          json="$(gh api "repos/${repo}/releases/tags/${tag}")"
+          echo "$json" > work_release.json
+          rid="$(python -c "import json; print(json.load(open('work_release.json'))['id'])")"
+          echo "release_id=$rid" >> "$GITHUB_OUTPUT"
+
+          # Pull original asset info by name prefix.
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("work_release.json"))
+          for a in data.get("assets", []):
+              if a["name"].startswith("original."):
+                  print(f"orig_name={a['name']}")
+                  print(f"orig_url={a['browser_download_url']}")
+                  print(f"orig_id={a['id']}")
+                  break
+          PY
+
+      - name: Download original video from release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          # Use gh api with Accept: octet-stream to download the private asset.
+          orig_id="${{ steps.relmeta.outputs.orig_id }}"
+          orig_name="${{ steps.relmeta.outputs.orig_name }}"
+          if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
+            echo "Could not find original video asset in release" >&2
+            exit 1
+          fi
+          gh api -H "Accept: application/octet-stream" \
+            "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" \
+            > "work/${orig_name}"
+          ls -lh "work/${orig_name}"
+          echo "ORIGINAL_PATH=work/${orig_name}" >> "$GITHUB_ENV"
+
+      - name: Resolve cuts.json
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ref="${{ github.event.inputs.cuts_ref }}"
+          jid="${{ steps.jid.outputs.job_id }}"
+
+          # Support placeholder <JOB_ID> in the default form
+          ref="${ref//<JOB_ID>/$jid}"
+
+          case "$ref" in
+            path:*)
+              src="${ref#path:}"
+              if [ ! -f "$src" ]; then
+                echo "cuts.json not found at repo path: $src" >&2
+                exit 1
+              fi
+              cp "$src" work/cuts.json
+              ;;
+            url:*)
+              src="${ref#url:}"
+              curl -fSL --retry 3 -o work/cuts.json "$src"
+              ;;
+            asset:*)
+              name="${ref#asset:}"
+              tag="${{ steps.jid.outputs.release_tag }}"
+              aid="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                    --jq ".assets[] | select(.name==\"$name\") | .id")"
+              if [ -z "$aid" ]; then
+                echo "asset not found: $name" >&2; exit 1
+              fi
+              gh api -H "Accept: application/octet-stream" \
+                "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" \
+                > work/cuts.json
+              ;;
+            *)
+              echo "Unknown cuts_ref format: $ref" >&2; exit 1;;
+          esac
+
+          echo "cuts.json head:"
+          head -c 400 work/cuts.json; echo
+
+      - name: Cut and concat with ffmpeg
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/out
+          python scripts/cut_and_concat.py \
+            "$ORIGINAL_PATH" \
+            work/cuts.json \
+            MASTER_PROMPT.md \
+            "work/out/${{ steps.jid.outputs.job_id }}.mp4" \
+            "work/out/output.txt"
+          ls -lh work/out/
+
+      - name: Zip final artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd work/out
+          zip -q -j "clipforge-${{ steps.jid.outputs.job_id }}-final.zip" \
+            "${{ steps.jid.outputs.job_id }}.mp4" \
+            "output.txt"
+          ls -lh
+          echo "FINAL_ZIP=work/out/clipforge-${{ steps.jid.outputs.job_id }}-final.zip" >> "$GITHUB_ENV"
+
+      - name: Delete original video asset from release (no longer needed)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          orig_id="${{ steps.relmeta.outputs.orig_id }}"
+          if [ -n "$orig_id" ]; then
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" || true
+          fi
+
+      - name: Upload final zip to the SAME release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.jid.outputs.release_tag }}
+          name: "ClipForge job ${{ steps.jid.outputs.job_id }}"
+          body: |
+            ClipForge output.
+
+            clipforge-job-id: ${{ steps.jid.outputs.job_id }}
+            stage: complete
+
+            Final artifact:
+              - clipforge-${{ steps.jid.outputs.job_id }}-final.zip
+                (contains ${{ steps.jid.outputs.job_id }}.mp4 + output.txt)
+
+            This release is automatically deleted 12 hours after creation.
+          make_latest: "false"
+          prerelease: true
+          files: |
+            ${{ env.FINAL_ZIP }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve final asset URL
+        id: finalasset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.jid.outputs.release_tag }}"
+          url="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                --jq ".assets[] | select(.name | endswith(\"-final.zip\")) | .browser_download_url")"
+          echo "final_url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Write complete status
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "complete" \
+            --message "Final video is ready." \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --asset "final_zip=${{ steps.finalasset.outputs.final_url }}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
+          git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} complete" || echo "nothing to commit"
+          git push
+
+      - name: On failure, write error status
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "error" \
+            --message "Stage B failed. See workflow run for logs." \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" || true
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.jid.outputs.job_id }}/status.json" || true
+          git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} error (stage B)" || true
+          git push || true
