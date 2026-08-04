@@ -64,7 +64,14 @@ jobs:
           cache: "pip"
           cache-dependency-path: scripts/requirements.txt
 
-      - name: Install system packages (ffmpeg is pre-installed on ubuntu-latest)
+      - name: Install ffmpeg
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y ffmpeg
+
+      - name: Verify ffmpeg installation
         shell: bash
         run: |
           set -euo pipefail
