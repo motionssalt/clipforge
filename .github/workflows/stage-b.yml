@@ -49,13 +49,25 @@ jobs:
           cache: "pip"
           cache-dependency-path: scripts/requirements.txt
 
+      - name: Install ffmpeg
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y ffmpeg
+
+      - name: Verify ffmpeg installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ffmpeg -version | head -n 1
+
       - name: Install Python deps
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           pip install -r scripts/requirements.txt
-          ffmpeg -version | head -n 1
 
       - name: Write stage_b_running status
         shell: bash
