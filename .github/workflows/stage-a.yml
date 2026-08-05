@@ -156,35 +156,47 @@ jobs:
             work/analysis/compressed.mp4
           ls -lh work/analysis/compressed.mp4
 
-      - name: Extract 5-frame composite screenshots (one file per second)
+      - name: Extract 6-frame composite screenshots (one file per second)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p work/screenshots
 
-          # For each second of video we sample 5 frames evenly spaced within
-          # that second (fps=5) and composite them into a single JPEG using
-          # ffmpeg's tile filter (5x1 row). Each output image therefore still
-          # corresponds to exactly one second of source video — same
-          # per-second naming/index convention as before (frame_00000.jpg =
-          # second 0) — but each image now contains 5 sub-frames from that
-          # second so the downstream vision agent can read motion/action
-          # instead of a single static pose.
+          # For each second of video we sample 6 frames evenly spaced within
+          # that second (fps=6) and composite them into a single JPEG using
+          # ffmpeg's tile filter (3x2 grid — 3 columns wide, 2 rows tall).
+          # Each output image therefore still corresponds to exactly one
+          # second of source video — same per-second naming/index convention
+          # as before (frame_00000.jpg = second 0) — but each image now
+          # contains 6 sub-frames from that second so the downstream vision
+          # agent can read motion/action instead of a single static pose.
+          #
+          # The layout was previously a 5x1 row, which produced very wide /
+          # short images (~3200x360). Some vision models struggle with such
+          # extreme aspect ratios: the panels get downsampled aggressively
+          # to fit the model's input and fine detail is lost. A 3x2 grid
+          # produces a near-square composite (~1920x720) that vision models
+          # handle much better, at essentially the same total pixel count.
+          #
+          # Reading order inside each composite:
+          #   [ 0  1  2 ]   <- earliest 3 sub-frames in that second
+          #   [ 3  4  5 ]   <- latest 3 sub-frames in that second
+          # i.e. left-to-right, then top-to-bottom (English reading order).
           #
           # We downscale each sub-frame to 640px wide before tiling to keep
           # the composite reasonably sized. -qscale:v 5 is a slightly lower
           # JPEG quality than the previous single-frame setting (was 3) to
-          # offset the ~5x pixel count and keep the Release archive from
+          # offset the ~6x pixel count and keep the Release archive from
           # bloating.
           ffmpeg -y -i work/analysis/compressed.mp4 \
-            -vf "fps=5,scale='min(640,iw)':'-2',tile=5x1:padding=2:margin=2:color=black" \
+            -vf "fps=6,scale='min(640,iw)':'-2',tile=3x2:padding=2:margin=2:color=black" \
             -vsync vfr \
             -qscale:v 5 \
             -start_number 0 \
             "work/screenshots/frame_%05d.jpg"
           count="$(ls work/screenshots | wc -l)"
           echo "SCREENSHOT_COUNT=$count" >> "$GITHUB_ENV"
-          echo "Extracted $count composite screenshots (5 sub-frames each)"
+          echo "Extracted $count composite screenshots (6 sub-frames each, 3x2 grid)"
           # Sanity: report size of the whole screenshots directory.
           du -sh work/screenshots || true
 
