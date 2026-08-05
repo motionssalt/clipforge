@@ -129,10 +129,31 @@ grounded rather than excited.
 ```
 
 **Director's Note settings:**
-- Style: Calm / Matter-of-fact
-- Pace: Fast (brisk, continuous, no dead air — quick delivery, not
-  slow or meditative)
+
+Only recommend values that exist in the TTS tool's actual dropdowns.
+The Audio Profile above is the only free-text field — the three settings
+below must be selected verbatim from these fixed option lists:
+
+- Style — one of: Vocal Smile | Newscaster | Whisper | Empathetic |
+  Promo/Hype | Deadpan
+- Pace — one of: Natural | Rapid Fire | The Drift | Staccato
+- Accent — one of: Neutral | American (Gen) | American (Valley) |
+  American (South) | British (RP) | British (Brixton) | Transatlantic
+  | Australian
+
+For the calm, matter-of-fact retention-style commentary this prompt
+produces, the correct dropdown-constrained selections are:
+
+- Style: Deadpan
+- Pace: Rapid Fire
 - Accent: American (Gen)
+
+Do NOT invent descriptive labels like "Calm / Matter-of-fact" or
+"Fast (brisk, continuous)" — those are not real options in the tool
+and cannot be selected. If the raw notes ever call for a different
+register, still pick from the lists above verbatim (e.g. Newscaster
+for a straight news-read feel, Empathetic for a somber first-person
+story) rather than writing a free-text descriptor.
 
 ## STEP 4 — POSTING PACKAGE
 
