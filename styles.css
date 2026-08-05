@@ -389,6 +389,21 @@ input[type="file"] {
 .rf-kicker { margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: 2.5px; color: var(--accent); }
 .rf-body { margin: 0; font-size: 13px; color: var(--fg-dim); max-width: 62ch; }
 
+.rf-actions { gap: 12px; }
+.rf-copy-hint { max-width: 62ch; }
+.rf-copy-hint strong { color: var(--fg); font-weight: 600; }
+
+#copy-agent-prompt.is-copied {
+  background: var(--accent-dark);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#copy-agent-prompt:disabled {
+  background: #1b1f27;
+  border-color: var(--border-strong);
+  color: var(--fg-faint);
+}
+
 .asset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .asset-item {
   display: flex;
