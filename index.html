@@ -185,9 +185,13 @@
             (read that first), <code>transcript.json</code>, and <code>screenshots.zip</code> — is attached
             to one GitHub Release. Hand the agent this single link and it can grab all assets in one step,
             no per-file download/upload roundtrip.</p>
-          <div class="actions">
-            <a id="release-url-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Open Release →</a>
+          <div class="actions rf-actions">
+            <button type="button" id="copy-agent-prompt" class="btn btn-big btn-accent" disabled aria-live="polite">Copy for AI agent</button>
+            <a id="release-url-link" class="btn btn-big btn-ghost" href="#" target="_blank" rel="noopener noreferrer">Open Release ↗</a>
           </div>
+          <p class="hint rf-copy-hint">The <strong>Copy for AI agent</strong> button copies a ready-to-paste block
+            (Release link + instructions to read <code>00_READ_THIS_FIRST</code> first and return
+            <code>cuts.json</code>) so you can hand off in one paste — no extra typing.</p>
           <p class="hint" id="release-url-text"></p>
           <p class="hint" id="release-tag-line"></p>
         </div>
