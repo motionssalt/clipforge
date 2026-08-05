@@ -83,9 +83,9 @@
     <div class="panel-body">
       <form id="stage-a-form" autocomplete="off">
         <div class="field">
-          <label for="drive-link-input">Google Drive link <span class="req">required</span></label>
-          <input type="url" id="drive-link-input" name="drive_link" placeholder="https://drive.google.com/file/d/…/view?usp=sharing" spellcheck="false" required>
-          <p class="hint">Public (anyone-with-link) Drive URL for the episode video.</p>
+          <label for="drive-link-input">Video URL <span class="req">required</span></label>
+          <input type="url" id="drive-link-input" name="video_url" placeholder="https://drive.google.com/file/d/…/view  — or any direct .mp4/.mkv URL" spellcheck="false" required>
+          <p class="hint">Any public video URL: a Google Drive share link (anyone-with-link) or a direct download link to the video file from any host.</p>
         </div>
 
         <div class="field-row">
@@ -168,16 +168,18 @@
       <!-- awaiting_json_upload: artifacts + upload -->
       <div id="handoff-block" class="handoff-block is-hidden">
 
-        <div id="read-first-callout" class="read-first is-hidden">
-          <p class="rf-kicker">READ THIS FIRST</p>
-          <p class="rf-body">Open <code>00_READ_THIS_FIRST.txt</code> before anything else — it contains the
-            instructions and constraints your external agent needs to produce a valid <code>cuts.json</code>.</p>
-          <a id="read-first-link" class="btn btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download 00_READ_THIS_FIRST.txt</a>
+        <div id="release-link-callout" class="read-first">
+          <p class="rf-kicker">RELEASE READY</p>
+          <p class="rf-body">Everything your external agent needs — <code>00_READ_THIS_FIRST.txt</code>
+            (read that first), <code>transcript.json</code>, and <code>screenshots.zip</code> — is attached
+            to one GitHub Release. Hand the agent this single link and it can grab all assets in one step,
+            no per-file download/upload roundtrip.</p>
+          <div class="actions">
+            <a id="release-url-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Open Release →</a>
+          </div>
+          <p class="hint" id="release-url-text"></p>
+          <p class="hint" id="release-tag-line"></p>
         </div>
-
-        <h3 class="sub-heading">Release assets</h3>
-        <p class="hint" id="release-tag-line"></p>
-        <ul id="asset-list" class="asset-list"></ul>
 
         <h3 class="sub-heading">Upload <code>cuts.json</code></h3>
         <p class="hint">Validated in-browser, committed to
