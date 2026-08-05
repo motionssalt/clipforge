@@ -30,11 +30,19 @@ pipeline:
   2. screenshots.zip      — a zip archive containing one JPEG per second
                             of the (compressed) source video. Each JPEG is
                             NOT a single still frame — it is a composite
-                            of 5 sub-frames sampled evenly across that
-                            same second, tiled into one image (a 5x1
-                            contact-sheet row: left → right = earliest →
-                            latest within that second). Files inside are
-                            named frame_00000.jpg .. frame_{last_frame:05d}.jpg
+                            of 6 sub-frames sampled evenly across that
+                            same second, tiled into one image as a 3x2
+                            grid (3 columns wide, 2 rows tall). Reading
+                            order inside each composite is English reading
+                            order — left-to-right, then top-to-bottom:
+
+                                [ 0  1  2 ]   <- earliest 3 sub-frames
+                                [ 3  4  5 ]   <- latest 3 sub-frames
+
+                            So the top-left panel is the earliest moment
+                            in that second and the bottom-right panel is
+                            the latest. Files inside are named
+                            frame_00000.jpg .. frame_{last_frame:05d}.jpg
                             (zero-padded 5-digit index of seconds-since-
                             start). Read each image as a short visual
                             sequence within that one second, not as a
@@ -62,9 +70,12 @@ VIDEO METADATA (substituted by Stage A)
   Screenshots available:   frame_00000.jpg .. frame_{last_frame:05d}.jpg
                            (one file per second, zero-padded 5-digit index
                             of seconds-since-start, packaged inside
-                            screenshots.zip). Each file is a 5x1 tiled
-                            composite of 5 sub-frames sampled evenly within
-                            that second (left = earliest, right = latest).
+                            screenshots.zip). Each file is a 3x2 grid
+                            composite of 6 sub-frames sampled evenly within
+                            that second — read in English reading order
+                            (left-to-right, then top-to-bottom): the
+                            top-left panel is the earliest moment in that
+                            second, the bottom-right panel is the latest.
   Target output length:    ~{target_duration} seconds of cuts combined
                            (user-selected in the Stage A form; approximate
                            — favor engagement over hitting the number
@@ -103,15 +114,21 @@ transport efficiency. Treat it as a normal working input:
     reconstruct the visual sequence of events for each cut you plan to
     keep.
 
-  • Each frame_NNNNN.jpg is a 5x1 tiled composite — 5 sub-frames sampled
-    evenly across that one second, arranged left-to-right (earliest →
-    latest). When you read a file, read it as a short motion strip, not
-    a single still: compare the 5 panels to see how the shot changes
-    within that second (a hand moves, a facial expression shifts, the
-    camera cuts, a prop enters frame). If the 5 panels are visually
-    identical the second was static; if they differ, that difference IS
-    the motion/action inside that second and should inform your
-    raw_narration.
+  • Each frame_NNNNN.jpg is a 3x2 grid composite — 6 sub-frames sampled
+    evenly across that one second, arranged in English reading order
+    (left-to-right, then top-to-bottom):
+
+        [ 0  1  2 ]   <- earliest 3 sub-frames in that second
+        [ 3  4  5 ]   <- latest 3 sub-frames in that second
+
+    So the top-left panel is the earliest moment in that second and the
+    bottom-right panel is the latest. When you read a file, read it as
+    a short motion sequence, not a single still: compare the 6 panels
+    in that order to see how the shot changes within that second (a
+    hand moves, a facial expression shifts, the camera cuts, a prop
+    enters frame). If the 6 panels are visually identical the second
+    was static; if they differ, that difference IS the motion/action
+    inside that second and should inform your raw_narration.
 
 In short:
     Extract archive        →  ALWAYS do this. Cheap. Expected.
@@ -177,9 +194,10 @@ STEP 4. For each candidate range you plan to keep, VIEW enough
 
         e.g. for a moment around 4 minutes 32 seconds in, that is
         second 272, so view `screenshots/frame_00272.jpg`. Remember
-        each file is a 5-panel motion strip covering that one second,
-        so opening a single file already gives you 5 sample points
-        within that second. For a candidate cut from 142s to 168s,
+        each file is a 3x2 grid (6 panels, read left-to-right then
+        top-to-bottom) covering that one second, so opening a single
+        file already gives you 6 sample points within that second.
+        For a candidate cut from 142s to 168s,
         view a spread of these composite files across that range
         (e.g. the start, several points in the middle where the action
         changes, and the end) so you can see how the scene evolves
