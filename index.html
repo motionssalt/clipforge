@@ -108,6 +108,17 @@
             <input type="text" id="language-input" name="language" value="auto" spellcheck="false" autocapitalize="off">
             <p class="hint">Default <code>auto</code>.</p>
           </div>
+          <div class="field">
+            <label for="target-duration-select">Target output length</label>
+            <select id="target-duration-select" name="target_duration_seconds">
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120" selected>2 minutes</option>
+              <option value="180">3 minutes</option>
+              <option value="300">5 minutes</option>
+            </select>
+            <p class="hint">Target total duration of the final cut. Default <code>2 minutes</code>.</p>
+          </div>
         </div>
 
         <div class="actions">
