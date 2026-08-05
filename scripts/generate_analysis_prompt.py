@@ -27,8 +27,11 @@ You have been given three artifacts from a Stage A run of the ClipForge
 pipeline:
 
   1. transcript.json      — timestamped transcript of the video's audio
-  2. screenshots/*.jpg    — one screenshot per second of the (compressed)
-                            source video
+  2. screenshots.zip      — a zip archive containing one JPEG screenshot
+                            per second of the (compressed) source video.
+                            Files inside are named frame_00000.jpg ..
+                            frame_{last_frame:05d}.jpg (zero-padded 5-digit
+                            index of seconds-since-start).
   3. This file            — your instructions
 
 Your job: choose the most engaging moments from this video and output a
@@ -44,48 +47,92 @@ VIDEO METADATA (substituted by Stage A)
   Full video duration:     {duration_seconds} seconds ({duration_hms})
   Screenshots available:   frame_00000.jpg .. frame_{last_frame:05d}.jpg
                            (one frame per second, zero-padded 5-digit index
-                            of seconds-since-start)
+                            of seconds-since-start, packaged inside
+                            screenshots.zip)
   Target output length:    ~{target_duration} seconds of cuts combined
                            (approximate — favor engagement over hitting the
                            number exactly)
 
 --------------------------------------------------------------------------------
-HOW TO SELECT CUTS (important — follow this order to keep vision tokens low)
+ABOUT THE SCREENSHOTS ARCHIVE — read this carefully
 --------------------------------------------------------------------------------
 
-STEP 1. Read transcript.json FIRST.
-        Look at the `segments` array. Each segment has `start`, `end`, and
-        `text`. Everything you need to identify interesting moments is in
-        the DIALOGUE, NARRATION, and TONAL SHIFTS in the transcript.
+The screenshots ship as a single zip file (`screenshots.zip`) purely for
+transport efficiency. Treat it as a normal working input:
 
-STEP 2. Identify candidate ranges purely from the transcript text.
+  • EXTRACTING screenshots.zip is EXPECTED and REQUIRED. Do it up front,
+    the same way you would unzip any other input archive. Extraction is
+    a cheap local file operation — it does NOT consume vision tokens and
+    does NOT count as "looking at" the images.
+
+  • What is expensive and what you should avoid is VIEWING / LOADING /
+    FEEDING-TO-VISION every image inside the archive. Bulk-viewing all
+    frames is what wastes tokens, not extracting them.
+
+  • After extraction you will have a `screenshots/` directory full of
+    JPEGs sitting on disk, untouched by any vision model. That is the
+    correct state. You will then OPEN (view) only a small handful of
+    specific frames whose filenames match timestamps you have already
+    identified as interesting from the transcript.
+
+  • Do NOT skip the screenshots entirely and rely on the transcript
+    alone. Selective visual confirmation of a few candidate moments is
+    part of the job — the transcript alone is not enough to catch
+    visual beats (reactions, on-screen text, action, framing changes).
+
+In short:
+    Extract archive        →  ALWAYS do this. Cheap. Expected.
+    List/scan the folder   →  fine (it's just filenames on disk).
+    Load an image into
+      your vision context  →  do this SPARINGLY, only for specific
+                              timestamps you already care about.
+    Load every image       →  DON'T. This is the only thing to avoid.
+
+--------------------------------------------------------------------------------
+HOW TO SELECT CUTS (follow this order to keep vision-token usage low)
+--------------------------------------------------------------------------------
+
+STEP 1. Extract screenshots.zip into a local `screenshots/` directory.
+        This is a plain unzip — no images are viewed yet, no vision
+        tokens are spent. You now have random-access to individual
+        frames by filename for the rest of the workflow.
+
+STEP 2. Read transcript.json.
+        Look at the `segments` array. Each segment has `start`, `end`,
+        and `text`. Everything you need to identify interesting moments
+        is in the DIALOGUE, NARRATION, and TONAL SHIFTS in the transcript.
+
+STEP 3. Identify candidate ranges purely from the transcript text.
         Prioritize:
-          - Emotional peaks (shouting, whispered reveals, laughter, silence
-            between heavy lines)
-          - Key beats (someone learning something, a reveal, a confrontation,
-            a decision, a turning point)
+          - Emotional peaks (shouting, whispered reveals, laughter,
+            silence between heavy lines)
+          - Key beats (someone learning something, a reveal, a
+            confrontation, a decision, a turning point)
           - Defining lines (memorable quotes, callbacks, strong claims)
           - Action beats where dialogue or sound signals impact
           - Cliffhanger-style openings or endings
         Skip:
           - Long silent expositional stretches
           - Recap/preview sections
-          - Intro/outro songs or credit sequences if the transcript makes
-            them obvious
+          - Intro/outro songs or credit sequences if the transcript
+            makes them obvious
 
-STEP 3. DO NOT browse the screenshots folder wholesale. Do not list-dir
-        or scan-all it. Vision tokens are expensive.
-
-STEP 4. Once you have a shortlist of candidate ranges, and ONLY THEN,
-        fetch the specific screenshot(s) whose filename matches the
-        timestamp(s) you want to visually confirm. Filename convention:
+STEP 4. For each candidate range, VIEW ONLY the specific screenshot(s)
+        whose filename matches the timestamp(s) you want to visually
+        confirm — never open the whole folder into vision. Filename
+        convention:
 
             frame_<seconds-since-start>.jpg    (zero-padded to 5 digits)
 
-        e.g. for a moment around 4 minutes 32 seconds in, that is second
-        272, so open `frame_00272.jpg`. To sanity-check the middle of a
-        candidate cut from 142s to 168s, sample e.g. frame_00142.jpg,
-        frame_00155.jpg, frame_00168.jpg — not the full folder.
+        e.g. for a moment around 4 minutes 32 seconds in, that is
+        second 272, so view `screenshots/frame_00272.jpg`. To sanity-
+        check the middle of a candidate cut from 142s to 168s, sample
+        e.g. frame_00142.jpg, frame_00155.jpg, frame_00168.jpg — a
+        few frames, not the full folder.
+
+        Rule of thumb: a handful of frames per candidate cut, not
+        dozens. If you're tempted to view more than ~5 frames for one
+        candidate, you're over-sampling.
 
 STEP 5. Assemble cuts.
 
