@@ -22,6 +22,11 @@ on:
         required: false
         type: string
         default: "auto"
+      target_duration_seconds:
+        description: "Target total duration (seconds) of the final cut video the downstream agent should aim for."
+        required: false
+        type: string
+        default: "120"
 
 permissions:
   contents: write
@@ -151,21 +156,37 @@ jobs:
             work/analysis/compressed.mp4
           ls -lh work/analysis/compressed.mp4
 
-      - name: Extract 1 fps screenshots from compressed copy
+      - name: Extract 5-frame composite screenshots (one file per second)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p work/screenshots
-          # -vf fps=1 -> exactly 1 frame per second. -q:v 3 = high jpeg quality.
-          # We use start_number 0 so frame_00000.jpg = second 0.
+
+          # For each second of video we sample 5 frames evenly spaced within
+          # that second (fps=5) and composite them into a single JPEG using
+          # ffmpeg's tile filter (5x1 row). Each output image therefore still
+          # corresponds to exactly one second of source video — same
+          # per-second naming/index convention as before (frame_00000.jpg =
+          # second 0) — but each image now contains 5 sub-frames from that
+          # second so the downstream vision agent can read motion/action
+          # instead of a single static pose.
+          #
+          # We downscale each sub-frame to 640px wide before tiling to keep
+          # the composite reasonably sized. -qscale:v 5 is a slightly lower
+          # JPEG quality than the previous single-frame setting (was 3) to
+          # offset the ~5x pixel count and keep the Release archive from
+          # bloating.
           ffmpeg -y -i work/analysis/compressed.mp4 \
-            -vf "fps=1" \
-            -qscale:v 3 \
+            -vf "fps=5,scale='min(640,iw)':'-2',tile=5x1:padding=2:margin=2:color=black" \
+            -vsync vfr \
+            -qscale:v 5 \
             -start_number 0 \
             "work/screenshots/frame_%05d.jpg"
           count="$(ls work/screenshots | wc -l)"
           echo "SCREENSHOT_COUNT=$count" >> "$GITHUB_ENV"
-          echo "Extracted $count screenshots"
+          echo "Extracted $count composite screenshots (5 sub-frames each)"
+          # Sanity: report size of the whole screenshots directory.
+          du -sh work/screenshots || true
 
       - name: Extract audio for transcription
         shell: bash
@@ -185,11 +206,24 @@ jobs:
 
       - name: Generate 00_READ_THIS_FIRST.txt (analysis prompt)
         shell: bash
+        env:
+          RAW_TARGET: ${{ github.event.inputs.target_duration_seconds }}
         run: |
           set -euo pipefail
+          # Sanitize user-supplied target duration; fall back to 120s if
+          # the input is missing or non-numeric / non-positive.
+          raw="${RAW_TARGET:-}"
+          raw="${raw// /}"
+          if [[ "$raw" =~ ^[0-9]+$ ]] && [ "$raw" -gt 0 ]; then
+            target_dur="$raw"
+          else
+            target_dur="120"
+          fi
+          echo "Target output duration (seconds): $target_dur"
           python scripts/generate_analysis_prompt.py \
             "$DURATION_SECONDS" "$SCREENSHOT_COUNT" \
             "work/00_READ_THIS_FIRST.txt" \
+            --target-duration "$target_dur" \
             --job-id "${{ steps.jid.outputs.job_id }}"
           head -n 40 work/00_READ_THIS_FIRST.txt
 
