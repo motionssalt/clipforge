@@ -27,11 +27,18 @@ You have been given three artifacts from a Stage A run of the ClipForge
 pipeline:
 
   1. transcript.json      — timestamped transcript of the video's audio
-  2. screenshots.zip      — a zip archive containing one JPEG screenshot
-                            per second of the (compressed) source video.
-                            Files inside are named frame_00000.jpg ..
-                            frame_{last_frame:05d}.jpg (zero-padded 5-digit
-                            index of seconds-since-start).
+  2. screenshots.zip      — a zip archive containing one JPEG per second
+                            of the (compressed) source video. Each JPEG is
+                            NOT a single still frame — it is a composite
+                            of 5 sub-frames sampled evenly across that
+                            same second, tiled into one image (a 5x1
+                            contact-sheet row: left → right = earliest →
+                            latest within that second). Files inside are
+                            named frame_00000.jpg .. frame_{last_frame:05d}.jpg
+                            (zero-padded 5-digit index of seconds-since-
+                            start). Read each image as a short visual
+                            sequence within that one second, not as a
+                            single static pose.
   3. This file            — your instructions
 
 Your job: choose the most engaging moments from this video and output a
@@ -53,12 +60,15 @@ VIDEO METADATA (substituted by Stage A)
   Job ID:                  {job_id}
   Full video duration:     {duration_seconds} seconds ({duration_hms})
   Screenshots available:   frame_00000.jpg .. frame_{last_frame:05d}.jpg
-                           (one frame per second, zero-padded 5-digit index
+                           (one file per second, zero-padded 5-digit index
                             of seconds-since-start, packaged inside
-                            screenshots.zip)
+                            screenshots.zip). Each file is a 5x1 tiled
+                            composite of 5 sub-frames sampled evenly within
+                            that second (left = earliest, right = latest).
   Target output length:    ~{target_duration} seconds of cuts combined
-                           (approximate — favor engagement over hitting the
-                           number exactly)
+                           (user-selected in the Stage A form; approximate
+                           — favor engagement over hitting the number
+                           exactly)
 
 --------------------------------------------------------------------------------
 ABOUT THE SCREENSHOTS ARCHIVE — read this carefully
@@ -92,6 +102,16 @@ transport efficiency. Treat it as a normal working input:
     will miss the actual story of the video. View enough frames to
     reconstruct the visual sequence of events for each cut you plan to
     keep.
+
+  • Each frame_NNNNN.jpg is a 5x1 tiled composite — 5 sub-frames sampled
+    evenly across that one second, arranged left-to-right (earliest →
+    latest). When you read a file, read it as a short motion strip, not
+    a single still: compare the 5 panels to see how the shot changes
+    within that second (a hand moves, a facial expression shifts, the
+    camera cuts, a prop enters frame). If the 5 panels are visually
+    identical the second was static; if they differ, that difference IS
+    the motion/action inside that second and should inform your
+    raw_narration.
 
 In short:
     Extract archive        →  ALWAYS do this. Cheap. Expected.
@@ -156,12 +176,15 @@ STEP 4. For each candidate range you plan to keep, VIEW enough
             frame_<seconds-since-start>.jpg    (zero-padded to 5 digits)
 
         e.g. for a moment around 4 minutes 32 seconds in, that is
-        second 272, so view `screenshots/frame_00272.jpg`. For a
-        candidate cut from 142s to 168s, view a spread of frames
-        across that range (e.g. the start, several points in the
-        middle where the action changes, and the end) so you can
-        actually see how the scene evolves — a reaction shot, a prop
-        entering frame, a cut to a new location, etc.
+        second 272, so view `screenshots/frame_00272.jpg`. Remember
+        each file is a 5-panel motion strip covering that one second,
+        so opening a single file already gives you 5 sample points
+        within that second. For a candidate cut from 142s to 168s,
+        view a spread of these composite files across that range
+        (e.g. the start, several points in the middle where the action
+        changes, and the end) so you can see how the scene evolves
+        across seconds — a reaction shot, a prop entering frame, a
+        cut to a new location, etc.
 
         Guidance on how many frames to view:
           - Aim for enough coverage that you could confidently write a
