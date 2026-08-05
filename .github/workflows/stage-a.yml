@@ -156,47 +156,80 @@ jobs:
             work/analysis/compressed.mp4
           ls -lh work/analysis/compressed.mp4
 
-      - name: Extract 6-frame composite screenshots (one file per second)
+      - name: Extract 6-frame composite screenshots (one file per 6s window)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p work/screenshots
+          mkdir -p work/screenshots work/screenshots_tmp
 
-          # For each second of video we sample 6 frames evenly spaced within
-          # that second (fps=6) and composite them into a single JPEG using
-          # ffmpeg's tile filter (3x2 grid — 3 columns wide, 2 rows tall).
-          # Each output image therefore still corresponds to exactly one
-          # second of source video — same per-second naming/index convention
-          # as before (frame_00000.jpg = second 0) — but each image now
-          # contains 6 sub-frames from that second so the downstream vision
-          # agent can read motion/action instead of a single static pose.
+          # NEW CADENCE (changed from the old "one grid per second"):
           #
-          # The layout was previously a 5x1 row, which produced very wide /
-          # short images (~3200x360). Some vision models struggle with such
-          # extreme aspect ratios: the panels get downsampled aggressively
-          # to fit the model's input and fine detail is lost. A 3x2 grid
-          # produces a near-square composite (~1920x720) that vision models
-          # handle much better, at essentially the same total pixel count.
+          # We now emit ONE composite JPEG per SIX SECONDS of source video.
+          # Each composite is still a 3x2 tile (3 columns wide, 2 rows tall,
+          # 6 panels total), but the 6 panels now come from six DIFFERENT
+          # seconds within a 6-second window — one representative frame per
+          # second, spread across the full 6-second span — instead of six
+          # near-duplicate frames from within a single second.
           #
-          # Reading order inside each composite:
-          #   [ 0  1  2 ]   <- earliest 3 sub-frames in that second
-          #   [ 3  4  5 ]   <- latest 3 sub-frames in that second
-          # i.e. left-to-right, then top-to-bottom (English reading order).
+          # How it works:
+          #   - fps=1 gives us exactly one frame per source second.
+          #   - tile=3x2 then packs every 6 consecutive input frames (i.e.
+          #     6 consecutive seconds) into one output JPEG.
+          #   - So output image N covers source seconds [N*6, N*6+6).
+          #
+          # Reading order inside each composite (English reading order,
+          # left-to-right then top-to-bottom):
+          #
+          #   [ s+0   s+1   s+2 ]   <- seconds 1, 2, 3 of the window
+          #   [ s+3   s+4   s+5 ]   <- seconds 4, 5, 6 of the window
+          #
+          # where `s` is the window's start second. The top-left panel is
+          # a frame from the first second of the window; the bottom-right
+          # panel is a frame from the sixth (last) second of the window.
+          # Reading a single file therefore gives the vision agent real
+          # temporal progression across a 6-second span, not near-duplicate
+          # frames from a single second.
+          #
+          # Compared to the old cadence this reduces the total number of
+          # screenshot files by roughly 6x while carrying much more useful
+          # visual variance per image.
           #
           # We downscale each sub-frame to 640px wide before tiling to keep
-          # the composite reasonably sized. -qscale:v 5 is a slightly lower
-          # JPEG quality than the previous single-frame setting (was 3) to
-          # offset the ~6x pixel count and keep the Release archive from
-          # bloating.
+          # the composite reasonably sized (~1920x720). -qscale:v 5 keeps
+          # per-file JPEG size in check.
+          #
+          # ffmpeg writes sequentially-indexed files (grid_00000.jpg,
+          # grid_00001.jpg, ...); the following rename step converts those
+          # into the human-meaningful naming convention where the number
+          # in the filename is the window START SECOND, zero-padded.
           ffmpeg -y -i work/analysis/compressed.mp4 \
-            -vf "fps=6,scale='min(640,iw)':'-2',tile=3x2:padding=2:margin=2:color=black" \
+            -vf "fps=1,scale='min(640,iw)':'-2',tile=3x2:padding=2:margin=2:color=black" \
             -vsync vfr \
             -qscale:v 5 \
             -start_number 0 \
-            "work/screenshots/frame_%05d.jpg"
+            "work/screenshots_tmp/grid_%05d.jpg"
+
+          # Rename grid_<seq>.jpg -> frame_<window_start_seconds>.jpg
+          # (zero-padded to 6 digits so files sort chronologically even for
+          # long videos). Window start second = sequence index * 6.
+          shopt -s nullglob
+          for f in work/screenshots_tmp/grid_*.jpg; do
+            base="$(basename "$f" .jpg)"       # e.g. grid_00042
+            seq="${base#grid_}"                # e.g. 00042
+            # strip leading zeros safely
+            seq_num="$((10#$seq))"
+            start_sec="$((seq_num * 6))"
+            printf -v padded 'frame_%06d.jpg' "$start_sec"
+            mv "$f" "work/screenshots/$padded"
+          done
+          rmdir work/screenshots_tmp || true
+
           count="$(ls work/screenshots | wc -l)"
           echo "SCREENSHOT_COUNT=$count" >> "$GITHUB_ENV"
-          echo "Extracted $count composite screenshots (6 sub-frames each, 3x2 grid)"
+          # Expose the window size (in seconds) so downstream steps and the
+          # analysis prompt stay in sync if this ever changes again.
+          echo "SCREENSHOT_WINDOW_SECONDS=6" >> "$GITHUB_ENV"
+          echo "Extracted $count composite screenshots (6-second windows, 1 frame per second, 3x2 grid)"
           # Sanity: report size of the whole screenshots directory.
           du -sh work/screenshots || true
 
@@ -236,7 +269,8 @@ jobs:
             "$DURATION_SECONDS" "$SCREENSHOT_COUNT" \
             "work/00_READ_THIS_FIRST.txt" \
             --target-duration "$target_dur" \
-            --job-id "${{ steps.jid.outputs.job_id }}"
+            --job-id "${{ steps.jid.outputs.job_id }}" \
+            --window-seconds "${SCREENSHOT_WINDOW_SECONDS:-6}"
           head -n 40 work/00_READ_THIS_FIRST.txt
 
       - name: Zip screenshots
@@ -275,7 +309,7 @@ jobs:
             Assets:
               - 00_READ_THIS_FIRST.txt  (READ FIRST — cut selection instructions)
               - transcript.json         (timestamped transcript)
-              - screenshots.zip         (1 fps frames, frame_NNNNN.jpg)
+              - screenshots.zip         (one 3x2 grid per 6s window, frame_NNNNNN.jpg where NNNNNN is the window START SECOND)
               - ${{ env.ORIGINAL_ASSET_NAME }}  (original quality video, used by Stage B)
 
             This release is automatically deleted 12 hours after creation.
