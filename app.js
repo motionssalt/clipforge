@@ -61,7 +61,7 @@
     'repo-indicator', 'banner-stack',
     'settings-section', 'settings-toggle', 'settings-body', 'settings-state', 'settings-form',
     'owner-input', 'repo-input', 'token-input', 'token-reveal', 'settings-save', 'settings-clear', 'settings-msg',
-    'stage-a-section', 'stage-a-form', 'drive-link-input', 'job-slug-input', 'whisper-model-select',
+    'stage-a-section', 'stage-a-form', 'video-url-input', 'job-slug-input', 'whisper-model-select',
     'language-input', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
@@ -384,7 +384,7 @@
       return;
     }
 
-    var videoUrl = el['drive-link-input'].value.trim();
+    var videoUrl = el['video-url-input'].value.trim();
     if (!videoUrl) {
       setMsg(el['stage-a-msg'], 'A video URL is required.', 'bad');
       return;
