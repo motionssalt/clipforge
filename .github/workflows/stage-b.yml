@@ -95,6 +95,8 @@ jobs:
           echo "$json" > work_release.json
           rid="$(python -c "import json; print(json.load(open('work_release.json'))['id'])")"
           echo "release_id=$rid" >> "$GITHUB_OUTPUT"
+          rurl="$(python -c "import json; print(json.load(open('work_release.json')).get('html_url',''))")"
+          echo "release_url=$rurl" >> "$GITHUB_OUTPUT"
 
           # Pull original asset info by name prefix.
           python - <<'PY' >> "$GITHUB_OUTPUT"
@@ -249,6 +251,7 @@ jobs:
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "complete" \
             --message "Final video is ready." \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --release-url "${{ steps.relmeta.outputs.release_url }}" \
             --asset "final_zip=${{ steps.finalasset.outputs.final_url }}"
 
           git config user.name  "github-actions[bot]"
