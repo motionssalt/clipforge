@@ -37,14 +37,18 @@ loading `app.js` at the end of `<body>`.
 ## 2. What the site is for (one paragraph)
 
 Single-user personal tool. The user pastes a GitHub personal access
-token once, pastes a public Google Drive link to an anime episode
-video, and clicks "Start Stage A". The site dispatches the Stage A
+token once, pastes any public video URL (a Google Drive share link or
+a direct video file link from any host), and clicks "Start Stage A".
+The site dispatches the Stage A
 workflow via the GitHub API, then polls the repo for a
 `jobs/<job-id>/status.json` file that Stage A writes. When status
-transitions to `awaiting_json_upload`, the UI shows the Release
-download links (READ_THIS_FIRST first, then transcript, then
-screenshots) and a `cuts.json` file upload control. The user takes
-those artifacts to an external AI agent, gets a `cuts.json` back, and
+transitions to `awaiting_json_upload`, the UI shows ONE prominent
+link — the GitHub Release page URL itself (`release_url` from
+status.json, labeled e.g. "Open Release →") — plus a `cuts.json` file
+upload control. The Release page already lists every asset
+(`00_READ_THIS_FIRST.txt`, transcript, screenshots zip, original
+video) in one place, so the user hands that single link to an
+external AI agent, gets a `cuts.json` back, and
 uploads it here. The site commits that file to the job folder, then
 dispatches Stage B. Stage B updates status through `stage_b_running`
 to `complete`, at which point the UI shows a download button for the
@@ -87,7 +91,7 @@ Handle exactly these values:
 | *(no status.json yet)*   | "Waiting for Stage A to start…" spinner |
 | `queued`                 | "Queued" |
 | `stage_a_running`        | "Stage A running — downloading, transcribing, extracting frames" + spinner + link to workflow run |
-| `awaiting_json_upload`   | Show Release download links (READ_THIS_FIRST prominently at top), plus a file input for `cuts.json` and a "Start Stage B" button |
+| `awaiting_json_upload`   | Show a single prominent "Open Release →" link (the `release_url` from status.json — the Release page lists every asset in one place), plus a file input for `cuts.json` and a "Start Stage B" button. Do NOT render individual per-asset download links. |
 | `stage_b_running`        | "Stage B running — cutting and concatenating" + spinner |
 | `complete`               | Big "Download final zip" button pointing at `assets.final_zip` |
 | `error`                  | Red banner with `message` field, plus a "Start over" button |
@@ -108,6 +112,7 @@ except indirectly by triggering workflows. Shape:
   "stage": "awaiting_json_upload",
   "message": "Stage A complete. Upload cuts.json to start Stage B.",
   "release_tag": "clipforge-20260804-121530-1234567",
+  "release_url": "https://github.com/<owner>/<repo>/releases/tag/clipforge-20260804-121530-1234567",
   "assets": {
     "00_READ_THIS_FIRST.txt": "https://github.com/.../releases/download/.../00_READ_THIS_FIRST.txt",
     "transcript.json":       "https://github.com/.../releases/download/.../transcript.json",
@@ -128,11 +133,17 @@ except indirectly by triggering workflows. Shape:
 
 Notes for the site:
 
+- `release_url` is the canonical hand-off link: the GitHub Release
+  page URL (`https://github.com/<owner>/<repo>/releases/tag/<tag>`).
+  Render it as the single prominent "Open Release →" link at
+  `awaiting_json_upload`. If `release_url` is absent (older jobs),
+  derive the same URL from `release_tag` and the configured
+  owner/repo. Never enumerate per-asset download links in the UI —
+  the Release page already lists every asset in one place.
 - `assets` keys are the literal asset filenames from the Release, plus
-  a `final_zip` key added by Stage B. Do not hardcode which keys are
-  present — iterate the object.
-- Always render `00_READ_THIS_FIRST.txt` at the top of the assets list
-  with a distinct "READ THIS FIRST" callout.
+  a `final_zip` key added by Stage B. The site uses `assets.final_zip`
+  for the completion download button; the other keys are not rendered
+  as links anymore.
 - `expires_at_epoch` is when the cleanup workflow will delete this job.
   Show a countdown ("expires in 11h 42m") once we reach
   `awaiting_json_upload` or later.
@@ -159,7 +170,7 @@ Content-Type: application/json
 {
   "ref": "main",
   "inputs": {
-    "drive_link": "<user-pasted Drive URL>",
+    "video_url": "<user-pasted video URL — Drive share link OR any direct video URL>",
     "job_id": "<optional short slug, or empty string to auto-generate>",
     "whisper_model": "base",
     "language": "auto"
@@ -318,14 +329,16 @@ progressively revealed:
 saved). Fields: GitHub owner, repo name, PAT token, "Save", "Clear".
 
 **Section 2 — Start Stage A** (visible once token is saved). Fields:
-Google Drive link (required), optional job slug, dropdown for whisper
+Video URL (required — labeled generically; help text notes that both
+Google Drive share links and direct video file URLs from any host are
+accepted), optional job slug, dropdown for whisper
 model (`tiny` / `base` / `small`, default `base`), language hint text
 input (default `auto`). A single "Start Stage A" button. Shows the
 active job's job id + "View workflow run" link once dispatched.
 
 **Section 3 — Job status** (visible once a job is active). Renders per
-the state table in § 4. If `awaiting_json_upload`: list of Release
-assets (READ_THIS_FIRST prominently at top, then the others), plus a
+the state table in § 4. If `awaiting_json_upload`: one prominent
+"Open Release →" link to the Release page (from `release_url`), plus a
 `<input type="file" accept="application/json,.json">` and "Start
 Stage B" button. If `complete`: big download button.
 
