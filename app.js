@@ -68,6 +68,7 @@
     'status-section', 'stage-badge', 'expiry-countdown', 'stage-line', 'stage-spinner', 'stage-text',
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
+    'copy-agent-prompt',
     'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation',
     'complete-block', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
@@ -859,8 +860,92 @@
 
     text(el['release-tag-line'], s.release_tag ? 'Release tag: ' + s.release_tag : '');
 
+    // Prime the "Copy for AI agent" button: it stashes the ready-to-paste
+    // hand-off block on a data attribute and disables itself until a URL is
+    // actually available for the current job.
+    var copyBtn = el['copy-agent-prompt'];
+    if (copyBtn) {
+      if (url) {
+        copyBtn.dataset.pasteText = buildAgentPasteText(url);
+        copyBtn.disabled = false;
+        copyBtn.classList.remove('is-copied');
+        copyBtn.textContent = 'Copy for AI agent';
+      } else {
+        copyBtn.dataset.pasteText = '';
+        copyBtn.disabled = true;
+        copyBtn.classList.remove('is-copied');
+        copyBtn.textContent = 'Copy for AI agent';
+      }
+    }
+
     // Warm the release-asset id cache so private-repo downloads work.
     if (s.release_tag) loadReleaseAssets(s.release_tag, false);
+  }
+
+  /**
+   * Build the single, ready-to-paste text block the user hands to their AI
+   * agent. It carries the Release URL together with a brief instruction that
+   * tells the agent to open 00_READ_THIS_FIRST first and return cuts.json.
+   */
+  function buildAgentPasteText(url) {
+    return (
+      'Go to this link: ' + url + ' — it contains a GitHub Release with a ' +
+      'transcript, screenshots, and an analysis prompt file (its name starts ' +
+      'with 00_READ_THIS_FIRST). Open/read that file first, then follow its ' +
+      'instructions to analyze the transcript and screenshots and produce the ' +
+      'requested cuts.json output.'
+    );
+  }
+
+  /** Copy `text` to the clipboard. Uses the async API when available, falls
+   *  back to a hidden <textarea> + execCommand so it still works on non-secure
+   *  contexts and older browsers. Returns a Promise<boolean>. */
+  function copyToClipboard(str) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(str).then(function () { return true; },
+        function () { return fallbackCopy(str); });
+    }
+    return Promise.resolve(fallbackCopy(str));
+  }
+
+  function fallbackCopy(str) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = str;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, str.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  if (el['copy-agent-prompt']) {
+    el['copy-agent-prompt'].addEventListener('click', function () {
+      var btn = el['copy-agent-prompt'];
+      var paste = btn.dataset.pasteText || '';
+      if (!paste) return;
+      copyToClipboard(paste).then(function (ok) {
+        if (ok) {
+          btn.classList.add('is-copied');
+          btn.textContent = 'Copied — paste into your AI agent';
+          setTimeout(function () {
+            btn.classList.remove('is-copied');
+            btn.textContent = 'Copy for AI agent';
+          }, 2500);
+        } else {
+          btn.textContent = 'Copy failed — select the URL below manually';
+          setTimeout(function () { btn.textContent = 'Copy for AI agent'; }, 3000);
+        }
+      });
+    });
   }
 
   /** Release-asset lookup — gives us asset ids for private-repo downloads. */
