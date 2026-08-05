@@ -12,10 +12,10 @@ Usage:
                                        <output_txt_path>
                                        [--target-duration 120]
                                        [--job-id JOB_ID]
+                                       [--window-seconds 6]
 """
 import argparse
 import os
-import textwrap
 
 
 TEMPLATE = """\
@@ -27,26 +27,51 @@ You have been given three artifacts from a Stage A run of the ClipForge
 pipeline:
 
   1. transcript.json      — timestamped transcript of the video's audio
-  2. screenshots.zip      — a zip archive containing one JPEG per second
-                            of the (compressed) source video. Each JPEG is
-                            NOT a single still frame — it is a composite
-                            of 6 sub-frames sampled evenly across that
-                            same second, tiled into one image as a 3x2
-                            grid (3 columns wide, 2 rows tall). Reading
-                            order inside each composite is English reading
-                            order — left-to-right, then top-to-bottom:
+  2. screenshots.zip      — a zip archive containing composite JPEG images
+                            of the (compressed) source video. Each JPEG
+                            covers a {window_seconds}-SECOND WINDOW of the
+                            source video, not a single second and not a
+                            single still frame. Each JPEG is a 3x2 grid
+                            (3 columns wide, 2 rows tall) of 6 panels,
+                            and each of the 6 panels is ONE frame sampled
+                            from ONE of the 6 seconds inside that
+                            {window_seconds}-second window — panel 1 is a
+                            frame from second 1 of the window, panel 2
+                            from second 2, and so on through panel 6 /
+                            second 6. Reading order inside each composite
+                            is English reading order — left-to-right,
+                            then top-to-bottom:
 
-                                [ 0  1  2 ]   <- earliest 3 sub-frames
-                                [ 3  4  5 ]   <- latest 3 sub-frames
+                                [ s+0s   s+1s   s+2s ]   <- seconds 1, 2, 3 of the window
+                                [ s+3s   s+4s   s+5s ]   <- seconds 4, 5, 6 of the window
 
-                            So the top-left panel is the earliest moment
-                            in that second and the bottom-right panel is
-                            the latest. Files inside are named
-                            frame_00000.jpg .. frame_{last_frame:05d}.jpg
-                            (zero-padded 5-digit index of seconds-since-
-                            start). Read each image as a short visual
-                            sequence within that one second, not as a
-                            single static pose.
+                            where `s` is the window's START second (the
+                            number in the filename). So the top-left
+                            panel is a frame from the FIRST second of the
+                            window and the bottom-right panel is a frame
+                            from the SIXTH (last) second of the window —
+                            real temporal progression across a
+                            {window_seconds}-second span, not near-
+                            duplicate frames from within one second.
+
+                            Files inside are named
+                            frame_000000.jpg .. frame_{last_window_start:06d}.jpg
+                            where the number is the WINDOW START SECOND
+                            (zero-padded to 6 digits), and each file
+                            covers the half-open interval
+                            [start, start+{window_seconds}) seconds.
+                            Consecutive files therefore step by
+                            {window_seconds}: frame_000000.jpg covers
+                            seconds [0, {window_seconds}),
+                            frame_{window_seconds:06d}.jpg covers seconds
+                            [{window_seconds}, {two_windows}),
+                            frame_{two_windows:06d}.jpg covers seconds
+                            [{two_windows}, {three_windows}), and so on.
+
+                            Read each image as a short visual sequence
+                            across a {window_seconds}-second span (one
+                            sample per second, six seconds total), not as
+                            a single static pose.
   3. This file            — your instructions
 
 Your job: choose the most engaging moments from this video and output a
@@ -85,20 +110,21 @@ CRITICAL WORKING ORDER (read this before doing anything else):
      reading it.
 
   4. When you DO open screenshots, open them in CHRONOLOGICAL (canonical)
-     order — ascending by frame index. Never jump around out of order
-     (e.g. frame_00042 → frame_00891 → frame_00312). Within a single
-     candidate range, view its frames from earliest second to latest
-     second, in order. Across the whole video, work through your
-     candidates in the order they occur, not in the order they
-     occurred to you. Chronological viewing is how the visual story
-     actually unfolds — viewing frames out of order fragments
+     order — ascending by window-start second (which is the number in
+     the filename). Never jump around out of order (e.g.
+     frame_000042 → frame_000894 → frame_000312). Within a single
+     candidate range, view its windows from earliest window-start to
+     latest window-start, in order. Across the whole video, work
+     through your candidates in the order they occur, not in the order
+     they occurred to you. Chronological viewing is how the visual
+     story actually unfolds — viewing frames out of order fragments
      comprehension and is the main reason cuts come out inaccurate.
 
-  5. If, after viewing a candidate's frames, you still don't understand
-     what is happening, it is fine to fetch MORE frames for that same
+  5. If, after viewing a candidate's windows, you still don't understand
+     what is happening, it is fine to fetch MORE windows for that same
      range — still in chronological order — until you do. But do not
-     fetch frames from unrelated parts of the video just because they
-     are there. Every frame you open should have a specific reason
+     fetch windows from unrelated parts of the video just because they
+     are there. Every image you open should have a specific reason
      tied to a specific candidate cut.
 
 --------------------------------------------------------------------------------
@@ -107,15 +133,28 @@ VIDEO METADATA (substituted by Stage A)
 
   Job ID:                  {job_id}
   Full video duration:     {duration_seconds} seconds ({duration_hms})
-  Screenshots available:   frame_00000.jpg .. frame_{last_frame:05d}.jpg
-                           (one file per second, zero-padded 5-digit index
-                            of seconds-since-start, packaged inside
-                            screenshots.zip). Each file is a 3x2 grid
-                            composite of 6 sub-frames sampled evenly within
-                            that second — read in English reading order
-                            (left-to-right, then top-to-bottom): the
-                            top-left panel is the earliest moment in that
-                            second, the bottom-right panel is the latest.
+  Screenshot cadence:      one composite JPEG per {window_seconds}-second
+                           window of source video. Each composite is a
+                           3x2 grid of 6 panels, and each panel is one
+                           frame from one of the 6 seconds inside that
+                           window (panel 1 = second 1 of the window,
+                           panel 6 = second 6 of the window). So a
+                           single image spans a real {window_seconds}-
+                           second slice of the video, sampled once per
+                           second.
+  Screenshots available:   frame_000000.jpg .. frame_{last_window_start:06d}.jpg
+                           ({total_frames} files total, packaged inside
+                           screenshots.zip). The number in each filename
+                           is the WINDOW START SECOND, zero-padded to
+                           6 digits. Consecutive filenames step by
+                           {window_seconds}. File frame_SSSSSS.jpg covers
+                           source seconds [SSSSSS, SSSSSS+{window_seconds}).
+                           Reading order inside each composite is
+                           English reading order (left-to-right, then
+                           top-to-bottom): the top-left panel is a frame
+                           from the FIRST second of the window, the
+                           bottom-right panel is a frame from the SIXTH
+                           (last) second of the window.
   Target output length:    ~{target_duration} seconds of cuts combined
                            (user-selected in the Stage A form; approximate
                            — favor engagement over hitting the number
@@ -135,9 +174,8 @@ transport efficiency. Treat it as a normal working input:
 
   • What is expensive is VIEWING / LOADING / FEEDING-TO-VISION every
     image inside the archive. The thing to avoid is indiscriminately
-    piping the entire folder (which can be hundreds or thousands of
-    near-identical frames) into your vision context in one shot. Do NOT
-    do that.
+    piping the entire folder into your vision context in one shot. Do
+    NOT do that.
 
   • After extraction you will have a `screenshots/` directory full of
     JPEGs sitting on disk, untouched by any vision model. That is the
@@ -150,25 +188,40 @@ transport efficiency. Treat it as a normal working input:
     carry information that the transcript literally cannot: physical
     actions, facial reactions, sight gags, on-screen text, cutaways,
     and scene changes. If you only skim a couple of frames per cut you
-    will miss the actual story of the video. View enough frames to
+    will miss the actual story of the video. View enough windows to
     reconstruct the visual sequence of events for each cut you plan to
     keep.
 
-  • Each frame_NNNNN.jpg is a 3x2 grid composite — 6 sub-frames sampled
-    evenly across that one second, arranged in English reading order
-    (left-to-right, then top-to-bottom):
+  • Each frame_SSSSSS.jpg is a 3x2 grid composite that represents a
+    {window_seconds}-SECOND WINDOW of the source video, starting at the
+    second `SSSSSS` in the filename. The 6 panels are sampled ONE PER
+    SECOND across those {window_seconds} seconds — they are NOT six
+    near-duplicate frames from within a single second. Reading order
+    is English reading order (left-to-right, then top-to-bottom):
 
-        [ 0  1  2 ]   <- earliest 3 sub-frames in that second
-        [ 3  4  5 ]   <- latest 3 sub-frames in that second
+        [ s+0s   s+1s   s+2s ]   <- one frame each from seconds 1, 2, 3 of the window
+        [ s+3s   s+4s   s+5s ]   <- one frame each from seconds 4, 5, 6 of the window
 
-    So the top-left panel is the earliest moment in that second and the
-    bottom-right panel is the latest. When you read a file, read it as
-    a short motion sequence, not a single still: compare the 6 panels
-    in that order to see how the shot changes within that second (a
-    hand moves, a facial expression shifts, the camera cuts, a prop
-    enters frame). If the 6 panels are visually identical the second
-    was static; if they differ, that difference IS the motion/action
-    inside that second and should inform your raw_narration.
+    where `s` is the window's start second (the number in the
+    filename). So opening a single file gives you SIX sample points
+    spread across a real {window_seconds}-second slice of the video —
+    the top-left panel is a frame from the first second of the window
+    and the bottom-right panel is a frame from the sixth (last) second
+    of the window. Compare the 6 panels in that order to see how the
+    scene evolves across the window (a character moves, an expression
+    shifts, the camera cuts, a new subject enters frame, on-screen
+    text changes). If the 6 panels look nearly identical the window
+    was static; if they differ, that difference IS the action inside
+    that {window_seconds}-second span and should inform your
+    raw_narration.
+
+  • When you need finer-grained temporal information than one file can
+    give you, open the ADJACENT files (frame_<S>.jpg and then
+    frame_<S+{window_seconds}>.jpg, then frame_<S+{two_windows}>.jpg,
+    …). Each successive file continues the sequence into the next
+    {window_seconds}-second window, so opening two or three files in a
+    row gives you continuous per-second coverage across roughly
+    {two_windows}–{three_windows} seconds of video.
 
 In short:
     Extract archive        →  ALWAYS do this. Cheap. Expected.
@@ -177,13 +230,13 @@ In short:
       your vision context  →  do this DELIBERATELY, as often as needed
                               to actually understand what is happening
                               visually in the segments you care about.
-                              Sample multiple frames per beat/scene, not
-                              just one, so you can see how the shot
-                              evolves.
+                              Sample multiple adjacent windows per
+                              beat/scene, not just one, so you can see
+                              how the shot evolves across time.
     Load every single
       image in bulk        →  DON'T. Indiscriminately viewing every
-                              frame of a long video is the one thing to
-                              avoid. Be intentional, not exhaustive.
+                              window of a long video is the one thing
+                              to avoid. Be intentional, not exhaustive.
 
 --------------------------------------------------------------------------------
 HOW TO SELECT CUTS AND DESCRIBE THEM
@@ -192,7 +245,7 @@ HOW TO SELECT CUTS AND DESCRIBE THEM
 STEP 1. Extract screenshots.zip into a local `screenshots/` directory.
         This is a plain unzip — no images are viewed yet, no vision
         tokens are spent. You now have random-access to individual
-        frames by filename for the rest of the workflow.
+        window composites by filename for the rest of the workflow.
 
 STEP 2. Read transcript.json in full and understand the story from the
         transcript alone, BEFORE opening any images.
@@ -242,8 +295,8 @@ STEP 3. Using the story map from Step 2, pick candidate cut ranges
         (Exception: if the entire video has essentially no useful
         transcript — e.g. a mostly-silent action video — say so
         explicitly to yourself and then, and only then, fall back to a
-        deliberate chronological sweep of frames as your primary
-        source. This should be rare.)
+        deliberate chronological sweep of window composites as your
+        primary source. This should be rare.)
 
 STEP 4. For each candidate range from Step 3, open its screenshots
         IN CHRONOLOGICAL ORDER to fill in what the transcript cannot
@@ -251,58 +304,81 @@ STEP 4. For each candidate range from Step 3, open its screenshots
 
         Frame filename convention:
 
-            frame_<seconds-since-start>.jpg    (zero-padded to 5 digits)
+            frame_<window_start_seconds>.jpg    (zero-padded to 6 digits)
 
-        e.g. for a moment around 4 minutes 32 seconds in, that is
-        second 272, so view `screenshots/frame_00272.jpg`. Remember
-        each file is a 3x2 grid (6 panels, read left-to-right then
-        top-to-bottom) covering that one second, so opening a single
-        file already gives you 6 sample points within that second.
+        Each such file covers the half-open interval
+        [window_start, window_start + {window_seconds}) seconds of the
+        source video, and its 6 panels are one frame per second across
+        that {window_seconds}-second span (top-left = first second of
+        the window, bottom-right = last second of the window).
+
+        To find the file that covers a specific moment T (in seconds),
+        floor T to the nearest multiple of {window_seconds}:
+
+            window_start = (T // {window_seconds}) * {window_seconds}
+
+        e.g. for a moment around 4 minutes 32 seconds in (T = 272s):
+        272 // {window_seconds} = {example_div}, so the covering file is
+        `screenshots/frame_{example_window:06d}.jpg`, which covers
+        seconds [{example_window}, {example_window_end}).
+
+        Opening a single file already gives you 6 sample points spread
+        across {window_seconds} real seconds of video. When you need
+        continuous per-second coverage across a longer stretch, open
+        the adjacent files in order:
+        frame_<S>.jpg, frame_<S+{window_seconds}>.jpg,
+        frame_<S+{two_windows}>.jpg, … Each step moves the window
+        forward by exactly {window_seconds} seconds.
 
         VIEWING ORDER — this is a hard rule, not a suggestion:
 
-          - Within a single candidate range, open frames in ASCENDING
-            frame-index order (canonical / chronological). For a
-            candidate from 142s to 168s, view frame_00142.jpg, then
-            some frames in the middle in ascending order (e.g.
-            frame_00150, frame_00158), then frame_00168.jpg. Never
-            jump around inside the range out of order.
+          - Within a single candidate range, open window composites in
+            ASCENDING window-start order (canonical / chronological).
+            For a candidate from 142s to 168s, view the file covering
+            second 142 first, then the next window forward, and so on
+            up to the one covering second 168. Never jump around
+            inside the range out of order.
           - Across candidates, work through them in the order they
             occur in the video (earliest start_seconds first), not in
             the order they occurred to you. Finish looking at one
             candidate before moving to the next.
-          - Do NOT interleave frames from unrelated parts of the
-            video (e.g. frame_00042 → frame_00891 → frame_00312).
-            Out-of-order frame viewing is the single biggest cause
-            of inaccurate raw_narration — the visual story stops
-            making sense when you hop around.
-          - If you realize mid-way that you need a frame from an
+          - Do NOT interleave windows from unrelated parts of the
+            video (e.g. frame_000042 → frame_000894 → frame_000312).
+            Out-of-order viewing is the single biggest cause of
+            inaccurate raw_narration — the visual story stops making
+            sense when you hop around.
+          - If you realize mid-way that you need a window from an
             EARLIER candidate you already left, you may go back, but
-            still view that earlier candidate's remaining frames in
+            still view that earlier candidate's remaining windows in
             ascending order before returning to where you were.
 
-        How many frames to open per candidate:
+        How many windows to open per candidate:
           - Aim for enough coverage that you could confidently write a
             plain-prose description of what a viewer sees during the
             cut, including any visual beat that isn't spoken. The
             goal is understanding, not thoroughness for its own sake.
-          - Sample MORE frames when the shot is action-heavy, changes
+          - Because each file already spans {window_seconds} seconds at
+            one-frame-per-second granularity, ONE composite is often
+            enough for a short, self-contained beat, and a handful of
+            adjacent composites will typically cover any candidate
+            cut end-to-end.
+          - Sample MORE windows when the shot is action-heavy, changes
             location, has visual gags / reactions the transcript
             won't capture, or when the transcript for that stretch is
             ambiguous ("…", pronouns without antecedents, sudden
             topic jumps).
-          - Sample FEWER frames when the shot is a static talking
+          - Sample FEWER windows when the shot is a static talking
             head and the transcript already describes the content
-            well. In that case one or two composite frames may be
-            enough to confirm the setting.
+            well. In that case one composite may be enough to confirm
+            the setting.
           - If after your first pass over a candidate you still don't
-            understand what is happening, open MORE frames for the
+            understand what is happening, open MORE windows for the
             SAME candidate (still in ascending order) rather than
             wandering off into other parts of the video. It is fine
             and expected to re-visit a candidate until the story of
             that specific segment is clear.
-          - Do NOT open frames outside your candidate ranges to
-            "see what's there". Every frame you open must be tied to
+          - Do NOT open windows outside your candidate ranges to
+            "see what's there". Every image you open must be tied to
             a specific candidate you are actively evaluating.
 
 STEP 5. Assemble cuts.
@@ -314,6 +390,10 @@ STEP 5. Assemble cuts.
         - Target the sum of (end - start) across all cuts at roughly
           {target_duration} seconds. It does NOT need to be exact — prefer
           slightly longer or shorter if the engagement is better.
+        - `start_seconds` and `end_seconds` are still expressed in
+          SOURCE-VIDEO seconds (integers, second-precision) — they are
+          independent of the {window_seconds}-second screenshot cadence
+          and do NOT need to align with window boundaries.
         - For each cut, write a `raw_narration` field: a plain,
           matter-of-fact description of WHAT HAPPENS in that segment,
           the way a viewer who can see the screen would describe it to
@@ -374,15 +454,42 @@ def main() -> None:
     ap.add_argument("output_txt")
     ap.add_argument("--target-duration", type=int, default=120)
     ap.add_argument("--job-id", default="(unknown)")
+    ap.add_argument(
+        "--window-seconds",
+        type=int,
+        default=6,
+        help="Seconds of source video covered by each composite JPEG "
+             "(must match the ffmpeg extraction step in stage-a.yml).",
+    )
     args = ap.parse_args()
 
-    last_frame = max(args.total_frames - 1, 0)
+    window_seconds = max(int(args.window_seconds), 1)
+    total_frames = max(int(args.total_frames), 0)
+    # Window-start second of the LAST composite file. If there are N
+    # composites they cover windows starting at 0, W, 2W, ..., (N-1)*W.
+    last_window_start = max(total_frames - 1, 0) * window_seconds
+
+    # Worked example used inside the prompt so the agent can see the
+    # arithmetic once. T = 272s (about 4m32s) is the example from the
+    # existing prompt; we reuse it here.
+    example_t = 272
+    example_div = example_t // window_seconds
+    example_window = example_div * window_seconds
+    example_window_end = example_window + window_seconds
+
     content = TEMPLATE.format(
         job_id=args.job_id,
         duration_seconds=args.duration_seconds,
         duration_hms=hms(args.duration_seconds),
-        last_frame=last_frame,
+        total_frames=total_frames,
+        window_seconds=window_seconds,
+        two_windows=window_seconds * 2,
+        three_windows=window_seconds * 3,
+        last_window_start=last_window_start,
         target_duration=args.target_duration,
+        example_div=example_div,
+        example_window=example_window,
+        example_window_end=example_window_end,
     )
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output_txt)) or ".", exist_ok=True)
