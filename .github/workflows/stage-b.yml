@@ -187,6 +187,30 @@ jobs:
             "work/out/output.txt"
           ls -lh work/out/
 
+      - name: Validate final MP4 with ffprobe
+        shell: bash
+        run: |
+          set -euo pipefail
+          FINAL="work/out/${{ steps.jid.outputs.job_id }}.mp4"
+          echo "=== ffprobe: format info ==="
+          ffprobe -v info "$FINAL"
+          echo ""
+          echo "=== MP4 signature check ==="
+          python3 -c "
+          import sys
+          with open('$FINAL', 'rb') as f:
+              sig = f.read(12)
+          if sig[4:8] != b'ftyp':
+              print('FAIL: output is NOT a valid MP4 (missing ftyp box)', file=sys.stderr)
+              sys.exit(1)
+          print('PASS: output has valid MP4 ftyp signature')
+          "
+          echo ""
+          echo "=== ffprobe: stream summary ==="
+          ffprobe -v error -show_entries "stream=codec_type,codec_name,width,height" \
+            -of default=noprint_wrappers=1 \
+            "$FINAL"
+
       - name: Zip final artifacts
         shell: bash
         run: |
