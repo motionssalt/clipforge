@@ -20,28 +20,28 @@ import textwrap
 
 TEMPLATE = """\
 ================================================================================
-  READ THIS FIRST — Anime episode cut-selection instructions for the AI agent
+  READ THIS FIRST — Source-video cut-selection instructions for the AI agent
 ================================================================================
 
 You have been given three artifacts from a Stage A run of the ClipForge
 pipeline:
 
-  1. transcript.json      — timestamped transcript of the episode's audio
+  1. transcript.json      — timestamped transcript of the video's audio
   2. screenshots/*.jpg    — one screenshot per second of the (compressed)
-                            episode video
+                            source video
   3. This file            — your instructions
 
-Your job: choose the most engaging moments from this episode and output a
+Your job: choose the most engaging moments from this video and output a
 `cuts.json` file (schema at the bottom of this document) that ClipForge's
 Stage B will use to slice the ORIGINAL full-quality video and stitch a
 short-form commentary base.
 
 --------------------------------------------------------------------------------
-EPISODE METADATA (substituted by Stage A)
+VIDEO METADATA (substituted by Stage A)
 --------------------------------------------------------------------------------
 
   Job ID:                  {job_id}
-  Full episode duration:   {duration_seconds} seconds ({duration_hms})
+  Full video duration:     {duration_seconds} seconds ({duration_hms})
   Screenshots available:   frame_00000.jpg .. frame_{last_frame:05d}.jpg
                            (one frame per second, zero-padded 5-digit index
                             of seconds-since-start)
@@ -62,15 +62,16 @@ STEP 2. Identify candidate ranges purely from the transcript text.
         Prioritize:
           - Emotional peaks (shouting, whispered reveals, laughter, silence
             between heavy lines)
-          - Plot beats (a character learning something, a betrayal, a
-            confrontation, a decision)
-          - Character-defining lines (memorable quotes, callbacks, threats)
-          - Fight/action beats where dialogue signals impact
+          - Key beats (someone learning something, a reveal, a confrontation,
+            a decision, a turning point)
+          - Defining lines (memorable quotes, callbacks, strong claims)
+          - Action beats where dialogue or sound signals impact
           - Cliffhanger-style openings or endings
         Skip:
           - Long silent expositional stretches
           - Recap/preview sections
-          - OP/ED songs if the transcript makes them obvious
+          - Intro/outro songs or credit sequences if the transcript makes
+            them obvious
 
 STEP 3. DO NOT browse the screenshots folder wholesale. Do not list-dir
         or scan-all it. Vision tokens are expensive.
@@ -120,13 +121,13 @@ OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
 
 CONSTRAINTS
   - `start_seconds` and `end_seconds` are integers, in seconds since the
-    start of the episode. `end_seconds > start_seconds`. Both must lie
+    start of the video. `end_seconds > start_seconds`. Both must lie
     within [0, {duration_seconds}].
   - Cuts MUST NOT overlap.
   - Cuts MUST be sorted ascending by `start_seconds`.
   - `raw_narration` is plain prose. No markdown, no timestamps inside it,
-    no character-name guessing when unsure — use descriptive tags like
-    "the researcher" if unclear.
+    no name guessing when unsure — use clear descriptive tags like
+    "the researcher" or "the host" if unclear.
   - Return ONLY the JSON, no surrounding prose, no code fences. It will
     be uploaded verbatim to ClipForge Stage B.
 
