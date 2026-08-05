@@ -61,6 +61,46 @@ actions, reactions, expressions, visual gags, scene changes — not just
 paraphrase the dialogue. The transcript alone is almost never enough for
 this; the screenshots are how you actually see the video.
 
+CRITICAL WORKING ORDER (read this before doing anything else):
+
+  1. FIRST, read transcript.json end-to-end and reconstruct the story
+     from the dialogue alone. Do not open any screenshots yet. Write
+     down (mentally or in a scratch buffer) what the video appears to
+     be about, who the recurring speakers/entities seem to be (using
+     descriptive tags like "the narrator", "the woman", "the enemy"
+     since the transcript has no speaker labels), and where the beats
+     and turning points sit on the timeline.
+
+  2. THEN, using that story map, pick the candidate cut ranges you
+     think will make the final short. At this point you already know
+     roughly what each candidate is about from the transcript.
+
+  3. ONLY THEN start opening screenshots — and only for the candidate
+     ranges you actually plan to keep, plus any transcript stretch
+     that is genuinely ambiguous or visually-driven (silent action,
+     unclear referent, on-screen text, a beat that must exist visually
+     but the transcript is silent on). Do not preemptively sample
+     frames across the whole video "just to see". The images exist to
+     fill in what the transcript cannot tell you, not to replace
+     reading it.
+
+  4. When you DO open screenshots, open them in CHRONOLOGICAL (canonical)
+     order — ascending by frame index. Never jump around out of order
+     (e.g. frame_00042 → frame_00891 → frame_00312). Within a single
+     candidate range, view its frames from earliest second to latest
+     second, in order. Across the whole video, work through your
+     candidates in the order they occur, not in the order they
+     occurred to you. Chronological viewing is how the visual story
+     actually unfolds — viewing frames out of order fragments
+     comprehension and is the main reason cuts come out inaccurate.
+
+  5. If, after viewing a candidate's frames, you still don't understand
+     what is happening, it is fine to fetch MORE frames for that same
+     range — still in chronological order — until you do. But do not
+     fetch frames from unrelated parts of the video just because they
+     are there. Every frame you open should have a specific reason
+     tied to a specific candidate cut.
+
 --------------------------------------------------------------------------------
 VIDEO METADATA (substituted by Stage A)
 --------------------------------------------------------------------------------
@@ -154,41 +194,62 @@ STEP 1. Extract screenshots.zip into a local `screenshots/` directory.
         tokens are spent. You now have random-access to individual
         frames by filename for the rest of the workflow.
 
-STEP 2. Read transcript.json.
-        Look at the `segments` array. Each segment has `start`, `end`,
-        and `text`. Use the transcript to get an initial map of what
-        the video is roughly about and where the beats are.
+STEP 2. Read transcript.json in full and understand the story from the
+        transcript alone, BEFORE opening any images.
+        Look at the `segments` array — each segment has `start`, `end`,
+        and `text`. Read them in order, top to bottom, and build a
+        mental model of the video:
+          - What is the video roughly about?
+          - Who are the recurring speakers/entities? (The transcript
+            has no speaker labels — you cannot know who is talking
+            just from the text. That is expected and fine at this
+            stage; use descriptive tags like "the narrator", "the
+            woman", "the enemy", "the researcher" and move on. Do
+            not open screenshots yet trying to attach names.)
+          - Where are the beats, turns, reveals, and the ending?
+          - Which stretches sound like the good parts, and which
+            stretches sound like filler / recap / intro / outro?
 
-STEP 3. Identify candidate ranges from the transcript AND from a first
-        pass over the visuals.
+        The output of this step is your story map. You do NOT need
+        images for this step. Opening screenshots here is premature
+        and wasteful — do not do it.
+
+STEP 3. Using the story map from Step 2, pick candidate cut ranges
+        from the transcript alone.
         Prioritize:
           - Emotional peaks (shouting, whispered reveals, laughter,
             silence between heavy lines, visible strong reactions)
           - Key beats (someone learning something, a reveal, a
-            confrontation, a decision, a turning point — spoken OR
-            purely visual)
+            confrontation, a decision, a turning point)
           - Defining lines (memorable quotes, callbacks, strong claims)
-          - Action beats and visual gags — physical action, a stunt, a
-            prop reveal, a facial reaction, on-screen text — that the
-            transcript may not mention at all
           - Cliffhanger-style openings or endings
+          - Transcript stretches that clearly reference visual events
+            you cannot infer from the words alone ("look at that",
+            "he grabs it", a sudden change of subject, an unresolved
+            "…") — these are the ones the images will need to
+            disambiguate in Step 4.
         Skip:
-          - Long silent expositional stretches with no visual payoff
+          - Long silent expositional stretches with no clear payoff
           - Recap/preview sections
-          - Intro/outro songs or credit sequences if the transcript
-            or a quick frame check makes them obvious
+          - Intro/outro songs or credit sequences
 
-        To catch visual-only beats that the transcript is silent on,
-        it's fine to sample frames at a coarse interval across the
-        whole video (for example every ~20-30 seconds) as a first pass,
-        then zoom in on the segments that actually look interesting.
-        That coarse pass is deliberate sampling, not bulk-viewing every
-        frame.
+        Do NOT do a coarse pre-scan of frames across the whole video
+        looking for visual-only beats. That approach spends vision on
+        parts of the video you have already decided are filler and
+        misses the point of Step 2. If the transcript does not point
+        at a candidate, do not go hunting for one in the frames.
 
-STEP 4. For each candidate range you plan to keep, VIEW enough
-        screenshots to actually understand what is visually happening
-        across that range — not just one frame to "confirm" the
-        transcript. Filename convention:
+        (Exception: if the entire video has essentially no useful
+        transcript — e.g. a mostly-silent action video — say so
+        explicitly to yourself and then, and only then, fall back to a
+        deliberate chronological sweep of frames as your primary
+        source. This should be rare.)
+
+STEP 4. For each candidate range from Step 3, open its screenshots
+        IN CHRONOLOGICAL ORDER to fill in what the transcript cannot
+        tell you.
+
+        Frame filename convention:
 
             frame_<seconds-since-start>.jpg    (zero-padded to 5 digits)
 
@@ -197,26 +258,52 @@ STEP 4. For each candidate range you plan to keep, VIEW enough
         each file is a 3x2 grid (6 panels, read left-to-right then
         top-to-bottom) covering that one second, so opening a single
         file already gives you 6 sample points within that second.
-        For a candidate cut from 142s to 168s,
-        view a spread of these composite files across that range
-        (e.g. the start, several points in the middle where the action
-        changes, and the end) so you can see how the scene evolves
-        across seconds — a reaction shot, a prop entering frame, a
-        cut to a new location, etc.
 
-        Guidance on how many frames to view:
+        VIEWING ORDER — this is a hard rule, not a suggestion:
+
+          - Within a single candidate range, open frames in ASCENDING
+            frame-index order (canonical / chronological). For a
+            candidate from 142s to 168s, view frame_00142.jpg, then
+            some frames in the middle in ascending order (e.g.
+            frame_00150, frame_00158), then frame_00168.jpg. Never
+            jump around inside the range out of order.
+          - Across candidates, work through them in the order they
+            occur in the video (earliest start_seconds first), not in
+            the order they occurred to you. Finish looking at one
+            candidate before moving to the next.
+          - Do NOT interleave frames from unrelated parts of the
+            video (e.g. frame_00042 → frame_00891 → frame_00312).
+            Out-of-order frame viewing is the single biggest cause
+            of inaccurate raw_narration — the visual story stops
+            making sense when you hop around.
+          - If you realize mid-way that you need a frame from an
+            EARLIER candidate you already left, you may go back, but
+            still view that earlier candidate's remaining frames in
+            ascending order before returning to where you were.
+
+        How many frames to open per candidate:
           - Aim for enough coverage that you could confidently write a
             plain-prose description of what a viewer sees during the
-            cut, including any visual beat that isn't spoken.
+            cut, including any visual beat that isn't spoken. The
+            goal is understanding, not thoroughness for its own sake.
           - Sample MORE frames when the shot is action-heavy, changes
-            location, or clearly has visual gags / reactions that the
-            transcript won't capture.
-          - Sample FEWER frames when the shot is a static talking head
-            and the transcript already describes the content well.
-          - The rule is "look at enough to describe it honestly", not
-            "look at as few as possible". The only hard limit is: do
-            not indiscriminately dump every frame of the video into
-            vision — be intentional about which frames and why.
+            location, has visual gags / reactions the transcript
+            won't capture, or when the transcript for that stretch is
+            ambiguous ("…", pronouns without antecedents, sudden
+            topic jumps).
+          - Sample FEWER frames when the shot is a static talking
+            head and the transcript already describes the content
+            well. In that case one or two composite frames may be
+            enough to confirm the setting.
+          - If after your first pass over a candidate you still don't
+            understand what is happening, open MORE frames for the
+            SAME candidate (still in ascending order) rather than
+            wandering off into other parts of the video. It is fine
+            and expected to re-visit a candidate until the story of
+            that specific segment is clear.
+          - Do NOT open frames outside your candidate ranges to
+            "see what's there". Every frame you open must be tied to
+            a specific candidate you are actively evaluating.
 
 STEP 5. Assemble cuts.
 
