@@ -1,0 +1,26 @@
+{
+  "video_duration_seconds": 81,
+  "cuts": [
+    {
+      "start_seconds": 11,
+      "end_seconds": 20,
+      "raw_narration": "A man stands on a red circular stage with blue lighting behind him and opens with a bold provocation, telling the audience he does not care what they think of his talk, then immediately pivots to questioning whether he should care what the internet thinks."
+    },
+    {
+      "start_seconds": 21,
+      "end_seconds": 33,
+      "raw_narration": "The speaker explains why the internet audience matters, saying they are the ones who get content seen and shared. He contrasts talking to a live audience here versus talking to a random person scrolling Facebook, gesturing emphatically toward the crowd."
+    },
+    {
+      "start_seconds": 35,
+      "end_seconds": 45,
+      "raw_narration": "The speaker jokes about how in 2009 people had attention spans, then dramatically declares they are gone, killed, dead, spreading his arms wide in a theatrical gesture as the audience laughs."
+    },
+    {
+      "start_seconds": 52,
+      "end_seconds": 67,
+      "raw_narration": "The speaker says if you get a TED talk keep it quick, then reveals he is doing his in under a minute and is at 44 seconds, so he has time for one final joke. He asks why balloons are so expensive, then delivers the punchline: inflation, pointing to both sides of the audience with big comedic body language."
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
