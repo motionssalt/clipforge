@@ -3,8 +3,8 @@ name: Stage A — Ingest, Transcribe, Screenshot
 on:
   workflow_dispatch:
     inputs:
-      drive_link:
-        description: "Public Google Drive link to the episode video (mkv/mp4)"
+      video_url:
+        description: "Public video URL — Google Drive share link or any direct video file URL (mkv/mp4)"
         required: true
         type: string
       job_id:
@@ -90,7 +90,7 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_a_running" \
-            --message "Downloading source video from Drive" \
+            --message "Downloading source video" \
             --release-tag "${{ steps.jid.outputs.release_tag }}"
 
       - name: Commit initial status
@@ -105,14 +105,14 @@ jobs:
           git commit -m "clipforge: init job ${{ steps.jid.outputs.job_id }}" || echo "nothing to commit"
           git push || echo "push failed (non-fatal for run)"
 
-      - name: Download video from Google Drive
+      - name: Download source video (Google Drive link or any direct URL)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p work
-          python scripts/download_drive.py "${{ github.event.inputs.drive_link }}" work/source_input.bin
+          python scripts/download_drive.py "${{ github.event.inputs.video_url }}" work/source_input.bin
 
-          # Detect real container from bytes (drive may lie about extension).
+          # Detect real container from bytes (the host may lie about extension).
           mime="$(file -b --mime-type work/source_input.bin || true)"
           echo "Detected mime: $mime"
           case "$mime" in
@@ -256,6 +256,8 @@ jobs:
           echo "$json" | python -c '
           import json, os, sys
           data = json.load(sys.stdin)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("release_url=" + data.get("html_url", "") + "\n")
           out = {}
           for a in data.get("assets", []):
               out[a["name"]] = a["browser_download_url"]
@@ -272,8 +274,9 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "awaiting_json_upload" \
-            --message "Stage A complete. Upload cuts.json to start Stage B." \
+            --message "Stage A complete. Open the Release, hand it to your agent, then upload cuts.json to start Stage B." \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --release-url "${{ steps.assets.outputs.release_url }}" \
             --extra "duration_seconds=${DURATION_SECONDS}" \
             --extra "screenshot_count=${SCREENSHOT_COUNT}" \
             --extra "original_asset_name=${ORIGINAL_ASSET_NAME}"
