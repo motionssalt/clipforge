@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
 """
-Download a public Google Drive file to a local path.
+Download a video file to a local path from either:
 
-Handles the standard public-share URL shapes:
-  - https://drive.google.com/file/d/<FILE_ID>/view?usp=sharing
-  - https://drive.google.com/open?id=<FILE_ID>
-  - https://drive.google.com/uc?id=<FILE_ID>&export=download
-  - Raw file id
-  - Any URL containing id=<FILE_ID>
+  A) A public Google Drive share link / file id, e.g.:
+       - https://drive.google.com/file/d/<FILE_ID>/view?usp=sharing
+       - https://drive.google.com/open?id=<FILE_ID>
+       - https://drive.google.com/uc?id=<FILE_ID>&export=download
+       - Raw file id
+       - Any URL containing id=<FILE_ID>
 
-Handles the "confirm token" interstitial that Drive shows for large files
-by re-issuing the request with the confirmation cookie/token.
+     Drive inputs keep the original behavior: the file id is extracted and
+     downloaded via Drive's uc?export=download endpoint, including the
+     "confirm token" interstitial that Drive shows for large files.
+
+  B) ANY other direct download URL (raw GitHub file URL, a plain
+     .mp4/.mkv/.webm link on any host, etc.). Non-Drive input is treated
+     as a direct URL and streamed as-is — no Drive-only restriction.
+
+Basic validation is kept for genuinely undownloadable input: HTTP errors
+(404 etc.) fail loudly, and an HTML/error-page response instead of actual
+file bytes is rejected (the caller separately verifies the bytes are a
+video container).
 
 Usage:
-    python download_drive.py <drive_link_or_id> <output_path>
+    python download_drive.py <drive_link_or_id_or_direct_url> <output_path>
 """
 import os
 import re
@@ -25,9 +35,12 @@ import requests
 
 
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
+REQUEST_TIMEOUT = (30, 60)  # (connect, read) seconds
 
 
 def extract_file_id(link: str) -> str:
+    """Return the Drive file id if `link` is a recognizable Drive link / id,
+    else raise ValueError."""
     link = link.strip()
     if not link:
         raise ValueError("Empty drive link")
@@ -54,7 +67,38 @@ def extract_file_id(link: str) -> str:
     raise ValueError(f"Could not extract Google Drive file id from: {link}")
 
 
+def _stream_to_file(resp, output_path: str, label: str) -> None:
+    """Stream an open requests response to disk with progress logging."""
+    total = int(resp.headers.get("Content-Length", 0))
+    ct = resp.headers.get("Content-Type", "")
+    print(f"Downloading {label} content-type={ct} size={total} bytes", flush=True)
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)) or ".", exist_ok=True)
+    written = 0
+    last_report = time.time()
+    with open(output_path, "wb") as f:
+        for chunk in resp.iter_content(CHUNK_SIZE):
+            if not chunk:
+                continue
+            f.write(chunk)
+            written += len(chunk)
+            now = time.time()
+            if now - last_report >= 5:
+                if total:
+                    pct = written * 100.0 / total
+                    print(f"  ...{written / 1e6:.1f} MB / {total / 1e6:.1f} MB ({pct:.1f}%)", flush=True)
+                else:
+                    print(f"  ...{written / 1e6:.1f} MB", flush=True)
+                last_report = now
+
+    if written == 0:
+        raise RuntimeError("Downloaded 0 bytes — download failed.")
+
+    print(f"Done. Wrote {written} bytes to {output_path}", flush=True)
+
+
 def download(file_id: str, output_path: str) -> None:
+    """Google Drive download flow (file id + confirm-token handling)."""
     base_url = "https://docs.google.com/uc?export=download"
     session = requests.Session()
 
@@ -100,36 +144,45 @@ def download(file_id: str, output_path: str) -> None:
                 "publicly shared, may require sign-in, or the file is too large / rate limited."
             )
 
-    total = int(resp.headers.get("Content-Length", 0))
-    print(f"Downloading file id={file_id} content-type={ct} size={total} bytes", flush=True)
+    _stream_to_file(resp, output_path, f"file id={file_id}")
 
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)) or ".", exist_ok=True)
-    written = 0
-    last_report = time.time()
-    with open(output_path, "wb") as f:
-        for chunk in resp.iter_content(CHUNK_SIZE):
-            if not chunk:
-                continue
-            f.write(chunk)
-            written += len(chunk)
-            now = time.time()
-            if now - last_report >= 5:
-                if total:
-                    pct = written * 100.0 / total
-                    print(f"  ...{written / 1e6:.1f} MB / {total / 1e6:.1f} MB ({pct:.1f}%)", flush=True)
-                else:
-                    print(f"  ...{written / 1e6:.1f} MB", flush=True)
-                last_report = now
 
-    if written == 0:
-        raise RuntimeError("Downloaded 0 bytes — download failed.")
+def download_direct(url: str, output_path: str) -> None:
+    """Plain direct-URL download for any non-Drive link."""
+    session = requests.Session()
+    headers = {
+        # Some hosts reject the default python-requests UA.
+        "User-Agent": "Mozilla/5.0 (compatible; clipforge-downloader/1.0)",
+        "Accept": "*/*",
+    }
+    resp = session.get(url, headers=headers, stream=True, allow_redirects=True,
+                       timeout=REQUEST_TIMEOUT)
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as e:
+        raise RuntimeError(
+            f"Direct download failed: {url} returned HTTP "
+            f"{e.response.status_code if e.response is not None else 'error'} "
+            f"— check that the URL is correct and publicly accessible."
+        )
 
-    print(f"Done. Wrote {written} bytes to {output_path}", flush=True)
+    ct = resp.headers.get("Content-Type", "").lower()
+    # Reject obvious HTML/error pages — the URL did not resolve to a file.
+    # (Content type alone doesn't prove it's a video; the caller sniffs the
+    # actual bytes afterwards, so octet-stream / missing types are fine.)
+    if "text/html" in ct or ct.startswith("text/"):
+        raise RuntimeError(
+            f"The URL returned {ct or 'a text response'} instead of a file — "
+            "this does not look like a direct video download link."
+        )
+
+    _stream_to_file(resp, output_path, f"url={url}")
 
 
 def main() -> None:
     if len(sys.argv) != 3:
-        print("Usage: download_drive.py <drive_link_or_id> <output_path>", file=sys.stderr)
+        print("Usage: download_drive.py <drive_link_or_id_or_direct_url> <output_path>",
+              file=sys.stderr)
         sys.exit(2)
 
     raw = sys.argv[1]
@@ -139,9 +192,32 @@ def main() -> None:
     if "%" in raw and "http" in raw:
         raw = urllib.parse.unquote(raw)
 
-    file_id = extract_file_id(raw)
-    print(f"Extracted file id: {file_id}", flush=True)
-    download(file_id, out)
+    # Drive link / file id? Keep the original Drive behavior. Otherwise treat
+    # the input as a plain direct download URL.
+    file_id = None
+    try:
+        file_id = extract_file_id(raw)
+    except ValueError:
+        file_id = None
+
+    if file_id:
+        print(f"Detected Google Drive input. Extracted file id: {file_id}", flush=True)
+        download(file_id, out)
+        return
+
+    if raw.lower().startswith(("http://", "https://")):
+        print("Not a Google Drive link — treating as a direct download URL.", flush=True)
+        download_direct(raw, out)
+        return
+
+    # Neither a Drive link/id nor a usable URL — this is genuinely bad input.
+    print(
+        f"Could not handle input: {raw}\n"
+        "Provide a public Google Drive share link, a Drive file id, or a "
+        "direct http(s) URL to the video file.",
+        file=sys.stderr,
+    )
+    sys.exit(2)
 
 
 if __name__ == "__main__":
