@@ -5,6 +5,7 @@ Write / update jobs/<job-id>/status.json for a given job.
 Usage:
     python write_status.py <job-id> <stage> [--message MSG]
                            [--release-tag TAG]
+                           [--release-url URL]
                            [--asset name=url ...]
                            [--extra key=value ...]
                            [--out-dir jobs]
@@ -29,6 +30,7 @@ def main() -> None:
     ap.add_argument("stage")
     ap.add_argument("--message", default="")
     ap.add_argument("--release-tag", default="")
+    ap.add_argument("--release-url", default="")
     ap.add_argument("--asset", action="append", default=[], help="name=url")
     ap.add_argument("--extra", action="append", default=[], help="key=value")
     ap.add_argument("--out-dir", default="jobs")
@@ -67,6 +69,7 @@ def main() -> None:
         "stage": args.stage,
         "message": args.message,
         "release_tag": args.release_tag or prior.get("release_tag", ""),
+        "release_url": args.release_url or prior.get("release_url", ""),
         "assets": {**prior.get("assets", {}), **assets},
         "created_at_epoch": created_at,
         "updated_at_epoch": int(time.time()),
@@ -75,7 +78,7 @@ def main() -> None:
         **extra,
     }
     # Move any extra-only keys under 'extra' for cleanliness.
-    known = {"job_id", "stage", "message", "release_tag", "assets",
+    known = {"job_id", "stage", "message", "release_tag", "release_url", "assets",
              "created_at_epoch", "updated_at_epoch", "expires_at_epoch", "extra"}
     payload_extra = {k: v for k, v in payload.items() if k not in known}
     for k in list(payload_extra.keys()):
