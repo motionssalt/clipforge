@@ -208,9 +208,10 @@ jobs:
           # We upload the original alongside the analysis bundle in the same
           # release, but under a distinct filename. Stage B fetches it back.
           orig_name="original$(echo "$ORIGINAL_PATH" | sed 's/.*\././')"
-          cp "$ORIGINAL_PATH" "work/$orig_name"
+          mkdir -p work/stash
+          cp "$ORIGINAL_PATH" "work/stash/$orig_name"
           echo "ORIGINAL_ASSET_NAME=$orig_name" >> "$GITHUB_ENV"
-          ls -lh "work/$orig_name"
+          ls -lh "work/stash/$orig_name"
 
       - name: Create GitHub Release with analysis bundle
         id: rel
@@ -238,7 +239,7 @@ jobs:
             work/00_READ_THIS_FIRST.txt
             work/transcript.json
             work/screenshots.zip
-            work/${{ env.ORIGINAL_ASSET_NAME }}
+            work/stash/${{ env.ORIGINAL_ASSET_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
