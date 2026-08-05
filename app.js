@@ -29,8 +29,6 @@
   var POLL_SLOWDOWN_AFTER = 10 * 60 * 1000;
   var RUN_DISCOVERY_TIMEOUT = 30000;
 
-  var READ_FIRST = '00_READ_THIS_FIRST.txt';
-
   /* ------------------------------------------------------------------- state */
 
   var state = {
@@ -69,7 +67,7 @@
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
     'status-section', 'stage-badge', 'expiry-countdown', 'stage-line', 'stage-spinner', 'stage-text',
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
-    'handoff-block', 'read-first-callout', 'read-first-link', 'release-tag-line', 'asset-list',
+    'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation',
     'complete-block', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
@@ -386,15 +384,15 @@
       return;
     }
 
-    var driveLink = el['drive-link-input'].value.trim();
-    if (!driveLink) {
-      setMsg(el['stage-a-msg'], 'A Google Drive link is required.', 'bad');
+    var videoUrl = el['drive-link-input'].value.trim();
+    if (!videoUrl) {
+      setMsg(el['stage-a-msg'], 'A video URL is required.', 'bad');
       return;
     }
 
     var slug = el['job-slug-input'].value.trim();
     var inputs = {
-      drive_link: driveLink,
+      video_url: videoUrl,
       job_id: slug,
       whisper_model: el['whisper-model-select'].value,
       language: el['language-input'].value.trim() || 'auto'
@@ -797,6 +795,7 @@
     var rows = [];
     if (s.job_id) rows.push(['job_id', s.job_id]);
     if (s.release_tag) rows.push(['release_tag', s.release_tag]);
+    if (s.release_url) rows.push(['release_url', s.release_url]);
     if (s.created_at_epoch) rows.push(['created', fmtEpoch(s.created_at_epoch)]);
     if (s.updated_at_epoch) rows.push(['updated', fmtEpoch(s.updated_at_epoch)]);
     if (s.expires_at_epoch) rows.push(['expires', fmtEpoch(s.expires_at_epoch)]);
@@ -830,96 +829,39 @@
 
   /* ------------------------------------------------------------------ assets */
 
-  function assetEntries(s) {
-    var assets = (s && s.assets && typeof s.assets === 'object') ? s.assets : {};
-    var keys = Object.keys(assets).filter(function (k) { return !!assets[k]; });
-
-    // READ_THIS_FIRST first; final_zip last; everything else in between.
-    keys.sort(function (a, b) {
-      var rank = function (k) {
-        if (k === READ_FIRST) return 0;
-        if (k === 'final_zip') return 2;
-        return 1;
-      };
-      var d = rank(a) - rank(b);
-      return d !== 0 ? d : a.localeCompare(b);
-    });
-
-    return keys.map(function (k) { return { key: k, url: assets[k] }; });
+  /** The single Release page URL the UI surfaces after Stage A. */
+  function releasePageUrl(s) {
+    if (s && typeof s.release_url === 'string' && /^https?:\/\//.test(s.release_url)) {
+      return s.release_url;
+    }
+    if (s && s.release_tag) {
+      return 'https://github.com/' + state.owner + '/' + state.repo +
+        '/releases/tag/' + s.release_tag;
+    }
+    return '';
   }
 
   function renderAssets(s) {
-    var entries = assetEntries(s);
+    var url = releasePageUrl(s);
 
-    text(el['release-tag-line'], s.release_tag
-      ? 'Release tag: ' + s.release_tag
-      : 'Release tag unknown — assets listed from status.json.');
-
-    // READ THIS FIRST callout.
-    var readFirst = entries.filter(function (e) { return e.key === READ_FIRST; })[0];
-    if (readFirst) {
-      el['read-first-link'].href = readFirst.url;
-      el['read-first-link'].onclick = makeDownloadHandler(READ_FIRST, readFirst.url);
-      show(el['read-first-callout']);
+    if (url) {
+      el['release-url-link'].href = url;
+      text(el['release-url-text'], url);
     } else {
-      hide(el['read-first-callout']);
+      el['release-url-link'].removeAttribute('href');
+      text(el['release-url-text'],
+        'Release URL not yet available — check the Releases page of the repo.');
     }
 
-    el['asset-list'].innerHTML = '';
-    if (!entries.length) {
-      var li = document.createElement('li');
-      li.className = 'asset-item';
-      li.innerHTML = '<span class="asset-name">No assets listed in status.json.</span>';
-      el['asset-list'].appendChild(li);
-      // Backup path: read the release by tag.
-      if (s.release_tag) loadReleaseAssets(s.release_tag, true);
-      return;
-    }
-
-    entries.forEach(function (entry) {
-      el['asset-list'].appendChild(assetListItem(entry.key, entry.url));
-    });
+    text(el['release-tag-line'], s.release_tag ? 'Release tag: ' + s.release_tag : '');
 
     // Warm the release-asset id cache so private-repo downloads work.
     if (s.release_tag) loadReleaseAssets(s.release_tag, false);
   }
 
-  function assetListItem(name, url) {
-    var li = document.createElement('li');
-    li.className = 'asset-item' + (name === READ_FIRST ? ' is-primary' : '');
-
-    var nameSpan = document.createElement('span');
-    nameSpan.className = 'asset-name';
-    nameSpan.textContent = name === 'final_zip' ? 'final zip' : name;
-    li.appendChild(nameSpan);
-
-    if (name === READ_FIRST) {
-      var note = document.createElement('span');
-      note.className = 'asset-note';
-      note.textContent = 'read this first';
-      li.appendChild(note);
-    }
-
-    var actions = document.createElement('div');
-    actions.className = 'asset-actions';
-    var a = document.createElement('a');
-    a.className = 'btn btn-small' + (name === READ_FIRST ? ' btn-accent' : '');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.textContent = 'Download';
-    a.onclick = makeDownloadHandler(name, url);
-    actions.appendChild(a);
-    li.appendChild(actions);
-    return li;
-  }
-
-  /** Backup asset lookup (§6.4) — also gives us asset ids for private repos. */
+  /** Release-asset lookup — gives us asset ids for private-repo downloads. */
   async function loadReleaseAssets(tag, renderInto) {
-    if (state.releaseAssetsTag === tag && state.releaseAssets) {
-      if (renderInto) renderAssetsFromRelease();
-      return;
-    }
+    if (state.releaseAssetsTag === tag && state.releaseAssets) return;
     try {
       var rel = await gh('/repos/' + state.owner + '/' + state.repo +
         '/releases/tags/' + encodeURIComponent(tag));
@@ -927,29 +869,9 @@
         return { name: a.name, id: a.id, url: a.browser_download_url, size: a.size };
       });
       state.releaseAssetsTag = tag;
-      if (renderInto) renderAssetsFromRelease();
     } catch (err) {
       if (err.name === 'AuthError') handleGlobalError(err);
-      // Otherwise silent: status.json URLs are the primary path.
-    }
-  }
-
-  function renderAssetsFromRelease() {
-    if (!state.releaseAssets || !state.releaseAssets.length) return;
-    var sorted = state.releaseAssets.slice().sort(function (a, b) {
-      var rank = function (n) { return n === READ_FIRST ? 0 : 1; };
-      var d = rank(a.name) - rank(b.name);
-      return d !== 0 ? d : a.name.localeCompare(b.name);
-    });
-    el['asset-list'].innerHTML = '';
-    sorted.forEach(function (a) {
-      el['asset-list'].appendChild(assetListItem(a.name, a.url));
-    });
-    var rf = sorted.filter(function (a) { return a.name === READ_FIRST; })[0];
-    if (rf) {
-      el['read-first-link'].href = rf.url;
-      el['read-first-link'].onclick = makeDownloadHandler(rf.name, rf.url);
-      show(el['read-first-callout']);
+      // Otherwise silent: the Release page link is the primary path.
     }
   }
 
