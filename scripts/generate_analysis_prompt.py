@@ -39,6 +39,13 @@ Your job: choose the most engaging moments from this video and output a
 Stage B will use to slice the ORIGINAL full-quality video and stitch a
 short-form commentary base.
 
+The narration ClipForge produces from your `raw_narration` field is meant
+to explain the video to someone who cannot see it. That means your
+`raw_narration` has to describe what is VISUALLY happening on screen —
+actions, reactions, expressions, visual gags, scene changes — not just
+paraphrase the dialogue. The transcript alone is almost never enough for
+this; the screenshots are how you actually see the video.
+
 --------------------------------------------------------------------------------
 VIDEO METADATA (substituted by Stage A)
 --------------------------------------------------------------------------------
@@ -65,31 +72,44 @@ transport efficiency. Treat it as a normal working input:
     a cheap local file operation — it does NOT consume vision tokens and
     does NOT count as "looking at" the images.
 
-  • What is expensive and what you should avoid is VIEWING / LOADING /
-    FEEDING-TO-VISION every image inside the archive. Bulk-viewing all
-    frames is what wastes tokens, not extracting them.
+  • What is expensive is VIEWING / LOADING / FEEDING-TO-VISION every
+    image inside the archive. The thing to avoid is indiscriminately
+    piping the entire folder (which can be hundreds or thousands of
+    near-identical frames) into your vision context in one shot. Do NOT
+    do that.
 
   • After extraction you will have a `screenshots/` directory full of
     JPEGs sitting on disk, untouched by any vision model. That is the
-    correct state. You will then OPEN (view) only a small handful of
-    specific frames whose filenames match timestamps you have already
-    identified as interesting from the transcript.
+    correct starting state. From there you will deliberately OPEN the
+    frames you actually need in order to understand the video — which
+    is more than a token handful, because the goal is genuinely
+    describing what happens on screen, not just spot-checking dialogue.
 
-  • Do NOT skip the screenshots entirely and rely on the transcript
-    alone. Selective visual confirmation of a few candidate moments is
-    part of the job — the transcript alone is not enough to catch
-    visual beats (reactions, on-screen text, action, framing changes).
+  • Do NOT rely on the transcript alone. In a lot of shorts the visuals
+    carry information that the transcript literally cannot: physical
+    actions, facial reactions, sight gags, on-screen text, cutaways,
+    and scene changes. If you only skim a couple of frames per cut you
+    will miss the actual story of the video. View enough frames to
+    reconstruct the visual sequence of events for each cut you plan to
+    keep.
 
 In short:
     Extract archive        →  ALWAYS do this. Cheap. Expected.
     List/scan the folder   →  fine (it's just filenames on disk).
     Load an image into
-      your vision context  →  do this SPARINGLY, only for specific
-                              timestamps you already care about.
-    Load every image       →  DON'T. This is the only thing to avoid.
+      your vision context  →  do this DELIBERATELY, as often as needed
+                              to actually understand what is happening
+                              visually in the segments you care about.
+                              Sample multiple frames per beat/scene, not
+                              just one, so you can see how the shot
+                              evolves.
+    Load every single
+      image in bulk        →  DON'T. Indiscriminately viewing every
+                              frame of a long video is the one thing to
+                              avoid. Be intentional, not exhaustive.
 
 --------------------------------------------------------------------------------
-HOW TO SELECT CUTS (follow this order to keep vision-token usage low)
+HOW TO SELECT CUTS AND DESCRIBE THEM
 --------------------------------------------------------------------------------
 
 STEP 1. Extract screenshots.zip into a local `screenshots/` directory.
@@ -99,40 +119,63 @@ STEP 1. Extract screenshots.zip into a local `screenshots/` directory.
 
 STEP 2. Read transcript.json.
         Look at the `segments` array. Each segment has `start`, `end`,
-        and `text`. Everything you need to identify interesting moments
-        is in the DIALOGUE, NARRATION, and TONAL SHIFTS in the transcript.
+        and `text`. Use the transcript to get an initial map of what
+        the video is roughly about and where the beats are.
 
-STEP 3. Identify candidate ranges purely from the transcript text.
+STEP 3. Identify candidate ranges from the transcript AND from a first
+        pass over the visuals.
         Prioritize:
           - Emotional peaks (shouting, whispered reveals, laughter,
-            silence between heavy lines)
+            silence between heavy lines, visible strong reactions)
           - Key beats (someone learning something, a reveal, a
-            confrontation, a decision, a turning point)
+            confrontation, a decision, a turning point — spoken OR
+            purely visual)
           - Defining lines (memorable quotes, callbacks, strong claims)
-          - Action beats where dialogue or sound signals impact
+          - Action beats and visual gags — physical action, a stunt, a
+            prop reveal, a facial reaction, on-screen text — that the
+            transcript may not mention at all
           - Cliffhanger-style openings or endings
         Skip:
-          - Long silent expositional stretches
+          - Long silent expositional stretches with no visual payoff
           - Recap/preview sections
           - Intro/outro songs or credit sequences if the transcript
-            makes them obvious
+            or a quick frame check makes them obvious
 
-STEP 4. For each candidate range, VIEW ONLY the specific screenshot(s)
-        whose filename matches the timestamp(s) you want to visually
-        confirm — never open the whole folder into vision. Filename
-        convention:
+        To catch visual-only beats that the transcript is silent on,
+        it's fine to sample frames at a coarse interval across the
+        whole video (for example every ~20-30 seconds) as a first pass,
+        then zoom in on the segments that actually look interesting.
+        That coarse pass is deliberate sampling, not bulk-viewing every
+        frame.
+
+STEP 4. For each candidate range you plan to keep, VIEW enough
+        screenshots to actually understand what is visually happening
+        across that range — not just one frame to "confirm" the
+        transcript. Filename convention:
 
             frame_<seconds-since-start>.jpg    (zero-padded to 5 digits)
 
         e.g. for a moment around 4 minutes 32 seconds in, that is
-        second 272, so view `screenshots/frame_00272.jpg`. To sanity-
-        check the middle of a candidate cut from 142s to 168s, sample
-        e.g. frame_00142.jpg, frame_00155.jpg, frame_00168.jpg — a
-        few frames, not the full folder.
+        second 272, so view `screenshots/frame_00272.jpg`. For a
+        candidate cut from 142s to 168s, view a spread of frames
+        across that range (e.g. the start, several points in the
+        middle where the action changes, and the end) so you can
+        actually see how the scene evolves — a reaction shot, a prop
+        entering frame, a cut to a new location, etc.
 
-        Rule of thumb: a handful of frames per candidate cut, not
-        dozens. If you're tempted to view more than ~5 frames for one
-        candidate, you're over-sampling.
+        Guidance on how many frames to view:
+          - Aim for enough coverage that you could confidently write a
+            plain-prose description of what a viewer sees during the
+            cut, including any visual beat that isn't spoken.
+          - Sample MORE frames when the shot is action-heavy, changes
+            location, or clearly has visual gags / reactions that the
+            transcript won't capture.
+          - Sample FEWER frames when the shot is a static talking head
+            and the transcript already describes the content well.
+          - The rule is "look at enough to describe it honestly", not
+            "look at as few as possible". The only hard limit is: do
+            not indiscriminately dump every frame of the video into
+            vision — be intentional about which frames and why.
 
 STEP 5. Assemble cuts.
 
@@ -143,11 +186,16 @@ STEP 5. Assemble cuts.
         - Target the sum of (end - start) across all cuts at roughly
           {target_duration} seconds. It does NOT need to be exact — prefer
           slightly longer or shorter if the engagement is better.
-        - For each cut, write a `raw_narration` field: a plain description
-          of what happens in that segment, written the way a viewer would
-          describe it while watching. Not a script, not stylized — just
-          the raw beats. This is what ClipForge feeds into the master
-          conversion prompt to produce the final commentary.
+        - For each cut, write a `raw_narration` field: a plain,
+          matter-of-fact description of WHAT HAPPENS in that segment,
+          the way a viewer who can see the screen would describe it to
+          someone who cannot. Cover the visual sequence of events
+          (actions, reactions, expressions, scene changes, on-screen
+          text, visual gags) as well as any essential dialogue, in
+          chronological order. Not a script, not stylized, not
+          dramatized — just the raw beats, in order. This is what
+          ClipForge feeds into the master conversion prompt to produce
+          the final commentary.
 
 --------------------------------------------------------------------------------
 OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
@@ -159,7 +207,7 @@ OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 168,
-      "raw_narration": "plain description of what happens in this segment, written the way a viewer would describe it while watching"
+      "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen"
     }}
     // ... more cuts, ordered chronologically ...
   ],
@@ -174,7 +222,8 @@ CONSTRAINTS
   - Cuts MUST be sorted ascending by `start_seconds`.
   - `raw_narration` is plain prose. No markdown, no timestamps inside it,
     no name guessing when unsure — use clear descriptive tags like
-    "the researcher" or "the host" if unclear.
+    "the researcher" or "the host" if unclear. Describe what is
+    visually happening, not just what is said.
   - Return ONLY the JSON, no surrounding prose, no code fences. It will
     be uploaded verbatim to ClipForge Stage B.
 
