@@ -1,25 +1,30 @@
 # ClipForge
 
-A personal, GitHub-only pipeline that turns a full anime episode into a
-short-form commentary clip. Static site on GitHub Pages drives GitHub
-Actions workflows; the repo (jobs folder + Releases) is the database.
-Single user, personal use, one repo, one personal access token.
+A personal, GitHub-only pipeline that turns any full-length source video
+into a short-form commentary clip. Static site on GitHub Pages drives
+GitHub Actions workflows; the repo (jobs folder + Releases) is the
+database. Single user, personal use, one repo, one personal access token.
 
 ## What it does
 
-1. You paste a Google Drive link to a full episode (mkv/mp4, ~300 MB+).
+1. You paste any public video URL — a Google Drive share link **or** a
+   direct download link to the video file (mkv/mp4, ~300 MB+) from any
+   host.
 2. **Stage A** downloads it, transcribes the audio locally with
    faster-whisper on CPU (no paid APIs), builds a compressed 720p copy,
    extracts 1 screenshot per second, and packages
    `00_READ_THIS_FIRST.txt` + `transcript.json` + `screenshots.zip` +
    the original video into a GitHub Release.
-3. You take `00_READ_THIS_FIRST.txt` + `transcript.json` + the
-   screenshots to an external AI agent. It returns a `cuts.json`.
+3. The site gives you **one link**: the GitHub Release page itself. Hand
+   that single URL to your external AI agent — it can read
+   `00_READ_THIS_FIRST.txt`, `transcript.json`, and the screenshots from
+   there in one step (no per-file download/upload roundtrip). The agent
+   returns a `cuts.json`.
 4. You upload `cuts.json` back through the site.
 5. **Stage B** cuts the ORIGINAL (full-quality) video at those
    timestamps with ffmpeg, concatenates the segments, and produces a
    final `.mp4` plus an `output.txt` (`MASTER_PROMPT.md` + raw
-   narration notes) zipped together.
+   narration notes) zipped together on the same Release.
 6. A **cleanup** workflow runs hourly and deletes every job, release
    and job folder older than 12 hours. Nothing lingers.
 
@@ -101,8 +106,10 @@ gaps. Commit the generated files at the repo root.
 ### 5. Open the site and go
 
 Visit the Pages URL, open Settings, paste owner + repo + token,
-save. Paste a Google Drive link. Click Start Stage A. Watch the
-status update; download `00_READ_THIS_FIRST.txt` first.
+save. Paste any public video URL (Google Drive share link or a direct
+video file link). Click Start Stage A. Watch the status update; when
+Stage A finishes, use the single **Open Release →** link and have your
+agent read `00_READ_THIS_FIRST.txt` from the Release first.
 
 ## The 12-hour cleanup
 
@@ -134,9 +141,9 @@ whether Stage B ever ran. Override the TTL via the workflow's
 - Default model is `base`. `small` is more accurate but ~3× slower.
   `tiny` is faster but noticeably worse. `large` is not offered —
   too slow on CPU.
-- Language defaults to `auto`. If your source is Japanese, pass `ja`
-  from the site's Start Stage A form to skip auto-detect and get a
-  small speedup.
+- Language defaults to `auto`. If you know the source video's language
+  (e.g. Japanese), pass the code (e.g. `ja`) from the site's Start Stage
+  A form to skip auto-detect and get a small speedup.
 - The transcription backend lives behind a small `Transcriber`
   interface in `scripts/transcribe.py`. To swap backends later,
   add a new class and change `build_default_transcriber` — the rest
