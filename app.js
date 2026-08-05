@@ -62,7 +62,7 @@
     'settings-section', 'settings-toggle', 'settings-body', 'settings-state', 'settings-form',
     'owner-input', 'repo-input', 'token-input', 'token-reveal', 'settings-save', 'settings-clear', 'settings-msg',
     'stage-a-section', 'stage-a-form', 'video-url-input', 'job-slug-input', 'whisper-model-select',
-    'language-input', 'start-stage-a', 'stage-a-msg',
+    'language-input', 'target-duration-select', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
     'status-section', 'stage-badge', 'expiry-countdown', 'stage-line', 'stage-spinner', 'stage-text',
@@ -391,11 +391,15 @@
     }
 
     var slug = el['job-slug-input'].value.trim();
+    var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
+    var targetDurInt = parseInt(targetDurRaw, 10);
+    if (!isFinite(targetDurInt) || targetDurInt <= 0) targetDurInt = 120;
     var inputs = {
       video_url: videoUrl,
       job_id: slug,
       whisper_model: el['whisper-model-select'].value,
-      language: el['language-input'].value.trim() || 'auto'
+      language: el['language-input'].value.trim() || 'auto',
+      target_duration_seconds: String(targetDurInt)
     };
 
     state.busy = true;
