@@ -1,0 +1,41 @@
+{
+  "video_duration_seconds": 1427,
+  "cuts": [
+    {
+      "start_seconds": 3,
+      "end_seconds": 14,
+      "raw_narration": "A menacing female voice declares from the dark that she has a duty to fulfill — she must give birth to the king. An ominous cold-open hook."
+    },
+    {
+      "start_seconds": 347,
+      "end_seconds": 365,
+      "raw_narration": "The hunters examine a recovered claw the size of a human finger. Computer analysis matched it 99 percent to a chimera ant queen, hinting at a giant, possibly mutated species."
+    },
+    {
+      "start_seconds": 693,
+      "end_seconds": 712,
+      "raw_narration": "The researchers explain phago-genesis: when the chimera ant queen eats other creatures, she absorbs their traits and passes a mix of those genes down to her offspring."
+    },
+    {
+      "start_seconds": 740,
+      "end_seconds": 774,
+      "raw_narration": "The queen hunts the strongest organisms and can devour her favorite prey to extinction, eating many times her body weight in a day. Judging by the claw she is at least two meters long — big enough to eat a human in seconds."
+    },
+    {
+      "start_seconds": 871,
+      "end_seconds": 887,
+      "raw_narration": "A quiet family moment: the mother praises nine-year-old Kurt as reliable and asks him to keep looking after his little sister Reina. Kurt promises he will keep both of them safe no matter what happens."
+    },
+    {
+      "start_seconds": 1057,
+      "end_seconds": 1072,
+      "raw_narration": "The queen savors new prey, moaning that it is delicious and the most nutritious fodder yet, and commands that she must consume more of this species — clearly humans."
+    },
+    {
+      "start_seconds": 1296,
+      "end_seconds": 1325,
+      "raw_narration": "The queen orders her newborn talking squadron leader to capture more of the highly nutritious humans. The narrator lands the reveal: a chimera ant has been born with human genes, and the researcher's worst fears have finally come to pass."
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
