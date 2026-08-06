@@ -92,8 +92,8 @@ Handle exactly these values:
 | `queued`                 | "Queued" |
 | `stage_a_running`        | "Stage A running — downloading, transcribing, extracting frames" + spinner + link to workflow run |
 | `awaiting_json_upload`   | Show a single prominent "Open Release →" link (the `release_url` from status.json — the Release page lists every asset in one place), plus a file input for `cuts.json` and a "Start Stage B" button. Do NOT render individual per-asset download links. |
-| `stage_b_running`        | "Stage B running — cutting and concatenating" + spinner |
-| `complete`               | Big "Download final zip" button pointing at `assets.final_zip` |
+| `stage_b_running`        | "Stage B running — cutting each segment into its own scene file" + spinner |
+| `complete`               | One download row per individual scene file on the Release (`scene_01.mp4`, `scene_02.mp4`, … — fetched via the release-asset lookup, § 6.4), PLUS a big "Download final zip" button pointing at `assets.final_zip` (the zip contains every scene + `output.txt`) |
 | `error`                  | Red banner with `message` field, plus a "Start over" button |
 
 Any unknown stage → render as `error` with the raw JSON dumped in a
@@ -142,8 +142,11 @@ Notes for the site:
   the Release page already lists every asset in one place.
 - `assets` keys are the literal asset filenames from the Release, plus
   a `final_zip` key added by Stage B. The site uses `assets.final_zip`
-  for the completion download button; the other keys are not rendered
-  as links anymore.
+  for the completion zip button. At `complete`, the site ALSO lists the
+  individual `scene_XX.mp4` files (Stage B attaches them to the Release
+  alongside the zip) as per-scene download links, discovered via the
+  release-asset lookup (§ 6.4). There is NO merged single video — never
+  present a lone video file as the only output.
 - `expires_at_epoch` is when the cleanup workflow will delete this job.
   Show a countdown ("expires in 11h 42m") once we reach
   `awaiting_json_upload` or later.
@@ -312,11 +315,15 @@ POST /repos/{owner}/{repo}/actions/workflows/stage-b.yml/dispatches
 Same 204-no-body response. Resume polling `status.json`. The stage
 will move through `stage_b_running` → `complete`.
 
-### 6.7 Download the final zip (stage == complete)
+### 6.7 Download the scenes / final zip (stage == complete)
 
-Read `status.data.assets.final_zip`. Present as a big download link.
-On private repos, download via the asset-id path (§ 6.4). On public
-repos, the direct URL works.
+Stage B ships one `scene_XX.mp4` per cut segment (NO merged video),
+each attached individually to the Release, plus `output.txt`, plus a
+final zip bundling all of them. Fetch the Release asset list (§ 6.4)
+and render one download link per `scene_XX.mp4` asset; then read
+`status.data.assets.final_zip` and present it as a big download link
+for the bundle. On private repos, download via the asset-id path
+(§ 6.4). On public repos, the direct URL works.
 
 ---
 
