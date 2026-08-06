@@ -2,8 +2,10 @@
 """
 Stage B core: read cuts.json, cut the ORIGINAL full-quality video at each
 range, concatenate the segments, write the final MP4, and produce
-output.txt = MASTER_PROMPT.md + separator + raw_narration fields
-concatenated in order.
+output.txt = MASTER_PROMPT.md + separator + raw_narration fields, clearly
+delimited and numbered per scene (SCENE i of N ... END SCENE i) with the
+total scene count stated in the header, so the downstream AI produces
+exactly one narration chunk per scene clip (strict 1:1 mapping).
 
 Uses ffmpeg (available on GitHub ubuntu-latest runners by default).
 
@@ -410,17 +412,47 @@ def main() -> None:
     # Validate the output is a genuine, mobile-safe MP4.
     validate_mp4(args.out_video_mp4)
 
+    # ---- output.txt: MASTER_PROMPT.md + per-scene labeled narrations ----
+    # The narration notes MUST be passed on with an explicit, numbered
+    # per-scene structure: the header states the exact TOTAL SCENES count,
+    # and each scene's raw narration is wrapped in "===== SCENE i of N
+    # (clip file: scene_XX.mp4) =====" / "===== END SCENE i ====="
+    # markers. Paired with MASTER_PROMPT.md's Step 2 contract (EXACTLY one
+    # chunk per scene, Scene N -> Chunk N, no scenes skipped/combined/
+    # split/dropped), this keeps the chunk count equal to the clip count.
     with open(args.master_prompt_md, "r", encoding="utf-8") as f:
         master_prompt = f.read()
 
-    narrations = []
-    for c in cuts:
+    scene_count = len(cuts)
+    sections = []
+    for i, c in enumerate(cuts):
         n = (c.get("raw_narration") or "").strip()
-        if n:
-            narrations.append(n)
+        if not n:
+            # Never drop a scene from the notes: emit an explicit
+            # placeholder so the chunk count still matches the clip count.
+            n = (
+                "[No raw narration was recorded for this scene. A narration "
+                "chunk for this scene is STILL REQUIRED so the output "
+                f"contains exactly {scene_count} chunks, one per scene.]"
+            )
+        sections.append(
+            f"===== SCENE {i + 1} of {scene_count} "
+            f"(clip file: scene_{i + 1:02d}.mp4) =====\n"
+            f"{n}\n"
+            f"===== END SCENE {i + 1} ====="
+        )
 
-    separator = "\n\n" + ("=" * 80) + "\n" + "RAW NARRATION NOTES (paste after the prompt above)\n" + ("=" * 80) + "\n\n"
-    combined_narration = "\n\n".join(narrations)
+    separator = (
+        "\n\n" + ("=" * 80) + "\n"
+        + f"RAW NARRATION NOTES — TOTAL SCENES: {scene_count}\n"
+        + "(one scene section per video clip, in playback order; Step 2 "
+          "must produce\n"
+        + f"EXACTLY {scene_count} narration chunks — one chunk per scene, "
+          "Scene N -> Chunk N,\n"
+        + "no scenes skipped, combined, split, or dropped)\n"
+        + ("=" * 80) + "\n\n"
+    )
+    combined_narration = "\n\n".join(sections)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out_text_path)) or ".", exist_ok=True)
     with open(args.out_text_path, "w", encoding="utf-8") as f:
