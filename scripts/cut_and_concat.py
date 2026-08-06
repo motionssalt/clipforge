@@ -35,6 +35,15 @@ The specific problems that path introduced:
      don't start at 0, tripping strict players (WhatsApp in particular
      refuses videos whose first PTS is not zero).
 
+  4. (Residual bug fixed in this version.) Even after re-encoding, an
+     embedded SUBTITLE/data track in the source leaked into the MP4 as a
+     third `bin_data`/`text` "SubtitleHandler" stream, and enabled
+     B-frames surfaced as `start_time=0.0667` / `has_b_frames=2`. Both
+     break phones AND strict PC players. Fix here mirrors cut_scenes.py:
+     `-bf 0` (no B-frames, PTS==DTS, start_time==0), drop `nal-hrd=cbr`
+     (invalid without VBV), strip global metadata/chapters, and add
+     `-sn -dn -ignore_unknown` so no subtitle/data track reaches the MP4.
+
 The fix: forget the branching. Do ONE ffmpeg pass that:
 
   - Uses the concat filter (not the concat demuxer) so cuts are joined
@@ -179,12 +188,16 @@ def cut_and_concat_single_pass(
         "-preset", X264_PRESET,
         "-crf", X264_CRF,
         "-pix_fmt", TARGET_PIX_FMT,
-        # Force a keyframe every 2s and disable open-GOP / scene-cut
-        # extras that some mobile decoders choke on.
+        # No B-frames -> PTS==DTS, start_time==0 (see module docstring).
+        "-bf", "0",
+        # Force a keyframe every 2s and disable scene-cut extras.
         "-g", str(TARGET_FPS * 2),
         "-keyint_min", str(TARGET_FPS * 2),
         "-sc_threshold", "0",
-        "-x264-params", "nal-hrd=cbr:force-cfr=1",
+        # force-cfr only; nal-hrd=cbr removed (invalid without VBV).
+        "-x264-params", "force-cfr=1",
+        # Pin a clean, phone-friendly video timebase.
+        "-video_track_timescale", "15360",
 
         # Audio: AAC-LC stereo 48 kHz 192 kbps — the phone-safe combo.
         "-c:a", "aac",
@@ -193,15 +206,14 @@ def cut_and_concat_single_pass(
         "-ar", AAC_SAMPLE_RATE,
         "-ac", AAC_CHANNELS,
 
-        # Container: MP4, faststart (moov at front), mp42 brand, no
-        # edit lists. `-movflags +faststart` moves the moov atom to
-        # the front so the file starts playing instantly on mobile
-        # / web. `use_metadata_tags` is harmless; the important
-        # flags are +faststart and -use_editlist 0. `-brand mp42`
-        # advertises the file as MP4 v2, which is what phones expect.
-        "-movflags", "+faststart+use_metadata_tags",
+        # Container: MP4, faststart (moov at front), mp42 brand, no edit
+        # lists. Strip global metadata + chapters; drop subtitle/data tracks.
+        "-movflags", "+faststart",
         "-use_editlist", "0",
         "-brand", "mp42",
+        "-map_metadata", "-1",
+        "-map_chapters", "-1",
+        "-sn", "-dn", "-ignore_unknown",
 
         # Sanity: fresh, zero-based timestamps.
         "-fflags", "+genpts",
