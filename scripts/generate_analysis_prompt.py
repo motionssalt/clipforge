@@ -405,6 +405,99 @@ STEP 5. Assemble cuts.
           ClipForge feeds into the master conversion prompt to produce
           the final commentary.
 
+        NARRATE THE CUTS AS ONE CONNECTED STORY (important):
+
+        The raw_narration fields, in the order the cuts appear in
+        cuts.json, will be concatenated end-to-end and handed to the
+        commentary-writing agent as if they were a single set of
+        notes on ONE video. If each raw_narration reads like a
+        standalone description of a good moment, the final commentary
+        ends up as a disconnected highlight reel — a series of
+        unrelated exciting beats, no throughline, no cause and effect.
+        Viewers stay engaged when they can follow a story from setup
+        to payoff, not when they are shown a list of separately
+        interesting clips.
+
+        Treat the sequence of cuts as ONE story you are narrating in
+        order, and write each raw_narration with awareness of what
+        came before it in the source video:
+
+          - Before writing raw_narration for the first cut, briefly
+            note to yourself what the overall story of the source
+            video is (from your Step 2 story map) and what arc the
+            cuts you have chosen trace through it — who the subject
+            is, what they want or are up against, and how the chosen
+            beats progress from beginning to end. The raw narrations
+            together should let a reader who has never seen the
+            video reconstruct that arc.
+
+          - Between one cut and the next in the source there is
+            usually a gap of footage you deliberately did NOT select.
+            Sometimes the two cuts still follow naturally (same
+            scene continuing, same subject, obvious next beat) and
+            need no bridge. But often there IS a gap the viewer will
+            feel — a change of location, a time skip, a new subject
+            appearing, an unexplained new state, or a payoff whose
+            setup lives in the un-selected footage in between. When
+            that gap exists, OPEN the next cut's raw_narration with
+            the SHORTEST possible connective phrase or sentence that
+            carries the viewer across it, so the moment lands as
+            part of the same story instead of dropping in cold.
+            One brief lead-in is enough: "Later, at the hospital,
+            …", "By the time she gets home, …", "After the fight,
+            …", "The next morning, …", "When the enemy finally
+            catches up, …". Keep it terse — the point is linkage,
+            not exposition.
+
+          - The connective lead-in must only summarize / frame what
+            the source material actually implies (from the
+            transcript and the screenshots you viewed). Do NOT
+            invent new events, new dialogue, new characters, or new
+            motivations to bridge the gap. If the material genuinely
+            does not tell you what happened in between, keep the
+            bridge vague and factual ("Later, …", "Elsewhere, …")
+            rather than making something up.
+
+          - When two adjacent cuts are linked as setup → payoff, or
+            cause → effect, make that relationship legible in the
+            wording of the second cut's raw_narration ("Because of
+            that, …", "This is what he was warned about at the
+            start: …", "The device she rigged earlier now …"). Do
+            not describe the payoff as if it were an unrelated new
+            event.
+
+          - Refer to recurring people/entities the SAME way across
+            every cut. If you called someone "the researcher" in
+            cut 1, keep calling them "the researcher" (or use a
+            pronoun that clearly refers back) in cuts 2, 3, 4 —
+            don't reset to "a man" each time, which would read as
+            a new person entering the story. Consistent labels are
+            what let the viewer track who is who across scenes.
+
+          - Each individual cut's raw_narration is still primarily
+            a plain, matter-of-fact description of what happens
+            visually inside THAT cut — the connective tissue above
+            is a lead-in of at most one short sentence or clause,
+            not a paragraph of recap. Do not restate what happened
+            in earlier cuts; assume the reader has just read them.
+
+          - The first cut's raw_narration opens the story. It does
+            not need a connective lead-in (there is nothing before
+            it), but it SHOULD orient the viewer on who / what /
+            where in its first sentence, so the rest of the cuts
+            have a subject to hang onto.
+
+          - The last cut's raw_narration ends the story. Land on
+            the final beat from the source; do not add a wrap-up,
+            moral, or teaser.
+
+        In short: individual cut SELECTION stays the same — you are
+        still picking the most engaging moments. But when you
+        NARRATE those moments in the raw_narration fields, write
+        them as consecutive scenes of ONE story, adding brief
+        connective context wherever a jump between cuts would
+        otherwise feel like a topic change.
+
 --------------------------------------------------------------------------------
 OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
 --------------------------------------------------------------------------------
@@ -415,7 +508,7 @@ OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 168,
-      "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen"
+      "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap."
     }}
     // ... more cuts, ordered chronologically ...
   ],
@@ -432,6 +525,15 @@ CONSTRAINTS
     no name guessing when unsure — use clear descriptive tags like
     "the researcher" or "the host" if unclear. Describe what is
     visually happening, not just what is said.
+  - Across cuts, `raw_narration` fields must read as consecutive scenes
+    of ONE continuous story, not as independent highlight descriptions.
+    Where there is a real gap between adjacent cuts (location change,
+    time skip, unexplained new state, setup→payoff), open the later
+    cut's `raw_narration` with a short connective lead-in that carries
+    the viewer across the gap, and refer to recurring subjects with
+    the same labels across cuts. Never invent events to fill a gap —
+    if the material doesn't tell you what happened in between, keep
+    the bridge vague and factual ("Later, …", "Elsewhere, …").
   - Return ONLY the JSON, no surrounding prose, no code fences. It will
     be uploaded verbatim to ClipForge Stage B.
 
