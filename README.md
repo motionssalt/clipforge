@@ -22,9 +22,12 @@ database. Single user, personal use, one repo, one personal access token.
    returns a `cuts.json`.
 4. You upload `cuts.json` back through the site.
 5. **Stage B** cuts the ORIGINAL (full-quality) video at those
-   timestamps with ffmpeg, concatenates the segments, and produces a
-   final `.mp4` plus an `output.txt` (`MASTER_PROMPT.md` + raw
-   narration notes) zipped together on the same Release.
+   timestamps with ffmpeg and produces **one separate `scene_XX.mp4`
+   per cut segment** — the segments are intentionally NOT merged into
+   a single video. Every scene file is attached to the Release
+   individually, plus an `output.txt` (`MASTER_PROMPT.md` + raw
+   narration notes) and a zip bundling all of them together on the
+   same Release.
 6. A **cleanup** workflow runs hourly and deletes every job, release
    and job folder older than 12 hours. Nothing lingers.
 
@@ -34,13 +37,13 @@ database. Single user, personal use, one repo, one personal access token.
 .
 ├── .github/workflows/
 │   ├── stage-a.yml       # ingest, transcribe, screenshot
-│   ├── stage-b.yml       # cut and concat with ffmpeg
+│   ├── stage-b.yml       # cut scenes with ffmpeg (separate files)
 │   └── cleanup.yml       # hourly, deletes >12h old jobs
 ├── scripts/
 │   ├── download_drive.py
 │   ├── transcribe.py            # faster-whisper CPU backend (swappable)
 │   ├── generate_analysis_prompt.py
-│   ├── cut_and_concat.py
+│   ├── cut_scenes.py
 │   ├── write_status.py
 │   ├── cleanup.py
 │   └── requirements.txt
@@ -161,12 +164,14 @@ whether Stage B ever ran. Override the TTL via the workflow's
   back via the authenticated releases-assets API, cuts, uploads the
   final zip, then deletes the original asset. This keeps everything
   in one release for the cleanup job to scoop up.
-- Segments in `cut_and_concat.py` are re-encoded per-segment with
-  `libx264 -crf 17 -preset veryfast` + AAC 192k. Reason: stream-copy
-  across arbitrary (non-keyframe) cut points is unreliable and
-  routinely produces black frames or A/V drift; per-segment re-encode
-  followed by concat-demuxer stream-copy is the safest tradeoff.
-  `crf 17` is visually lossless in practice for most sources.
+- Scenes in `cut_scenes.py` are cut in one self-contained ffmpeg
+  invocation per segment and re-encoded to a mobile-safe profile
+  (`libx264 High@L4.0 -crf 18 -preset veryfast`, yuv420p, 30 fps CFR,
+  +faststart, no edit lists, + AAC-LC 48 kHz stereo 192k). Reason:
+  stream-copy across arbitrary (non-keyframe) cut points is unreliable
+  and routinely produces black frames, A/V drift, or files phones
+  refuse to play. Each scene is an independent file — there is no
+  concat/merge step anywhere in the pipeline.
 - The site polls `status.json` every 5s while a job is running (back
   off to 15s after 10 minutes, per `SITE_BUILD_PROMPT.md`) — well
   within GitHub's default 5000-request/hour rate limit for a
