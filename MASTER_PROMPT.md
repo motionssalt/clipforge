@@ -8,6 +8,25 @@ package. Do not ask clarifying questions — make reasonable assumptions,
 flag uncertain names inline with [bracketed notes] rather than
 stopping to ask, and produce the full output in one response.
 
+IMPORTANT — INPUT STRUCTURE AND SCENE COUNT:
+The raw notes below the prompt are organized into clearly labeled,
+numbered scene sections, one section per video clip that was cut from
+the source, in playback order:
+
+    ===== SCENE 1 of M (clip file: scene_01.mp4) =====
+    [raw narration for scene 1]
+    ===== END SCENE 1 =====
+
+    ===== SCENE 2 of M (clip file: scene_02.mp4) =====
+    ...
+
+The header directly above those sections states the exact total scene
+count M ("TOTAL SCENES: M"). M is a hard contract for your output:
+each scene section below corresponds to exactly one video clip
+(scene_NN.mp4), and your final chunked script in Step 2 must contain
+EXACTLY M chunks — one chunk per scene, numbered identically. See
+Step 2 for the full 1:1 mapping rules.
+
 ## STEP 1 — CLEAN THE SCRIPT
 
 Rewrite the raw notes into a flat, confident, plot-forward narration
@@ -127,6 +146,29 @@ generations (roughly 15-30 seconds of spoken audio each, one scene/beat
 per chunk). Number them sequentially covering the entire script — do not
 stop partway or wait for confirmation between chunks.
 
+STRICT 1:1 SCENE-TO-CHUNK MAPPING (non-negotiable):
+
+- The input contains exactly M numbered scene sections (`SCENE 1` …
+  `SCENE M`), and each one maps to exactly one video clip
+  (scene_01.mp4 … scene_MM.mp4). You MUST output EXACTLY M chunks —
+  one chunk per scene, with Chunk N covering Scene N. If there are 9
+  scene sections in the input, there must be 9 chunks in your output.
+- NEVER skip a scene. NEVER combine or merge two scenes into a single
+  chunk. NEVER split one scene across two chunks. NEVER drop a scene
+  because its notes are short, thin, unclear, or feel redundant — if a
+  scene's raw notes are minimal or missing, still emit that chunk and
+  write the shortest honest narration the notes support, so the chunk
+  count stays aligned with the clip count.
+- Preserve the scene order: chunks must appear as Chunk 1, Chunk 2, …,
+  Chunk M, in the same order as the scene sections. Reorder sentences
+  only WITHIN a single scene's chunk; never move material across the
+  scene boundaries.
+- SELF-CHECK before moving to Step 3: re-count your `### Chunk` blocks
+  and confirm the count equals the TOTAL SCENES number (M) stated in
+  the input header, and that every scene number from 1 to M appears
+  exactly once. If the count is off by even one, fix the chunking
+  before writing anything else.
+
 Chunking is a delivery/pacing convenience for TTS — it must not break
 the throughline established in Step 1. When you split, keep any
 connective phrasing at the START of the chunk it belongs to (e.g. a
@@ -137,7 +179,7 @@ clauses are what makes the finished video feel like one story.
 
 For EACH chunk, output in this exact format:
 
-### Chunk N — [short scene label]
+### Chunk N (Scene N) — [short scene label]
 
 **Scene:**
 ```
@@ -228,6 +270,12 @@ broad + niche + long-tail, under 500 characters total):
 
 ## RULES
 
+- The chunk count must equal the scene count stated in the input
+  header ("TOTAL SCENES: M"), exactly. Output one chunk per numbered
+  scene section, in order 1..M — no scene skipped, none combined, none
+  split, none dropped, even if a scene's raw notes are short, thin, or
+  missing. A chunk count that differs from the scene count is a failed
+  response; recount and correct before finishing.
 - No back-and-forth. One full response covering script, all chunks,
   settings, and posting package.
 - If the raw notes are ambiguous on a detail (e.g. who does what to
