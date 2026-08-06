@@ -1,12 +1,3 @@
-# Short-Form Commentary Video — Master Conversion Prompt
-
-Paste this whole file as the system/instruction prompt, then paste the raw
-source-video notes after it in the same message. Output should require no
-back-and-forth — everything needed to go straight into voice generation
-and posting comes out in one pass.
-
----
-
 ## YOUR TASK
 
 You will receive raw, unstructured narration notes describing what happens
@@ -23,6 +14,48 @@ Rewrite the raw notes into a flat, confident, plot-forward narration
 script. This is retention-style short-form commentary — the voice
 describes the sequence of events matter-of-factly, and the tension comes
 from what happens next, not from vocal excitement or dramatic phrasing.
+
+Critically, the raw notes you are given were assembled from cuts that
+were selected out of a longer source video, so between one note and the
+next there may be a gap in real footage that the viewer has not seen.
+Your job is to turn those separately-selected moments into ONE
+continuous story — not a highlight reel of unrelated beats. The final
+script must read as a single throughline where each event either causes,
+sets up, or reacts to the next, so a viewer who has never seen the
+source can follow cause and effect from the first sentence to the last.
+
+To do that:
+
+- Treat the notes as raw material for a single connected narrative, not
+  as separate mini-descriptions to be stitched end to end. Reorder
+  sentences within a beat if that improves the flow, and re-word
+  transitions so each new event lands as a consequence of what came
+  before rather than as a fresh topic.
+- Where the notes jump from one selected moment to another and there is
+  clearly a gap in between (a change of location, a time skip, a shift
+  of subject, an unexplained new state), insert the SHORTEST possible
+  connective sentence or clause that carries the viewer across the
+  gap — just enough context that the next event makes sense as part of
+  the same story. One short sentence, or even a leading clause on the
+  next sentence ("Later, at the hospital,…", "By the time she gets
+  home,…", "The chase ends when…"), is usually enough. Do NOT
+  fabricate new events, dialogue, or motivations to fill the gap — the
+  connective tissue must only summarize/frame what the notes already
+  imply, never invent facts.
+- If two adjacent beats in the notes are clearly related (the second is
+  the payoff of the first, or the first sets up the stakes for the
+  second), explicitly make that relationship legible in the wording,
+  instead of describing each beat in isolation. Cause should point to
+  effect; setup should point to payoff.
+- If a beat in the notes genuinely does not connect to the surrounding
+  story and no honest bridge exists in the material, keep it — but
+  keep it brief, and let the next line move on. Do not invent a
+  connection that isn't there.
+- The overall arc still comes from the source. Preserve the order of
+  events as given in the notes (they are already in chronological
+  source order) and preserve every factual event, action, and piece of
+  dialogue. The rewrite is about linkage and flow, not about
+  reordering the story or adding content.
 
 Voice and tone:
 - Declarative, matter-of-fact narration. Third person, present tense by
@@ -45,11 +78,15 @@ Voice and tone:
   advance the plot or add a specific concrete detail.
 - Preserve all factual events, dialogue, and actions from the raw notes.
   Do not invent new events, reactions, or motivations that are not
-  supported by the notes.
+  supported by the notes. Connective phrasing between beats must only
+  frame or summarize what the notes already imply — it must not add
+  new facts.
 - Use real names/labels for people or entities in the footage if
   identifiable from context; if not certain, use a clear descriptive tag
   (e.g. "a man", "the woman", "the enemy", "her husband", "the
-  researcher") instead of guessing wrong.
+  researcher") instead of guessing wrong. Once you introduce a subject
+  with a descriptive tag, keep referring to them the same way so the
+  viewer can track who is who across scenes.
 - Dialogue: prefer reported/indirect speech over quoted lines
   ("he tells the enemy to abandon his violent ways" rather than
   '"Abandon your violent ways!" he shouts'). Quoted lines are okay
@@ -62,7 +99,9 @@ Voice and tone:
   editorial wrap-up, no "and that's how…", no call to action.
 
 Reference style — this is the target register (flat, declarative,
-plot-forward). Match this feel:
+plot-forward, and continuously connected). Notice how each sentence
+follows from the one before it as part of ONE story, not as a list of
+separate moments:
 
 > A man loves Rubik's Cubes so much that he gets plastic surgery to
 > transform his head into a Rubik's Cube. At a train station, his head
@@ -78,7 +117,8 @@ plot-forward). Match this feel:
 
 Notice: no exclamations, no rhetorical questions, no hype, no addressing
 the viewer, no dramatic build-up phrasing. Just the events, in order,
-stated plainly.
+stated plainly — and each event flows from the one before it, so the
+whole thing reads as one continuous story rather than a highlight reel.
 
 ## STEP 2 — SPLIT INTO CHUNKS
 
@@ -86,6 +126,14 @@ Break the full script into scene-based chunks suitable for individual TTS
 generations (roughly 15-30 seconds of spoken audio each, one scene/beat
 per chunk). Number them sequentially covering the entire script — do not
 stop partway or wait for confirmation between chunks.
+
+Chunking is a delivery/pacing convenience for TTS — it must not break
+the throughline established in Step 1. When you split, keep any
+connective phrasing at the START of the chunk it belongs to (e.g. a
+chunk that begins "Later, at the hospital,…" carries the bridge from
+the previous chunk into the new scene). Do NOT strip connective clauses
+during chunking to make chunks look self-contained; the connective
+clauses are what makes the finished video feel like one story.
 
 For EACH chunk, output in this exact format:
 
@@ -193,3 +241,8 @@ broad + niche + long-tail, under 500 characters total):
   declarative wording plus calm-but-brisk delivery. Do not slip hype
   phrasing back in at the chunk level even if the raw notes are
   dramatic — the drama is carried by the events themselves.
+- The finished script must read as ONE continuous story, not a
+  highlight reel. If, after writing, adjacent sentences describe
+  unrelated moments with no cause-and-effect link between them, add
+  the shortest possible connective clause (grounded in what the notes
+  already imply) to bridge them.
