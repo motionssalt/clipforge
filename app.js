@@ -70,7 +70,7 @@
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
     'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation',
-    'complete-block', 'final-zip-link', 'final-zip-hint', 'complete-ack',
+    'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
   ].forEach(function (id) {
     el[id] = $(id);
@@ -713,7 +713,7 @@
     },
     stage_b_running: {
       label: 'stage b', cls: 'stage-running', spin: true,
-      text: 'Stage B running — cutting and concatenating'
+      text: 'Stage B running — cutting each segment into its own scene file'
     },
     complete: { label: 'complete', cls: 'stage-done', spin: false, text: 'Job complete.' },
     error: { label: 'error', cls: 'stage-error', spin: false, text: 'The job reported an error.' }
@@ -948,9 +948,17 @@
     });
   }
 
-  /** Release-asset lookup — gives us asset ids for private-repo downloads. */
+  /** Release-asset lookup — gives us asset ids for private-repo downloads
+   *  and the scene-file names/URLs for the complete-state scene list. When
+   *  `renderInto` is true, the complete-state scene list is re-rendered once
+   *  the fresh asset data arrives. */
   async function loadReleaseAssets(tag, renderInto) {
-    if (state.releaseAssetsTag === tag && state.releaseAssets) return;
+    if (state.releaseAssetsTag === tag && state.releaseAssets) {
+      if (renderInto && state.status && state.status.stage === 'complete') {
+        renderSceneList(state.status);
+      }
+      return;
+    }
     try {
       var rel = await gh('/repos/' + state.owner + '/' + state.repo +
         '/releases/tags/' + encodeURIComponent(tag));
@@ -958,6 +966,9 @@
         return { name: a.name, id: a.id, url: a.browser_download_url, size: a.size };
       });
       state.releaseAssetsTag = tag;
+      if (renderInto && state.status && state.status.stage === 'complete') {
+        renderSceneList(state.status);
+      }
     } catch (err) {
       if (err.name === 'AuthError') handleGlobalError(err);
       // Otherwise silent: the Release page link is the primary path.
@@ -1233,25 +1244,93 @@
     startPolling();
   }
 
-  /* ------------------------------------------------------------- final zip */
+  /* ----------------------------------------------- complete: scene downloads */
 
+  /**
+   * Stage B no longer merges the cut segments into one video — it ships one
+   * scene_XX.mp4 per cut (plus output.txt) inside the final zip. The complete
+   * UI therefore lists EVERY scene file as its own download link, with the
+   * zip kept as a convenience "get everything at once" button.
+   *
+   * Scene links are discovered from the live Release asset list: Stage B
+   * attaches the individual scene MP4s to the Release in addition to the zip
+   * (see stage-b.yml), so each scene is downloadable on its own.
+   */
   function renderFinalZip(s) {
     var assets = (s && s.assets) || {};
     var url = assets.final_zip;
+
     if (!url) {
       el['final-zip-link'].removeAttribute('href');
       el['final-zip-link'].classList.add('is-hidden');
       text(el['final-zip-hint'],
         'status.json reports complete but no `assets.final_zip` URL is present. ' +
         'Check the Release ' + (s.release_tag || '') + ' directly.');
-      if (s.release_tag) loadReleaseAssets(s.release_tag, false);
+    } else {
+      el['final-zip-link'].classList.remove('is-hidden');
+      el['final-zip-link'].href = url;
+      el['final-zip-link'].onclick = makeDownloadHandler('final_zip', url);
+      text(el['final-zip-hint'], fileNameFromUrl(url) || url);
+    }
+
+    renderSceneList(s);
+
+    if (s.release_tag) loadReleaseAssets(s.release_tag, true);
+  }
+
+  /**
+   * Render one download row per scene file found on the Release.
+   * Re-renders when loadReleaseAssets() refreshes the asset cache.
+   */
+  function renderSceneList(s) {
+    var list = el['scene-list'];
+    if (!list) return;
+    list.innerHTML = '';
+
+    var scenes = [];
+    if (state.releaseAssets && s.release_tag && state.releaseAssetsTag === s.release_tag) {
+      scenes = state.releaseAssets
+        .filter(function (a) { return /^scene_\d+\.mp4$/.test(a.name); })
+        .sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+    }
+
+    if (!scenes.length) {
+      text(el['scene-list-hint'],
+        'Individual scene files are not listed on the Release (or have not been ' +
+        'fetched yet) — the final zip below contains every scene_XX.mp4 plus output.txt.');
+      show(el['scene-list-hint']);
       return;
     }
-    el['final-zip-link'].classList.remove('is-hidden');
-    el['final-zip-link'].href = url;
-    el['final-zip-link'].onclick = makeDownloadHandler('final_zip', url);
-    text(el['final-zip-hint'], fileNameFromUrl(url) || url);
-    if (s.release_tag) loadReleaseAssets(s.release_tag, false);
+
+    hide(el['scene-list-hint']);
+    scenes.forEach(function (a) {
+      var row = document.createElement('div');
+      row.className = 'scene-row';
+
+      var link = document.createElement('a');
+      link.className = 'btn btn-ghost btn-small scene-link';
+      link.href = a.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Download ' + a.name;
+      link.onclick = makeDownloadHandler(a.name, a.url);
+
+      var size = document.createElement('span');
+      size.className = 'hint scene-size';
+      size.textContent = a.size ? fmtBytes(a.size) : '';
+
+      row.appendChild(link);
+      row.appendChild(size);
+      list.appendChild(row);
+    });
+  }
+
+  function fmtBytes(n) {
+    var bytes = Number(n);
+    if (!isFinite(bytes) || bytes <= 0) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   /* -------------------------------------------------------------- countdown */
