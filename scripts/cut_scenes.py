@@ -37,6 +37,20 @@ The specific problems that path introduced:
      rejected by phone hardware decoders while still parsing fine in
      ffprobe and VLC.
 
+  3. (The residual bug this version fixes.) Even AFTER the re-encode was
+     in place, outputs still refused to play on phones AND on PC. Forensic
+     analysis of a real output (an x265/HEVC 10-bit MKV source with an
+     embedded subtitle) showed two defects the encode profile alone did
+     not prevent:
+       a. ffmpeg's DEFAULT stream mapping copied the source's embedded
+          subtitle into the MP4 as a third `bin_data`/`text`
+          "SubtitleHandler" stream. Strict players reject / choke on that.
+       b. B-frames were left enabled, so the first video packet carried
+          PTS 0.0667 vs DTS 0 -> `start_time=0.066667`, `has_b_frames=2`,
+          an A/V offset at the head of every cut.
+     Also, `nal-hrd=cbr` was set without any VBV rate control, which
+     writes an inconsistent HRD timing model into the bitstream.
+
 The fix: every scene is cut with ONE self-contained ffmpeg invocation
 that re-encodes that segment to a universally decodable profile:
 
@@ -111,6 +125,22 @@ def probe_duration(path: str) -> float:
     return float(out)
 
 
+def probe_has_audio(path: str) -> bool:
+    """Return True if the source has at least one audio stream."""
+    out = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-select_streams", "a:0",
+            "-show_entries", "stream=codec_type",
+            "-of", "csv=p=0",
+            path,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return "audio" in out.stdout
+
+
 def cut_scene(src: str, start: float, end: float, dst: str) -> None:
     """
     Cut ONE range [start, end] from `src` into `dst` as a standalone,
@@ -121,6 +151,30 @@ def cut_scene(src: str, start: float, end: float, dst: str) -> None:
     segment is then fully re-encoded (not stream-copied), the pre-roll is
     decoded and discarded instead of being hidden behind an edit list, so
     every scene starts cleanly at PTS 0 with no black head frames.
+
+    Two additional problems made earlier outputs refuse to play even after
+    the re-encode fix, on phones AND on PC. Both are addressed here:
+
+      * ROGUE SUBTITLE / DATA STREAM. Real source rips (the kind users
+        feed this pipeline — e.g. an x265/HEVC MKV with an embedded text
+        subtitle) carry a subtitle track. ffmpeg's default stream
+        selection copied that track into the MP4 as a third
+        `bin_data`/`text` "SubtitleHandler" stream. Strict players
+        (phones, WhatsApp, and many PC players) reject or choke on an
+        MP4 whose only media should be A/V but which contains an extra
+        data track. Fix: explicitly `-map 0:v:0 -map 0:a:0` (only the
+        primary A/V) and pass `-sn -dn -ignore_unknown`.
+
+      * B-FRAME CTS OFFSET + non-zero start_time. With B-frames enabled
+        the first video packet had PTS 0.0667 while DTS was 0, surfacing
+        as `start_time=0.066667` and `has_b_frames=2`. That decode-vs-
+        presentation offset breaks strict hardware/software decoders and
+        desyncs A/V at the head of every cut. Fix: `-bf 0` (no B-frames)
+        so every frame is I/P, PTS==DTS, start_time==0.
+
+      * `nal-hrd=cbr` was also removed: it is only valid alongside real
+        VBV rate control (-maxrate/-bufsize). Used with pure CRF it wrote
+        an inconsistent CBR HRD timing model into the bitstream.
     """
     vf = f"fps={TARGET_FPS},format={TARGET_PIX_FMT},setsar=1"
     af = (
@@ -128,12 +182,31 @@ def cut_scene(src: str, start: float, end: float, dst: str) -> None:
         f"aresample=async=1:first_pts=0"
     )
 
+    has_audio = probe_has_audio(src)
+
     cmd: list[str] = [
         "ffmpeg", "-y",
         "-ss", f"{start:.3f}",
         "-to", f"{end:.3f}",
         "-i", src,
+    ]
 
+    # If the source has no audio, synthesize a silent stereo track so the
+    # output is always a valid, playable A/V MP4 (validation requires one).
+    # The lavfi source is a SEPARATE input placed AFTER `-i src`, so the
+    # `-ss`/`-to` above still apply only to the real video input.
+    if not has_audio:
+        cmd += [
+            "-f", "lavfi",
+            "-i", f"anullsrc=channel_layout=stereo:sample_rate={AAC_SAMPLE_RATE}",
+        ]
+
+    # Map ONLY the primary video + audio. This (with -sn/-dn below) is
+    # what stops an embedded subtitle/data track from leaking into the MP4.
+    cmd += ["-map", "0:v:0"]
+    cmd += ["-map", "0:a:0"] if has_audio else ["-map", "1:a:0"]
+
+    cmd += [
         "-vf", vf,
         "-af", af,
 
@@ -144,12 +217,16 @@ def cut_scene(src: str, start: float, end: float, dst: str) -> None:
         "-preset", X264_PRESET,
         "-crf", X264_CRF,
         "-pix_fmt", TARGET_PIX_FMT,
-        # Force a keyframe every 2s and disable open-GOP / scene-cut
-        # extras that some mobile decoders choke on.
+        # No B-frames -> PTS==DTS, start_time==0 (see docstring).
+        "-bf", "0",
+        # Force a keyframe every 2s and disable scene-cut extras.
         "-g", str(TARGET_FPS * 2),
         "-keyint_min", str(TARGET_FPS * 2),
         "-sc_threshold", "0",
-        "-x264-params", "nal-hrd=cbr:force-cfr=1",
+        # force-cfr only; nal-hrd=cbr removed (invalid without VBV).
+        "-x264-params", "force-cfr=1",
+        # Pin a clean, phone-friendly video timebase.
+        "-video_track_timescale", "15360",
 
         # Audio: AAC-LC stereo 48 kHz 192 kbps — the phone-safe combo.
         "-c:a", "aac",
@@ -158,18 +235,26 @@ def cut_scene(src: str, start: float, end: float, dst: str) -> None:
         "-ar", AAC_SAMPLE_RATE,
         "-ac", AAC_CHANNELS,
 
-        # Container: MP4, faststart (moov at front, for instant playback
-        # on mobile / web), mp42 brand, no edit lists.
-        "-movflags", "+faststart+use_metadata_tags",
+        # Container: MP4, faststart (moov at front), mp42 brand, no edit
+        # lists. Strip inherited global metadata + chapters; drop subs/data.
+        "-movflags", "+faststart",
         "-use_editlist", "0",
         "-brand", "mp42",
+        "-map_metadata", "-1",
+        "-map_chapters", "-1",
+        "-sn", "-dn", "-ignore_unknown",
 
         # Sanity: fresh, zero-based timestamps.
         "-fflags", "+genpts",
         "-max_muxing_queue_size", "9999",
         "-f", "mp4",
-        dst,
     ]
+
+    if not has_audio:
+        # Stop at the end of the (finite) video, not the infinite lavfi tone.
+        cmd.append("-shortest")
+
+    cmd.append(dst)
 
     sh(cmd)
 
@@ -206,7 +291,7 @@ def validate_mp4(path: str) -> None:
             "ffprobe", "-v", "error",
             "-show_entries",
             "stream=codec_type,codec_name,profile,level,pix_fmt,width,height,"
-            "sample_rate,channels,r_frame_rate",
+            "sample_rate,channels,r_frame_rate,has_b_frames,start_time",
             "-show_entries", "format=format_name,format_long_name,duration,bit_rate,start_time",
             "-of", "json",
             path,
@@ -239,6 +324,21 @@ def validate_mp4(path: str) -> None:
         sys.exit(3)
     if not a_streams:
         print("ERROR: Scene file has no audio stream", file=sys.stderr)
+        sys.exit(3)
+
+    # A scene MP4 must contain EXACTLY one video + one audio stream. Any
+    # extra stream (an embedded subtitle leaked in as bin_data/text, an
+    # attached-pic video track, a second audio track, ...) is what made
+    # phones AND PC players reject the file even though the A/V streams
+    # themselves were fine. Fail loudly instead of shipping it.
+    if len(v_streams) != 1 or len(a_streams) != 1 or len(streams) != 2:
+        kinds = [f"{s.get('codec_type')}:{s.get('codec_name')}" for s in streams]
+        print(
+            f"ERROR: Scene file must contain exactly 1 video + 1 audio "
+            f"stream, found {len(streams)} stream(s): {kinds}. An embedded "
+            f"subtitle/data/extra track likely leaked into the MP4.",
+            file=sys.stderr,
+        )
         sys.exit(3)
 
     v = v_streams[0]
@@ -284,14 +384,31 @@ def validate_mp4(path: str) -> None:
         )
         sys.exit(3)
 
-    # Start-time should be at or very near zero. WhatsApp specifically
-    # rejects files whose first PTS is meaningfully greater than zero.
+    # B-frames force a decode-vs-presentation (CTS) offset that surfaces as
+    # a non-zero start_time and desyncs A/V on strict players. We encode
+    # with -bf 0, so a scene must have no B-frames.
+    if v.get("has_b_frames") not in (0, "0"):
+        print(
+            f"ERROR: video has_b_frames={v.get('has_b_frames')!r}, expected 0. "
+            f"B-frames introduce a CTS offset that breaks strict players.",
+            file=sys.stderr,
+        )
+        sys.exit(3)
+
+    # Both the container start_time AND the video stream start_time must be
+    # ~0. A non-zero video start (the B-frame offset above, or a leaked
+    # pre-roll) breaks WhatsApp / iOS / many PC players.
     try:
-        st = float(fmt_info.get("start_time", "0"))
-        if st > 0.05:
+        if float(fmt_info.get("start_time", "0")) > 0.05:
             print(
-                f"ERROR: scene start_time is {st:.3f}s, expected ~0.0. "
-                f"Non-zero start times break WhatsApp / iOS playback.",
+                f"ERROR: container start_time is {fmt_info.get('start_time')}s, expected ~0.0.",
+                file=sys.stderr,
+            )
+            sys.exit(3)
+        if float(v.get("start_time", "0")) > 0.05:
+            print(
+                f"ERROR: video start_time is {v.get('start_time')}s, expected ~0.0. "
+                f"Non-zero start times break WhatsApp / iOS / PC playback.",
                 file=sys.stderr,
             )
             sys.exit(3)
