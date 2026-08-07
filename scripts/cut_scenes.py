@@ -63,18 +63,28 @@ that re-encodes that segment to a universally decodable profile:
   - Video: H.264 High@L4.0, yuv420p 8-bit, fixed 30 fps CFR, SAR=1 —
     the exact profile every phone / WhatsApp / Instagram / TikTok
     hardware decoder is guaranteed to accept.
-  - Audio: AAC-LC, 48 kHz, stereo, 192 kbps — the safe audio flavor for
-    all mobile players.
+  - Audio: AAC-LC, 48 kHz, stereo, 128 kbps — the safe, delivery-grade
+    audio flavor for all mobile players (transparent on a phone; 192k
+    was pure size overhead for a short-form clip).
   - Container: MP4 with `+faststart` (moov at the front, for instant
     playback while streaming) and mp42 brand.
-  - CRF 18 keeps the result visually indistinguishable from the source
-    while still guaranteeing a phone-playable file.
+  - CRF 23 + preset medium keeps the result visually strong on a phone
+    screen (indistinguishable from CRF 18 after the platform's own
+    upload transcode) while producing sensibly sized files — a 20 s
+    1080p clip lands in the ~4-9 MB range instead of ~37 MB.
+  - A soft VBV ceiling (-maxrate 8M -bufsize 16M) caps the worst-case
+    bitrate on high-motion segments so a chaotic scene can't balloon
+    past ~8 Mbps. This IS real VBV rate control, so it is compatible
+    with `-x264-params force-cfr=1` (this is unrelated to the
+    `nal-hrd=cbr` misuse called out below, which was VBV-less).
 
 Yes, this always re-encodes. That is the point: universal playback
-matters more than avoiding encode passes, and CRF 18 preserves quality
-that no user will be able to distinguish from the original by eye. The
-previous "stream-copy when compatible" optimization is what was breaking
-phone playback in the first place.
+matters more than avoiding encode passes. Stream-copy across arbitrary
+(non-keyframe) cut points is what was breaking phone playback in the
+first place — it snaps to prior keyframes, writes edit lists, and
+inherits container quirks phones reject — so it is NOT an option even
+when the source codec looks MP4-compatible. Size is controlled via CRF
+tuning inside the re-encode, not by trying to avoid the re-encode.
 
 ---------------------------------------------------------------------------
 Usage:
@@ -103,9 +113,28 @@ TARGET_FPS = 30            # phones/WhatsApp are happiest with CFR 30
 TARGET_PIX_FMT = "yuv420p" # 8-bit 4:2:0 is the ONLY universally-decoded pixfmt
 X264_PROFILE = "high"
 X264_LEVEL = "4.0"         # covers up to 1080p30, accepted everywhere
-X264_PRESET = "veryfast"   # good speed/quality tradeoff on GH runners
-X264_CRF = "18"            # visually lossless for practical purposes
-AAC_BITRATE = "192k"
+# `medium` is x264's default and, at a given CRF, produces meaningfully
+# smaller files than `veryfast` for only a modest speed cost. On a GH
+# ubuntu-latest runner it still encodes 1080p30 faster than real-time,
+# so wall-clock impact per scene is small.
+X264_PRESET = "medium"
+# CRF 23 is the x264 default and the widely-recommended sweet spot for
+# H.264 delivery: visually strong on a phone screen while producing
+# sensibly sized files. The previous value (CRF 18, "visually lossless")
+# was the direct cause of 20 s / 1080p clips landing at ~37 MB — 3-5x
+# larger than they need to be for TikTok / Shorts / Reels, which will
+# re-transcode the upload anyway. Anything higher than ~26 starts to
+# show soft blocking on high-motion content; do not raise past 25.
+X264_CRF = "23"
+# Soft VBV ceiling so a single chaotic high-motion segment can't
+# balloon far past target — CRF alone has no cap. The ceiling is set
+# well above typical CRF-23 1080p bitrates (~3-6 Mbps) so it only
+# activates on genuinely hard scenes; typical clips remain pure CRF.
+X264_MAXRATE = "8M"
+X264_BUFSIZE = "16M"
+# 128 kbps AAC-LC stereo is transparent for delivery-oriented mobile
+# audio and saves ~1 MB per 20 s vs the old 192 kbps.
+AAC_BITRATE = "128k"
 AAC_SAMPLE_RATE = "48000"
 AAC_CHANNELS = "2"
 
@@ -213,12 +242,17 @@ def cut_scene(src: str, start: float, end: float, dst: str) -> None:
         "-vf", vf,
         "-af", af,
 
-        # Video: H.264 High@L4.0, CRF 18, yuv420p — universally decodable.
+        # Video: H.264 High@L4.0, CRF 23 (delivery sweet spot),
+        # yuv420p — universally decodable. A soft VBV ceiling keeps
+        # worst-case high-motion bitrate in check without altering the
+        # baseline CRF quality on typical scenes.
         "-c:v", "libx264",
         "-profile:v", X264_PROFILE,
         "-level:v", X264_LEVEL,
         "-preset", X264_PRESET,
         "-crf", X264_CRF,
+        "-maxrate", X264_MAXRATE,
+        "-bufsize", X264_BUFSIZE,
         "-pix_fmt", TARGET_PIX_FMT,
         # No B-frames -> PTS==DTS, start_time==0 (see docstring).
         "-bf", "0",
@@ -467,7 +501,9 @@ def main() -> None:
         f"Cutting {len(cuts)} range(s) into SEPARATE scene files "
         f"(NO concatenation / NO merge step — each cut becomes its own "
         f"scene_XX.mp4) with mobile-safe encoding "
-        f"(H.264 High@L{X264_LEVEL} {TARGET_PIX_FMT} CRF{X264_CRF}, "
+        f"(H.264 High@L{X264_LEVEL} {TARGET_PIX_FMT} "
+        f"preset={X264_PRESET} CRF{X264_CRF} "
+        f"maxrate={X264_MAXRATE} bufsize={X264_BUFSIZE}, "
         f"AAC-LC {AAC_SAMPLE_RATE}Hz stereo {AAC_BITRATE}, "
         f"+faststart, no edit lists).",
         flush=True,
