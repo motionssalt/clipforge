@@ -98,18 +98,50 @@ misidentified characters and missed beats.
      everyone beyond that is minor. From this moment on, and until you
      finish writing cuts.json, refer to characters by their `person_id`
      tag — NOT by ad-hoc descriptors like "the man" or "the boy" — even
-     in your internal notes. Only replace `person_A` with a real proper
-     name if the transcript, on-screen text, or context makes the name
-     UNAMBIGUOUS (e.g. a character is explicitly addressed by name in
-     dialogue that lines up with that identity being on screen). If a
-     name is only a guess, keep the `person_id` tag or add the guess in
+     in your internal notes. Resolve each `person_id` to a real proper
+     name whenever the transcript, on-screen text, or context provides
+     clear evidence of one (see STEP 0b below — name resolution is a
+     REQUIRED part of this workflow, not an optional extra). If a name
+     is only a guess, keep the `person_id` tag or add the guess in
      [brackets] the first time you use it, e.g. `person_A [Killua?]`.
+
+  STEP 0b (REQUIRED — resolve names before writing anything):
+     Actively mine `transcript.json` for name evidence and bind each
+     name you find to a `person_id`. Specifically:
+       - Scan the full transcript for proper names: characters
+         addressing each other by name ("Killua, wait", "Gon, listen"),
+         self-introductions ("my name is …", "I'm …", "call me …"),
+         third-person references ("Killua failed the exam", "his
+         brother Illumi"), and on-screen text naming a character.
+       - For every name found, cross-reference the TIMESTAMP of that
+         dialogue line against the `appearances` arrays in
+         character_index.json: which person_ids are on screen at that
+         moment, who is speaking, and who is being spoken TO or ABOUT.
+         A name said to (or clearly about) a character while that
+         person_id is on screen binds the name to that person_id. A
+         name spoken by a character as a self-introduction binds the
+         name to the speaker's person_id.
+       - Write down the resulting NAME MAP, e.g.
+         `person_A = Killua, person_B = Gon, person_C = Illumi`, and
+         keep it next to you for the rest of the session. Every cut
+         you write later uses this map.
+     COMMIT when the evidence is clear. A character being directly
+     addressed or referred to by name in dialogue that lines up with
+     that person_id being on screen is CLEAR evidence — treat it as
+     resolved, not as a guess. Do NOT keep using a descriptive tag
+     "to be safe" when the transcript has already told you the name.
+     Only leave a person_id unresolved (descriptor or [bracketed
+     guess]) when NO name evidence for that identity exists anywhere
+     in the transcript.
 
      WHY THIS ORDER: previously the agent re-identified every face from
      scratch on every screenshot it opened, so the same character would
      be narrated as "a man", then "the boy", then "the fighter" across
      three cuts of the same scene. Reading the character index first —
      with thumbnails — pins the cast in one place and stops re-guessing.
+     And resolving names up front (Step 0b) stops the other failure
+     mode: narration that says "the white-haired boy" in every cut
+     even though the transcript said his name out loud in scene one.
 
   STEP 1: Read `transcript.json` end-to-end. Do not open any composite
      screenshots yet. Reconstruct the story from the dialogue plus the
@@ -117,7 +149,12 @@ misidentified characters and missed beats.
      buffer) what the video appears to be about, which `person_id`s the
      recurring speakers seem to be (checking against
      character_index.json's shot_ids and timestamps), and where the
-     beats and turning points sit on the timeline.
+     beats and turning points sit on the timeline. While reading,
+     complete the Step 0b NAME MAP: every proper name in the dialogue
+     gets cross-referenced against who is on screen at that timestamp,
+     so by the end of this step each recurring person_id either has a
+     confidently resolved real name or is explicitly marked as having
+     no name evidence anywhere in the transcript.
 
   STEP 2: Open `scene_index.json` and `key_moments.json`.
      - `scene_index.json` gives you EXACT shot boundaries — where the
@@ -199,8 +236,10 @@ Use them as follows:
 
   character_index.json
     - Read it FIRST (see Step 0 above). Every recurring face in the
-      video is under a stable `person_id`. Refer to characters that
-      way for the entire session unless a proper name is unambiguous.
+      video is under a stable `person_id`. Use the `person_id` as the
+      working handle for the entire session, and resolve it to a real
+      name via the Step 0b NAME MAP whenever the transcript provides
+      clear evidence — the real name is what goes in raw_narration.
     - Each identity's `appearances` array lists every (shot_id,
       timestamp_seconds) where that identity was seen. When you need
       to know "is person_B on screen at 942s?" — check this list first
@@ -216,8 +255,10 @@ Use them as follows:
       descriptive-tag behavior for characters (see step 3 of the
       OLD workflow further down).
     - Naming is YOUR job, not the index's. person_A is a slot, not a
-      claim about who that person is. Use context to attach real
-      names; when uncertain, keep the slot id.
+      claim about who that person is. Actively attach real names from
+      transcript evidence (Step 0b); only keep the slot id or a
+      descriptive tag when no name evidence exists anywhere in the
+      transcript for that identity.
 
   scene_index.json
     - The definitive list of shot boundaries. Every entry is `{{shot_id,
@@ -434,21 +475,36 @@ STEP 4 (assemble cuts).
           chronological order.
 
         CHARACTER LABELS IN raw_narration:
-        - Refer to characters by `person_id` internally, and in
-          raw_narration either (a) use a short natural descriptor that
-          is CONSISTENT across every cut for that same person_id
-          (e.g. always "the silver-haired boy" for person_B), or
-          (b) use a proper name if the transcript makes it
-          unambiguous. Never switch descriptors for the same
-          person_id between cuts — that is exactly the bug that
+        - Refer to characters by `person_id` internally. In
+          raw_narration, label each person_id by this priority order:
+            (a) REAL NAME — if your Step 0b NAME MAP resolved this
+                person_id from clear transcript evidence, use the real
+                name (e.g. "Killua", "Gon", "Illumi"). This is the
+                expected, default case whenever name evidence exists.
+                On first use you may pair the name with one short
+                descriptor to anchor the visual ("Killua, the
+                white-haired boy, …"), then use the name alone (or a
+                pronoun clearly referring back to him) from then on.
+            (b) DESCRIPTIVE TAG — ONLY if no name evidence exists
+                anywhere in the transcript for that person_id. Pick a
+                short natural descriptor and keep it CONSISTENT across
+                every cut (e.g. always "the silver-haired boy" for
+                person_B).
+        - Once a real name is established for a person_id, use it for
+          the rest of the output. Do NOT acknowledge the name once and
+          then fall back to "the white-haired boy" in later cuts — a
+          resolved name stays resolved. Never switch labels for the
+          same person_id between cuts — that is exactly the bug that
           made the old commentary read as a highlight reel of
-          strangers. Once you introduce person_A as "the boy in the
-          sling", stay with "the boy in the sling" (or a pronoun
-          clearly referring back to him) in every later cut he
-          appears in.
+          strangers. If the transcript outright tells you a
+          character's name (someone says it to them or about them
+          while they are on screen), continuing to call them "the
+          white-haired boy" is a defect, not a safe choice.
         - If character_index.json is empty (identity_count = 0),
           fall back to the pre-existing behavior: pick a clear
-          descriptive tag on first use and stick with it thereafter.
+          descriptive tag on first use and stick with it thereafter —
+          but still prefer real names wherever the transcript
+          establishes them.
 
         NARRATE THE CUTS AS ONE CONNECTED STORY (unchanged from the
         previous version — do not treat the indexes as an excuse to
@@ -544,9 +600,13 @@ CONSTRAINTS
   - Cuts MUST NOT overlap.
   - Cuts MUST be sorted ascending by `start_seconds`.
   - `raw_narration` is plain prose. No markdown, no timestamps inside it,
-    no name guessing when unsure — use the SAME descriptor across every
-    cut for the same person_id from character_index.json. Describe what
-    is visually happening, not just what is said.
+    no name guessing when unsure — but when the transcript provides
+    clear name evidence for a person_id, using that name is NOT a
+    guess: use the real name, consistently, in every cut. Use the SAME
+    label (real name, or a descriptor only when no name evidence
+    exists) across every cut for the same person_id from
+    character_index.json. Describe what is visually happening, not
+    just what is said.
   - Across cuts, `raw_narration` fields must read as consecutive scenes
     of ONE continuous story, not as independent highlight descriptions.
     Where there is a real gap between adjacent cuts (location change,
