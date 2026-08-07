@@ -28,7 +28,7 @@ on:
         type: string
         default: "120"
       enable_vision_assist:
-        description: "Run local shot/face indexing (scene_index + character_index + key_moments + dense event composites). Set to 'false' to skip on very long videos."
+        description: "Run local shot indexing (scene_index + key_moments + dense event composites). Set to 'false' to skip on very long videos."
         required: false
         type: string
         default: "true"
@@ -96,22 +96,20 @@ jobs:
           pip install -r scripts/requirements.txt
 
       # ---------------------------------------------------------------
-      # Verify the shared onnxruntime stack up-front.
+      # Verify the onnxruntime stack up-front.
       #
-      # Both faster-whisper's Silero VAD filter and InsightFace's SCRFD
-      # detector import the SAME `onnxruntime` module in the SAME process,
-      # so if that module can't be imported cleanly (NumPy 2 vs onnxruntime
-      # ABI mismatch, protobuf 5 breakage, wrong manylinux tag, etc.) BOTH
-      # features fail. In the previous regression this surfaced ONLY inside
-      # faster-whisper's VAD path as the very misleading
+      # faster-whisper's Silero VAD filter imports `onnxruntime` in the
+      # same process. If that module can't be imported cleanly (NumPy
+      # ABI mismatch, wrong manylinux tag, etc.) transcription fails
+      # with a very misleading
       #     RuntimeError: Applying the VAD filter requires the onnxruntime package
-      # message — even though onnxruntime WAS installed, it just wouldn't
-      # import at runtime.
+      # message — even though onnxruntime WAS installed, it just
+      # wouldn't import at runtime.
       #
       # Doing an explicit sanity import here means any future ABI
-      # regression fails LOUDLY with the real traceback, at install time,
-      # before we've spent minutes downloading the source video and
-      # extracting audio only to crash inside transcribe.py.
+      # regression fails LOUDLY with the real traceback, at install
+      # time, before we've spent minutes downloading the source video
+      # and extracting audio only to crash inside transcribe.py.
       # ---------------------------------------------------------------
       - name: Verify onnxruntime + faster-whisper VAD stack
         shell: bash
@@ -145,12 +143,6 @@ jobs:
           assert os.path.exists(vad_path), f"missing VAD asset: {vad_path}"
           SileroVADModel(vad_path)
           print(f"Silero VAD session: OK ({vad_path})")
-
-          # And confirm InsightFace's onnxruntime consumer imports too, so
-          # the character-detection step later in this workflow doesn't
-          # need to be reached to discover the same class of failure.
-          import insightface
-          print(f"insightface: {insightface.__version__}")
           PY
 
       - name: Write initial status (stage_a_running)
@@ -279,18 +271,23 @@ jobs:
           head -c 400 work/transcript.json; echo
 
       # ---------------------------------------------------------------
-      # Local vision-assist stack (NEW)
+      # Local vision-assist stack
       #
-      # These three steps replace what used to be pure "let the vision
-      # agent figure it out" work. They run entirely on the runner using
-      # ffmpeg + a small CPU face model, so they cost zero AI-vision
-      # tokens downstream while dramatically improving character
-      # identification and scene detection.
+      # These steps replace what used to be pure "let the vision agent
+      # figure it out" work. They run entirely on the runner using
+      # ffmpeg, so they cost zero AI-vision tokens downstream while
+      # dramatically improving scene detection.
       #
       # The stack is opt-out (enable_vision_assist=false) but ON by
-      # default. If any step degrades — model download fails, deps
-      # missing — the scripts write empty-but-valid indexes and the
-      # rest of the pipeline continues.
+      # default. If any step degrades, the scripts write empty-but-
+      # valid indexes and the rest of the pipeline continues.
+      #
+      # NOTE: A local face-clustering ("character identification")
+      # step used to live here. It was removed because its identity
+      # errors (splits, merges, missed brief appearances) were doing
+      # more harm than good. Character identification is now handled
+      # directly by the downstream AI vision agent, which has both
+      # the transcript and the screenshots to work from.
       # ---------------------------------------------------------------
 
       - name: Detect shot boundaries (scene_index.json)
@@ -307,44 +304,6 @@ jobs:
           echo "SHOT_COUNT=$shot_count" >> "$GITHUB_ENV"
           echo "Detected $shot_count shot(s)"
 
-      - name: Build character index (character_index.json + people/*.jpg)
-        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Preload the InsightFace `buffalo_sc` model into the default
-          # ~/.insightface cache. Doing it here means a network glitch
-          # during model download shows up as its own visible step
-          # rather than as an opaque failure inside character_index.py.
-          #
-          # Note: the shared onnxruntime import was already verified in
-          # the "Verify onnxruntime + faster-whisper VAD stack" step at
-          # the top of the job, so anything failing here is model-
-          # download or SCRFD-specific rather than an environment issue.
-          python -c "
-          import os, sys
-          try:
-              from insightface.app import FaceAnalysis
-              app = FaceAnalysis(name='buffalo_sc', allowed_modules=['detection', 'recognition'])
-              app.prepare(ctx_id=-1, det_size=(640, 640))
-              print('InsightFace buffalo_sc ready')
-          except Exception as e:
-              print(f'InsightFace preload failed (non-fatal): {e}', file=sys.stderr)
-          "
-
-          python scripts/character_index.py \
-            work/analysis/compressed.mp4 \
-            work/scene_index.json \
-            work/screenshots \
-            work/character_index.json \
-            --max-samples-per-shot 3 \
-            --cluster-threshold 0.5 \
-            --min-appearances 2
-
-          char_count="$(python -c "import json; print(json.load(open('work/character_index.json'))['identity_count'])")"
-          echo "CHARACTER_COUNT=$char_count" >> "$GITHUB_ENV"
-          echo "Indexed $char_count recurring identity(ies)"
-
       - name: Build key-moments shortlist (key_moments.json)
         if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
         shell: bash
@@ -352,7 +311,6 @@ jobs:
           set -euo pipefail
           python scripts/build_key_moments.py \
             work/scene_index.json \
-            work/character_index.json \
             work/transcript.json \
             work/key_moments.json \
             --max-moments 60
@@ -394,15 +352,13 @@ jobs:
           import json
           for path, extra in [
               ('work/scene_index.json', {'shot_count': 0, 'shots': []}),
-              ('work/character_index.json', {'identity_count': 0, 'identities': [], 'backend': 'disabled'}),
-              ('work/key_moments.json', {'moment_count': 0, 'moments': [], 'cast_summary': []}),
+              ('work/key_moments.json', {'moment_count': 0, 'moments': []}),
           ]:
               payload = {'video_duration_seconds': ${DURATION_SECONDS}}
               payload.update(extra)
               open(path, 'w').write(json.dumps(payload, indent=2))
           "
           echo "SHOT_COUNT=0" >> "$GITHUB_ENV"
-          echo "CHARACTER_COUNT=0" >> "$GITHUB_ENV"
           echo "KEY_MOMENT_COUNT=0" >> "$GITHUB_ENV"
           echo "EVENT_FRAME_COUNT=0" >> "$GITHUB_ENV"
 
@@ -428,13 +384,12 @@ jobs:
             --target-duration "$target_dur" \
             --job-id "${{ steps.jid.outputs.job_id }}" \
             --window-seconds "${SCREENSHOT_WINDOW_SECONDS:-6}" \
-            --character-count "${CHARACTER_COUNT:-0}" \
             --shot-count "${SHOT_COUNT:-0}" \
             --key-moment-count "${KEY_MOMENT_COUNT:-0}" \
             --event-frame-count "${EVENT_FRAME_COUNT:-0}"
           head -n 40 work/00_READ_THIS_FIRST.txt
 
-      - name: Zip screenshots (baseline + event composites + face thumbnails)
+      - name: Zip screenshots (baseline + event composites)
         shell: bash
         run: |
           set -euo pipefail
@@ -469,14 +424,12 @@ jobs:
               - 00_READ_THIS_FIRST.txt   (READ FIRST — cut selection instructions)
               - transcript.json          (timestamped transcript)
               - scene_index.json         (locally-computed shot boundaries)
-              - character_index.json     (locally-computed face/character index; ${{ env.CHARACTER_COUNT }} recurring identity/-ies)
               - key_moments.json         (locally-ranked shortlist of high-signal moments)
-              - screenshots.zip          (baseline 6s composites + dense event composites + people/*.jpg thumbnails)
+              - screenshots.zip          (baseline 6s composites + dense event composites)
               - ${{ env.ORIGINAL_ASSET_NAME }}   (original quality video, used by Stage B)
 
             Stats:
               shots detected:           ${{ env.SHOT_COUNT }}
-              recurring characters:     ${{ env.CHARACTER_COUNT }}
               key moments shortlisted:  ${{ env.KEY_MOMENT_COUNT }}
               baseline composites:      ${{ env.SCREENSHOT_COUNT }}
               dense event composites:   ${{ env.EVENT_FRAME_COUNT }}
@@ -488,7 +441,6 @@ jobs:
             work/00_READ_THIS_FIRST.txt
             work/transcript.json
             work/scene_index.json
-            work/character_index.json
             work/key_moments.json
             work/screenshots.zip
             work/stash/${{ env.ORIGINAL_ASSET_NAME }}
@@ -533,7 +485,6 @@ jobs:
             --extra "screenshot_count=${SCREENSHOT_COUNT}" \
             --extra "event_frame_count=${EVENT_FRAME_COUNT:-0}" \
             --extra "shot_count=${SHOT_COUNT:-0}" \
-            --extra "character_count=${CHARACTER_COUNT:-0}" \
             --extra "key_moment_count=${KEY_MOMENT_COUNT:-0}" \
             --extra "original_asset_name=${ORIGINAL_ASSET_NAME}"
 
