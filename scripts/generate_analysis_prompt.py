@@ -8,6 +8,13 @@ shape to return.
 The duration, frame filename convention, and window size are substituted
 from the actual Stage A run.
 
+The optional --focus / --focus-env argument narrows the entire analysis
+to one specific scene/moment/plot thread in the source video. When
+provided, a strong "FOCUS DIRECTIVE" block is prepended to the top of
+the prompt and the working-order steps are rewritten to explicitly
+constrain the agent to that focus. When absent, the prompt behaves
+exactly as before (consider the whole video).
+
 Usage:
     python generate_analysis_prompt.py <duration_seconds> <total_frames>
                                        <output_txt_path>
@@ -17,13 +24,112 @@ Usage:
                                        [--shot-count 0]
                                        [--key-moment-count 0]
                                        [--event-frame-count 0]
+                                       [--focus "the confrontation between X and Y"]
+                                       [--focus-env FOCUS]
 """
 import argparse
 import os
 
 
+# ---------------------------------------------------------------------------
+# Focus directive.
+#
+# Prepended verbatim (with the user's focus text substituted) at the very
+# top of 00_READ_THIS_FIRST.txt, BEFORE the general instructions, whenever
+# the operator supplied a focus value in the Stage A form. Placed at the
+# top on purpose — this is a hard task-level constraint, not a preference,
+# and every subsequent instruction below (transcript reading, index use,
+# screenshot viewing, cut selection, narration) has to be understood
+# through this lens.
+#
+# The wording is intentionally emphatic and repeats the constraint several
+# times: real-world agents skim these prompts, and a single mention of
+# "focus on X" tends to get overridden by the very detailed
+# "consider the whole video" machinery that follows.
+# ---------------------------------------------------------------------------
+FOCUS_DIRECTIVE = """\
+################################################################################
+##  FOCUS DIRECTIVE — READ AND OBEY BEFORE ANYTHING ELSE BELOW
+################################################################################
+
+The operator has narrowed this run to ONE specific focus inside the source
+video. This is a HARD, TASK-LEVEL CONSTRAINT — not a preference, not a
+hint, and not something to balance against the rest of the instructions
+below. It overrides the general "consider the whole video" framing you
+will read in the sections that follow.
+
+  >>> FOCUS: {focus_text}
+
+What this means, concretely:
+
+  1. Your entire analysis — transcript reading, index inspection,
+     screenshot viewing, character identification, cut selection, and
+     raw_narration writing — must be NARROWED to the focus stated above.
+
+  2. Treat every other plot thread, subplot, side character, running gag,
+     cold open, recap, preview, or independently interesting moment in
+     this video as OUT OF SCOPE. Even if a non-focus moment is
+     objectively strong (high emotional score, high priority in
+     key_moments.json, a clear shot boundary with punchy dialogue),
+     SKIP IT if it does not directly serve the focus above.
+
+  3. The candidate pool for cuts.json is NOT "the best beats in the
+     whole video". It is "the best beats that build the specific
+     throughline named in the focus above". A ~2-minute cut sampled
+     evenly across an entire episode is exactly the diluted,
+     bouncing-around result the focus directive exists to prevent.
+
+  4. When reading transcript.json in STEP 1 (see working order below):
+     build your story map around the FOCUS. Locate where the focus
+     begins in the timeline, where it ends, and how it develops. You
+     may — and should — ignore stretches of the transcript that
+     clearly belong to unrelated plot threads.
+
+  5. When reading key_moments.json in STEP 2: filter the `moments`
+     array down to only those moments that belong to the focus. Do NOT
+     pick a moment just because its priority is high; a high-priority
+     moment from an unrelated subplot is worse for this run than a
+     medium-priority moment inside the focus.
+
+  6. When opening screenshots in STEP 3: only open composites that
+     cover time ranges where the focus is on screen (or where its
+     immediate setup / payoff lives). Do not spend vision budget on
+     unrelated stretches.
+
+  7. When writing raw_narration in STEP 4: every cut must contribute
+     to the ONE story defined by the focus above. The concatenated
+     narration should read as a single tight arc about that focus,
+     from earliest setup to final payoff — not as a highlight reel of
+     the whole video with the focus mixed in.
+
+  8. Duration target still applies (~{target_duration}s total), but
+     it is subordinate to the focus. If the focus genuinely has less
+     material than the target, prefer a slightly shorter, tighter cut
+     over padding with unrelated moments. If it has more, prefer a
+     slightly longer cut over dropping essential beats of the focus.
+
+  9. If — after honestly reading the transcript and indexes — you
+     cannot locate the focus in this source video at all, say so
+     explicitly in a single-line comment at the top of your response
+     BEFORE returning cuts.json, and then return the best cuts.json
+     you can that still respects the focus intent (e.g. its closest
+     analog); do NOT silently fall back to a whole-video highlight
+     reel.
+
+Everything below this box is the general ClipForge Stage A guidance.
+Read it through the lens of the FOCUS above: wherever the general
+guidance says "consider the whole video", "the video's story", "the
+overall throughline", or similar, substitute "the focus stated above"
+in your head. Where the general guidance and the focus directive
+conflict, the FOCUS DIRECTIVE wins.
+
+################################################################################
+
+"""
+
+
 TEMPLATE = """\
-================================================================================
+{focus_block}================================================================================
   READ THIS FIRST — Source-video cut-selection instructions for the AI agent
 ================================================================================
 
@@ -53,7 +159,7 @@ pipeline:
                                 need to open it; Stage B uses it later.
   6. This file                — your instructions.
 
-Your job: choose the most engaging moments from this video and output a
+Your job: choose the most engaging moments from this video{focus_scope_clause} and output a
 `cuts.json` file (schema at the bottom of this document) that ClipForge's
 Stage B will use to slice the ORIGINAL full-quality video and stitch a
 short-form commentary base.
@@ -92,7 +198,7 @@ The order below is the single most important thing in this document.
      introducing themselves, a third-person reference — and keep those
      names next to the timestamp where they were said, so you can bind
      each name to a visible character when you open the screenshots
-     later.
+     later.{step1_focus_note}
 
   STEP 2: Open `scene_index.json` and `key_moments.json`.
      - `scene_index.json` gives you EXACT shot boundaries — where the
@@ -105,7 +211,7 @@ The order below is the single most important thing in this document.
        `moments` array. This is your candidate pool. Cross-check it
        against your Step 1 story map and pick the moments that
        genuinely serve the throughline of the video, not just the
-       highest-priority ones in isolation.
+       highest-priority ones in isolation.{step2_focus_note}
 
   STEP 3: For each candidate moment/cut range from Step 2, OPEN
      screenshots to fill in what the transcript and indexes still can't
@@ -127,6 +233,7 @@ VIDEO METADATA (substituted by Stage A)
 
   Job ID:                  {job_id}
   Full video duration:     {duration_seconds} seconds ({duration_hms})
+  Focus (this run):        {focus_metadata}
   Baseline cadence:        one composite JPEG per {window_seconds}-second
                            window of source video. Each composite is a
                            3x2 grid of 6 panels, and each panel is one
@@ -204,7 +311,7 @@ tokens for the coverage they provide.
       "worth a look", not "must be a cut". The best cut list is the
       one that tells one connected story, not the one that greedily
       picks the top-N priorities.
-    - Moments are already sorted chronologically in the file.
+    - Moments are already sorted chronologically in the file.{indexes_focus_note}
 
 --------------------------------------------------------------------------------
 ABOUT THE SCREENSHOTS ARCHIVE — read this carefully
@@ -281,7 +388,7 @@ HOW TO SELECT CUTS AND DESCRIBE THEM
 STEP 1 (indexes-first). You have already read transcript.json,
         scene_index.json, and key_moments.json (Steps 1-2 above). Your
         candidate cut pool is the `moments` array of key_moments.json,
-        filtered against your story map from transcript.json.
+        filtered against your story map from transcript.json.{cut_step1_focus_note}
 
         Prioritize keeping moments that:
           - Sit on strong emotional dialogue (`emotional_score` >= 0.4).
@@ -294,7 +401,7 @@ STEP 1 (indexes-first). You have already read transcript.json,
           - Are shot boundaries with no dialogue signal (usually
             establishing shots or filler).
           - Repeat information a previous cut already delivered.
-          - Land in intro / outro / recap / preview sections.
+          - Land in intro / outro / recap / preview sections.{cut_step1_skip_focus_note}
 
 STEP 2 (open screenshots — in chronological order — to fill visuals).
 
@@ -509,7 +616,7 @@ STEP 3 (assemble cuts).
             your Step 1 story map) and what arc the cuts you have
             chosen trace through it — who the subject is, what they
             want or are up against, and how the chosen beats
-            progress from beginning to end.
+            progress from beginning to end.{narration_focus_note}
 
           - Between one cut and the next in the source there is
             usually a gap of footage you deliberately did NOT select.
@@ -597,7 +704,7 @@ CONSTRAINTS
     Where there is a real gap between adjacent cuts (location change,
     time skip, unexplained new state, setup→payoff), open the later
     cut's `raw_narration` with a short connective lead-in that carries
-    the viewer across the gap. Never invent events to fill a gap.
+    the viewer across the gap. Never invent events to fill a gap.{constraints_focus_note}
   - Return ONLY the JSON, no surrounding prose, no code fences. It will
     be uploaded verbatim to ClipForge Stage B.
 
@@ -611,6 +718,22 @@ def hms(sec: int) -> str:
     if h:
         return f"{h:d}h{m:02d}m{s:02d}s"
     return f"{m:d}m{s:02d}s"
+
+
+def _resolve_focus(args) -> str:
+    """
+    Resolve the focus string from either --focus (literal argv) or
+    --focus-env (env var name). Env-var form is preferred by stage-a.yml
+    because a free-form user string is safer piped through the
+    environment than through argv. Returns "" when no focus is set /
+    only whitespace was given.
+    """
+    raw = ""
+    if args.focus_env:
+        raw = os.environ.get(args.focus_env, "") or ""
+    elif args.focus is not None:
+        raw = args.focus
+    return (raw or "").strip()
 
 
 def main() -> None:
@@ -630,6 +753,20 @@ def main() -> None:
     ap.add_argument("--shot-count", type=int, default=0)
     ap.add_argument("--key-moment-count", type=int, default=0)
     ap.add_argument("--event-frame-count", type=int, default=0)
+    ap.add_argument(
+        "--focus",
+        default=None,
+        help="Optional literal focus string. Narrows the entire analysis "
+             "to one specific scene/moment/plot thread in the source video. "
+             "Prefer --focus-env for values coming from workflow_dispatch "
+             "so we don't have to shell-quote arbitrary user text on argv.",
+    )
+    ap.add_argument(
+        "--focus-env",
+        default=None,
+        help="Name of the environment variable that carries the focus "
+             "string. Preferred over --focus for stage-a.yml wiring.",
+    )
     args = ap.parse_args()
 
     window_seconds = max(int(args.window_seconds), 1)
@@ -641,7 +778,90 @@ def main() -> None:
     example_window = example_div * window_seconds
     example_window_end = example_window + window_seconds
 
+    focus_text = _resolve_focus(args)
+    has_focus = bool(focus_text)
+
+    # Compose the focus-conditional blocks. When focus is empty, every
+    # focus_* substitution is "" and the prompt reads exactly as the
+    # pre-feature version. When focus is set, a strong FOCUS DIRECTIVE
+    # block is prepended and inline reminders are woven through the
+    # working-order / cut-selection / narration / constraints sections.
+    if has_focus:
+        focus_block = FOCUS_DIRECTIVE.format(
+            focus_text=focus_text,
+            target_duration=args.target_duration,
+        )
+        focus_scope_clause = (
+            " — narrowed strictly to the FOCUS stated at the top of this file"
+        )
+        focus_metadata = focus_text
+        step1_focus_note = (
+            "\n     FOCUS-MODE ADDITION: while reading, build your story map "
+            "specifically around the FOCUS stated at the top of this file. "
+            "Note where the focus enters the timeline, where it develops, "
+            "and where it resolves. You may skim or skip stretches of the "
+            "transcript that clearly belong to unrelated plot threads."
+        )
+        step2_focus_note = (
+            "\n     FOCUS-MODE ADDITION: filter key_moments.json down to only "
+            "the moments that belong to the FOCUS. A high-priority moment "
+            "outside the focus is out of scope for this run — do NOT pick "
+            "it just because its priority is high."
+        )
+        indexes_focus_note = (
+            "\n\n  FOCUS-MODE ADDITION (both indexes):\n"
+            "    - When applying the indexes, treat any shot or moment that "
+            "does not belong to the FOCUS stated at the top of this file as "
+            "out of scope. High shot activity or high `priority` outside "
+            "the focus is not a reason to include it."
+        )
+        cut_step1_focus_note = (
+            "\n\n        FOCUS-MODE ADDITION: your candidate cut pool for "
+            "this run is not `moments` in general — it is the subset of "
+            "`moments` that belongs to the FOCUS stated at the top of "
+            "this file. Discard the rest before you start ranking."
+        )
+        cut_step1_skip_focus_note = (
+            "\n          - Belong to any plot thread, subplot, side "
+            "character, or running gag OTHER than the FOCUS stated at the "
+            "top of this file, even if they are independently strong."
+        )
+        narration_focus_note = (
+            "\n            FOCUS-MODE ADDITION: the \"overall story\" you "
+            "narrate is the FOCUS stated at the top of this file, NOT the "
+            "whole source video. The arc should trace that focus from its "
+            "earliest visible setup in the source to its final payoff."
+        )
+        constraints_focus_note = (
+            "\n  - Every cut in this cuts.json must serve the FOCUS stated "
+            "at the top of the accompanying 00_READ_THIS_FIRST.txt. Cuts "
+            "belonging to unrelated plot threads are a violation of this "
+            "run's constraint, regardless of how strong they are in "
+            "isolation."
+        )
+    else:
+        focus_block = ""
+        focus_scope_clause = ""
+        focus_metadata = "(none — whole video considered)"
+        step1_focus_note = ""
+        step2_focus_note = ""
+        indexes_focus_note = ""
+        cut_step1_focus_note = ""
+        cut_step1_skip_focus_note = ""
+        narration_focus_note = ""
+        constraints_focus_note = ""
+
     content = TEMPLATE.format(
+        focus_block=focus_block,
+        focus_scope_clause=focus_scope_clause,
+        focus_metadata=focus_metadata,
+        step1_focus_note=step1_focus_note,
+        step2_focus_note=step2_focus_note,
+        indexes_focus_note=indexes_focus_note,
+        cut_step1_focus_note=cut_step1_focus_note,
+        cut_step1_skip_focus_note=cut_step1_skip_focus_note,
+        narration_focus_note=narration_focus_note,
+        constraints_focus_note=constraints_focus_note,
         job_id=args.job_id,
         duration_seconds=args.duration_seconds,
         duration_hms=hms(args.duration_seconds),
@@ -662,7 +882,8 @@ def main() -> None:
     os.makedirs(os.path.dirname(os.path.abspath(args.output_txt)) or ".", exist_ok=True)
     with open(args.output_txt, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"Wrote analysis prompt to {args.output_txt} ({len(content)} bytes)")
+    focus_report = f"focus={focus_text!r}" if has_focus else "focus=<none>"
+    print(f"Wrote analysis prompt to {args.output_txt} ({len(content)} bytes; {focus_report})")
 
 
 if __name__ == "__main__":
