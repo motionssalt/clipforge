@@ -121,6 +121,24 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="focus-input">Focus <span class="opt">optional</span></label>
+          <input
+            type="text"
+            id="focus-input"
+            name="focus"
+            placeholder="e.g. the confrontation between X and Y — leave blank to consider the whole video"
+            spellcheck="true"
+            autocapitalize="sentences"
+            maxlength="500">
+          <p class="hint">
+            Narrow the whole analysis to <strong>one specific scene, moment, or plot thread</strong>
+            in this video. When set, the downstream agent is instructed to ignore other unrelated
+            plot threads — even objectively strong ones — and build the entire cut around this focus.
+            Leave blank to consider the whole video (default behavior).
+          </p>
+        </div>
+
         <div class="actions">
           <button type="submit" id="start-stage-a" class="btn btn-accent">Start Stage A</button>
           <span id="stage-a-msg" class="inline-msg" aria-live="polite"></span>
