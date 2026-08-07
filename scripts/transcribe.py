@@ -134,16 +134,14 @@ def _verify_onnxruntime_importable() -> None:
             ) from e
 
     That message is technically accurate but heavily misleading in practice.
-    In this project onnxruntime is ALWAYS installed (both faster-whisper 1.0.3
-    and insightface 0.7.3 pull it in, and scripts/requirements.txt pins it
-    explicitly). So if the VAD filter reports it "requires the onnxruntime
-    package", the real underlying cause is virtually always one of:
+    In this project onnxruntime is ALWAYS installed (faster-whisper 1.0.3
+    pulls it in, and scripts/requirements.txt pins it explicitly). So if
+    the VAD filter reports it "requires the onnxruntime package", the
+    real underlying cause is virtually always one of:
 
       - onnxruntime's C extension fails to import because it was built
-        against NumPy 1.x but NumPy 2.x got resolved into the environment
-        (ABI mismatch on the numpy dtype struct);
-      - a protobuf major-version mismatch (protobuf 5 dropping APIs that
-        onnxruntime <1.20 relies on);
+        against a different NumPy major than the one resolved into the
+        environment (ABI mismatch on the numpy dtype struct);
       - a manylinux tag mismatch that only lets pip pick a broken wheel.
 
     Doing the import here, BEFORE we hand off to faster-whisper, means the
@@ -162,8 +160,8 @@ def _verify_onnxruntime_importable() -> None:
             "VAD filter will hit this same failure and hide it behind a "
             "'requires the onnxruntime package' message. The underlying error "
             f"is: {type(e).__name__}: {e}. Check scripts/requirements.txt — "
-            "this almost always means an ABI mismatch (NumPy 2 vs. an "
-            "onnxruntime wheel built for NumPy 1, or a protobuf 5 install)."
+            "this almost always means an ABI mismatch between the installed "
+            "onnxruntime wheel and the resolved NumPy version."
         ) from e
 
 
