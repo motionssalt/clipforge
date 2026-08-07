@@ -18,23 +18,45 @@ the moments we already know are important — the ones on the
 `key_moments.json` shortlist that have `is_shot_boundary=true` OR a
 priority above the configured minimum.
 
-For each such moment we emit ONE extra 3x2 composite covering ±2s
-around the moment's start (a 4-second window sampled at 2 frames per
-second = 8 samples fit into a 3x3 grid — we use 3x2 = 6 for
-consistency with the baseline layout the agent already understands,
-sampling at 0.66s intervals so we cover the full 4s span).
+For each such moment we emit TWO extra 3x2 composites:
 
-Total extra frames are ~= (# high-signal moments) which for a typical
-video is <10% of the baseline frame count. Cost stays flat, resolution
-at the important moments jumps ~4x.
+  1. START composite — 3x2 tile of a 4-second window centered on the
+     moment's `start_seconds`. Captures the shot boundary itself and
+     the entry into the described beat.
+
+  2. TAIL composite — 3x2 tile of a 4-second window centered on the
+     moment's `end_seconds` (which by build_key_moments.py's
+     visual-tail policy already sits a bit PAST the raw shot
+     boundary). This is the fix for a real recurring bug: cuts were
+     ending before the described on-screen action actually finished
+     happening. The baseline cadence gives the agent 1 fps of visual
+     info at the END of a candidate scene and none across the
+     boundary — so it could not verify whether the described payoff
+     (reaction shot, cutaway, result of the action) had actually
+     landed before its chosen `end_seconds`. Sampling densely across
+     the tail restores symmetry: the agent now sees ~1.5 fps at BOTH
+     ends of every candidate, and can push `end_seconds` out until
+     the described action is visibly complete.
+
+Each composite is a 3x2 tile sampled at ~1.5 fps across a 4-second
+window (consecutive panels ~0.66s apart), same layout the agent
+already understands from the baseline.
+
+Total extra frames are ~= 2 * (# high-signal moments) which for a
+typical video is <20% of the baseline frame count. Cost stays flat,
+resolution at the important moments jumps ~4x AND now covers the
+action's visual tail, not just its onset.
 
 Output filenames are:
 
-    event_<start_ms>.jpg     # zero-padded to 9 digits: event_000042500.jpg
+    event_<center_ms>.jpg     # zero-padded to 9 digits: event_000042500.jpg
 
-placed alongside the baseline `frame_NNNNNN.jpg` files in the same
-screenshots directory. The agent is told about them in
-00_READ_THIS_FIRST.txt.
+The number is the CENTER of the window in milliseconds. Start and tail
+composites are distinguished purely by their timestamp — a moment
+with start_seconds=42.5 and end_seconds=61.5 emits event_000042500.jpg
+and event_000061500.jpg. Files placed alongside the baseline
+`frame_NNNNNN.jpg` files in the same screenshots directory. The agent
+is told about them in 00_READ_THIS_FIRST.txt.
 
 Usage
 -----
@@ -116,8 +138,10 @@ def main() -> None:
         "--max-events",
         type=int,
         default=30,
-        help="Hard cap on the number of dense event composites emitted, "
-             "so a video with many cuts can't balloon the frame count.",
+        help="Hard cap on the number of high-signal MOMENTS we emit dense "
+             "composites for. Each selected moment produces up to two "
+             "composites (start and tail), so the actual file count is up "
+             "to 2x this cap.",
     )
     ap.add_argument(
         "--min-priority",
@@ -125,7 +149,16 @@ def main() -> None:
         default=0.35,
         help="Only moments with priority >= this get a dense composite.",
     )
+    ap.add_argument(
+        "--tail-composites",
+        default="true",
+        help="If 'true' (default), also emit an event composite centered on "
+             "each moment's end_seconds so the agent has dense visual "
+             "coverage of the described beat's on-screen resolution, not "
+             "just its onset. Set to 'false' to emit start composites only.",
+    )
     args = ap.parse_args()
+    emit_tails = str(args.tail_composites).strip().lower() not in ("false", "0", "no", "off")
 
     if not os.path.exists(args.compressed_video):
         print(f"Input video not found: {args.compressed_video}", file=sys.stderr)
@@ -158,13 +191,32 @@ def main() -> None:
     high.sort(key=lambda m: m["start_seconds"])
 
     os.makedirs(args.screenshots_out_dir, exist_ok=True)
-    written = 0
-    for m in high:
-        center = float(m["start_seconds"])
-        # Filename encodes the CENTER of the event window in milliseconds,
-        # zero-padded to 9 digits so files sort by time and never collide
-        # with the baseline `frame_NNNNNN.jpg` naming.
-        fname = f"event_{int(round(center * 1000)):09d}.jpg"
+
+    # Deduplicate composite CENTERS across all moments — adjacent moments
+    # frequently share a boundary (moment N's end ≈ moment N+1's start),
+    # and we don't want to render the same window twice.
+    emitted_centers_ms: set[int] = set()
+
+    def _emit_one(center: float, label: str) -> bool:
+        """
+        Render a single 4-second event composite centered on `center` (in
+        source-video seconds). Returns True if a NEW file was written
+        (False if the center collides with something we already emitted
+        or if ffmpeg failed).
+        """
+        if center < 0.0:
+            return False
+        # Round to whole milliseconds for the filename AND for dedup.
+        center_ms = int(round(center * 1000))
+        if center_ms in emitted_centers_ms:
+            return False
+        # Also treat centers within ~0.5s of an already-emitted center as
+        # duplicates — they render essentially identical 4-second windows.
+        for existing in emitted_centers_ms:
+            if abs(existing - center_ms) < 500:
+                return False
+
+        fname = f"event_{center_ms:09d}.jpg"
         dst = os.path.join(args.screenshots_out_dir, fname)
         ok = emit_event_composite(
             args.compressed_video,
@@ -175,8 +227,35 @@ def main() -> None:
             args.panel_width,
         )
         if ok:
+            emitted_centers_ms.add(center_ms)
+            print(f"  event composite [{label}] @ {center:.2f}s -> {fname}", flush=True)
+            return True
+        return False
+
+    written = 0
+    for m in high:
+        start_c = float(m["start_seconds"])
+        if _emit_one(start_c, "start"):
             written += 1
-            print(f"  event composite @ {center:.2f}s -> {fname}", flush=True)
+
+        if not emit_tails:
+            continue
+
+        # Tail composite: center on end_seconds, which by
+        # build_key_moments.py's visual-tail policy already sits a bit
+        # PAST the raw shot boundary. If the moment for some reason has
+        # no distinct end (very short shot, missing field), fall back to
+        # shot_end_seconds and finally to a small pad past start.
+        end_c = m.get("end_seconds")
+        if end_c is None:
+            end_c = m.get("shot_end_seconds", start_c + 3.0)
+        end_c = float(end_c)
+        # If end is essentially the same as start (a sub-second shot),
+        # skip — the start composite already covers it.
+        if end_c - start_c < args.window_seconds / 2.0:
+            continue
+        if _emit_one(end_c, "tail"):
+            written += 1
 
     print(f"Wrote {written} event composite(s) to {args.screenshots_out_dir}", flush=True)
 
