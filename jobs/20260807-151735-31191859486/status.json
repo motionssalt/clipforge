@@ -1,7 +1,7 @@
 {
   "job_id": "20260807-151735-31191859486",
-  "stage": "stage_b_running",
-  "message": "Stage B started: cutting original video",
+  "stage": "complete",
+  "message": "Scene videos are ready (one MP4 per cut segment).",
   "release_tag": "clipforge-20260807-151735-31191859486",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260807-151735-31191859486",
   "assets": {
@@ -11,10 +11,11 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260807-151735-31191859486/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260807-151735-31191859486/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260807-151735-31191859486/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260807-151735-31191859486/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260807-151735-31191859486/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260807-151735-31191859486/clipforge-20260807-151735-31191859486-final.zip"
   },
   "created_at_epoch": 1786115914,
-  "updated_at_epoch": 1786118553,
+  "updated_at_epoch": 1786118656,
   "expires_at_epoch": 1786159114,
   "extra": {
     "duration_seconds": "1416",
