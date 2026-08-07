@@ -116,6 +116,57 @@ def _clip_segment_end(start: float, end: float, text: str, words) -> float:
     return corrected
 
 
+def _verify_onnxruntime_importable() -> None:
+    """
+    Eagerly import onnxruntime and surface the REAL failure if it can't be
+    loaded.
+
+    Why this exists
+    ---------------
+    faster-whisper's VAD filter path (SileroVADModel.__init__ in
+    faster_whisper/vad.py) does:
+
+        try:
+            import onnxruntime
+        except ImportError as e:
+            raise RuntimeError(
+                "Applying the VAD filter requires the onnxruntime package"
+            ) from e
+
+    That message is technically accurate but heavily misleading in practice.
+    In this project onnxruntime is ALWAYS installed (both faster-whisper 1.0.3
+    and insightface 0.7.3 pull it in, and scripts/requirements.txt pins it
+    explicitly). So if the VAD filter reports it "requires the onnxruntime
+    package", the real underlying cause is virtually always one of:
+
+      - onnxruntime's C extension fails to import because it was built
+        against NumPy 1.x but NumPy 2.x got resolved into the environment
+        (ABI mismatch on the numpy dtype struct);
+      - a protobuf major-version mismatch (protobuf 5 dropping APIs that
+        onnxruntime <1.20 relies on);
+      - a manylinux tag mismatch that only lets pip pick a broken wheel.
+
+    Doing the import here, BEFORE we hand off to faster-whisper, means the
+    original traceback (e.g. "numpy.dtype size changed, may indicate binary
+    incompatibility") shows up in the run log verbatim, instead of getting
+    swallowed and re-raised as the vague "requires the onnxruntime package"
+    message that already burned a Stage A run once.
+    """
+    try:
+        import onnxruntime  # noqa: F401
+    except Exception as e:  # noqa: BLE001 — we want to see EVERY failure mode
+        # Re-raise with a message that pins the blame where it belongs, and
+        # keep the original exception chained so the traceback survives.
+        raise RuntimeError(
+            "onnxruntime failed to import at transcription time. faster-whisper's "
+            "VAD filter will hit this same failure and hide it behind a "
+            "'requires the onnxruntime package' message. The underlying error "
+            f"is: {type(e).__name__}: {e}. Check scripts/requirements.txt — "
+            "this almost always means an ABI mismatch (NumPy 2 vs. an "
+            "onnxruntime wheel built for NumPy 1, or a protobuf 5 install)."
+        ) from e
+
+
 class FasterWhisperTranscriber:
     """
     Default (and currently only) transcriber.
@@ -134,6 +185,12 @@ class FasterWhisperTranscriber:
             )
         # Import lazily so the module is importable without the dep for tests.
         from faster_whisper import WhisperModel  # type: ignore
+
+        # Verify onnxruntime is actually usable BEFORE we build the model.
+        # If it isn't, we want the real traceback here, not the misleading
+        # "VAD filter requires the onnxruntime package" that would surface
+        # a few lines later inside faster-whisper.
+        _verify_onnxruntime_importable()
 
         print(f"Loading faster-whisper model: {model_size} (CPU, int8)", flush=True)
         t0 = time.time()
