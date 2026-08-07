@@ -14,7 +14,6 @@ Usage:
                                        [--target-duration 120]
                                        [--job-id JOB_ID]
                                        [--window-seconds 6]
-                                       [--character-count 0]
                                        [--shot-count 0]
                                        [--key-moment-count 0]
                                        [--event-frame-count 0]
@@ -28,11 +27,8 @@ TEMPLATE = """\
   READ THIS FIRST — Source-video cut-selection instructions for the AI agent
 ================================================================================
 
-You have been given SEVEN artifacts from a Stage A run of the ClipForge
-pipeline. Four of them are new — they exist specifically to make
-character identification and scene understanding more accurate without
-increasing the number of images you have to feed into your vision
-context.
+You have been given SIX artifacts from a Stage A run of the ClipForge
+pipeline:
 
   1. transcript.json          — timestamped transcript of the video's audio.
   2. scene_index.json         — locally-computed list of every shot
@@ -40,32 +36,22 @@ context.
                                 scene-change scores). Deterministic,
                                 zero-guesswork. See "USING THE INDEXES"
                                 below.
-  3. character_index.json     — locally-computed face-clustering index.
-                                Every recurring face in the video is
-                                grouped under a stable id (person_A,
-                                person_B, ...), with the exact shot ids
-                                and timestamps of every appearance and a
-                                thumbnail cropped from a representative
-                                frame. This is how you identify who is
-                                who across cuts without re-guessing on
-                                every screenshot.
-  4. key_moments.json         — a locally-ranked SHORTLIST of the
-                                high-signal moments in the video (new
-                                character enters, shot cut, emotionally
-                                loaded dialogue, cast changes). Each
-                                moment carries a `why` field. Use this
-                                shortlist to decide which stretches to
-                                open screenshots for, BEFORE opening any.
-  5. screenshots.zip          — a zip archive containing composite JPEG
+  3. key_moments.json         — a locally-ranked SHORTLIST of the
+                                high-signal moments in the video (shot
+                                cuts, emotionally loaded dialogue).
+                                Each moment carries a `why` field. Use
+                                this shortlist to decide which stretches
+                                to open screenshots for, BEFORE opening
+                                any.
+  4. screenshots.zip          — a zip archive containing composite JPEG
                                 images of the (compressed) source video.
                                 Two kinds of image live inside:
                                    • frame_NNNNNN.jpg   (baseline)
                                    • event_NNNNNNNNN.jpg (dense event)
-                                   • people/person_X.jpg (face thumbnails)
                                 See "ABOUT THE SCREENSHOTS ARCHIVE" below.
-  6. (the original video)     — attached to the same Release. You do not
+  5. (the original video)     — attached to the same Release. You do not
                                 need to open it; Stage B uses it later.
-  7. This file                — your instructions.
+  6. This file                — your instructions.
 
 Your job: choose the most engaging moments from this video and output a
 `cuts.json` file (schema at the bottom of this document) that ClipForge's
@@ -79,106 +65,61 @@ actions, reactions, expressions, visual gags, scene changes — not just
 paraphrase the dialogue. The transcript alone is almost never enough for
 this; the indexes plus the screenshots are how you actually see the video.
 
+CHARACTER IDENTIFICATION IS YOUR JOB.
+The pipeline no longer runs a local face-clustering step. That step was
+misidentifying people (splitting the same character into two labels, or
+merging distinct characters together, or missing brief appearances) and
+its errors were poisoning downstream selection and narration. You are
+the vision model — you can see the screenshots and read the transcript,
+so you identify who is who directly from those two sources. Do it the
+way any careful viewer would: infer names from dialogue (people
+addressing each other, self-introductions, third-person references,
+on-screen text), pick a consistent descriptor when no name is spoken,
+and use the SAME label for the same character across every cut.
+
 --------------------------------------------------------------------------------
 CRITICAL WORKING ORDER (read this before doing anything else)
 --------------------------------------------------------------------------------
 
 The order below is the single most important thing in this document.
-Following it is what makes character identification and scene selection
-accurate. Skipping any step is exactly how the old runs came out with
-misidentified characters and missed beats.
-
-  STEP 0 (NEW — do this FIRST):
-     Open `character_index.json` and read the FULL identity list end to
-     end. For every `person_id` (person_A, person_B, ...), also open the
-     matching `people/person_X.jpg` thumbnail so you have a visual of
-     that character. Note their `screen_time_seconds` and
-     `appearance_count`: the top identity is almost always the
-     protagonist, the next 1-3 are the recurring supporting cast, and
-     everyone beyond that is minor. From this moment on, and until you
-     finish writing cuts.json, refer to characters by their `person_id`
-     tag — NOT by ad-hoc descriptors like "the man" or "the boy" — even
-     in your internal notes. Resolve each `person_id` to a real proper
-     name whenever the transcript, on-screen text, or context provides
-     clear evidence of one (see STEP 0b below — name resolution is a
-     REQUIRED part of this workflow, not an optional extra). If a name
-     is only a guess, keep the `person_id` tag or add the guess in
-     [brackets] the first time you use it, e.g. `person_A [Killua?]`.
-
-  STEP 0b (REQUIRED — resolve names before writing anything):
-     Actively mine `transcript.json` for name evidence and bind each
-     name you find to a `person_id`. Specifically:
-       - Scan the full transcript for proper names: characters
-         addressing each other by name ("Killua, wait", "Gon, listen"),
-         self-introductions ("my name is …", "I'm …", "call me …"),
-         third-person references ("Killua failed the exam", "his
-         brother Illumi"), and on-screen text naming a character.
-       - For every name found, cross-reference the TIMESTAMP of that
-         dialogue line against the `appearances` arrays in
-         character_index.json: which person_ids are on screen at that
-         moment, who is speaking, and who is being spoken TO or ABOUT.
-         A name said to (or clearly about) a character while that
-         person_id is on screen binds the name to that person_id. A
-         name spoken by a character as a self-introduction binds the
-         name to the speaker's person_id.
-       - Write down the resulting NAME MAP, e.g.
-         `person_A = Killua, person_B = Gon, person_C = Illumi`, and
-         keep it next to you for the rest of the session. Every cut
-         you write later uses this map.
-     COMMIT when the evidence is clear. A character being directly
-     addressed or referred to by name in dialogue that lines up with
-     that person_id being on screen is CLEAR evidence — treat it as
-     resolved, not as a guess. Do NOT keep using a descriptive tag
-     "to be safe" when the transcript has already told you the name.
-     Only leave a person_id unresolved (descriptor or [bracketed
-     guess]) when NO name evidence for that identity exists anywhere
-     in the transcript.
-
-     WHY THIS ORDER: previously the agent re-identified every face from
-     scratch on every screenshot it opened, so the same character would
-     be narrated as "a man", then "the boy", then "the fighter" across
-     three cuts of the same scene. Reading the character index first —
-     with thumbnails — pins the cast in one place and stops re-guessing.
-     And resolving names up front (Step 0b) stops the other failure
-     mode: narration that says "the white-haired boy" in every cut
-     even though the transcript said his name out loud in scene one.
 
   STEP 1: Read `transcript.json` end-to-end. Do not open any composite
-     screenshots yet. Reconstruct the story from the dialogue plus the
-     cast you learned in Step 0. Write down (mentally or in a scratch
-     buffer) what the video appears to be about, which `person_id`s the
-     recurring speakers seem to be (checking against
-     character_index.json's shot_ids and timestamps), and where the
-     beats and turning points sit on the timeline. While reading,
-     complete the Step 0b NAME MAP: every proper name in the dialogue
-     gets cross-referenced against who is on screen at that timestamp,
-     so by the end of this step each recurring person_id either has a
-     confidently resolved real name or is explicitly marked as having
-     no name evidence anywhere in the transcript.
+     screenshots yet. Reconstruct the story from the dialogue. Write
+     down (mentally or in a scratch buffer) what the video appears to
+     be about, who the recurring speakers seem to be, and where the
+     beats and turning points sit on the timeline. Note every proper
+     name that appears — someone being addressed by name, someone
+     introducing themselves, a third-person reference — and keep those
+     names next to the timestamp where they were said, so you can bind
+     each name to a visible character when you open the screenshots
+     later.
 
   STEP 2: Open `scene_index.json` and `key_moments.json`.
      - `scene_index.json` gives you EXACT shot boundaries — where the
        camera cuts. You no longer have to infer cuts by comparing
        panels; the boundaries are enumerated.
      - `key_moments.json` gives you a locally-ranked shortlist of the
-       most promising cut candidates, each annotated with `on_screen`
-       (which person_ids are visible), `new_on_screen` (character
-       introductions), `transcript_excerpt`, and a `why` field. Read the
-       whole `moments` array. This is your candidate pool. Cross-check
-       it against your Step 1 story map and pick the moments that
+       most promising cut candidates, each annotated with
+       `transcript_excerpt`, `signals` (emotional_score,
+       dialogue_density, priority), and a `why` field. Read the whole
+       `moments` array. This is your candidate pool. Cross-check it
+       against your Step 1 story map and pick the moments that
        genuinely serve the throughline of the video, not just the
        highest-priority ones in isolation.
 
   STEP 3: For each candidate moment/cut range from Step 2, OPEN
      screenshots to fill in what the transcript and indexes still can't
-     tell you (physical action, expressions, visual gags, on-screen
-     text). See "ABOUT THE SCREENSHOTS ARCHIVE" and "HOW TO SELECT CUTS"
-     below for the viewing rules — chronological order, adjacent
-     windows, dense event composites for boundary-crossing beats.
+     tell you — including WHO is on screen. See "ABOUT THE SCREENSHOTS
+     ARCHIVE" and "HOW TO SELECT CUTS" below for the viewing rules —
+     chronological order, adjacent windows, dense event composites for
+     boundary-crossing beats. As you view screenshots for the first
+     few cuts, lock in a consistent label for each recurring
+     character (their real name if the transcript names them, or a
+     short descriptive tag if it doesn't) and reuse that same label
+     for the rest of the run.
 
   STEP 4: Assemble cuts.json using the raw_narration contract
-     described near the bottom of this file. That contract has not
-     changed — same throughline / connected-story rules as before.
+     described near the bottom of this file.
 
 --------------------------------------------------------------------------------
 VIDEO METADATA (substituted by Stage A)
@@ -206,17 +147,11 @@ VIDEO METADATA (substituted by Stage A)
                            3x2 grid, but sampled ~1.5 fps across a
                            tighter 4-second window centered on a
                            high-signal moment (a shot boundary or a
-                           character introduction). Use these to see
-                           fast beats the 6-second baseline may only
+                           high-priority beat). Use these to see fast
+                           beats the 6-second baseline may only
                            partially capture.
-  Face thumbnails:         inside `people/` in the zip. One JPEG per
-                           person_id from character_index.json. Small,
-                           ~256px, safe to load — that's the whole
-                           point of them.
   Local scene index:       {shot_count} shot(s) enumerated in
                            scene_index.json.
-  Local character index:   {character_count} recurring identity(ies) in
-                           character_index.json.
   Local key-moments list:  {key_moment_count} moment(s) in
                            key_moments.json.
   Target output length:    ~{target_duration} seconds of cuts combined
@@ -225,40 +160,13 @@ VIDEO METADATA (substituted by Stage A)
                            exactly).
 
 --------------------------------------------------------------------------------
-USING THE INDEXES (this is the whole reason accuracy improved)
+USING THE INDEXES
 --------------------------------------------------------------------------------
 
-The three JSON indexes are the cheap-vision layer. They were produced
-locally on the runner using ffmpeg and a small on-CPU face model — no
-LLM vision was spent building them. That means you can lean on them
-heavily WITHOUT paying vision tokens for the coverage they provide.
-Use them as follows:
-
-  character_index.json
-    - Read it FIRST (see Step 0 above). Every recurring face in the
-      video is under a stable `person_id`. Use the `person_id` as the
-      working handle for the entire session, and resolve it to a real
-      name via the Step 0b NAME MAP whenever the transcript provides
-      clear evidence — the real name is what goes in raw_narration.
-    - Each identity's `appearances` array lists every (shot_id,
-      timestamp_seconds) where that identity was seen. When you need
-      to know "is person_B on screen at 942s?" — check this list first
-      instead of opening a screenshot.
-    - The `screen_time_seconds` ranking tells you the protagonist
-      (usually person_A) and supporting cast (the next 1-3).
-    - `people/person_X.jpg` is the face thumbnail. Open every
-      thumbnail once, up front — that's a tiny fixed vision cost that
-      pays back on every subsequent cut.
-    - The index is not perfect. If it looks empty or has 0 identities
-      (`identity_count: 0`), the face pipeline degraded gracefully
-      because it couldn't run — fall back to the pre-existing
-      descriptive-tag behavior for characters (see step 3 of the
-      OLD workflow further down).
-    - Naming is YOUR job, not the index's. person_A is a slot, not a
-      claim about who that person is. Actively attach real names from
-      transcript evidence (Step 0b); only keep the slot id or a
-      descriptive tag when no name evidence exists anywhere in the
-      transcript for that identity.
+The two JSON indexes are the cheap-vision layer. They were produced
+locally on the runner using ffmpeg — no LLM vision was spent building
+them. That means you can lean on them heavily WITHOUT paying vision
+tokens for the coverage they provide.
 
   scene_index.json
     - The definitive list of shot boundaries. Every entry is `{{shot_id,
@@ -275,13 +183,9 @@ Use them as follows:
   key_moments.json
     - Your candidate shortlist. Every moment has:
         * `start_seconds` / `end_seconds` — the shot boundaries.
-        * `on_screen` — which person_ids are visible.
-        * `new_on_screen` — first-time appearances of a person_id.
-          These beats are almost always narrative introductions and
-          should be strongly considered as cuts.
         * `transcript_excerpt` — the dialogue during the window.
-        * `signals` — is_shot_boundary, introduces_person,
-          cast_change, emotional_score, dialogue_density, priority.
+        * `signals` — is_shot_boundary, emotional_score,
+          dialogue_density, priority.
         * `why` — human-readable list of the exact reasons this
           moment was flagged.
     - Priority is a HINT, not a mandate. A high priority means
@@ -312,8 +216,6 @@ transport efficiency. Treat it as a normal working input:
       - `event_NNNNNNNNN.jpg` — dense 4-second-window composites, one
         per high-signal moment. Sampled at ~1.5 fps so beats that fell
         between baseline panels are resolvable here.
-      - `people/person_X.jpg` — face thumbnails. Load all of them once
-        up front; they are small and stable.
 
   • Do NOT rely on the transcript alone. In a lot of shorts the visuals
     carry information that the transcript literally cannot: physical
@@ -337,10 +239,9 @@ transport efficiency. Treat it as a normal working input:
     filename (divide by 1000 to get the center in seconds). Panels are
     sampled at ~1.5 fps, so consecutive panels are ~0.66s apart.
     Reading order is the same left-to-right, top-to-bottom. Prefer
-    event composites for beats you know are on a shot boundary or a
-    character introduction (i.e. anything on the key_moments.json
-    shortlist with `is_shot_boundary=true` or
-    `introduces_person=true`) — they resolve fast beats that the
+    event composites for beats you know are on a shot boundary (i.e.
+    anything on the key_moments.json shortlist with
+    `is_shot_boundary=true`) — they resolve fast beats that the
     baseline can miss.
 
   • When you need finer-grained temporal information than one baseline
@@ -351,7 +252,6 @@ transport efficiency. Treat it as a normal working input:
 
 In short:
     Extract archive         → ALWAYS do this. Cheap. Expected.
-    Load face thumbnails    → Once, up front. Cheap. Required.
     Load a baseline
       composite             → Deliberately, as needed to understand a
                               specific candidate cut.
@@ -366,38 +266,25 @@ In short:
 HOW TO SELECT CUTS AND DESCRIBE THEM
 --------------------------------------------------------------------------------
 
-STEP 1 (indexes-first). You have already read character_index.json,
-        transcript.json, scene_index.json, and key_moments.json (Steps 0-2
-        above). Your candidate cut pool is the `moments` array of
-        key_moments.json, filtered against your story map from
-        transcript.json.
+STEP 1 (indexes-first). You have already read transcript.json,
+        scene_index.json, and key_moments.json (Steps 1-2 above). Your
+        candidate cut pool is the `moments` array of key_moments.json,
+        filtered against your story map from transcript.json.
 
         Prioritize keeping moments that:
-          - Introduce a new person_id (these are the "who is this?"
-            beats that anchor the whole rest of the story).
           - Sit on strong emotional dialogue (`emotional_score` >= 0.4).
-          - Have a clear cast change AND advance the story (someone
-            new enters the scene mid-conflict, or the protagonist
-            walks into a new confrontation).
+          - Advance the story (a new confrontation, a reveal, a
+            reaction beat).
           - Are the payoff of a setup earlier in the video (check the
             transcript, not just the individual moment).
 
         Skip moments that:
-          - Are shot boundaries with neither new characters nor
-            dialogue signal (usually establishing shots or filler).
+          - Are shot boundaries with no dialogue signal (usually
+            establishing shots or filler).
           - Repeat information a previous cut already delivered.
           - Land in intro / outro / recap / preview sections.
 
-STEP 2 (character-check every candidate). For each candidate cut range,
-        verify against character_index.json which person_ids are on
-        screen. If your Step 1 story map thinks person_B does something
-        in this range but character_index says person_B is not present
-        in these shot_ids, EITHER the story map is wrong or the face
-        pipeline missed a low-quality frame. Open an event composite
-        (if available near that timestamp) or the covering baseline
-        composite to resolve — don't just guess.
-
-STEP 3 (open screenshots — in chronological order — to fill visuals).
+STEP 2 (open screenshots — in chronological order — to fill visuals).
 
         Frame filename convention (baseline):
 
@@ -455,7 +342,7 @@ STEP 3 (open screenshots — in chronological order — to fill visuals).
             is happening, open MORE composites for the SAME candidate
             (still in ascending order). Do not wander off.
 
-STEP 4 (assemble cuts).
+STEP 3 (assemble cuts).
 
         - Order cuts chronologically by `start_seconds`.
         - Each cut should be self-contained enough that a viewer landing
@@ -475,40 +362,34 @@ STEP 4 (assemble cuts).
           chronological order.
 
         CHARACTER LABELS IN raw_narration:
-        - Refer to characters by `person_id` internally. In
-          raw_narration, label each person_id by this priority order:
-            (a) REAL NAME — if your Step 0b NAME MAP resolved this
-                person_id from clear transcript evidence, use the real
-                name (e.g. "Killua", "Gon", "Illumi"). This is the
-                expected, default case whenever name evidence exists.
-                On first use you may pair the name with one short
-                descriptor to anchor the visual ("Killua, the
-                white-haired boy, …"), then use the name alone (or a
-                pronoun clearly referring back to him) from then on.
-            (b) DESCRIPTIVE TAG — ONLY if no name evidence exists
-                anywhere in the transcript for that person_id. Pick a
-                short natural descriptor and keep it CONSISTENT across
-                every cut (e.g. always "the silver-haired boy" for
-                person_B).
-        - Once a real name is established for a person_id, use it for
-          the rest of the output. Do NOT acknowledge the name once and
-          then fall back to "the white-haired boy" in later cuts — a
-          resolved name stays resolved. Never switch labels for the
-          same person_id between cuts — that is exactly the bug that
-          made the old commentary read as a highlight reel of
-          strangers. If the transcript outright tells you a
-          character's name (someone says it to them or about them
-          while they are on screen), continuing to call them "the
-          white-haired boy" is a defect, not a safe choice.
-        - If character_index.json is empty (identity_count = 0),
-          fall back to the pre-existing behavior: pick a clear
-          descriptive tag on first use and stick with it thereafter —
-          but still prefer real names wherever the transcript
-          establishes them.
+        - Identify each recurring character yourself from the
+          screenshots and transcript, and refer to them by the SAME
+          label in every cut. Label priority:
+            (a) REAL NAME — if the transcript makes a name clear
+                (someone addressed by name, a self-introduction, a
+                third-person reference that lines up with who is on
+                screen at that timestamp), use the real name (e.g.
+                "Killua", "Gon"). On first use you may pair the name
+                with one short descriptor to anchor the visual
+                ("Killua, the white-haired boy, …"), then use the
+                name alone (or a pronoun clearly referring back to
+                him) from then on.
+            (b) DESCRIPTIVE TAG — if no name evidence exists, pick a
+                short natural descriptor and keep it CONSISTENT
+                across every cut (e.g. always "the silver-haired
+                boy").
+        - Once a real name is established, use it for the rest of the
+          output. Do NOT acknowledge the name once and then fall back
+          to "the white-haired boy" in later cuts — a resolved name
+          stays resolved. Never switch labels for the same character
+          between cuts — that reads as a highlight reel of strangers.
+        - When unsure whether two on-screen faces are the same person,
+          look at the screenshots — hair, outfit, and context are
+          usually enough to decide. If you truly cannot tell, keep the
+          descriptions generic ("a boy in a white shirt") rather than
+          committing to a wrong identity.
 
-        NARRATE THE CUTS AS ONE CONNECTED STORY (unchanged from the
-        previous version — do not treat the indexes as an excuse to
-        atomize the cuts):
+        NARRATE THE CUTS AS ONE CONNECTED STORY:
 
         The raw_narration fields, in the order the cuts appear in
         cuts.json, will be concatenated end-to-end and handed to the
@@ -527,10 +408,9 @@ STEP 4 (assemble cuts).
           - Before writing raw_narration for the first cut, briefly
             note what the overall story of the source video is (from
             your Step 1 story map) and what arc the cuts you have
-            chosen trace through it — who the subject is (using the
-            person_id you decided on in Step 0), what they want or
-            are up against, and how the chosen beats progress from
-            beginning to end.
+            chosen trace through it — who the subject is, what they
+            want or are up against, and how the chosen beats
+            progress from beginning to end.
 
           - Between one cut and the next in the source there is
             usually a gap of footage you deliberately did NOT select.
@@ -558,10 +438,9 @@ STEP 4 (assemble cuts).
             start: …", "The device she rigged earlier now …").
 
           - Refer to recurring people/entities the SAME way across
-            every cut. Because you locked in the cast at Step 0
-            using person_ids, this is now easy: whichever descriptor
-            or name you chose for person_A stays fixed through the
-            entire cuts.json. Don't reset labels between cuts.
+            every cut. Whichever label you chose for a character in
+            their first cut stays fixed through the entire
+            cuts.json. Don't reset labels between cuts.
 
           - Each individual cut's raw_narration is still primarily
             a plain, matter-of-fact description of what happens
@@ -586,7 +465,7 @@ OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 168,
-      "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts (see the person_id contract above)."
+      "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
     }}
     // ... more cuts, ordered chronologically ...
   ],
@@ -601,12 +480,11 @@ CONSTRAINTS
   - Cuts MUST be sorted ascending by `start_seconds`.
   - `raw_narration` is plain prose. No markdown, no timestamps inside it,
     no name guessing when unsure — but when the transcript provides
-    clear name evidence for a person_id, using that name is NOT a
+    clear name evidence for a character, using that name is NOT a
     guess: use the real name, consistently, in every cut. Use the SAME
     label (real name, or a descriptor only when no name evidence
-    exists) across every cut for the same person_id from
-    character_index.json. Describe what is visually happening, not
-    just what is said.
+    exists) across every cut for the same character. Describe what is
+    visually happening, not just what is said.
   - Across cuts, `raw_narration` fields must read as consecutive scenes
     of ONE continuous story, not as independent highlight descriptions.
     Where there is a real gap between adjacent cuts (location change,
@@ -642,7 +520,6 @@ def main() -> None:
         help="Seconds of source video covered by each baseline composite "
              "JPEG (must match the ffmpeg extraction step in stage-a.yml).",
     )
-    ap.add_argument("--character-count", type=int, default=0)
     ap.add_argument("--shot-count", type=int, default=0)
     ap.add_argument("--key-moment-count", type=int, default=0)
     ap.add_argument("--event-frame-count", type=int, default=0)
@@ -670,7 +547,6 @@ def main() -> None:
         example_div=example_div,
         example_window=example_window,
         example_window_end=example_window_end,
-        character_count=args.character_count,
         shot_count=args.shot_count,
         key_moment_count=args.key_moment_count,
         event_frame_count=args.event_frame_count,
