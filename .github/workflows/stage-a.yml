@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: "120"
+      enable_vision_assist:
+        description: "Run local shot/face indexing (scene_index + character_index + key_moments + dense event composites). Set to 'false' to skip on very long videos."
+        required: false
+        type: string
+        default: "true"
 
 permissions:
   contents: write
@@ -162,46 +167,16 @@ jobs:
           set -euo pipefail
           mkdir -p work/screenshots work/screenshots_tmp
 
-          # NEW CADENCE (changed from the old "one grid per second"):
-          #
-          # We now emit ONE composite JPEG per SIX SECONDS of source video.
-          # Each composite is still a 3x2 tile (3 columns wide, 2 rows tall,
-          # 6 panels total), but the 6 panels now come from six DIFFERENT
+          # Baseline cadence: one composite JPEG per 6 seconds of source video.
+          # Each composite is a 3x2 tile (3 columns wide, 2 rows tall,
+          # 6 panels total), and the 6 panels come from six DIFFERENT
           # seconds within a 6-second window — one representative frame per
-          # second, spread across the full 6-second span — instead of six
-          # near-duplicate frames from within a single second.
+          # second, spread across the full 6-second span.
           #
-          # How it works:
-          #   - fps=1 gives us exactly one frame per source second.
-          #   - tile=3x2 then packs every 6 consecutive input frames (i.e.
-          #     6 consecutive seconds) into one output JPEG.
-          #   - So output image N covers source seconds [N*6, N*6+6).
-          #
-          # Reading order inside each composite (English reading order,
-          # left-to-right then top-to-bottom):
-          #
-          #   [ s+0   s+1   s+2 ]   <- seconds 1, 2, 3 of the window
-          #   [ s+3   s+4   s+5 ]   <- seconds 4, 5, 6 of the window
-          #
-          # where `s` is the window's start second. The top-left panel is
-          # a frame from the first second of the window; the bottom-right
-          # panel is a frame from the sixth (last) second of the window.
-          # Reading a single file therefore gives the vision agent real
-          # temporal progression across a 6-second span, not near-duplicate
-          # frames from a single second.
-          #
-          # Compared to the old cadence this reduces the total number of
-          # screenshot files by roughly 6x while carrying much more useful
-          # visual variance per image.
-          #
-          # We downscale each sub-frame to 640px wide before tiling to keep
-          # the composite reasonably sized (~1920x720). -qscale:v 5 keeps
-          # per-file JPEG size in check.
-          #
-          # ffmpeg writes sequentially-indexed files (grid_00000.jpg,
-          # grid_00001.jpg, ...); the following rename step converts those
-          # into the human-meaningful naming convention where the number
-          # in the filename is the window START SECOND, zero-padded.
+          # fps=1 gives one frame per source second; tile=3x2 packs every 6
+          # consecutive seconds into one JPEG; output image N covers source
+          # seconds [N*6, N*6+6). Reading order inside each composite is
+          # English reading order (left-to-right, then top-to-bottom).
           ffmpeg -y -i work/analysis/compressed.mp4 \
             -vf "fps=1,scale='min(640,iw)':'-2',tile=3x2:padding=2:margin=2:color=black" \
             -vsync vfr \
@@ -216,7 +191,6 @@ jobs:
           for f in work/screenshots_tmp/grid_*.jpg; do
             base="$(basename "$f" .jpg)"       # e.g. grid_00042
             seq="${base#grid_}"                # e.g. 00042
-            # strip leading zeros safely
             seq_num="$((10#$seq))"
             start_sec="$((seq_num * 6))"
             printf -v padded 'frame_%06d.jpg' "$start_sec"
@@ -226,11 +200,8 @@ jobs:
 
           count="$(ls work/screenshots | wc -l)"
           echo "SCREENSHOT_COUNT=$count" >> "$GITHUB_ENV"
-          # Expose the window size (in seconds) so downstream steps and the
-          # analysis prompt stay in sync if this ever changes again.
           echo "SCREENSHOT_WINDOW_SECONDS=6" >> "$GITHUB_ENV"
-          echo "Extracted $count composite screenshots (6-second windows, 1 frame per second, 3x2 grid)"
-          # Sanity: report size of the whole screenshots directory.
+          echo "Extracted $count baseline composite screenshots (6-second windows, 1 frame per second, 3x2 grid)"
           du -sh work/screenshots || true
 
       - name: Extract audio for transcription
@@ -248,6 +219,129 @@ jobs:
             --model "${{ github.event.inputs.whisper_model }}" \
             --lang "${{ github.event.inputs.language }}"
           head -c 400 work/transcript.json; echo
+
+      # ---------------------------------------------------------------
+      # Local vision-assist stack (NEW)
+      #
+      # These three steps replace what used to be pure "let the vision
+      # agent figure it out" work. They run entirely on the runner using
+      # ffmpeg + a small CPU face model, so they cost zero AI-vision
+      # tokens downstream while dramatically improving character
+      # identification and scene detection.
+      #
+      # The stack is opt-out (enable_vision_assist=false) but ON by
+      # default. If any step degrades — model download fails, deps
+      # missing — the scripts write empty-but-valid indexes and the
+      # rest of the pipeline continues.
+      # ---------------------------------------------------------------
+
+      - name: Detect shot boundaries (scene_index.json)
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/scene_index.py \
+            work/analysis/compressed.mp4 \
+            "$DURATION_SECONDS" \
+            work/scene_index.json \
+            --threshold 0.35
+          shot_count="$(python -c "import json; print(json.load(open('work/scene_index.json'))['shot_count'])")"
+          echo "SHOT_COUNT=$shot_count" >> "$GITHUB_ENV"
+          echo "Detected $shot_count shot(s)"
+
+      - name: Build character index (character_index.json + people/*.jpg)
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Preload the InsightFace `buffalo_sc` model into the default
+          # ~/.insightface cache. Doing it here means a network glitch
+          # during model download shows up as its own visible step
+          # rather than as an opaque failure inside character_index.py.
+          python -c "
+          import os, sys
+          try:
+              from insightface.app import FaceAnalysis
+              app = FaceAnalysis(name='buffalo_sc', allowed_modules=['detection', 'recognition'])
+              app.prepare(ctx_id=-1, det_size=(640, 640))
+              print('InsightFace buffalo_sc ready')
+          except Exception as e:
+              print(f'InsightFace preload failed (non-fatal): {e}', file=sys.stderr)
+          "
+
+          python scripts/character_index.py \
+            work/analysis/compressed.mp4 \
+            work/scene_index.json \
+            work/screenshots \
+            work/character_index.json \
+            --max-samples-per-shot 3 \
+            --cluster-threshold 0.5 \
+            --min-appearances 2
+
+          char_count="$(python -c "import json; print(json.load(open('work/character_index.json'))['identity_count'])")"
+          echo "CHARACTER_COUNT=$char_count" >> "$GITHUB_ENV"
+          echo "Indexed $char_count recurring identity(ies)"
+
+      - name: Build key-moments shortlist (key_moments.json)
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_key_moments.py \
+            work/scene_index.json \
+            work/character_index.json \
+            work/transcript.json \
+            work/key_moments.json \
+            --max-moments 60
+          km_count="$(python -c "import json; print(json.load(open('work/key_moments.json'))['moment_count'])")"
+          echo "KEY_MOMENT_COUNT=$km_count" >> "$GITHUB_ENV"
+          echo "Shortlisted $km_count key moment(s)"
+
+      - name: Emit dense event composites for high-signal beats
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Count baseline images before we add event composites so we can
+          # report the delta accurately.
+          before="$(ls work/screenshots | grep -c '^frame_' || true)"
+
+          python scripts/event_frames.py \
+            work/analysis/compressed.mp4 \
+            work/key_moments.json \
+            work/screenshots \
+            --window-seconds 4.0 \
+            --samples 6 \
+            --panel-width 640 \
+            --max-events 30 \
+            --min-priority 0.35
+
+          # Count how many event composites landed.
+          event_count="$(ls work/screenshots | grep -c '^event_' || true)"
+          echo "EVENT_FRAME_COUNT=$event_count" >> "$GITHUB_ENV"
+          echo "Wrote $event_count dense event composite(s) (baseline unchanged: $before)"
+
+      - name: Vision-assist disabled — write empty stubs
+        if: ${{ github.event.inputs.enable_vision_assist == 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Vision-assist disabled by input; writing empty stub indexes."
+          python -c "
+          import json
+          for path, extra in [
+              ('work/scene_index.json', {'shot_count': 0, 'shots': []}),
+              ('work/character_index.json', {'identity_count': 0, 'identities': [], 'backend': 'disabled'}),
+              ('work/key_moments.json', {'moment_count': 0, 'moments': [], 'cast_summary': []}),
+          ]:
+              payload = {'video_duration_seconds': ${DURATION_SECONDS}}
+              payload.update(extra)
+              open(path, 'w').write(json.dumps(payload, indent=2))
+          "
+          echo "SHOT_COUNT=0" >> "$GITHUB_ENV"
+          echo "CHARACTER_COUNT=0" >> "$GITHUB_ENV"
+          echo "KEY_MOMENT_COUNT=0" >> "$GITHUB_ENV"
+          echo "EVENT_FRAME_COUNT=0" >> "$GITHUB_ENV"
 
       - name: Generate 00_READ_THIS_FIRST.txt (analysis prompt)
         shell: bash
@@ -270,10 +364,14 @@ jobs:
             "work/00_READ_THIS_FIRST.txt" \
             --target-duration "$target_dur" \
             --job-id "${{ steps.jid.outputs.job_id }}" \
-            --window-seconds "${SCREENSHOT_WINDOW_SECONDS:-6}"
+            --window-seconds "${SCREENSHOT_WINDOW_SECONDS:-6}" \
+            --character-count "${CHARACTER_COUNT:-0}" \
+            --shot-count "${SHOT_COUNT:-0}" \
+            --key-moment-count "${KEY_MOMENT_COUNT:-0}" \
+            --event-frame-count "${EVENT_FRAME_COUNT:-0}"
           head -n 40 work/00_READ_THIS_FIRST.txt
 
-      - name: Zip screenshots
+      - name: Zip screenshots (baseline + event composites + face thumbnails)
         shell: bash
         run: |
           set -euo pipefail
@@ -285,8 +383,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # We upload the original alongside the analysis bundle in the same
-          # release, but under a distinct filename. Stage B fetches it back.
           orig_name="original$(echo "$ORIGINAL_PATH" | sed 's/.*\././')"
           mkdir -p work/stash
           cp "$ORIGINAL_PATH" "work/stash/$orig_name"
@@ -307,10 +403,20 @@ jobs:
             stage: awaiting_json_upload
 
             Assets:
-              - 00_READ_THIS_FIRST.txt  (READ FIRST — cut selection instructions)
-              - transcript.json         (timestamped transcript)
-              - screenshots.zip         (one 3x2 grid per 6s window, frame_NNNNNN.jpg where NNNNNN is the window START SECOND)
-              - ${{ env.ORIGINAL_ASSET_NAME }}  (original quality video, used by Stage B)
+              - 00_READ_THIS_FIRST.txt   (READ FIRST — cut selection instructions)
+              - transcript.json          (timestamped transcript)
+              - scene_index.json         (locally-computed shot boundaries)
+              - character_index.json     (locally-computed face/character index; ${{ env.CHARACTER_COUNT }} recurring identity/-ies)
+              - key_moments.json         (locally-ranked shortlist of high-signal moments)
+              - screenshots.zip          (baseline 6s composites + dense event composites + people/*.jpg thumbnails)
+              - ${{ env.ORIGINAL_ASSET_NAME }}   (original quality video, used by Stage B)
+
+            Stats:
+              shots detected:           ${{ env.SHOT_COUNT }}
+              recurring characters:     ${{ env.CHARACTER_COUNT }}
+              key moments shortlisted:  ${{ env.KEY_MOMENT_COUNT }}
+              baseline composites:      ${{ env.SCREENSHOT_COUNT }}
+              dense event composites:   ${{ env.EVENT_FRAME_COUNT }}
 
             This release is automatically deleted 12 hours after creation.
           make_latest: "false"
@@ -318,6 +424,9 @@ jobs:
           files: |
             work/00_READ_THIS_FIRST.txt
             work/transcript.json
+            work/scene_index.json
+            work/character_index.json
+            work/key_moments.json
             work/screenshots.zip
             work/stash/${{ env.ORIGINAL_ASSET_NAME }}
         env:
@@ -359,6 +468,10 @@ jobs:
             --release-url "${{ steps.assets.outputs.release_url }}" \
             --extra "duration_seconds=${DURATION_SECONDS}" \
             --extra "screenshot_count=${SCREENSHOT_COUNT}" \
+            --extra "event_frame_count=${EVENT_FRAME_COUNT:-0}" \
+            --extra "shot_count=${SHOT_COUNT:-0}" \
+            --extra "character_count=${CHARACTER_COUNT:-0}" \
+            --extra "key_moment_count=${KEY_MOMENT_COUNT:-0}" \
             --extra "original_asset_name=${ORIGINAL_ASSET_NAME}"
 
           # Merge in every asset URL from the release.
