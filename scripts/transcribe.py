@@ -27,6 +27,95 @@ class Transcriber(Protocol):
     def transcribe(self, path: str) -> Iterable[Segment]: ...
 
 
+# ---------------------------------------------------------------------------
+# Segment-boundary tuning
+# ---------------------------------------------------------------------------
+#
+# faster-whisper's VAD splits the audio into speech chunks, but Whisper's
+# decoder still assigns segment "end" timestamps on the ORIGINAL timeline.
+# When a segment happens to land next to a long non-speech gap (music,
+# opening credits, silence), the decoder's end-timestamp can drift far past
+# when speech actually stopped and effectively snap to the onset of the
+# NEXT speech chunk. Downstream cut logic then treats that gap as part of
+# the previous segment and produces cuts that are wildly too long.
+#
+# To keep segment "end" timestamps honest we:
+#   1. Tighten Silero VAD so long non-speech regions are actually excluded
+#      (the previous 500ms threshold was too aggressive at merging real
+#      silence into speech, and no upper bound existed on merged chunks).
+#   2. Ask faster-whisper for word_timestamps so each segment carries its
+#      own per-word timing.
+#   3. Post-process every segment: clip "end" to the last word's end time
+#      (plus a small tail pad), and hard-cap the segment duration so a
+#      swallowed silence gap can never survive into the transcript.
+
+# Max amount (seconds) we allow segment "end" to sit past the last word's
+# end. Anything larger is treated as absorbed non-speech and trimmed off.
+MAX_TRAILING_SILENCE_S = 0.75
+
+# Absolute cap on any single segment's duration. Real spoken sentences
+# essentially never exceed this; a value larger than this is a strong
+# signal that a silence/music gap has been absorbed into the segment.
+MAX_SEGMENT_DURATION_S = 30.0
+
+# If we have no word timestamps to lean on, estimate a plausible spoken
+# duration from the text length and clamp to that. ~15 chars/sec is a
+# comfortable upper bound for natural speech; we add a fixed floor so
+# very short words still get a sensible window.
+FALLBACK_CHARS_PER_SEC = 15.0
+FALLBACK_MIN_DURATION_S = 1.5
+
+
+def _clip_segment_end(start: float, end: float, text: str, words) -> float:
+    """
+    Return a corrected segment end time that reflects when speech actually
+    stopped, not when the next speech began.
+
+    - If word-level timestamps are available, snap `end` to the last word's
+      end (plus a small tail pad).
+    - Otherwise fall back to a text-length-based estimate.
+    - In either case, enforce MAX_SEGMENT_DURATION_S as a hard ceiling.
+    """
+    corrected = end
+
+    if words:
+        last_word_end = None
+        for w in words:
+            we = getattr(w, "end", None)
+            if we is None and isinstance(w, dict):
+                we = w.get("end")
+            if we is not None:
+                last_word_end = float(we)
+        if last_word_end is not None:
+            # Clip trailing silence: never let `end` sit more than
+            # MAX_TRAILING_SILENCE_S past the last spoken word.
+            padded = last_word_end + MAX_TRAILING_SILENCE_S
+            if corrected > padded:
+                corrected = padded
+            # And never let it be earlier than the last word actually ends.
+            if corrected < last_word_end:
+                corrected = last_word_end
+    else:
+        # No word timestamps -> estimate from text length.
+        est = max(
+            FALLBACK_MIN_DURATION_S,
+            len((text or "").strip()) / FALLBACK_CHARS_PER_SEC,
+        )
+        est_end = start + est + MAX_TRAILING_SILENCE_S
+        if corrected > est_end:
+            corrected = est_end
+
+    # Hard ceiling on segment duration.
+    if corrected - start > MAX_SEGMENT_DURATION_S:
+        corrected = start + MAX_SEGMENT_DURATION_S
+
+    # Sanity: end must be strictly after start.
+    if corrected <= start:
+        corrected = start + FALLBACK_MIN_DURATION_S
+
+    return corrected
+
+
 class FasterWhisperTranscriber:
     """
     Default (and currently only) transcriber.
@@ -54,25 +143,75 @@ class FasterWhisperTranscriber:
 
     def transcribe(self, path: str) -> Iterable[Segment]:
         print(f"Transcribing {path} (language={self.language or 'auto-detect'})", flush=True)
+
+        # VAD parameters tuned to keep long non-speech gaps OUT of segments.
+        #
+        # - min_silence_duration_ms: 1000ms (up from 500ms). 500ms treated
+        #   natural inter-sentence pauses as "still speech" and let the
+        #   decoder merge across them; 1000ms is closer to the library
+        #   default (2000ms) but keeps sensitivity for tight dialogue.
+        # - speech_pad_ms: 200ms (down from the library default 400ms).
+        #   Less padding means less silence tacked onto each speech chunk.
+        # - max_speech_duration_s: 30s. Prevents VAD from merging a long
+        #   run of quasi-speech into one huge chunk that the decoder
+        #   would then have to segment on its own.
+        # - min_speech_duration_ms: 250ms. Drops sub-quarter-second blips
+        #   that are almost always non-speech noise.
+        # - threshold: 0.5 (Silero default) — explicit for clarity.
+        vad_parameters = {
+            "threshold": 0.5,
+            "min_speech_duration_ms": 250,
+            "min_silence_duration_ms": 1000,
+            "speech_pad_ms": 200,
+            "max_speech_duration_s": 30.0,
+        }
+
         segments, info = self.model.transcribe(
             path,
             language=self.language,
             beam_size=5,
             vad_filter=True,
-            vad_parameters={"min_silence_duration_ms": 500},
+            vad_parameters=vad_parameters,
+            # word_timestamps=True gives us per-word timing we can use to
+            # clip the segment "end" back to the last actual spoken word,
+            # instead of trusting the decoder's silence-swallowing end.
+            word_timestamps=True,
+            # Suppress "trailing silence hallucinations" that Whisper is
+            # known to emit — those are exactly the kind of ghost content
+            # that made bad ends look plausible.
+            condition_on_previous_text=False,
         )
         print(
             f"Detected language: {info.language} (prob={info.language_probability:.2f}), "
             f"duration={info.duration:.1f}s",
             flush=True,
         )
-        for i, seg in enumerate(segments):
+
+        i = 0
+        for seg in segments:
+            raw_start = float(seg.start)
+            raw_end = float(seg.end)
+            text = (seg.text or "").strip()
+            words = getattr(seg, "words", None)
+
+            corrected_end = _clip_segment_end(raw_start, raw_end, text, words)
+
+            if corrected_end < raw_end - 0.01:
+                # Log corrections so bad-boundary regressions are visible
+                # in the run log without needing to re-diff transcripts.
+                print(
+                    f"  [vad-fix] seg {i}: end {raw_end:.2f}s -> {corrected_end:.2f}s "
+                    f"(text={text[:40]!r})",
+                    flush=True,
+                )
+
             yield Segment(
                 id=i,
-                start=round(float(seg.start), 3),
-                end=round(float(seg.end), 3),
-                text=(seg.text or "").strip(),
+                start=round(raw_start, 3),
+                end=round(corrected_end, 3),
+                text=text,
             )
+            i += 1
 
 
 def build_default_transcriber(model_size: str, language: str) -> Transcriber:
