@@ -41,7 +41,9 @@ Output shape (`key_moments.json`)
     {
       "moment_id": 1,
       "start_seconds": 42.5,
-      "end_seconds": 61.2,
+      "shot_end_seconds": 61.2,
+      "end_seconds": 63.7,
+      "visual_tail_seconds": 2.5,
       "shot_ids": [3],
       "transcript_excerpt": "...",
       "signals": {
@@ -52,7 +54,10 @@ Output shape (`key_moments.json`)
       },
       "why": [
         "shot boundary at 42.5s (cut)",
-        "high emotional-word density in dialogue"
+        "high emotional-word density in dialogue",
+        "end_seconds extended 2.5s past shot boundary so the beat's",
+        "visual payoff (reaction / cutaway / result on screen) is",
+        "actually contained inside the moment window"
       ]
     },
     ...
@@ -140,6 +145,76 @@ def transcript_between(segments: list[dict], t_start: float, t_end: float) -> tu
     return " ".join(pieces), min(1.0, covered / dur) if dur > 0 else 0.0
 
 
+def compute_visual_tail(
+    shots: list[dict],
+    shot_index: int,
+    duration: float,
+    min_tail: float = 1.5,
+    max_tail: float = 3.5,
+) -> float:
+    """
+    Return how many seconds to extend a moment's `end_seconds` PAST the
+    raw shot boundary, so the visual payoff of the described action is
+    actually contained inside the moment window.
+
+    Why any tail at all
+    -------------------
+    The raw shot boundary (`shot.end_seconds`) is the frame BEFORE the
+    camera cuts away. On short-form narrative content the beat that a
+    viewer would describe as "the moment" almost always resolves ACROSS
+    the cut — the reaction shot, the cutaway to the object that was
+    just referenced, the aftermath of the punch, the flash of
+    someone's eye as they close it. If we hand the downstream vision
+    agent a moment window that ends at the raw shot boundary, and the
+    agent then anchors its cut's `end_seconds` to the window it was
+    given, the resulting scene_XX.mp4 lands right before the described
+    action's visual payoff is on screen.
+
+    Padding by a small, bounded amount into the NEXT shot(s) gives the
+    agent visual coverage of the payoff. It never invents new content —
+    the next shot is real footage that already exists in the source; we
+    just include it in the candidate window so the agent can see it and
+    decide whether to keep it.
+
+    Bounds
+    ------
+    - Never longer than `max_tail` seconds (default 3.5s) — beyond that
+      we would start swallowing the next shot's own moment.
+    - Never longer than half of the NEXT shot's duration, for the same
+      reason: don't cannibalize the next moment's window.
+    - Never past `duration` (end of the video).
+    - Always at least `min_tail` seconds when there is room, so even a
+      tiny follow-up shot gets a meaningful chunk of tail.
+    """
+    if shot_index < 0 or shot_index >= len(shots):
+        return 0.0
+    shot = shots[shot_index]
+    shot_end = float(shot["end_seconds"])
+    # Room until the end of the video.
+    room_to_video_end = max(0.0, duration - shot_end)
+    if room_to_video_end <= 0.0:
+        return 0.0
+
+    if shot_index + 1 < len(shots):
+        next_shot = shots[shot_index + 1]
+        next_duration = max(
+            0.0, float(next_shot["end_seconds"]) - float(next_shot["start_seconds"])
+        )
+        # Half the next shot's duration, so we never eat more than half
+        # of the following beat's own visual real estate.
+        cap_from_next = next_duration / 2.0
+    else:
+        # This is the last shot: only the video-end cap applies.
+        cap_from_next = room_to_video_end
+
+    tail = min(max_tail, cap_from_next, room_to_video_end)
+    # Floor tail at min_tail when there is at least that much room; if
+    # the next shot is genuinely tiny (<3s), we accept the small cap.
+    if tail < min_tail and room_to_video_end >= min_tail and cap_from_next >= min_tail:
+        tail = min_tail
+    return round(tail, 3)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("scene_index_json")
@@ -152,6 +227,22 @@ def main() -> None:
         help="Hard cap on the number of moments emitted. The agent should "
              "still open its own screenshots; this is a shortlist, not a "
              "final cut list.",
+    )
+    ap.add_argument(
+        "--visual-tail-min-seconds",
+        type=float,
+        default=1.5,
+        help="Minimum seconds to extend end_seconds past the raw shot "
+             "boundary so the described beat's visual payoff (reaction / "
+             "cutaway / result) sits inside the moment window, not one "
+             "frame past it. See compute_visual_tail() docstring.",
+    )
+    ap.add_argument(
+        "--visual-tail-max-seconds",
+        type=float,
+        default=3.5,
+        help="Hard cap on the visual-tail extension. Larger values would "
+             "start eating the following moment's own window.",
     )
     args = ap.parse_args()
 
@@ -170,13 +261,23 @@ def main() -> None:
     tx_segments = tx_data.get("segments", [])
 
     # Score every shot as a candidate moment.
+    #
+    # A moment's `end_seconds` is NOT the raw shot boundary — it is the
+    # shot boundary plus a small `visual_tail_seconds` extension into the
+    # next shot. That extension is what stops the downstream vision agent
+    # from picking cut end_seconds that land one frame before the described
+    # action's visual payoff (the reaction shot, the cutaway, the result
+    # of the just-executed action). See compute_visual_tail() above.
     candidates: list[dict] = []
-    for shot in shots:
+    for shot_idx, shot in enumerate(shots):
         sid = shot["shot_id"]
         s = float(shot["start_seconds"])
-        e = float(shot["end_seconds"])
+        shot_end = float(shot["end_seconds"])
 
-        transcript_excerpt, dialogue_density = transcript_between(tx_segments, s, e)
+        # Score against the RAW shot window (the emotional/dialogue signal
+        # belongs to what was said inside the current shot, not to the
+        # tail we're about to bolt onto its end).
+        transcript_excerpt, dialogue_density = transcript_between(tx_segments, s, shot_end)
         emotional = score_emotional(transcript_excerpt)
 
         # Composite priority. Weights tuned so:
@@ -194,10 +295,29 @@ def main() -> None:
         priority += 0.05
         why.append(f"shot boundary at {s:.1f}s ({shot.get('cause', 'cut')})")
 
+        tail = compute_visual_tail(
+            shots,
+            shot_idx,
+            duration,
+            min_tail=max(0.0, args.visual_tail_min_seconds),
+            max_tail=max(0.0, args.visual_tail_max_seconds),
+        )
+        moment_end = round(min(duration, shot_end + tail), 3)
+        if tail > 0.0:
+            why.append(
+                f"end_seconds extended +{tail:.2f}s past the shot boundary so "
+                f"the beat's visual payoff (reaction / cutaway / result on "
+                f"screen) is inside the moment window, not one frame past it"
+            )
+
         candidates.append(
             {
                 "start_seconds": s,
-                "end_seconds": e,
+                # `shot_end_seconds` is preserved as the raw shot boundary
+                # so downstream code (and the agent) can tell the two apart.
+                "shot_end_seconds": round(shot_end, 3),
+                "end_seconds": moment_end,
+                "visual_tail_seconds": tail,
                 "shot_ids": [sid],
                 "transcript_excerpt": transcript_excerpt[:500],
                 "signals": {
@@ -221,6 +341,20 @@ def main() -> None:
     payload = {
         "video_duration_seconds": duration,
         "moment_count": len(top),
+        "visual_tail_policy": {
+            "min_seconds": args.visual_tail_min_seconds,
+            "max_seconds": args.visual_tail_max_seconds,
+            "description": (
+                "Each moment's `end_seconds` is deliberately extended past "
+                "the raw shot boundary (`shot_end_seconds`) by "
+                "`visual_tail_seconds`, so the on-screen payoff of the "
+                "described beat (reaction shot / cutaway / result of the "
+                "action) sits INSIDE the moment window. Do not treat "
+                "`shot_end_seconds` as a cut-end candidate — use "
+                "`end_seconds` (or push further if the visible action "
+                "clearly runs past even that)."
+            ),
+        },
         "notes": (
             "This file is a SHORTLIST of high-signal moments produced "
             "locally at zero AI-vision cost. It is a hint, not a mandate: "
