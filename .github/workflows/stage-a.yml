@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: "120"
+      focus:
+        description: "Optional: narrow analysis to one specific scene/moment/plot thread (e.g. 'the confrontation between X and Y'). Leave blank to consider the whole video."
+        required: false
+        type: string
+        default: ""
       enable_vision_assist:
         description: "Run local shot indexing (scene_index + key_moments + dense event composites). Set to 'false' to skip on very long videos."
         required: false
@@ -366,6 +371,12 @@ jobs:
         shell: bash
         env:
           RAW_TARGET: ${{ github.event.inputs.target_duration_seconds }}
+          # Pipe the optional focus string through the environment rather
+          # than interpolating it into the shell command line — the value
+          # is free-form user text that can contain quotes, backticks,
+          # newlines, or `$` characters and would otherwise be a shell
+          # injection footgun.
+          FOCUS_INPUT: ${{ github.event.inputs.focus }}
         run: |
           set -euo pipefail
           # Sanitize user-supplied target duration; fall back to 120s if
@@ -378,6 +389,22 @@ jobs:
             target_dur="120"
           fi
           echo "Target output duration (seconds): $target_dur"
+
+          # Normalize the optional focus value. Treat missing / all-whitespace
+          # as "no focus" (whole-video mode). When a focus is provided,
+          # log it verbatim so it's easy to correlate with the generated
+          # prompt in workflow logs.
+          focus_trimmed="$(printf '%s' "${FOCUS_INPUT:-}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ -n "$focus_trimmed" ]; then
+            echo "Focus (narrow analysis to): $focus_trimmed"
+          else
+            echo "Focus: (none — whole video considered)"
+          fi
+
+          # Pass the focus value via env into the generator so we don't
+          # have to worry about shell-quoting a multi-line / special-char
+          # user string on the argv command line.
+          FOCUS="$focus_trimmed" \
           python scripts/generate_analysis_prompt.py \
             "$DURATION_SECONDS" "$SCREENSHOT_COUNT" \
             "work/00_READ_THIS_FIRST.txt" \
@@ -386,8 +413,9 @@ jobs:
             --window-seconds "${SCREENSHOT_WINDOW_SECONDS:-6}" \
             --shot-count "${SHOT_COUNT:-0}" \
             --key-moment-count "${KEY_MOMENT_COUNT:-0}" \
-            --event-frame-count "${EVENT_FRAME_COUNT:-0}"
-          head -n 40 work/00_READ_THIS_FIRST.txt
+            --event-frame-count "${EVENT_FRAME_COUNT:-0}" \
+            --focus-env FOCUS
+          head -n 60 work/00_READ_THIS_FIRST.txt
 
       - name: Zip screenshots (baseline + event composites)
         shell: bash
