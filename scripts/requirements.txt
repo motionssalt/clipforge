@@ -1,30 +1,12 @@
 # --- Transcription stack -----------------------------------------------------
 # faster-whisper drives Stage A's Silero-VAD-gated Whisper transcription.
 # Its VAD filter (vad_filter=True in transcribe.py) needs onnxruntime to be
-# importable at runtime — see the pin block below for the shared cross-feature
-# constraints that keep that import working.
+# importable at runtime — see the onnxruntime pin below.
 faster-whisper==1.0.3
 requests>=2.31.0
 
-# --- Local vision-assist stack (CPU only, no external APIs) ------------------
-# These power scripts/character_index.py so face tracking / clustering is
-# done deterministically on the runner, not by burning AI-vision tokens.
-# Everything below is free, offline once installed, and CPU-only.
-#
-# InsightFace + onnxruntime carry the SCRFD face detector and the
-# MobileFaceNet embedder used by the `buffalo_sc` bundle (~30 MB total).
-# opencv-python-headless is the image I/O layer InsightFace uses.
-# scikit-learn provides the agglomerative clustering used to group
-# embeddings into stable identities.
-insightface==0.7.3
-
-# --- onnxruntime pin (SHARED between faster-whisper's VAD and InsightFace) ---
-# Both features import the same `onnxruntime` module in the same process,
-# so we have exactly one constraint window to satisfy:
-#
-#   * faster-whisper 1.0.3 declares:  onnxruntime >=1.14, <2
-#   * insightface     0.7.3 accepts:  any onnxruntime >=1.x that ships wheels
-#     for the runner's Python (3.11 on ubuntu-latest)
+# --- onnxruntime (used by faster-whisper's Silero VAD) -----------------------
+# faster-whisper 1.0.3 declares:  onnxruntime >=1.14, <2
 #
 # We pin 1.19.2 because:
 #   * it's inside faster-whisper's `<2` window (Silero VAD is unchanged
@@ -40,19 +22,3 @@ insightface==0.7.3
 #   * it's still the CPU-wheel-friendly 1.19 line — no GPU/CUDA
 #     assumptions that would break ubuntu-latest.
 onnxruntime==1.19.2
-
-# NumPy is pinned <2 to keep InsightFace 0.7.3 happy. 0.7.3 pre-dates the
-# NumPy 2 ABI break and imports fail against NumPy 2.x (its internal
-# np.int_ / np.float_ aliases are gone). Pinning <2 costs nothing here
-# because onnxruntime 1.19.2 supports both NumPy majors.
-numpy>=1.24,<2
-
-# protobuf is a transitive dep of both onnxruntime and insightface.
-# protobuf 5 removed several APIs that onnxruntime <1.20 and
-# insightface 0.7.3 still use, so we cap it explicitly. Without this cap
-# pip is free to resolve protobuf 5.x, which reintroduces the "installed
-# but crashes on import" failure mode.
-protobuf>=3.20,<5
-
-opencv-python-headless>=4.8,<5
-scikit-learn>=1.3,<2
