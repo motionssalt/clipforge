@@ -62,7 +62,7 @@
     'settings-section', 'settings-toggle', 'settings-body', 'settings-state', 'settings-form',
     'owner-input', 'repo-input', 'token-input', 'token-reveal', 'settings-save', 'settings-clear', 'settings-msg',
     'stage-a-section', 'stage-a-form', 'video-url-input', 'job-slug-input', 'whisper-model-select',
-    'language-input', 'target-duration-select', 'start-stage-a', 'stage-a-msg',
+    'language-input', 'target-duration-select', 'focus-input', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
     'status-section', 'stage-badge', 'expiry-countdown', 'stage-line', 'stage-spinner', 'stage-text',
@@ -395,12 +395,20 @@
     var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
     var targetDurInt = parseInt(targetDurRaw, 10);
     if (!isFinite(targetDurInt) || targetDurInt <= 0) targetDurInt = 120;
+
+    // Optional narrow-focus directive. Free-form user text; trimmed to
+    // strip incidental whitespace, and left as "" when the field is
+    // empty so stage-a.yml's default (whole-video behavior) applies.
+    var focusRaw = (el['focus-input'] && el['focus-input'].value) || '';
+    var focus = focusRaw.replace(/^\s+|\s+$/g, '');
+
     var inputs = {
       video_url: videoUrl,
       job_id: slug,
       whisper_model: el['whisper-model-select'].value,
       language: el['language-input'].value.trim() || 'auto',
-      target_duration_seconds: String(targetDurInt)
+      target_duration_seconds: String(targetDurInt),
+      focus: focus
     };
 
     state.busy = true;
