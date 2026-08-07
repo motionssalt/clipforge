@@ -182,12 +182,24 @@ tokens for the coverage they provide.
 
   key_moments.json
     - Your candidate shortlist. Every moment has:
-        * `start_seconds` / `end_seconds` — the shot boundaries.
+        * `start_seconds` — the shot's start (a real shot boundary).
+        * `shot_end_seconds` — the raw shot boundary, i.e. the frame
+          BEFORE the camera cuts away from this shot.
+        * `end_seconds` — `shot_end_seconds` PLUS a small
+          `visual_tail_seconds` extension into the next shot, so the
+          moment's window actually contains the beat's on-screen
+          resolution (reaction shot, cutaway, aftermath), not just its
+          last spoken word. Prefer `end_seconds` over
+          `shot_end_seconds` when you use this moment as a cut-end
+          anchor.
+        * `visual_tail_seconds` — how much tail was added past the
+          raw shot boundary. See `visual_tail_policy` at the top of
+          the file.
         * `transcript_excerpt` — the dialogue during the window.
         * `signals` — is_shot_boundary, emotional_score,
           dialogue_density, priority.
         * `why` — human-readable list of the exact reasons this
-          moment was flagged.
+          moment was flagged (and, when the tail was extended, why).
     - Priority is a HINT, not a mandate. A high priority means
       "worth a look", not "must be a cut". The best cut list is the
       one that tells one connected story, not the one that greedily
@@ -312,6 +324,17 @@ STEP 2 (open screenshots — in chronological order — to fill visuals).
         M (i.e. abs(center_ms/1000 - M) <= 2.0). If one exists, prefer
         it over the baseline for that beat.
 
+        Every high-signal moment in key_moments.json emits TWO event
+        composites: one centered on its `start_seconds` (the onset of
+        the beat) AND one centered on its `end_seconds` (the beat's
+        on-screen resolution — already pre-padded past the raw shot
+        boundary by `visual_tail_seconds`). This is deliberate: the
+        tail composite is what lets you verify that the described
+        action has actually finished on screen before you commit an
+        `end_seconds` value. ALWAYS open the tail composite before
+        finalizing `end_seconds` for a cut that anchors on this
+        moment — see "PICKING end_seconds" in STEP 3 below.
+
         VIEWING ORDER — this is a hard rule, not a suggestion:
 
           - Within a single candidate range, open composites in
@@ -353,6 +376,82 @@ STEP 3 (assemble cuts).
         - `start_seconds` and `end_seconds` are still expressed in
           SOURCE-VIDEO seconds (integers, second-precision). They do
           NOT need to align with window boundaries.
+
+        --------------------------------------------------------------
+        PICKING end_seconds — read this before writing any cut
+        --------------------------------------------------------------
+
+        This is the single most common failure mode of cuts.json:
+        `end_seconds` chosen at the point where the NARRATION or
+        DIALOGUE ends, one or two seconds BEFORE the described
+        on-screen action actually finishes happening. The result is a
+        scene_XX.mp4 that references an event ("his eye flashes red",
+        "the storm crashes down", "she hooks her pinky around his",
+        "he stalks toward the door") and then cuts off right before
+        the viewer can see that event on screen. Do not do this.
+
+        The rule is simple and non-negotiable:
+
+          If your raw_narration for this cut describes an action, a
+          reaction, a cutaway, or a visible result, then `end_seconds`
+          MUST sit AFTER that action / reaction / result is visibly
+          complete on screen. Not at the last spoken word. Not at the
+          shot boundary just before the payoff. AFTER the payoff.
+
+        Concretely:
+
+          (a) Ignore "where the transcript segment ends" as an anchor
+              for `end_seconds`. Whisper's segment ends are aligned to
+              the last SPOKEN WORD (± a small pad) — the visual beat
+              a viewer would describe as "the moment" almost always
+              lands AFTER the last word, in the next 1–4 seconds of
+              screen time.
+
+          (b) Do NOT anchor `end_seconds` to the shot's
+              `shot_end_seconds` from scene_index.json / key_moments.json.
+              Short-form narrative beats routinely resolve ACROSS the
+              cut: the reaction shot, the cutaway to what was just
+              referenced, the aftermath of the punch, the flash of
+              someone's eye as they close it — those live in the NEXT
+              shot, not the current one. If the described beat's
+              payoff clearly lives in the next shot, extend
+              `end_seconds` into that next shot until the payoff is
+              on screen.
+
+          (c) The `end_seconds` value in each key_moments.json entry
+              is already pre-padded past `shot_end_seconds` by a
+              small `visual_tail_seconds` for exactly this reason.
+              Use that as your MINIMUM. Only shrink it back below
+              that value if you have specifically verified from the
+              screenshots that the described action truly completed
+              earlier; and even then, keep at least ~1s of visual
+              tail after the last described beat.
+
+          (d) Verify visually. Open the event composite centered on
+              your candidate `end_seconds` (there is one for every
+              key_moments.json moment — same event_<ms>.jpg naming as
+              the start-of-moment composite) and confirm the described
+              action's resolution is visible in one of its panels. If
+              the payoff is still in progress at the last panel, push
+              `end_seconds` forward by another 1–2 seconds and check
+              again. If it already completed by the first panel, you
+              may pull `end_seconds` back — but keep at least ~1s of
+              tail after the described beat.
+
+          (e) Tail budget. A visual tail of roughly 1–4 seconds past
+              the on-screen end of the described beat is the right
+              range for essentially every cut. Less than 1s reads as
+              a cut-off; more than 4s starts dragging.
+
+          (f) Self-check before finalizing each cut: re-read your
+              raw_narration and, for every distinct beat it mentions,
+              confirm you have visual evidence (from the screenshots
+              you opened) that the beat is INSIDE
+              [`start_seconds`, `end_seconds`]. If any described beat
+              lands at or past `end_seconds`, extend `end_seconds`.
+              This check is more important than hitting the target
+              total duration exactly.
+
         - For each cut, write a `raw_narration` field: a plain,
           matter-of-fact description of WHAT HAPPENS in that segment,
           the way a viewer who can see the screen would describe it to
@@ -464,7 +563,7 @@ OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
   "cuts": [
     {{
       "start_seconds": 142,
-      "end_seconds": 168,
+      "end_seconds": 170,
       "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
     }}
     // ... more cuts, ordered chronologically ...
@@ -478,6 +577,14 @@ CONSTRAINTS
     within [0, {duration_seconds}].
   - Cuts MUST NOT overlap.
   - Cuts MUST be sorted ascending by `start_seconds`.
+  - `end_seconds` must sit AFTER the visual resolution of every event
+    the cut's `raw_narration` describes. It is NOT the last spoken
+    word, and it is NOT the raw shot boundary at the end of the
+    current shot — both routinely land BEFORE the described action's
+    on-screen payoff. See the "PICKING end_seconds" block in STEP 3
+    for the full rule and self-check. When in doubt, err on the side
+    of 1–2 extra seconds of tail; a slightly long cut is fine, a cut
+    that ends before its described beat is on screen is broken.
   - `raw_narration` is plain prose. No markdown, no timestamps inside it,
     no name guessing when unsure — but when the transcript provides
     clear name evidence for a character, using that name is NOT a
