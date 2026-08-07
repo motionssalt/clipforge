@@ -7,16 +7,16 @@ Why this exists
 ---------------
 The baseline screenshot cadence (one 3x2 composite per 6 seconds of
 source, one panel per second) is fine for slow / talking-head footage
-but too coarse for fast beats — a character reveal, a cut, or a punch
-lands in a single frame that the baseline may or may not sample. The
-downstream vision agent then either misses the beat entirely or has to
-guess from a single ambiguous panel.
+but too coarse for fast beats — a cut or a punch lands in a single
+frame that the baseline may or may not sample. The downstream vision
+agent then either misses the beat entirely or has to guess from a
+single ambiguous panel.
 
 Rather than doubling the baseline (which would double vision-token
 cost across the whole video), we spend the extra frame budget ONLY on
 the moments we already know are important — the ones on the
-`key_moments.json` shortlist that have `is_shot_boundary=true` OR
-`introduces_person=true`.
+`key_moments.json` shortlist that have `is_shot_boundary=true` OR a
+priority above the configured minimum.
 
 For each such moment we emit ONE extra 3x2 composite covering ±2s
 around the moment's start (a 4-second window sampled at 2 frames per
@@ -151,7 +151,6 @@ def main() -> None:
     high = [
         m for m in moments
         if m.get("signals", {}).get("is_shot_boundary")
-        or m.get("signals", {}).get("introduces_person")
         or m.get("signals", {}).get("priority", 0.0) >= args.min_priority
     ]
     high.sort(key=lambda m: m["signals"].get("priority", 0.0), reverse=True)
