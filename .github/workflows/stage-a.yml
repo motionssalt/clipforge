@@ -95,6 +95,64 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r scripts/requirements.txt
 
+      # ---------------------------------------------------------------
+      # Verify the shared onnxruntime stack up-front.
+      #
+      # Both faster-whisper's Silero VAD filter and InsightFace's SCRFD
+      # detector import the SAME `onnxruntime` module in the SAME process,
+      # so if that module can't be imported cleanly (NumPy 2 vs onnxruntime
+      # ABI mismatch, protobuf 5 breakage, wrong manylinux tag, etc.) BOTH
+      # features fail. In the previous regression this surfaced ONLY inside
+      # faster-whisper's VAD path as the very misleading
+      #     RuntimeError: Applying the VAD filter requires the onnxruntime package
+      # message — even though onnxruntime WAS installed, it just wouldn't
+      # import at runtime.
+      #
+      # Doing an explicit sanity import here means any future ABI
+      # regression fails LOUDLY with the real traceback, at install time,
+      # before we've spent minutes downloading the source video and
+      # extracting audio only to crash inside transcribe.py.
+      # ---------------------------------------------------------------
+      - name: Verify onnxruntime + faster-whisper VAD stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import sys
+
+          print(f"Python:  {sys.version.split()[0]}")
+
+          import numpy as np
+          print(f"numpy:   {np.__version__}")
+
+          # This is the exact same import that faster-whisper's
+          # SileroVADModel.__init__ does. If it raises here, the run stops
+          # here with a real traceback instead of being re-raised as the
+          # misleading "requires the onnxruntime package" RuntimeError
+          # deep inside faster-whisper later on.
+          import onnxruntime
+          print(f"onnxruntime: {onnxruntime.__version__}")
+
+          import faster_whisper
+          print(f"faster-whisper: {faster_whisper.__version__}")
+
+          # Confirm the VAD asset shipped with faster-whisper is present
+          # and that a session can actually be created against it — this
+          # is what the transcription step will do first when it starts.
+          from faster_whisper.vad import SileroVADModel, get_assets_path
+          import os
+          vad_path = os.path.join(get_assets_path(), "silero_vad.onnx")
+          assert os.path.exists(vad_path), f"missing VAD asset: {vad_path}"
+          SileroVADModel(vad_path)
+          print(f"Silero VAD session: OK ({vad_path})")
+
+          # And confirm InsightFace's onnxruntime consumer imports too, so
+          # the character-detection step later in this workflow doesn't
+          # need to be reached to discover the same class of failure.
+          import insightface
+          print(f"insightface: {insightface.__version__}")
+          PY
+
       - name: Write initial status (stage_a_running)
         shell: bash
         run: |
@@ -258,6 +316,11 @@ jobs:
           # ~/.insightface cache. Doing it here means a network glitch
           # during model download shows up as its own visible step
           # rather than as an opaque failure inside character_index.py.
+          #
+          # Note: the shared onnxruntime import was already verified in
+          # the "Verify onnxruntime + faster-whisper VAD stack" step at
+          # the top of the job, so anything failing here is model-
+          # download or SCRFD-specific rather than an environment issue.
           python -c "
           import os, sys
           try:
