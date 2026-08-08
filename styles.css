@@ -422,6 +422,16 @@ input[type="file"] {
 
 .upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+/* Quality-enhancement on/off toggle (Stage B).
+   Sits under the cuts.json upload row; the checkbox drives the `enhance`
+   workflow_dispatch input on stage-b.yml. Default state is checked so
+   the UI matches the shipped default. */
+.enhance-toggle-row { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.enhance-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; color: var(--fg); }
+.enhance-toggle input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
+.enhance-toggle-label { font-weight: 500; }
+.enhance-toggle-hint { max-width: 68ch; }
+
 .validation {
   border: 1px solid var(--border-strong);
   background: var(--bg-inset);
