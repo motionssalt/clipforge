@@ -271,6 +271,20 @@
             enhanced vs unenhanced output; the encoding profile, file size and mobile-safety
             checks are identical either way.</p>
         </div>
+
+        <div class="brand-toggle-row">
+          <label class="brand-toggle">
+            <input type="checkbox" id="brand-toggle" checked>
+            <span class="brand-toggle-label">Composite scenes into the branded 9:16 template</span>
+          </label>
+          <p class="hint brand-toggle-hint">Renders each cut scene onto the branded
+            <strong>1080×1920</strong> vertical canvas — your channel avatar and name up top,
+            the job title, and a follow / like / comment / share CTA — using the persistent
+            branding saved in Settings (<code>branding/branding.json</code>). The source clip is
+            letterboxed at its native aspect ratio, never stretched or cropped, and the output
+            passes the same mobile-safety checks either way. Toggle off to ship the raw cut
+            scenes. If no channel branding is saved yet, scenes ship unbranded even with this on.</p>
+        </div>
         <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
       </div>
 
