@@ -22,3 +22,15 @@ requests>=2.31.0
 #   * it's still the CPU-wheel-friendly 1.19 line — no GPU/CUDA
 #     assumptions that would break ubuntu-latest.
 onnxruntime==1.19.2
+
+# --- Branded template compositor (brand_template.py / brand_scene.py) --------
+# Pillow is used to pre-render the 1080x1920 branded chrome (avatar ring,
+# name row, category badge, auto-fitted title, follow button, engagement
+# prompt) as a single transparent RGBA PNG that ffmpeg then overlays onto
+# each letterboxed scene. Doing it in Pillow rather than in ffmpeg's
+# drawtext/drawbox gives us: proper word-wrapping + auto-shrink for
+# titles of any length, rounded corners, ring strokes, and soft shadows —
+# all trivial in Pillow, painful (or impossible) in a filter graph.
+# 10.x is the current supported line; it ships wheels for Python 3.11 so
+# the GitHub ubuntu-latest runner pip step stays offline-friendly.
+Pillow>=10.0.0
