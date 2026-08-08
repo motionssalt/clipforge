@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: "true"
+      brand:
+        description: "Composite each cut scene into the branded 1080x1920 template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. Default true; set to false to ship unbranded scenes. When no username is configured yet the job ships unbranded either way."
+        required: false
+        type: string
+        default: "true"
 
 permissions:
   contents: write
@@ -314,6 +319,64 @@ jobs:
           PY
 
 
+      # -------------------------------------------------------------------
+      # Branded 9:16 compositor (Stage B, optional).
+      #
+      # Runs strictly AFTER quality enhancement and BEFORE per-scene
+      # validation, so a branded scene has to pass the same mobile-safety
+      # bar as every other stage. Kept as its own step, mirroring the
+      # enhance step's structure: the `brand` workflow_dispatch input
+      # maps 1:1 to the site's on/off toggle ('true' default,
+      # 'false' short-circuits scripts/brand_scenes.py to a no-op).
+      #
+      # The orchestrator has three behavior paths — toggle off (no-op),
+      # toggle on but no username saved in branding/branding.json yet
+      # (no-op: an unconfigured channel ships unbranded, unchanged from
+      # before), and toggle on + username configured (each scene_*.mp4
+      # is composited into the branded 1080x1920 template and atomically
+      # swapped in place). BRANDING_APPLIED is exported here so the
+      # completion-status step can report branding_applied=true ONLY
+      # when the toggle was on AND a username was configured.
+      # -------------------------------------------------------------------
+      - name: Brand scenes (composite into the branded 9:16 template)
+        shell: bash
+        env:
+          BRAND_FLAG: ${{ github.event.inputs.brand }}
+        run: |
+          set -euo pipefail
+          # Default to "true" when the input is unset (e.g. a re-run of
+          # an older dispatch that didn't carry the brand input yet), so
+          # the shipped default matches the site's default-on toggle.
+          flag="${BRAND_FLAG:-true}"
+          case "$flag" in
+            true|1|yes|on|True|TRUE)  enable_arg="--enabled" ;;
+            false|0|no|off|False|FALSE) enable_arg="--no-enabled" ;;
+            *)
+              echo "Unrecognised brand flag: '$flag' — defaulting to enabled." >&2
+              enable_arg="--enabled"
+              ;;
+          esac
+          echo "Branding flag: $flag -> $enable_arg"
+          python scripts/brand_scenes.py work/out/scenes "$enable_arg"
+          # branding_applied requires BOTH the toggle on AND a configured
+          # username (BRANDING_USERNAME was exported by the earlier
+          # "Load persistent channel branding" step only when the saved
+          # branding.json actually has one).
+          applied=false
+          if [ "$enable_arg" = "--enabled" ] && [ -n "${BRANDING_USERNAME:-}" ]; then
+            applied=true
+          fi
+          echo "branding_applied=$applied"
+          echo "BRANDING_APPLIED=$applied" >> "$GITHUB_ENV"
+          # The orchestrator asserts this itself, but double-check here so
+          # a leftover temp file can never leak into the release zip.
+          shopt -s nullglob
+          leftovers=(work/out/scenes/*.branded.mp4)
+          if [ ${#leftovers[@]} -ne 0 ]; then
+            echo "Leftover temp files after branding: ${leftovers[*]}" >&2
+            exit 1
+          fi
+
       - name: Validate every scene MP4 with ffprobe
         shell: bash
         run: |
@@ -432,6 +495,13 @@ jobs:
           title = (os.environ.get("JOB_TITLE") or "").strip()
           if title:
               extra["title"] = title
+          # branding_applied is true ONLY when the brand toggle was on
+          # AND a username was configured for this run (exported by the
+          # "Brand scenes" step). Always written — a definitive false is
+          # more useful to the site than an absent field.
+          extra["branding_applied"] = (
+              os.environ.get("BRANDING_APPLIED", "false").lower() == "true"
+          )
           username = (os.environ.get("BRANDING_USERNAME") or "").strip()
           if username:
               extra["branding_username"] = username
@@ -450,6 +520,7 @@ jobs:
         env:
           JID: ${{ steps.jid.outputs.job_id }}
           JOB_TITLE: ${{ env.JOB_TITLE }}
+          BRANDING_APPLIED: ${{ env.BRANDING_APPLIED }}
           BRANDING_USERNAME: ${{ env.BRANDING_USERNAME }}
           BRANDING_DISPLAY_NAME: ${{ env.BRANDING_DISPLAY_NAME }}
           BRANDING_PROFILE_PICTURE: ${{ env.BRANDING_PROFILE_PICTURE }}
