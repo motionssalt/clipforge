@@ -69,7 +69,7 @@
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
-    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation',
+    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'enhance-toggle',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
   ].forEach(function (id) {
@@ -1209,7 +1209,19 @@
       return;
     }
 
-    showValidation([path + ' committed. Dispatching stage-b.yml…'], true);
+    // The enhance toggle drives Stage B's optional quality-enhancement
+    // filter chain (denoise + color grade + sharpen). Default is ON so
+    // the checkbox reflects the shipped default; unticking it dispatches
+    // Stage B with enhance='false' and the workflow skips the extra step
+    // (files go straight from cut to validate). The workflow input is a
+    // string because GitHub workflow_dispatch inputs are always strings.
+    var enhanceOn = !el['enhance-toggle'] || !!el['enhance-toggle'].checked;
+    var enhanceInput = enhanceOn ? 'true' : 'false';
+
+    showValidation([
+      path + ' committed. Dispatching stage-b.yml… ' +
+      '(quality enhancement: ' + (enhanceOn ? 'ON' : 'OFF') + ')'
+    ], true);
 
     var dispatchedAt = new Date();
     try {
@@ -1220,7 +1232,8 @@
           ref: REF,
           inputs: {
             job_id: state.jobId,
-            cuts_ref: 'path:jobs/' + state.jobId + '/cuts.json'
+            cuts_ref: 'path:jobs/' + state.jobId + '/cuts.json',
+            enhance: enhanceInput
           }
         }
       });
