@@ -473,6 +473,25 @@ input[type="file"] {
 .scene-link { min-width: 210px; justify-content: center; }
 .scene-size { margin: 0; }
 
+/* ---------- channel branding ---------- */
+
+.branding-block {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.branding-head { display: flex; align-items: center; gap: 12px; }
+.branding-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-inset);
+}
+
 /* ---------- job facts ---------- */
 
 .job-facts {
