@@ -188,11 +188,9 @@ jobs:
           # cuts.json (see generate_analysis_prompt.py). Optional: a
           # missing/blank title exports an empty string and the rest of
           # the pipeline ships without a title line.
-          python - <<'PY' >> "$GITHUB_ENV"
-          import json
-          raw = (json.load(open("work/cuts.json")).get("title") or "").strip()
-          print("JOB_TITLE=" + raw)
-          PY
+          JOB_TITLE=$(python -c 'import json; print((json.load(open("work/cuts.json")).get("title") or "").strip())')
+          echo "JOB_TITLE=$JOB_TITLE" >> "$GITHUB_ENV"
+
           if [ -n "$JOB_TITLE" ]; then
             echo "Job title: $JOB_TITLE"
           else
