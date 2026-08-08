@@ -179,6 +179,63 @@ jobs:
           echo "cuts.json head:"
           head -c 400 work/cuts.json; echo
 
+          # Extract the one-per-job title the analysis agent put in
+          # cuts.json (see generate_analysis_prompt.py). Optional: a
+          # missing/blank title exports an empty string and the rest of
+          # the pipeline ships without a title line.
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json
+          raw = (json.load(open("work/cuts.json")).get("title") or "").strip()
+          print("JOB_TITLE=" + raw)
+          PY
+          if [ -n "$JOB_TITLE" ]; then
+            echo "Job title: $JOB_TITLE"
+          else
+            echo "No top-level title in cuts.json (optional field)."
+          fi
+
+      # -------------------------------------------------------------------
+      # Persistent channel branding (branding/branding.json on the default
+      # branch, written by the site's Settings panel via the contents API).
+      # It lives OUTSIDE jobs/ so the 12-hour cleanup never deletes it.
+      # This step only RECORDS which branding (and which job title) this
+      # run used in status.json's `extra` — actually rendering the title /
+      # branding onto the video frames is a separate addition and is
+      # deliberately not wired here.
+      # -------------------------------------------------------------------
+      - name: Load persistent channel branding (branding/branding.json)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json, os
+
+          doc = {}
+          try:
+              with open("branding/branding.json", encoding="utf-8") as f:
+                  doc = json.load(f)
+          except FileNotFoundError:
+              print("branding/branding.json not found — no branding saved yet")
+          except Exception as e:
+              print(f"branding/branding.json unreadable ({e}) — continuing without branding")
+
+          username = (doc.get("username") or "").strip()
+          display_name = (doc.get("display_name") or "").strip() or username
+          picture = (doc.get("profile_picture") or "").strip()
+          pic_present = bool(picture) and os.path.isfile(picture)
+          if picture and not pic_present:
+              print(f"branding picture listed but missing on disk: {picture} — ignoring")
+              picture = ""
+
+          if username:
+              print(f"branding_username={username}")
+              print(f"branding_display_name={display_name}")
+              if picture:
+                  print(f"branding_profile_picture={picture}")
+          else:
+              print("No branding configured (empty username) — job runs unbranded.")
+          PY
+
       - name: Cut scenes with ffmpeg (NO concat — one MP4 per cut)
         shell: bash
         run: |
@@ -364,12 +421,38 @@ jobs:
             --release-url "${{ steps.relmeta.outputs.release_url }}" \
             --asset "final_zip=${{ steps.finalasset.outputs.final_url }}"
 
+          # Merge the job title + the branding this run used into status.json
+          # (same inline-merge pattern Stage A uses for the asset URLs).
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path("jobs") / os.environ["JID"] / "status.json"
+          data = json.loads(p.read_text())
+          extra = data.setdefault("extra", {})
+          title = (os.environ.get("JOB_TITLE") or "").strip()
+          if title:
+              extra["title"] = title
+          username = (os.environ.get("BRANDING_USERNAME") or "").strip()
+          if username:
+              extra["branding_username"] = username
+              extra["branding_display_name"] = (os.environ.get("BRANDING_DISPLAY_NAME") or "").strip() or username
+              if (os.environ.get("BRANDING_PROFILE_PICTURE") or "").strip():
+                  extra["branding_profile_picture"] = os.environ["BRANDING_PROFILE_PICTURE"].strip()
+          p.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+          PY
+
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} complete" || echo "nothing to commit"
           git push
+        env:
+          JID: ${{ steps.jid.outputs.job_id }}
+          JOB_TITLE: ${{ env.JOB_TITLE }}
+          BRANDING_USERNAME: ${{ env.BRANDING_USERNAME }}
+          BRANDING_DISPLAY_NAME: ${{ env.BRANDING_DISPLAY_NAME }}
+          BRANDING_PROFILE_PICTURE: ${{ env.BRANDING_PROFILE_PICTURE }}
 
       - name: On failure, write error status
         if: failure()
