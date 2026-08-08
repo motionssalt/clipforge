@@ -477,6 +477,21 @@ def main() -> None:
         print("cuts.json contains no cuts", file=sys.stderr)
         sys.exit(2)
 
+    # One title per JOB (not per scene). The analysis agent generates it as
+    # the top-level `title` field of cuts.json (see generate_analysis_prompt.py);
+    # every scene cut from this job shares it. Missing/blank is legal (older
+    # cuts.json) and simply means the output.txt header carries no title line.
+    job_title = payload.get("title")
+    if job_title is not None:
+        if not isinstance(job_title, str) or not job_title.strip():
+            print("cuts.json `title` must be a non-empty string when present", file=sys.stderr)
+            sys.exit(2)
+        job_title = job_title.strip()
+    if job_title:
+        print(f"Job title (one per job, shared by every scene): {job_title}", flush=True)
+    else:
+        print("No top-level `title` in cuts.json — scenes ship without a job title.", flush=True)
+
     # Sort defensively, validate.
     cuts = sorted(cuts, key=lambda c: float(c["start_seconds"]))
     src_duration = probe_duration(args.original_video)
@@ -571,8 +586,22 @@ def main() -> None:
             f"===== END SCENE {i + 1} ====="
         )
 
+    # The title is pinned ABOVE the narration notes in its own labelled
+    # header so the commentary agent applies it to the whole package
+    # (MASTER_PROMPT.md Step 4) instead of treating it as scene material.
+    title_header = ""
+    if job_title:
+        title_header = (
+            "\n\n" + ("=" * 80) + "\n"
+            + f"JOB TITLE (ONE title for the whole job — every scene clip\n"
+            + f"of this job shares it; use it for the posting package, Step 4):\n"
+            + f"{job_title}\n"
+            + ("=" * 80)
+        )
+
     separator = (
-        "\n\n" + ("=" * 80) + "\n"
+        title_header
+        + "\n\n" + ("=" * 80) + "\n"
         + f"RAW NARRATION NOTES — TOTAL SCENES: {scene_count}\n"
         + "(one scene section per video clip, in playback order; Step 2 "
           "must produce\n"
