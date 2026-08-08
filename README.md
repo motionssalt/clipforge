@@ -19,7 +19,9 @@ database. Single user, personal use, one repo, one personal access token.
    that single URL to your external AI agent — it can read
    `00_READ_THIS_FIRST.txt`, `transcript.json`, and the screenshots from
    there in one step (no per-file download/upload roundtrip). The agent
-   returns a `cuts.json`.
+   returns a `cuts.json` carrying a top-level **`title`** — ONE catchy
+   title generated once per job, shared by every scene clip cut from
+   that video (not per scene).
 4. You upload `cuts.json` back through the site.
 5. **Stage B** cuts the ORIGINAL (full-quality) video at those
    timestamps with ffmpeg and produces **one separate `scene_XX.mp4`
@@ -47,6 +49,9 @@ database. Single user, personal use, one repo, one personal access token.
 │   ├── write_status.py
 │   ├── cleanup.py
 │   └── requirements.txt
+├── branding/                    # persistent channel branding (site-managed)
+│   ├── branding.json            #   username, display name, picture path
+│   └── profile_picture.<ext>    #   optional avatar (png/jpg/webp)
 ├── jobs/                        # per-job status.json + cuts.json land here
 ├── MASTER_PROMPT.md             # commentary-script conversion prompt
 ├── SITE_BUILD_PROMPT.md         # hand to a site-generator to build the UI
@@ -106,7 +111,25 @@ transitions, the exact filenames and localStorage keys — so the tool
 can produce a working `index.html` / `styles.css` / `app.js` with no
 gaps. Commit the generated files at the repo root.
 
-### 5. Open the site and go
+### 5. Channel branding (set once, persists across jobs)
+
+In the site's Settings panel there is a **Channel branding** block:
+username (required, without `@`), display name (optional — falls back
+to the username), and a profile picture (optional, PNG/JPEG/WebP ≤
+5 MB). Save it once and it applies to every future job; update it any
+time the same way.
+
+It is stored in the repo — the same "GitHub as the database" pattern
+as job state — at `branding/branding.json` (+ the committed profile
+picture next to it), written directly by the site via the contents
+API. It deliberately lives OUTSIDE `jobs/`: the hourly cleanup only
+deletes `jobs/<id>/` folders and `clipforge-*` releases, so branding
+survives the 12-hour job TTL forever. Stage B records which branding
+(and which job title) a run used in that job's `status.json` `extra`
+— actually rendering the title / branding onto the video frames is a
+separate addition, not part of this storage step.
+
+### 6. Open the site and go
 
 Visit the Pages URL, open Settings, paste owner + repo + token,
 save. Paste any public video URL (Google Drive share link or a direct
@@ -181,3 +204,11 @@ whether Stage B ever ran. Override the TTL via the workflow's
 - `cuts.json` is uploaded by the site directly to
   `jobs/<jobId>/cuts.json` on `main`; Stage B is dispatched with
   `cuts_ref=path:jobs/<jobId>/cuts.json`.
+- **Per-job title.** The analysis prompt (`00_READ_THIS_FIRST.txt`)
+  asks the agent for a single top-level `title` in cuts.json — one
+  catchy, attention-grabbing title for the WHOLE job, decided after
+  the cuts are final. Every scene from that job shares it. Stage B
+  threads it into `output.txt` (its own `JOB TITLE` header, above the
+  narration notes, for the commentary agent) and into `status.json`
+  under `extra.title`. `title` is optional: an older cuts.json without
+  it still validates and runs.
