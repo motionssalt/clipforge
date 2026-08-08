@@ -84,7 +84,7 @@
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
-    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'enhance-toggle',
+    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'enhance-toggle', 'brand-toggle',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
     'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
@@ -1519,9 +1519,19 @@
     var enhanceOn = !el['enhance-toggle'] || !!el['enhance-toggle'].checked;
     var enhanceInput = enhanceOn ? 'true' : 'false';
 
+    // The brand toggle drives Stage B's optional branded-9:16 compositor
+    // step, same contract as enhance: default ON (checkbox reflects the
+    // shipped default), unticking dispatches with brand='false' and the
+    // workflow short-circuits the branding step to a no-op. When no
+    // channel branding is saved yet the workflow ships unbranded either
+    // way and reports branding_applied=false in status.json.
+    var brandOn = !el['brand-toggle'] || !!el['brand-toggle'].checked;
+    var brandInput = brandOn ? 'true' : 'false';
+
     showValidation([
       path + ' committed. Dispatching stage-b.yml… ' +
-      '(quality enhancement: ' + (enhanceOn ? 'ON' : 'OFF') + ')'
+      '(quality enhancement: ' + (enhanceOn ? 'ON' : 'OFF') +
+      ', branded template: ' + (brandOn ? 'ON' : 'OFF') + ')'
     ], true);
 
     var dispatchedAt = new Date();
@@ -1534,7 +1544,8 @@
           inputs: {
             job_id: state.jobId,
             cuts_ref: 'path:jobs/' + state.jobId + '/cuts.json',
-            enhance: enhanceInput
+            enhance: enhanceInput,
+            brand: brandInput
           }
         }
       });
