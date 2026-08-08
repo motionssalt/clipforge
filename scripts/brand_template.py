@@ -628,44 +628,119 @@ def _draw_cta_button(canvas: Image.Image) -> None:
     )
 
 
+def _draw_heart_icon(draw: ImageDraw.ImageDraw, x: float, y: float, size: float, fill) -> None:
+    """Draw a vector heart icon using Pillow primitives."""
+    half = size / 2
+    draw.ellipse([x, y, x + half * 1.15, y + half * 1.15], fill=fill)
+    draw.ellipse([x + half * 0.85, y, x + size, y + half * 1.15], fill=fill)
+    draw.polygon([
+        (x + size * 0.05, y + half * 0.6),
+        (x + size * 0.95, y + half * 0.6),
+        (x + half, y + size),
+    ], fill=fill)
+
+
+def _draw_bubble_icon(draw: ImageDraw.ImageDraw, x: float, y: float, size: float, fill) -> None:
+    """Draw a vector speech bubble icon using Pillow primitives."""
+    bw = size
+    bh = size * 0.82
+    by = y + (size - bh) / 2
+    draw.rounded_rectangle([x, by, x + bw, by + bh * 0.85], radius=size * 0.25, fill=fill)
+    tx = x + bw * 0.25
+    ty = by + bh * 0.85
+    draw.polygon([
+        (tx, ty - 1),
+        (tx + bw * 0.3, ty - 1),
+        (tx + bw * 0.05, ty + bh * 0.25),
+    ], fill=fill)
+
+
+def _draw_share_icon(draw: ImageDraw.ImageDraw, x: float, y: float, size: float, fill) -> None:
+    """Draw a vector share arrow icon (up-right arrow) using Pillow primitives."""
+    ax1, ay1 = x + size * 0.2, y + size * 0.8
+    ax2, ay2 = x + size * 0.8, y + size * 0.2
+    thick = max(3, int(size * 0.12))
+    draw.line([(ax1, ay1 + thick / 2), (ax2 - thick / 2, ay2)], fill=fill, width=thick)
+    hw = size * 0.38
+    draw.polygon([
+        (ax2, ay2),
+        (ax2 - hw, ay2),
+        (ax2, ay2 + hw),
+    ], fill=fill)
+
+
 def _draw_engagement_prompt(canvas: Image.Image) -> None:
     """
     Secondary call-to-action row directly below the follow button —
-    encourages likes / comments / shares. Drawn in muted white so the
-    follow button remains the primary visual weight and this reads as a
-    supporting nudge, not a competing button.
-
-    The brief explicitly asks for MORE than "just follow" — this is that.
+    encourages likes / comments / shares. Drawn with clean vector icons
+    (heart, speech bubble, share arrow) and text labels instead of
+    unreliable font/emoji glyphs.
     """
     draw = ImageDraw.Draw(canvas)
     font = _load_font(FONT_CANDIDATES_BOLD, 34)
 
-    # Three tokens with symbol + label; joined by narrow dot separators.
-    # Symbols are Unicode glyphs (♥ 💬 ↗) which DejaVu Sans covers.
-    tokens = [("♥", "LIKE"), ("💬", "COMMENT"), ("↗", "SHARE")]
-    sep = "   •   "
+    labels = ["LIKE", "COMMENT", "SHARE"]
+    icon_size = 32
+    icon_text_gap = 12
+    item_gap = 48
 
-    parts: list[str] = []
-    for sym, label in tokens:
-        parts.append(f"{sym} {label}")
-    line = sep.join(parts)
+    text_metrics = []
+    for label in labels:
+        tw, th = _text_size(draw, label, font)
+        text_metrics.append((tw, th))
 
-    lw, lh = _text_size(draw, line, font)
-    x = (CANVAS_W - lw) // 2
+    total_w = 0
+    for i, label in enumerate(labels):
+        tw, th = text_metrics[i]
+        item_w = icon_size + icon_text_gap + tw
+        total_w += item_w
+        if i < len(labels) - 1:
+            total_w += item_gap
+
     y = ENGAGEMENT_Y
-    # Faint accent-colored highlight behind the row so it reads as a
-    # deliberate UI element and not as random floating text.
-    pad_x = 30
-    pad_y = 12
+    pad_x = 36
+    pad_y = 14
+    max_h = max(icon_size, max(th for _, th in text_metrics))
+    start_x = (CANVAS_W - total_w) // 2
+
     bg = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     bd = ImageDraw.Draw(bg)
     bd.rounded_rectangle(
-        [x - pad_x, y - pad_y, x + lw + pad_x, y + lh + pad_y],
-        radius=(lh + 2 * pad_y) // 2,
+        [start_x - pad_x, y - pad_y, start_x + total_w + pad_x, y + max_h + pad_y],
+        radius=(max_h + 2 * pad_y) // 2,
         fill=(255, 255, 255, 18),
     )
     canvas.alpha_composite(bg)
-    draw.text((x, y), line, font=font, fill=TEXT_BRIGHT)
+
+    cur_x = start_x
+    for i, label in enumerate(labels):
+        tw, th = text_metrics[i]
+        icon_y = y + (max_h - icon_size) // 2
+        text_y = y + (max_h - th) // 2 - 2
+
+        if i == 0:
+            _draw_heart_icon(draw, cur_x, icon_y, icon_size, TEXT_BRIGHT)
+        elif i == 1:
+            _draw_bubble_icon(draw, cur_x, icon_y, icon_size, TEXT_BRIGHT)
+        elif i == 2:
+            _draw_share_icon(draw, cur_x, icon_y, icon_size, TEXT_BRIGHT)
+
+        text_x = cur_x + icon_size + icon_text_gap
+        draw.text((text_x + 2, text_y + 2), label, font=font, fill=(0, 0, 0, 180))
+        draw.text((text_x, text_y), label, font=font, fill=TEXT_BRIGHT)
+
+        cur_x += icon_size + icon_text_gap + tw
+        if i < len(labels) - 1:
+            sep_x = cur_x + item_gap // 2
+            sep_w, sep_h = _text_size(draw, "•", font)
+            sep_y = y + (max_h - sep_h) // 2 - 2
+            draw.text(
+                (sep_x - sep_w // 2, sep_y),
+                "•",
+                font=font,
+                fill=(TEXT_MUTED[0], TEXT_MUTED[1], TEXT_MUTED[2], 160),
+            )
+            cur_x += item_gap
 
 
 # =============================================================================
