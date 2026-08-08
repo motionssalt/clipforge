@@ -221,6 +221,20 @@
           <input type="file" id="cuts-file-input" accept="application/json,.json">
           <button type="button" id="start-stage-b" class="btn btn-accent" disabled>Start Stage B</button>
         </div>
+
+        <div class="enhance-toggle-row">
+          <label class="enhance-toggle">
+            <input type="checkbox" id="enhance-toggle" checked>
+            <span class="enhance-toggle-label">Apply quality enhancement filter chain</span>
+          </label>
+          <p class="hint enhance-toggle-hint">Runs a tuned filter chain on each cut scene after cutting:
+            mild <strong>hqdn3d</strong> denoise (spatial+temporal, gentle so anime line-art doesn't smear),
+            a subtle <strong>eq</strong> color grade (contrast&nbsp;+6&#37;, saturation&nbsp;+15&#37;,
+            gamma&nbsp;0.98 for mobile screens), and a luma-only <strong>unsharp</strong> pass
+            (chroma sharpen off — it just fringes anime color edges). Toggle off to compare
+            enhanced vs unenhanced output; the encoding profile, file size and mobile-safety
+            checks are identical either way.</p>
+        </div>
         <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
       </div>
 
