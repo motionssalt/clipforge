@@ -1,12 +1,26 @@
 {
   "job_id": "20260808-193031-31274584952",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "awaiting_json_upload",
+  "message": "Stage A complete. Open the Release, hand it to your agent, then upload cuts.json to start Stage B.",
   "release_tag": "clipforge-20260808-193031-31274584952",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260808-193031-31274584952",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-193031-31274584952/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-193031-31274584952/key_moments.json",
+    "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-193031-31274584952/original.mkv",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-193031-31274584952/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-193031-31274584952/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-193031-31274584952/transcript.json"
+  },
   "created_at_epoch": 1786217475,
-  "updated_at_epoch": 1786217475,
+  "updated_at_epoch": 1786217954,
   "expires_at_epoch": 1786260675,
-  "extra": {}
+  "extra": {
+    "duration_seconds": "1426",
+    "screenshot_count": "238",
+    "event_frame_count": "60",
+    "shot_count": "172",
+    "key_moment_count": "60",
+    "original_asset_name": "original.mkv"
+  }
 }
