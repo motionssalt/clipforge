@@ -1,7 +1,7 @@
 {
   "job_id": "20260808-042211-31239279753",
-  "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Open the Release, hand it to your agent, then upload cuts.json to start Stage B.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: cutting original video",
   "release_tag": "clipforge-20260808-042211-31239279753",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260808-042211-31239279753",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-042211-31239279753/transcript.json"
   },
   "created_at_epoch": 1786162983,
-  "updated_at_epoch": 1786163453,
+  "updated_at_epoch": 1786165554,
   "expires_at_epoch": 1786206183,
   "extra": {
     "duration_seconds": "1427",
