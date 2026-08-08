@@ -225,7 +225,11 @@ The order below is the single most important thing in this document.
      for the rest of the run.
 
   STEP 4: Assemble cuts.json using the raw_narration contract
-     described near the bottom of this file.
+     described near the bottom of this file, and write the single
+     `title` field described in the OUTPUT SCHEMA — ONE title for the
+     whole job, decided AFTER your cuts are final (it must describe
+     the story your selected cuts tell, not the source video in
+     general).
 
 --------------------------------------------------------------------------------
 VIDEO METADATA (substituted by Stage A)
@@ -662,11 +666,36 @@ STEP 3 (assemble cuts).
             final beat from the source; do not add a wrap-up.
 
 --------------------------------------------------------------------------------
+JOB TITLE — ONE title for the entire job (top-level `title` field)
+--------------------------------------------------------------------------------
+
+Every scene clip Stage B cuts from this cuts.json belongs to ONE posting
+package, so they all share ONE title. You generate that title ONCE per
+job, here, as a top-level `title` field — NOT per cut, NOT inside any
+cut object.
+
+Rules for the title:
+
+  - Decide it AFTER your cuts are final. It must hook the specific story
+    your selected cuts tell — not the source video in general, and not
+    a beat you ended up leaving out.
+  - ONE single line of plain text. No emoji, no leading/trailing
+    quotation marks, no markdown, no hashtags, no episode numbers, no
+    trailing punctuation.
+  - Catchy and attention-grabbing for short-form feeds: front-load the
+    most arresting element (the twist, the stakes, the impossible
+    thing), keep it specific to what actually happens in the cuts, and
+    keep it under roughly 90 characters.
+  - Never invent events the cuts do not show. A title that promises a
+    payoff the viewer never sees is worse than a plain one.
+
+--------------------------------------------------------------------------------
 OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
 --------------------------------------------------------------------------------
 
 {{
   "video_duration_seconds": {duration_seconds},
+  "title": "ONE catchy, attention-grabbing title for this whole job — a single line of plain text shared by every scene clip cut from this file (see JOB TITLE above)",
   "cuts": [
     {{
       "start_seconds": 142,
@@ -692,6 +721,8 @@ CONSTRAINTS
     for the full rule and self-check. When in doubt, err on the side
     of 1–2 extra seconds of tail; a slightly long cut is fine, a cut
     that ends before its described beat is on screen is broken.
+  - `title` is a single non-empty string: one catchy title for the WHOLE
+    job (all cuts share it). One line, plain text, no emoji/quotes/markdown.
   - `raw_narration` is plain prose. No markdown, no timestamps inside it,
     no name guessing when unsure — but when the transcript provides
     clear name evidence for a character, using that name is NOT a
