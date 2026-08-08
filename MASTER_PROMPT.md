@@ -195,13 +195,69 @@ scene/chunk it follows]
 
 **Speaker 1 speech block:**
 ```
-[the actual VO text for this chunk. Do NOT prepend hype/energy tags
-like [excited, fast]. If a tone tag is truly needed for a genuine
-emotional turn, use something restrained like [calm] or [matter-of-
-fact] at the start — but in most chunks no tag is needed at all.
-Never insert mid-block pause tags; the narration should read as a
-continuous, brisk delivery.]
+[the actual VO text for this chunk. Start the block with ONE emotional
+tone tag in square brackets that matches the actual mood of THIS
+scene's content — see the "Emotional tone tags" section below for the
+tag palette and how to choose. The tag directs vocal COLOR only
+(sad/tense/quiet/excited/etc.); it must NEVER slow the delivery. Do
+not prepend legacy hype tags like [excited, fast] and do not insert
+mid-block pause or tone-shift tags — one tag at the start, then a
+continuous, rapid-fire read all the way through the chunk.]
 ```
+
+### Emotional tone tags — per-chunk vocal color
+
+Every chunk's speech block begins with exactly one bracketed tone tag.
+The tag tells the TTS the emotional register for that scene; it does
+NOT change pacing. Rapid-fire, continuous delivery with no dead air is
+locked in globally by the Audio Profile and by `Pace: Rapid Fire` in
+Step 3, and it applies to every tag equally — a `[sad]` chunk is still
+read quickly and continuously, just with sadder vocal color, not
+slower or with dramatic pauses.
+
+Choose the tag from the scene's actual on-screen content and the
+factual mood of the beat, not from a default. Use this palette:
+
+- `[matter-of-fact]` — default. Neutral recap beat, action/plot
+  advancing with no strong emotional charge. Use for the majority of
+  chunks.
+- `[sad]` — a death, a loss, a goodbye, a defeat, someone crying, a
+  quietly devastating reveal.
+- `[somber]` — heavy/serious aftermath, funerals, grief that isn't
+  actively tearful, morally dark turns.
+- `[quiet]` — hushed, intimate, or still moments (a whispered
+  confession, a character alone, a lull before something bad). Vocal
+  softness, not slower pace.
+- `[tense]` — danger building, a standoff, someone stalking someone,
+  a countdown, an imminent threat.
+- `[uneasy]` — something is off but not yet dangerous — dread,
+  suspicion, a wrong-feeling situation.
+- `[excited]` — a genuine payoff, victory, breakthrough, or
+  crowd-going-wild moment. Do not use just because a scene is
+  action-heavy; action alone stays `[matter-of-fact]`.
+- `[surprised]` — a hard twist or reveal lands. Use sparingly, only on
+  the beat where the twist actually hits.
+- `[amused]` — a genuinely funny/absurd beat where a small vocal smirk
+  fits. Do not force it on ordinary humor.
+
+Rules for choosing:
+
+- Match the tag to the emotional content of the scene, not to what
+  came before or after. Adjacent chunks can and should carry different
+  tags when the mood shifts (e.g. a `[tense]` chase chunk followed by
+  a `[sad]` aftermath chunk).
+- Pick the single closest tag. Do not stack tags, do not combine them
+  with energy descriptors, do not write free-text tags. If nothing
+  fits better than neutral recap, use `[matter-of-fact]`.
+- The tag governs VOCAL COLOR only. It must not cause the script text
+  to be reworded into slower, more dramatic phrasing, and it must not
+  cause mid-chunk pauses, sighs, or ellipses. The written sentences
+  stay flat, declarative, and information-dense exactly as Step 1
+  requires; only the emotional register of the read changes.
+- Never let a tag override the rapid-fire, continuous delivery
+  requirement. If in doubt about whether a tag would slow things down,
+  it doesn't — the tag is interpreted alongside `Pace: Rapid Fire`,
+  which is non-negotiable.
 
 ## STEP 3 — VOICE / SPEAKER SETTINGS
 
@@ -237,6 +293,17 @@ produces, the correct dropdown-constrained selections are:
 - Style: Deadpan
 - Pace: Rapid Fire
 - Accent: American (Gen)
+
+These three selections set the GLOBAL baseline for the whole video.
+They are NOT in conflict with the per-chunk emotional tone tags from
+Step 2: the dropdown Style is the narrator's overall character
+(flat/deadpan default), while the bracketed tag at the start of each
+speech block modulates the emotional color of THAT scene on top of
+that baseline. `Pace: Rapid Fire` in particular is a hard invariant —
+it stays selected regardless of which per-chunk tone tag is used, so
+a `[sad]` or `[quiet]` scene is still delivered rapid-fire and
+continuously, just with the appropriate emotional color. Never
+downgrade the Pace selection to compensate for an emotional tag.
 
 Do NOT invent descriptive labels like "Calm / Matter-of-fact" or
 "Fast (brisk, continuous)" — those are not real options in the tool
@@ -289,6 +356,19 @@ broad + niche + long-tail, under 500 characters total):
   declarative wording plus calm-but-brisk delivery. Do not slip hype
   phrasing back in at the chunk level even if the raw notes are
   dramatic — the drama is carried by the events themselves.
+- Every chunk's speech block MUST begin with exactly one bracketed
+  emotional tone tag from the palette in Step 2 (`[matter-of-fact]`,
+  `[sad]`, `[somber]`, `[quiet]`, `[tense]`, `[uneasy]`, `[excited]`,
+  `[surprised]`, `[amused]`). Choose the tag from the actual mood of
+  that specific scene's content — do not default every chunk to the
+  same tag, and do not omit the tag. This is what allows a sad or
+  tense moment to sound sad or tense.
+- Emotional tone tags govern vocal COLOR only; they never modify
+  pacing. Rapid-fire, continuous delivery is locked by the Audio
+  Profile and by `Pace: Rapid Fire` and applies to every tag equally.
+  Do not reword sentences to be slower/more dramatic, do not insert
+  mid-block pauses, ellipses, or sighs, and do not lower the Pace
+  setting because a scene carries an emotional tag.
 - The finished script must read as ONE continuous story, not a
   highlight reel. If, after writing, adjacent sentences describe
   unrelated moments with no cause-and-effect link between them, add
