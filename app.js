@@ -23,6 +23,15 @@
     activeJob: 'clipforge_active_job_id'
   };
 
+  /* Persistent channel branding. Follows the same "repo is the database"
+   * pattern as job state (status.json / cuts.json) but lives OUTSIDE jobs/ —
+   * the hourly cleanup only touches jobs/<id>/ folders and clipforge-*
+   * releases, so branding/branding.json + branding/profile_picture.<ext>
+   * on the default branch survive forever and apply to every future job. */
+  var BRANDING_JSON_PATH = 'branding/branding.json';
+  var BRANDING_AVATAR_STEM = 'branding/profile_picture.';   // + png|jpg|webp
+  var BRANDING_AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
   var POLL_FAST = 5000;        // first 10 minutes
   var POLL_SLOW = 15000;       // after 10 minutes
   var POLL_RATELIMIT = 60000;  // after hitting a rate limit
@@ -49,7 +58,13 @@
     countdownTimer: null,
     validatedCuts: null,   // string contents of a validated cuts.json
     busy: false,
-    stageBDispatched: false
+    stageBDispatched: false,
+    branding: null,        // parsed branding.json, or null when none is saved
+    brandingSha: null,     // blob sha of branding.json (needed to update it)
+    brandingAvatarUrl: '', // raw.githubusercontent.com URL of the saved picture
+    brandingAvatarExt: '', // ext of the saved picture ('' = none saved)
+    avatarFile: null,      // a newly picked picture, not yet committed
+    removeAvatar: false    // true when the user asked to delete the picture
   };
 
   /* --------------------------------------------------------------- dom lookup */
@@ -71,6 +86,8 @@
     'copy-agent-prompt',
     'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'enhance-toggle',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
+    'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
+    'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
   ].forEach(function (id) {
     el[id] = $(id);
@@ -340,6 +357,7 @@
     setMsg(el['settings-msg'], 'Saved to localStorage.', 'ok');
     openSettings(false);
     probeRepo();
+    loadBranding();
     if (!state.jobId) offerResumeFromRepo();
   });
 
@@ -350,6 +368,271 @@
     localStorage.removeItem(LS.activeJob);
     location.reload();
   });
+
+  /* ---------------------------------------------------- channel branding */
+
+  // Branding is validated live on every keystroke / file pick (same pattern
+  // as the cuts.json validator below) and committed to branding/ on the
+  // default branch via the contents API — the exact flow startStageB() uses
+  // for cuts.json.
+
+  function brandingErrors(username, displayName) {
+    var errors = [];
+    if (!username) {
+      errors.push('Username is required.');
+    } else if (!/^[a-z0-9_-]{1,64}$/.test(username)) {
+      errors.push('Username must be 1–64 chars of a–z, 0–9, _ or - (no @).');
+    }
+    if (displayName.length > 64) errors.push('Display name must be 64 characters or fewer.');
+    if (state.avatarFile) {
+      var okType = ['image/png', 'image/jpeg', 'image/webp'].indexOf(state.avatarFile.type) !== -1;
+      if (!okType) errors.push('Profile picture must be a PNG, JPEG, or WebP.');
+      else if (state.avatarFile.size > BRANDING_AVATAR_MAX_BYTES) {
+        errors.push('Profile picture must be 5 MB or smaller (got ' + fmtBytes(state.avatarFile.size) + ').');
+      }
+    }
+    return errors;
+  }
+
+  function refreshBrandingValidity() {
+    if (!el['branding-save']) return;
+    var username = el['branding-username-input'].value.trim().toLowerCase();
+    var displayName = el['branding-display-name-input'].value.trim();
+    el['branding-save'].disabled = brandingErrors(username, displayName).length > 0;
+  }
+
+  el['branding-username-input'].addEventListener('input', refreshBrandingValidity);
+  el['branding-display-name-input'].addEventListener('input', refreshBrandingValidity);
+
+  el['branding-avatar-input'].addEventListener('change', function () {
+    var file = el['branding-avatar-input'].files && el['branding-avatar-input'].files[0];
+    state.avatarFile = file || null;
+    state.removeAvatar = false;
+    if (file) {
+      var okType = ['image/png', 'image/jpeg', 'image/webp'].indexOf(file.type) !== -1;
+      if (okType && file.size <= BRANDING_AVATAR_MAX_BYTES) {
+        el['branding-preview'].src = URL.createObjectURL(file);
+        show(el['branding-preview']);
+        setMsg(el['branding-msg'], 'New picture selected — not saved yet.', null);
+      }
+    }
+    refreshBrandingValidity();
+  });
+
+  el['branding-clear-avatar'].addEventListener('click', function () {
+    state.avatarFile = null;
+    el['branding-avatar-input'].value = '';
+    state.removeAvatar = true;
+    setMsg(el['branding-msg'], 'Saved picture will be removed on Save.', null);
+    renderBranding();
+    refreshBrandingValidity();
+  });
+
+  function readFileAsBytes(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('Could not read the selected file.')); };
+      reader.onload = function () { resolve(new Uint8Array(reader.result)); };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function bytesToB64(bytes) {
+    var bin = '';
+    var CHUNK = 0x8000;
+    for (var i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin);
+  }
+
+  function avatarExtForType(mime) {
+    return mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+  }
+
+  /** Fetch (or re-fetch) branding.json from the repo. Missing file = never saved. */
+  async function loadBranding() {
+    if (!isConfigured()) return;
+    state.branding = null;
+    state.brandingSha = null;
+    state.brandingAvatarUrl = '';
+    state.brandingAvatarExt = '';
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + BRANDING_JSON_PATH + '?ref=' + REF + '&_=' + Date.now());
+      var parsed;
+      try {
+        parsed = JSON.parse(b64decodeUtf8(file.content));
+      } catch (parseErr) {
+        setMsg(el['branding-msg'], 'branding/branding.json is not valid JSON — save again to repair it.', 'bad');
+        renderBranding();
+        refreshBrandingValidity();
+        return;
+      }
+      state.brandingSha = file.sha || null;
+      state.branding = {
+        username: String(parsed.username || ''),
+        display_name: String(parsed.display_name || ''),
+        profile_picture: String(parsed.profile_picture || '')
+      };
+      var pic = state.branding.profile_picture;
+      var m = /^branding\/profile_picture\.(png|jpg|jpeg|webp)$/.exec(pic);
+      if (m) {
+        state.brandingAvatarExt = m[1] === 'jpeg' ? 'jpg' : m[1];
+        state.brandingAvatarUrl =
+          'https://raw.githubusercontent.com/' + state.owner + '/' + state.repo +
+          '/' + REF + '/' + pic;
+      }
+    } catch (err) {
+      if (err.status === 404) {
+        // Never saved yet — the empty form is the correct state.
+      } else if (err.name === 'AuthError' || err.name === 'RateLimitError') {
+        handleGlobalError(err);
+        return;
+      } else {
+        setMsg(el['branding-msg'], 'Could not load branding: ' + err.message, 'bad');
+      }
+    }
+    renderBranding();
+    refreshBrandingValidity();
+  }
+
+  function renderBranding() {
+    if (!el['branding-form']) return;
+    var b = state.branding;
+
+    if (!state.avatarFile && b && b.username) el['branding-username-input'].value = b.username;
+    if (!state.avatarFile && b) el['branding-display-name-input'].value = b.display_name;
+
+    if (!state.avatarFile && !state.removeAvatar && state.brandingAvatarUrl) {
+      el['branding-preview'].src = state.brandingAvatarUrl;
+      show(el['branding-preview']);
+    } else if (!state.avatarFile) {
+      el['branding-preview'].removeAttribute('src');
+      hide(el['branding-preview']);
+    }
+
+    var bits = [];
+    if (b && b.username) {
+      bits.push('Saved: @' + b.username +
+        (b.display_name ? ' — ' + b.display_name : ''));
+      if (state.brandingAvatarUrl && !state.removeAvatar) bits.push('with profile picture');
+    }
+    if (state.removeAvatar) bits.push('saved picture will be removed');
+    text(el['branding-current'], bits.length ? bits.join(' ') : 'No branding saved yet.');
+
+    var hasSavedPic = !!(b && b.profile_picture);
+    toggleHidden(el['branding-clear-avatar'],
+      !(hasSavedPic && !state.removeAvatar && !state.avatarFile));
+  }
+
+  /** Create/update a file on the default branch via the contents API. */
+  async function putRepoFile(path, contentB64, message) {
+    var contentsPath = '/repos/' + state.owner + '/' + state.repo + '/contents/' + path;
+    var sha = null;
+    try {
+      var existing = await gh(contentsPath + '?ref=' + REF + '&_=' + Date.now());
+      if (existing && existing.sha) sha = existing.sha;
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+    var body = { message: message, content: contentB64, branch: REF };
+    if (sha) body.sha = sha;
+    await gh(contentsPath, { method: 'PUT', body: body });
+  }
+
+  /** Delete a file from the default branch (no-op when it does not exist). */
+  async function deleteRepoFile(path, message) {
+    var contentsPath = '/repos/' + state.owner + '/' + state.repo + '/contents/' + path;
+    var existing;
+    try {
+      existing = await gh(contentsPath + '?ref=' + REF + '&_=' + Date.now());
+    } catch (err) {
+      if (err.status === 404) return;
+      throw err;
+    }
+    if (!existing || !existing.sha) return;
+    await gh(contentsPath, { method: 'DELETE', body: { message: message, sha: existing.sha, branch: REF } });
+  }
+
+  el['branding-form'].addEventListener('submit', function (e) {
+    e.preventDefault();
+    saveBranding();
+  });
+
+  async function saveBranding() {
+    if (state.busy) return;
+    if (!isConfigured()) {
+      setMsg(el['branding-msg'], 'Save your GitHub settings above first.', 'bad');
+      return;
+    }
+
+    var username = el['branding-username-input'].value.trim().toLowerCase();
+    var displayName = el['branding-display-name-input'].value.trim();
+    var errors = brandingErrors(username, displayName);
+    if (errors.length) {
+      setMsg(el['branding-msg'], errors.join(' '), 'bad');
+      return;
+    }
+
+    state.busy = true;
+    el['branding-save'].disabled = true;
+    setMsg(el['branding-msg'], 'Saving to ' + BRANDING_JSON_PATH + '…', null);
+
+    try {
+      // 1) New picture picked -> commit it as branding/profile_picture.<ext>.
+      var picPath = (state.branding && state.branding.profile_picture) || '';
+      if (state.avatarFile) {
+        var ext = avatarExtForType(state.avatarFile.type);
+        var newPath = BRANDING_AVATAR_STEM + ext;
+        var bytes = await readFileAsBytes(state.avatarFile);
+        await putRepoFile(newPath, bytesToB64(bytes),
+          'clipforge: update channel branding profile picture');
+        // If the ext changed (e.g. png -> webp), remove the stale file.
+        if (picPath && picPath !== newPath) {
+          await deleteRepoFile(picPath, 'clipforge: remove superseded branding profile picture');
+        }
+        picPath = newPath;
+      } else if (state.removeAvatar) {
+        if (picPath) {
+          await deleteRepoFile(picPath, 'clipforge: remove channel branding profile picture');
+        }
+        picPath = '';
+      }
+
+      // 2) Commit branding.json itself.
+      var doc = {
+        version: 1,
+        username: username,
+        display_name: displayName,
+        profile_picture: picPath,
+        updated_at_epoch: Math.floor(Date.now() / 1000)
+      };
+      await putRepoFile(BRANDING_JSON_PATH,
+        b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
+        'clipforge: update channel branding');
+
+      // 3) Reflect locally.
+      state.branding = { username: username, display_name: displayName, profile_picture: picPath };
+      state.brandingAvatarExt = picPath ? picPath.split('.').pop() : '';
+      state.brandingAvatarUrl = picPath
+        ? 'https://raw.githubusercontent.com/' + state.owner + '/' + state.repo + '/' + REF + '/' + picPath
+        : '';
+      state.removeAvatar = false;
+      if (state.avatarFile) {
+        el['branding-avatar-input'].value = '';
+        state.avatarFile = null;
+      }
+      renderBranding();
+      setMsg(el['branding-msg'], 'Branding saved. It now applies to every future job.', 'ok');
+    } catch (err) {
+      setMsg(el['branding-msg'], 'Save failed: ' + err.message, 'bad');
+      handleGlobalError(err, 'branding');
+    }
+
+    state.busy = false;
+    refreshBrandingValidity();
+  }
 
   function setMsg(node, message, kind) {
     if (!node) return;
@@ -815,12 +1098,18 @@
     if (s.extra && typeof s.extra === 'object') {
       Object.keys(s.extra).forEach(function (k) {
         var v = s.extra[k];
+        if (k === 'title') {
+          // The one-per-job title is long free text — pin it to the end of
+          // the facts list so it never squeezes the technical fields.
+          return;
+        }
         if (k === 'duration_seconds' && isFinite(Number(v))) {
           rows.push([k, v + ' (' + fmtDuration(Number(v)) + ')']);
         } else {
           rows.push([k, String(v)]);
         }
       });
+      if (s.extra.title) rows.push(['title', String(s.extra.title)]);
     }
 
     el['job-facts'].innerHTML = '';
@@ -1074,7 +1363,10 @@
       showValidation([
         'Valid. ' + count + ' cut' + (count === 1 ? '' : 's') + ', ' +
         total + 's of source selected (target ' +
-        parsed.target_total_duration_seconds + 's).'
+        parsed.target_total_duration_seconds + 's).' +
+        (typeof parsed.title === 'string' && parsed.title.trim() !== ''
+          ? '\nJob title: "' + parsed.title + '" (one title for every scene of this job.)'
+          : '')
       ], true);
       el['start-stage-b'].disabled = false;
     };
@@ -1096,6 +1388,15 @@
 
     if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
       return ['Top level must be a JSON object.'];
+    }
+
+    // Optional one-per-job title (generated by the same agent step that
+    // produces the cuts; see 00_READ_THIS_FIRST.txt). Validated when
+    // present so a malformed title is caught before upload, never required
+    // so older cuts.json files keep working.
+    if (doc.title !== undefined &&
+        (typeof doc.title !== 'string' || doc.title.trim() === '')) {
+      errors.push('`title` must be a non-empty string when present (or omit it entirely).');
     }
 
     if (!isInt(doc.video_duration_seconds) || doc.video_duration_seconds <= 0) {
@@ -1463,6 +1764,7 @@
     if (!isConfigured()) return;
 
     probeRepo();
+    loadBranding();
 
     var active = localStorage.getItem(LS.activeJob);
     if (active) {
