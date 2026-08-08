@@ -70,6 +70,42 @@
           <span id="settings-msg" class="inline-msg" aria-live="polite"></span>
         </div>
       </form>
+
+      <div class="branding-block">
+        <h3 class="sub-heading">Channel branding</h3>
+        <p class="hint">Saved once in the repo at <code>branding/branding.json</code> and
+          applied to every future job — jobs come and go (12-hour cleanup), this stays.
+          Uses the same token from the fields above.</p>
+        <form id="branding-form" autocomplete="off">
+          <div class="branding-head">
+            <img id="branding-preview" class="branding-preview is-hidden" alt="" aria-hidden="true">
+            <div id="branding-current" class="hint">No branding saved yet.</div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="branding-username-input">Username <span class="req">required</span></label>
+              <input type="text" id="branding-username-input" name="username" placeholder="motionsalt" spellcheck="false" autocapitalize="off" maxlength="64">
+              <p class="hint">Handle, without the <code>@</code>. Lowercase letters, numbers, <code>_</code> and <code>-</code> only.</p>
+            </div>
+            <div class="field">
+              <label for="branding-display-name-input">Display name <span class="opt">optional</span></label>
+              <input type="text" id="branding-display-name-input" name="display_name" placeholder="MOTIONSALT" spellcheck="false" maxlength="64">
+              <p class="hint">Shown to viewers. Falls back to the username when blank.</p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="branding-avatar-input">Profile picture <span class="opt">optional</span></label>
+            <input type="file" id="branding-avatar-input" accept="image/png,image/jpeg,image/webp">
+            <p class="hint">PNG / JPEG / WebP, up to 5&nbsp;MB — committed as <code>branding/profile_picture.&lt;ext&gt;</code>.
+              Leave empty to keep the picture already saved.</p>
+          </div>
+          <div class="actions">
+            <button type="submit" id="branding-save" class="btn btn-accent" disabled>Save branding</button>
+            <button type="button" id="branding-clear-avatar" class="btn btn-ghost btn-small is-hidden">Remove saved picture</button>
+            <span id="branding-msg" class="inline-msg" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
     </div>
   </section>
 
