@@ -6,6 +6,7 @@
 <title>ClipForge — MOTIONSALT</title>
 <meta name="description" content="ClipForge job console: dispatch Stage A, hand off artifacts, upload cuts.json, run Stage B.">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
@@ -31,8 +32,10 @@
     <button type="button" id="settings-toggle" class="panel-head" aria-expanded="true" aria-controls="settings-body">
       <span class="panel-step">1</span>
       <h2 id="settings-heading">Settings</h2>
-      <span id="settings-state" class="panel-badge">not configured</span>
-      <span class="chevron" aria-hidden="true">▾</span>
+      <span class="head-meta">
+        <span id="settings-state" class="panel-badge">not configured</span>
+        <span class="chevron" aria-hidden="true">▾</span>
+      </span>
     </button>
 
     <div id="settings-body" class="panel-body">
@@ -53,7 +56,7 @@
         <div class="field">
           <label for="token-input">Personal access token</label>
           <div class="token-wrap">
-            <input type="password" id="token-input" name="token" placeholder="ghp_… / github_pat_…" spellcheck="false" autocapitalize="off" required>
+            <input type="password" id="token-input" name="token" placeholder="ghp_… / github_pat_…" spellcheck="false" autocapitalize="off" autocomplete="off" required>
             <button type="button" id="token-reveal" class="btn btn-ghost btn-small" aria-pressed="false">Show</button>
           </div>
           <p class="hint">
@@ -71,9 +74,9 @@
         </div>
       </form>
 
-      <div class="branding-block">
+      <div class="branding-block panel-section">
         <h3 class="sub-heading">Channel branding</h3>
-        <p class="hint">Saved once in the repo at <code>branding/branding.json</code> and
+        <p class="panel-note">Saved once in the repo at <code>branding/branding.json</code> and
           applied to every future job — jobs come and go (12-hour cleanup), this stays.
           Uses the same token from the fields above.</p>
         <form id="branding-form" autocomplete="off">
@@ -127,7 +130,7 @@
         <div class="field-row">
           <div class="field">
             <label for="job-slug-input">Job slug <span class="opt">optional</span></label>
-            <input type="text" id="job-slug-input" name="job_id" placeholder="leave blank to auto-generate" spellcheck="false" autocapitalize="off">
+            <input type="text" id="job-slug-input" name="job_id" placeholder="auto-generate" spellcheck="false" autocapitalize="off">
             <p class="hint">Blank sends <code>""</code> and Stage A generates the id.</p>
           </div>
           <div class="field">
@@ -153,7 +156,7 @@
               <option value="180">3 minutes</option>
               <option value="300">5 minutes</option>
             </select>
-            <p class="hint">Target total duration of the final cut. Default <code>2 minutes</code>.</p>
+            <p class="hint">Total length of the final cut.</p>
           </div>
         </div>
 
@@ -208,8 +211,10 @@
     <div class="panel-head static">
       <span class="panel-step">3</span>
       <h2 id="status-heading">Job status</h2>
-      <span id="stage-badge" class="stage-badge stage-unknown">—</span>
-      <span id="expiry-countdown" class="expiry is-hidden" aria-live="off"></span>
+      <span class="head-meta">
+        <span id="stage-badge" class="stage-badge stage-unknown">—</span>
+        <span id="expiry-countdown" class="expiry is-hidden" aria-live="off"></span>
+      </span>
     </div>
 
     <div class="panel-body">
@@ -234,7 +239,7 @@
       <div id="handoff-block" class="handoff-block is-hidden">
 
         <div id="release-link-callout" class="read-first">
-          <p class="rf-kicker">RELEASE READY</p>
+          <p class="rf-kicker">Release ready</p>
           <p class="rf-body">Everything your external agent needs — <code>00_READ_THIS_FIRST.txt</code>
             (read that first), <code>transcript.json</code>, and <code>screenshots.zip</code> — is attached
             to one GitHub Release. Hand the agent this single link and it can grab all assets in one step,
@@ -250,42 +255,45 @@
           <p class="hint" id="release-tag-line"></p>
         </div>
 
-        <h3 class="sub-heading">Upload <code>cuts.json</code></h3>
-        <p class="hint">Validated in-browser, committed to
-          <code id="cuts-path-hint">jobs/&lt;job-id&gt;/cuts.json</code>, then Stage B is dispatched.</p>
-        <div class="upload-row">
-          <input type="file" id="cuts-file-input" accept="application/json,.json">
-          <button type="button" id="start-stage-b" class="btn btn-accent" disabled>Start Stage B</button>
-        </div>
+        <div class="panel-section">
+          <h3 class="sub-heading">Upload <code>cuts.json</code></h3>
+          <p class="panel-note">Validated in-browser, committed to
+            <code id="cuts-path-hint">jobs/&lt;job-id&gt;/cuts.json</code>, then Stage B is dispatched.</p>
+          <div class="upload-row">
+            <input type="file" id="cuts-file-input" accept="application/json,.json">
+            <button type="button" id="start-stage-b" class="btn btn-accent" disabled>Start Stage B</button>
+          </div>
 
-        <div class="enhance-toggle-row">
-          <label class="enhance-toggle">
-            <input type="checkbox" id="enhance-toggle" checked>
-            <span class="enhance-toggle-label">Apply quality enhancement filter chain</span>
-          </label>
-          <p class="hint enhance-toggle-hint">Runs a tuned filter chain on each cut scene after cutting:
-            mild <strong>hqdn3d</strong> denoise (spatial+temporal, gentle so anime line-art doesn't smear),
-            a subtle <strong>eq</strong> color grade (contrast&nbsp;+6&#37;, saturation&nbsp;+15&#37;,
-            gamma&nbsp;0.98 for mobile screens), and a luma-only <strong>unsharp</strong> pass
-            (chroma sharpen off — it just fringes anime color edges). Toggle off to compare
-            enhanced vs unenhanced output; the encoding profile, file size and mobile-safety
-            checks are identical either way.</p>
-        </div>
+          <div class="toggle-card">
+            <label class="toggle-line">
+              <input type="checkbox" id="enhance-toggle" checked>
+              <span class="enhance-toggle-label">Apply quality enhancement filter chain</span>
+            </label>
+            <p class="hint toggle-desc">Runs a tuned filter chain on each cut scene after cutting:
+              mild <strong>hqdn3d</strong> denoise (spatial+temporal, gentle so anime line-art doesn't smear),
+              a subtle <strong>eq</strong> color grade (contrast&nbsp;+6&#37;, saturation&nbsp;+15&#37;,
+              gamma&nbsp;0.98 for mobile screens), and a luma-only <strong>unsharp</strong> pass
+              (chroma sharpen off — it just fringes anime color edges). Toggle off to compare
+              enhanced vs unenhanced output; the encoding profile, file size and mobile-safety
+              checks are identical either way.</p>
+          </div>
 
-        <div class="brand-toggle-row">
-          <label class="brand-toggle">
-            <input type="checkbox" id="brand-toggle" checked>
-            <span class="brand-toggle-label">Composite scenes into the branded 9:16 template</span>
-          </label>
-          <p class="hint brand-toggle-hint">Renders each cut scene onto the branded
-            <strong>1080×1920</strong> vertical canvas — your channel avatar and name up top,
-            the job title, and a follow / like / comment / share CTA — using the persistent
-            branding saved in Settings (<code>branding/branding.json</code>). The source clip is
-            letterboxed at its native aspect ratio, never stretched or cropped, and the output
-            passes the same mobile-safety checks either way. Toggle off to ship the raw cut
-            scenes. If no channel branding is saved yet, scenes ship unbranded even with this on.</p>
+          <div class="toggle-card">
+            <label class="toggle-line">
+              <input type="checkbox" id="brand-toggle" checked>
+              <span class="brand-toggle-label">Composite scenes into the branded 9:16 template</span>
+            </label>
+            <p class="hint toggle-desc">Renders each cut scene onto the branded
+              <strong>1080×1920</strong> vertical canvas — your channel avatar and name up top,
+              the job title, and a follow / like / comment / share CTA — using the persistent
+              branding saved in Settings (<code>branding/branding.json</code>). The source clip is
+              letterboxed at its native aspect ratio, never stretched or cropped, and the output
+              passes the same mobile-safety checks either way. Toggle off to ship the raw cut
+              scenes. If no channel branding is saved yet, scenes ship unbranded even with this on.</p>
+          </div>
+
+          <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
         </div>
-        <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
       </div>
 
       <!-- complete -->
@@ -319,5 +327,5 @@
 </footer>
 
 <script src="app.js"></script>
-</body>
+<script src="https://www.genspark.ai/sandbox_inspect.js"></script></body>
 </html>
