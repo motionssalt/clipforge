@@ -12,6 +12,11 @@ on:
         required: true
         type: string
         default: "path:jobs/<JOB_ID>/cuts.json"
+      enhance:
+        description: "Apply the tuned quality enhancement filter chain (denoise + color grade + sharpen) to each cut scene after cutting. Default true; set to false to ship unenhanced scenes for comparison."
+        required: false
+        type: string
+        default: "true"
 
 permissions:
   contents: write
@@ -194,6 +199,63 @@ jobs:
             exit 1
           fi
           echo "Produced ${#scenes[@]} scene file(s)."
+
+      # -------------------------------------------------------------------
+      # Quality enhancement filter chain (Stage B, optional).
+      #
+      # Runs strictly AFTER cutting and BEFORE per-scene validation, so any
+      # bug in the enhancement pass fails the same mobile-safety bar the cut
+      # pass has to satisfy. Kept as its own step so it composes cleanly
+      # with other Stage B additions (branding/overlay work is a separate
+      # step deliberately not wired here). The `enhance` workflow_dispatch
+      # input maps 1:1 to the site's on/off toggle: 'true' (default) runs
+      # the tuned chain, 'false' short-circuits the script to a no-op.
+      # -------------------------------------------------------------------
+      - name: Quality enhancement (denoise + color grade + sharpen)
+        shell: bash
+        env:
+          ENHANCE_FLAG: ${{ github.event.inputs.enhance }}
+        run: |
+          set -euo pipefail
+          # Default to "true" when the input is unset (e.g. a re-run of an
+          # older dispatch that didn't carry the enhance input yet), so
+          # the shipped default matches the site's default-on toggle.
+          flag="${ENHANCE_FLAG:-true}"
+          case "$flag" in
+            true|1|yes|on|True|TRUE)  enable_arg="--enabled" ;;
+            false|0|no|off|False|FALSE) enable_arg="--no-enabled" ;;
+            *)
+              echo "Unrecognised enhance flag: '$flag' — defaulting to enabled." >&2
+              enable_arg="--enabled"
+              ;;
+          esac
+          echo "Quality enhancement flag: $flag -> $enable_arg"
+          # Snapshot pre-enhance total bytes for a visible before/after log.
+          before_bytes=$(du -cb work/out/scenes/scene_*.mp4 | tail -1 | awk '{print $1}')
+          python scripts/enhance_scenes.py work/out/scenes "$enable_arg"
+          after_bytes=$(du -cb work/out/scenes/scene_*.mp4 | tail -1 | awk '{print $1}')
+          echo "scene bytes: ${before_bytes} -> ${after_bytes}"
+          # Guard the size bar from the addition brief: warn (do not fail)
+          # if enhancement inflated aggregate scene size by more than 25%.
+          # In tuning against real anime footage the delta was ~+1%; if this
+          # trips, the values likely need retuning against the current source.
+          # before_bytes / after_bytes are exported so the python subprocess
+          # actually sees them — shell vars aren't inherited automatically.
+          export before_bytes after_bytes
+          python - <<'PY'
+          import os
+          b = int(os.environ.get('before_bytes') or 0)
+          a = int(os.environ.get('after_bytes') or 0)
+          if b > 0:
+              pct = (a - b) / b * 100.0
+              print(f'aggregate size delta: {pct:+.1f}%')
+              if pct > 25.0:
+                  print(
+                      f'WARNING: enhancement inflated aggregate scene size '
+                      f'by {pct:.1f}% (> 25%). Values may need retuning.'
+                  )
+          PY
+
 
       - name: Validate every scene MP4 with ffprobe
         shell: bash
