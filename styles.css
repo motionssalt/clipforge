@@ -432,6 +432,13 @@ input[type="file"] {
 .enhance-toggle-label { font-weight: 500; }
 .enhance-toggle-hint { max-width: 68ch; }
 
+/* Brand toggle — mirrors the enhance-toggle block above it. */
+.brand-toggle-row { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.brand-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; color: var(--fg); }
+.brand-toggle input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
+.brand-toggle-label { font-weight: 500; }
+.brand-toggle-hint { max-width: 68ch; }
+
 .validation {
   border: 1px solid var(--border-strong);
   background: var(--bg-inset);
