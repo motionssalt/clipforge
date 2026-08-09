@@ -1,7 +1,7 @@
 {
   "job_id": "20260808-225917-31282944288",
-  "stage": "stage_b_running",
-  "message": "Stage B started: cutting original video",
+  "stage": "complete",
+  "message": "Scene videos are ready (one MP4 per cut segment).",
   "release_tag": "clipforge-20260808-225917-31282944288",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260808-225917-31282944288",
   "assets": {
@@ -10,10 +10,11 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-225917-31282944288/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-225917-31282944288/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-225917-31282944288/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-225917-31282944288/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-225917-31282944288/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260808-225917-31282944288/clipforge-20260808-225917-31282944288-final.zip"
   },
   "created_at_epoch": 1786229991,
-  "updated_at_epoch": 1786233786,
+  "updated_at_epoch": 1786234346,
   "expires_at_epoch": 1786273191,
   "extra": {
     "duration_seconds": "1416",
@@ -21,6 +22,8 @@
     "event_frame_count": "57",
     "shot_count": "288",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "Leorio vs Kurapika: The Fight That Almost Sank Them Before The Hunter Exam",
+    "branding_applied": false
   }
 }
