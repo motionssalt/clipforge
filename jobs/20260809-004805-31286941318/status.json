@@ -1,7 +1,7 @@
 {
   "job_id": "20260809-004805-31286941318",
-  "stage": "stage_b_running",
-  "message": "Stage B started: cutting original video",
+  "stage": "complete",
+  "message": "Scene videos are ready (one MP4 per cut segment).",
   "release_tag": "clipforge-20260809-004805-31286941318",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260809-004805-31286941318",
   "assets": {
@@ -10,10 +10,11 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260809-004805-31286941318/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260809-004805-31286941318/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260809-004805-31286941318/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260809-004805-31286941318/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260809-004805-31286941318/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260809-004805-31286941318/clipforge-20260809-004805-31286941318-final.zip"
   },
   "created_at_epoch": 1786236527,
-  "updated_at_epoch": 1786265157,
+  "updated_at_epoch": 1786266192,
   "expires_at_epoch": 1786279727,
   "extra": {
     "duration_seconds": "1423",
@@ -21,6 +22,8 @@
     "event_frame_count": "58",
     "shot_count": "302",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "The Spider Who Couldn't Break the Chain - Kurapika Buries Uvogin",
+    "branding_applied": false
   }
 }
