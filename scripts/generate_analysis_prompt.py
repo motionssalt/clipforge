@@ -2,7 +2,7 @@
 """
 Generate the 00_READ_THIS_FIRST.txt file that Stage A ships alongside the
 transcript + screenshots + local vision-assist indexes. This file
-instructs the downstream AI agent how to select cuts and what cuts.json
+instructs the downstream AI agent how to select cuts and what production.json
 shape to return.
 
 The duration, frame filename convention, and window size are substituted
@@ -64,7 +64,7 @@ What this means, concretely:
 
   1. Your entire analysis — transcript reading, index inspection,
      screenshot viewing, character identification, cut selection, and
-     raw_narration writing — must be NARROWED to the focus stated above.
+     voiceover_text writing — must be NARROWED to the focus stated above.
 
   2. Treat every other plot thread, subplot, side character, running gag,
      cold open, recap, preview, or independently interesting moment in
@@ -73,7 +73,7 @@ What this means, concretely:
      key_moments.json, a clear shot boundary with punchy dialogue),
      SKIP IT if it does not directly serve the focus above.
 
-  3. The candidate pool for cuts.json is NOT "the best beats in the
+  3. The candidate pool for production.json is NOT "the best beats in the
      whole video". It is "the best beats that build the specific
      throughline named in the focus above". A ~2-minute cut sampled
      evenly across an entire episode is exactly the diluted,
@@ -96,7 +96,7 @@ What this means, concretely:
      immediate setup / payoff lives). Do not spend vision budget on
      unrelated stretches.
 
-  7. When writing raw_narration in STEP 4: every cut must contribute
+  7. When writing voiceover_text in STEP 4: every cut must contribute
      to the ONE story defined by the focus above. The concatenated
      narration should read as a single tight arc about that focus,
      from earliest setup to final payoff — not as a highlight reel of
@@ -111,7 +111,7 @@ What this means, concretely:
   9. If — after honestly reading the transcript and indexes — you
      cannot locate the focus in this source video at all, say so
      explicitly in a single-line comment at the top of your response
-     BEFORE returning cuts.json, and then return the best cuts.json
+     BEFORE returning production.json, and then return the best production.json
      you can that still respects the focus intent (e.g. its closest
      analog); do NOT silently fall back to a whole-video highlight
      reel.
@@ -160,13 +160,13 @@ pipeline:
   6. This file                — your instructions.
 
 Your job: choose the most engaging moments from this video{focus_scope_clause} and output a
-`cuts.json` file (schema at the bottom of this document) that ClipForge's
+`production.json` file (schema at the bottom of this document) that ClipForge's
 Stage B will use to slice the ORIGINAL full-quality video and stitch a
 short-form commentary base.
 
-The narration ClipForge produces from your `raw_narration` field is meant
+The narration ClipForge produces from your `voiceover_text` field is meant
 to explain the video to someone who cannot see it. That means your
-`raw_narration` has to describe what is VISUALLY happening on screen —
+`voiceover_text` has to describe what is VISUALLY happening on screen —
 actions, reactions, expressions, visual gags, scene changes — not just
 paraphrase the dialogue. The transcript alone is almost never enough for
 this; the indexes plus the screenshots are how you actually see the video.
@@ -224,7 +224,7 @@ The order below is the single most important thing in this document.
      short descriptive tag if it doesn't) and reuse that same label
      for the rest of the run.
 
-  STEP 4: Assemble cuts.json using the raw_narration contract
+  STEP 4: Assemble production.json using the voiceover_text contract
      described near the bottom of this file, and write the single
      `title` field described in the OUTPUT SCHEMA — ONE title for the
      whole job, decided AFTER your cuts are final (it must describe
@@ -282,7 +282,7 @@ tokens for the coverage they provide.
   scene_index.json
     - The definitive list of shot boundaries. Every entry is `{{shot_id,
       start_seconds, end_seconds, keyframe_seconds, cause}}`.
-    - When you write raw_narration for a cut that spans multiple
+    - When you write voiceover_text for a cut that spans multiple
       shot_ids, you already know exactly where the camera cut inside
       it — describe those transitions accurately ("the shot cuts to a
       wide of the arena", "we cut back to the boy") instead of
@@ -455,7 +455,7 @@ STEP 2 (open screenshots — in chronological order — to fill visuals).
             occur in the video (earliest start_seconds first).
           - Do NOT interleave windows from unrelated parts of the
             video. Out-of-order viewing is a major cause of
-            inaccurate raw_narration.
+            inaccurate voiceover_text.
           - If you realize mid-way that you need a window from an
             EARLIER candidate you already left, go back and view it
             in ascending order before returning.
@@ -492,7 +492,7 @@ STEP 3 (assemble cuts).
         PICKING end_seconds — read this before writing any cut
         --------------------------------------------------------------
 
-        This is the single most common failure mode of cuts.json:
+        This is the single most common failure mode of production.json:
         `end_seconds` chosen at the point where the NARRATION or
         DIALOGUE ends, one or two seconds BEFORE the described
         on-screen action actually finishes happening. The result is a
@@ -503,7 +503,7 @@ STEP 3 (assemble cuts).
 
         The rule is simple and non-negotiable:
 
-          If your raw_narration for this cut describes an action, a
+          If your voiceover_text for this cut describes an action, a
           reaction, a cutaway, or a visible result, then `end_seconds`
           MUST sit AFTER that action / reaction / result is visibly
           complete on screen. Not at the last spoken word. Not at the
@@ -555,7 +555,7 @@ STEP 3 (assemble cuts).
               a cut-off; more than 4s starts dragging.
 
           (f) Self-check before finalizing each cut: re-read your
-              raw_narration and, for every distinct beat it mentions,
+              voiceover_text and, for every distinct beat it mentions,
               confirm you have visual evidence (from the screenshots
               you opened) that the beat is INSIDE
               [`start_seconds`, `end_seconds`]. If any described beat
@@ -563,7 +563,7 @@ STEP 3 (assemble cuts).
               This check is more important than hitting the target
               total duration exactly.
 
-        - For each cut, write a `raw_narration` field: a plain,
+        - For each cut, write a `voiceover_text` field: a plain,
           matter-of-fact description of WHAT HAPPENS in that segment,
           the way a viewer who can see the screen would describe it to
           someone who cannot. Cover the visual sequence of events
@@ -571,7 +571,7 @@ STEP 3 (assemble cuts).
           text, visual gags) as well as any essential dialogue, in
           chronological order.
 
-        CHARACTER LABELS IN raw_narration:
+        CHARACTER LABELS IN voiceover_text:
         - Identify each recurring character yourself from the
           screenshots and transcript, and refer to them by the SAME
           label in every cut. Label priority:
@@ -601,21 +601,26 @@ STEP 3 (assemble cuts).
 
         NARRATE THE CUTS AS ONE CONNECTED STORY:
 
-        The raw_narration fields, in the order the cuts appear in
-        cuts.json, will be concatenated end-to-end and handed to the
-        commentary-writing agent as if they were a single set of
-        notes on ONE video. If each raw_narration reads like a
-        standalone description of a good moment, the final commentary
+        The voiceover_text fields, in the order the cuts appear in
+        production.json, are the FINAL script. There is no second
+        commentary-writing pass: each field is synthesized to speech
+        verbatim (text-to-speech) and played over its own cut, in
+        order, as the narration of ONE video. Write every
+        voiceover_text as finished, speakable prose — no brackets,
+        no stage directions, no [uncertain name] placeholders, no
+        notes-to-self; if a name is uncertain, use a plain descriptor
+        instead. If each voiceover_text reads like a
+        standalone description of a good moment, the final voiceover
         ends up as a disconnected highlight reel — no throughline,
         no cause and effect. Viewers stay engaged when they can
         follow a story from setup to payoff, not when they are shown
         a list of separately interesting clips.
 
         Treat the sequence of cuts as ONE story you are narrating in
-        order, and write each raw_narration with awareness of what
+        order, and write each voiceover_text with awareness of what
         came before it in the source video:
 
-          - Before writing raw_narration for the first cut, briefly
+          - Before writing voiceover_text for the first cut, briefly
             note what the overall story of the source video is (from
             your Step 1 story map) and what arc the cuts you have
             chosen trace through it — who the subject is, what they
@@ -630,7 +635,7 @@ STEP 3 (assemble cuts).
             feel — a change of location, a time skip, a new subject
             appearing, an unexplained new state, or a payoff whose
             setup lives in the un-selected footage in between. When
-            that gap exists, OPEN the next cut's raw_narration with
+            that gap exists, OPEN the next cut's voiceover_text with
             the SHORTEST possible connective phrase or sentence that
             carries the viewer across it. Keep it terse — the point
             is linkage, not exposition.
@@ -643,33 +648,33 @@ STEP 3 (assemble cuts).
 
           - When two adjacent cuts are linked as setup → payoff, or
             cause → effect, make that relationship legible in the
-            wording of the second cut's raw_narration ("Because of
+            wording of the second cut's voiceover_text ("Because of
             that, …", "This is what he was warned about at the
             start: …", "The device she rigged earlier now …").
 
           - Refer to recurring people/entities the SAME way across
             every cut. Whichever label you chose for a character in
             their first cut stays fixed through the entire
-            cuts.json. Don't reset labels between cuts.
+            production.json. Don't reset labels between cuts.
 
-          - Each individual cut's raw_narration is still primarily
+          - Each individual cut's voiceover_text is still primarily
             a plain, matter-of-fact description of what happens
             visually inside THAT cut. The connective tissue is a
             lead-in of at most one short sentence or clause, not a
             paragraph of recap.
 
-          - The first cut's raw_narration opens the story. It does
+          - The first cut's voiceover_text opens the story. It does
             not need a connective lead-in, but it SHOULD orient the
             viewer on who / what / where in its first sentence.
 
-          - The last cut's raw_narration ends the story. Land on the
+          - The last cut's voiceover_text ends the story. Land on the
             final beat from the source; do not add a wrap-up.
 
 --------------------------------------------------------------------------------
 JOB TITLE — ONE title for the entire job (top-level `title` field)
 --------------------------------------------------------------------------------
 
-Every scene clip Stage B cuts from this cuts.json belongs to ONE posting
+Every scene clip Stage B cuts from this production.json belongs to ONE posting
 package, so they all share ONE title. You generate that title ONCE per
 job, here, as a top-level `title` field — NOT per cut, NOT inside any
 cut object.
@@ -690,7 +695,7 @@ Rules for the title:
     payoff the viewer never sees is worse than a plain one.
 
 --------------------------------------------------------------------------------
-OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
+OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
 --------------------------------------------------------------------------------
 
 {{
@@ -700,7 +705,7 @@ OUTPUT SCHEMA — cuts.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 170,
-      "raw_narration": "plain, matter-of-fact description of the visual sequence of events in this segment (actions, reactions, scene changes, essential dialogue), in chronological order, the way a viewer would describe it to someone who cannot see the screen. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
+      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, in a flat, confident, matter-of-fact voice, third person present tense by default. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
     }}
     // ... more cuts, ordered chronologically ...
   ],
@@ -714,7 +719,7 @@ CONSTRAINTS
   - Cuts MUST NOT overlap.
   - Cuts MUST be sorted ascending by `start_seconds`.
   - `end_seconds` must sit AFTER the visual resolution of every event
-    the cut's `raw_narration` describes. It is NOT the last spoken
+    the cut's `voiceover_text` describes. It is NOT the last spoken
     word, and it is NOT the raw shot boundary at the end of the
     current shot — both routinely land BEFORE the described action's
     on-screen payoff. See the "PICKING end_seconds" block in STEP 3
@@ -723,18 +728,23 @@ CONSTRAINTS
     that ends before its described beat is on screen is broken.
   - `title` is a single non-empty string: one catchy title for the WHOLE
     job (all cuts share it). One line, plain text, no emoji/quotes/markdown.
-  - `raw_narration` is plain prose. No markdown, no timestamps inside it,
+  - `voiceover_text` is the final spoken line for its cut: plain prose
+    meant to be READ ALOUD. No markdown, no timestamps inside it,
+    no brackets, no parentheticals, no directions or commentary ABOUT
+    the video — everything in it is heard by the viewer verbatim. Its
+    spoken length should roughly fit the cut's duration (about
+    2.5 words per second); keep it tight rather than breathless.
     no name guessing when unsure — but when the transcript provides
     clear name evidence for a character, using that name is NOT a
     guess: use the real name, consistently, in every cut. Use the SAME
     label (real name, or a descriptor only when no name evidence
     exists) across every cut for the same character. Describe what is
     visually happening, not just what is said.
-  - Across cuts, `raw_narration` fields must read as consecutive scenes
+  - Across cuts, `voiceover_text` fields must read as consecutive scenes
     of ONE continuous story, not as independent highlight descriptions.
     Where there is a real gap between adjacent cuts (location change,
     time skip, unexplained new state, setup→payoff), open the later
-    cut's `raw_narration` with a short connective lead-in that carries
+    cut's `voiceover_text` with a short connective lead-in that carries
     the viewer across the gap. Never invent events to fill a gap.{constraints_focus_note}
   - Return ONLY the JSON, no surrounding prose, no code fences. It will
     be uploaded verbatim to ClipForge Stage B.
@@ -864,7 +874,7 @@ def main() -> None:
             "earliest visible setup in the source to its final payoff."
         )
         constraints_focus_note = (
-            "\n  - Every cut in this cuts.json must serve the FOCUS stated "
+            "\n  - Every cut in this production.json must serve the FOCUS stated "
             "at the top of the accompanying 00_READ_THIS_FIRST.txt. Cuts "
             "belonging to unrelated plot threads are a violation of this "
             "run's constraint, regardless of how strong they are in "
