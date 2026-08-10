@@ -8,17 +8,69 @@ standalone merged voiceover WAV. The voiceover WAV (not the video's
 mixed audio, which may also carry background music) is what gets
 transcribed — music under speech would only degrade the word timing.
 
-Subtitles are one word on screen at a time, timed to that word's
-transcribed timestamp, in the word-by-word style that dominates
-short-form vertical video. Styling is deliberately oversized — bold,
-white fill, thick black outline, bottom-third, horizontally centered —
-because the output is watched on phones, where too-small caption styling
-is the single most common readability failure.
+---------------------------------------------------------------------------
+AUTHORITATIVE TEXT vs. TRANSCRIPTION
+---------------------------------------------------------------------------
+The transcription is used for ONE thing only: per-word TIMING. The actual
+words displayed on screen come from the ORIGINAL SCRIPT — the exact
+`voiceover_text` lines the analysis agent wrote in production.json and
+that generate_voiceover.py synthesized with the TTS (they are also stored
+1:1 per cut in voiceover_manifest.json). Whisper's best-effort spelling
+of what it heard is never shown to the viewer.
 
-Transcription reuses scripts/transcribe.py's faster-whisper backend with
-word_timestamps already enabled; this script drives it through its CLI
-(rather than reimplementing the model call) and then re-reads the word
-timings out of the audio with a second, word-focused pass — see below.
+Concretely:
+
+  * every cut's voiceover_text is tokenized into words;
+  * the transcribed word timeline is consumed in cut order — cut 0 owns
+    the first N0 timed words (N0 = word count of cut 0's script), cut 1
+    the next N1, and so on. This works because the merged voiceover is
+    exactly the per-cut TTS clips concatenated in order, and each clip
+    speaks exactly its script;
+  * inside a cut, the transcribed words and the script words are aligned
+    with a monotone sequence alignment (difflib on normalized tokens),
+    so a TTS contraction split, a merged compound, or a dropped/inserted
+    word still maps every script word to a sensible timestamp instead of
+    drifting;
+  * if the global counts disagree enough that the last cut would run out
+    of timed words, the remaining words get an even-share fallback inside
+    their cut's window — the script is still displayed VERBATIM, only
+    timing degrades gracefully.
+
+The only transformation ever applied to the script text is the required
+ALL CAPS display formatting.
+
+---------------------------------------------------------------------------
+STYLING / POSITIONING
+---------------------------------------------------------------------------
+Subtitles are one word on screen at a time, timed to that word's
+timestamp, in the word-by-word style that dominates short-form vertical
+video.
+
+Font: Bebas Neue — a condensed/narrow all-caps display face that is the
+de-facto standard for modern short-form / anime-edit captions. The TTF is
+VENDORED at assets/fonts/BebasNeue-Regular.ttf (SIL Open Font License)
+and passed to libass via the subtitles filter's fontsdir option, so the
+render no longer depends on whatever fonts happen to be installed on the
+runner. If the vendored file is ever missing, the script falls back to
+Liberation Sans Narrow / Nimbus Sans Narrow / DejaVu Sans (in that
+order) rather than failing.
+
+Position: the subtitles belong to the VIDEO CONTENT, not to the branded
+canvas. Stage B may composite the merged video into a 1080x1920 branded
+template (brand_scenes.py) where the actual video image occupies only a
+slot inside the canvas (letterboxed, native aspect ratio preserved). To
+keep subtitles inside the real video image for EVERY aspect ratio
+(16:9, 9:16, 1:1, …), the exact rectangle the video image occupies in
+the final frame is passed in via --video-rect (computed upstream from
+the actual pre-branding video dimensions and the brander's slot
+geometry), and the subtitle baseline is anchored to the MIDDLE OF THE
+LOWER THIRD of that rectangle:
+
+    subtitle_center_y = rect_top + rect_height * 5/6
+
+with a minimum bottom clearance so text never kisses the video edge.
+When no --video-rect is given (unbranded jobs) the rectangle is the
+whole frame, which reduces to the classic bottom-third placement.
 
 Rendering uses an ASS subtitle file with one timed event per word, burned
 in by ffmpeg's libass `subtitles=` filter. Per-word drawtext would need
@@ -27,6 +79,8 @@ hundreds of filter chains; ASS events are exactly the tool for this.
 Usage:
     python generate_subtitles.py <merged_video_mp4> <voiceover_wav>
                                  <out_video_mp4>
+                                 [--script-json <production_or_manifest>]
+                                 [--video-rect <x,y,w,h>]
                                  [--model base|small|tiny] [--lang auto|en|...]
                                  [--transcript-json <path>] [--keep-work]
 
@@ -34,26 +88,43 @@ Exit codes match the rest of the repo: 2 = bad input, 3 = validation
 failure, subprocess failures propagate from sh().
 """
 import argparse
+import difflib
 import json
 import os
+import re
 import subprocess
 import sys
 
 
 # ---------- Subtitle styling ----------
-# Bottom-third, centered, big enough to read on a phone held at arm's
-# length. ASS coordinates below assume the video's real resolution (the
-# filter is given the video size via the original file, so FontSize is in
-# output pixels at the ASS PlayRes we declare — we set PlayRes to the
-# video's own resolution at render time, so sizes are honest pixels).
-SUB_FONT = "DejaVu Sans"
-SUB_FONT_FRACTION_OF_HEIGHT = 0.055   # ~5.5% of frame height — phone-first
+# Condensed all-caps display font, vendored in-repo so the render is
+# identical on every runner (see module docstring). FontSize is in output
+# pixels at the ASS PlayRes we declare — we set PlayRes to the video's own
+# resolution at render time, so sizes are honest pixels.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SUB_FONT_DIR = os.path.join(REPO_ROOT, "assets", "fonts")
+SUB_FONT_FILE = os.path.join(SUB_FONT_DIR, "BebasNeue-Regular.ttf")
+SUB_FONT = "Bebas Neue"
+# Fallback stack, in preference order, used only if the vendored Bebas
+# Neue file is missing: condensed faces first, DejaVu as the last resort
+# (it is bundled with every ubuntu runner base image).
+SUB_FONT_FALLBACKS = ["Liberation Sans Narrow", "Nimbus Sans Narrow",
+                      "DejaVu Sans"]
+SUB_FONT_FRACTION_OF_HEIGHT = 0.06    # ~6% of frame height — phone-first
 SUB_OUTLINE_FRACTION = 0.0035         # stroke thickness vs frame height
-SUB_MARGIN_V_FRACTION = 0.22          # bottom-third placement
+# Vertical anchor: middle of the LOWER THIRD of the actual video image.
+LOWER_THIRD_CENTER_FRACTION = 5.0 / 6.0
+# Minimum clearance between the text block and the video rectangle's
+# bottom edge, as a fraction of frame height, so text never kisses (or
+# crosses) the bottom edge of the video image.
+MIN_BOTTOM_CLEARANCE_FRACTION = 0.02
 # Minimum/maximum on-screen time per word so very fast or very slow words
 # still read naturally; gaps longer than WORD_GAP_MERGE_S between words
 # of the same phrase simply leave the screen empty.
 MIN_WORD_SECONDS = 0.08
+# Per-word minimum display time applied AFTER alignment (slightly longer
+# than the transcription floor so very fast TTS words stay readable).
+MIN_DISPLAY_SECONDS = 0.12
 
 
 def sh(cmd: list[str]) -> None:
@@ -89,6 +160,10 @@ def transcribe_words(voiceover_wav: str, model: str, lang: str,
     pass runs here through the same faster-whisper backend and the same
     VAD/decoder settings as transcribe.py — same model, same CPU/int8
     config, word_timestamps=True — keeping the two from drifting apart.
+
+    IMPORTANT: the returned words are used for their TIMING ONLY. The
+    displayed subtitle text always comes from the original script (see
+    align_words_to_script).
     """
     from faster_whisper import WhisperModel  # noqa: delayed import
 
@@ -148,6 +223,236 @@ def transcribe_words(voiceover_wav: str, model: str, lang: str,
     return words
 
 
+# ---------------------------------------------------------------------------
+# Original-script word alignment
+# ---------------------------------------------------------------------------
+_WORD_RE = re.compile(r"\S+")
+
+
+def _norm_token(text: str) -> str:
+    """
+    Normalize a word for ALIGNMENT ONLY (never for display): lowercase and
+    strip everything that isn't a letter or digit, so punctuation and
+    capitalization differences between the script and the transcription
+    don't break the sequence matcher.
+    """
+    return re.sub(r"[^0-9a-z]+", "", text.lower())
+
+
+def load_script_texts(script_json: str) -> list[str]:
+    """
+    Load the ORIGINAL script — the authoritative subtitle wording — as one
+    string per cut, in cut order.
+
+    Accepts either file that carries the script verbatim:
+      * production.json / cuts.json  -> {"cuts": [{"voiceover_text": ...}
+                                        (legacy: "raw_narration"), ...]}
+      * voiceover_manifest.json      -> {"cuts": [{"index", ...,
+                                        "voiceover_text": ...}, ...]}
+    """
+    with open(script_json, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    cuts = payload.get("cuts") or []
+    if not cuts:
+        print(f"{script_json} contains no cuts", file=sys.stderr)
+        sys.exit(2)
+
+    # production.json orders by start_seconds; the manifest carries an
+    # explicit index. Detect which shape we have.
+    if all(isinstance(c, dict) and "index" in c for c in cuts):
+        cuts = sorted(cuts, key=lambda c: int(c["index"]))
+    else:
+        cuts = sorted(cuts, key=lambda c: float(c.get("start_seconds", 0)))
+
+    texts: list[str] = []
+    for i, c in enumerate(cuts):
+        text = (c.get("voiceover_text") or c.get("raw_narration") or "").strip()
+        if not text:
+            print(
+                f"{script_json} cut #{i} has no voiceover_text (and no "
+                f"legacy raw_narration fallback) — the original script is "
+                f"the authoritative subtitle source, so a cut without "
+                f"script text cannot be subtitled correctly. Fix the "
+                f"production.json and re-run.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        texts.append(text)
+    print(f"Loaded original script for {len(texts)} cut(s) from "
+          f"{script_json}", flush=True)
+    return texts
+
+
+def align_words_to_script(timed_words: list[dict],
+                          script_texts: list[str]) -> list[dict]:
+    """
+    Replace the transcription's words with the ORIGINAL SCRIPT's words
+    while keeping the transcription's timing.
+
+    Returns a flat list of {"start", "end", "word"} display events in
+    timeline order, where `word` is the exact script word (ALL-CAPS
+    applied later at ASS-write time — this function preserves the script
+    verbatim).
+
+    Strategy (see module docstring):
+      1. Partition the timed words across cuts by per-cut script word
+         count (cut 0 owns the first N0 words, cut 1 the next N1, ...).
+      2. Inside each cut, sequence-align normalized script tokens against
+         normalized transcribed tokens so count mismatches (contractions
+         split/merged, dropped or hallucinated words) still give every
+         script word a timestamp from the correct neighbourhood.
+    """
+    script_cuts = [_WORD_RE.findall(t) for t in script_texts]
+    total_script = sum(len(c) for c in script_cuts)
+    if total_script == 0:
+        print("ERROR: the original script contains no words at all.",
+              file=sys.stderr)
+        sys.exit(3)
+
+    # ---- 1. Partition timed words across cuts. ----
+    timed = list(timed_words)
+    n_timed = len(timed)
+    if n_timed < total_script:
+        # Transcription heard fewer words than the script contains (TTS
+        # elision, merged compounds, whisper drops). Keep the global
+        # ratios intact by scaling each cut's quota proportionally so
+        # every cut still gets a contiguous slice of the timeline.
+        print(
+            f"NOTE: transcription produced {n_timed} timed words but the "
+            f"script has {total_script}. Scaling per-cut timing quotas "
+            f"proportionally — wording is unaffected (script is always "
+            f"displayed verbatim).",
+            flush=True,
+        )
+        quotas: list[int] = []
+        acc = 0
+        remaining_timed = n_timed
+        remaining_script = total_script
+        for c in script_cuts:
+            q = min(len(c), int(round(remaining_timed * len(c) /
+                                      max(remaining_script, 1))))
+            quotas.append(q)
+            acc += q
+            remaining_timed -= q
+            remaining_script -= len(c)
+        # Give any rounding leftovers to the last cut (it owns the tail).
+        if quotas:
+            quotas[-1] += n_timed - acc
+    else:
+        quotas = [len(c) for c in script_cuts]
+        leftover = n_timed - total_script
+        if leftover > 0:
+            # Extra transcribed words beyond the script (whisper
+            # hallucination, split tokens): absorb them into the last
+            # cut's window — the alignment below simply never assigns
+            # them to a script word.
+            print(
+                f"NOTE: transcription produced {leftover} more word(s) "
+                f"than the script contains; extras are ignored for "
+                f"display (script is authoritative).",
+                flush=True,
+            )
+            quotas[-1] += leftover
+
+    display_events: list[dict] = []
+    cursor = 0
+    prev_end = 0.0
+
+    for cut_i, script_words in enumerate(script_cuts):
+        quota = quotas[cut_i]
+        window = timed[cursor:cursor + quota]
+        cursor += quota
+        if not window:
+            # Degenerate: no timed words left for this cut — space the
+            # script words out right after the previous event so the text
+            # still appears (timing-only degradation, wording intact).
+            t = prev_end
+            for w in script_words:
+                display_events.append({
+                    "start": round(t, 3),
+                    "end": round(t + MIN_DISPLAY_SECONDS, 3),
+                    "word": w,
+                })
+                t += MIN_DISPLAY_SECONDS
+            prev_end = t
+            continue
+
+        win_start = window[0]["start"]
+        win_end = window[-1]["end"]
+
+        # ---- 2. Monotone alignment inside the cut window. ----
+        # a = script tokens (what we DISPLAY), b = transcribed tokens
+        # (what we have TIMING for).
+        a = [_norm_token(w) for w in script_words]
+        b = [_norm_token(w["word"]) for w in window]
+        sm = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
+
+        # per-script-word (start, end) placeholders
+        starts: list[float | None] = [None] * len(script_words)
+        ends: list[float | None] = [None] * len(script_words)
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if tag in ("equal", "replace"):
+                # Map the aligned block proportionally: script word
+                # i1+k takes the timing slice of timed word j1+k (clamped
+                # into the block); if the block sizes differ, spread the
+                # timed block evenly over the script block.
+                span_a = i2 - i1
+                span_b = j2 - j1
+                for k in range(span_a):
+                    # fractional position inside the script block
+                    f0 = k / span_a
+                    f1 = (k + 1) / span_a
+                    tj0 = j1 + int(f0 * span_b)
+                    tj1 = j1 + max(int(f1 * span_b), int(f0 * span_b) + 1)
+                    tj1 = min(tj1, j2)
+                    starts[i1 + k] = window[tj0]["start"]
+                    ends[i1 + k] = window[max(tj0, tj1 - 1)]["end"]
+            elif tag == "delete":
+                # Script words with NO corresponding timed word: stamped
+                # in the gap-fill pass below.
+                pass
+            elif tag == "insert":
+                # Extra transcribed words: keep the timeline honest but
+                # never displayed — nothing to do.
+                pass
+
+        # ---- gap fill + monotonicity pass ----
+        last_t = win_start
+        for k in range(len(script_words)):
+            if starts[k] is None:
+                starts[k] = last_t
+                ends[k] = last_t + MIN_DISPLAY_SECONDS
+            else:
+                # Never let a word start before the previous word's start
+                # (alignment clamps can produce tiny inversions).
+                if starts[k] < last_t:
+                    starts[k] = last_t
+                ends[k] = max(ends[k] or 0.0,
+                              starts[k] + MIN_DISPLAY_SECONDS)
+            # Keep the word inside its cut window when possible.
+            if starts[k] > win_end:
+                starts[k] = win_end
+                ends[k] = max(ends[k], starts[k] + MIN_DISPLAY_SECONDS)
+            last_t = starts[k]
+
+        for k, w in enumerate(script_words):
+            display_events.append({
+                "start": round(starts[k], 3),
+                "end": round(ends[k], 3),
+                "word": w,
+            })
+        prev_end = display_events[-1]["end"]
+
+    assert cursor == n_timed, "timed-word partition bookkeeping drifted"
+    print(
+        f"Aligned {sum(len(c) for c in script_cuts)} script word(s) from "
+        f"{len(script_cuts)} cut(s) onto {n_timed} transcribed timing "
+        f"events. Subtitle wording = ORIGINAL SCRIPT (verbatim).",
+        flush=True,
+    )
+    return display_events
+
+
 def _ass_time(seconds: float) -> str:
     """ASS timestamp: H:MM:SS.cc (centiseconds)."""
     if seconds < 0:
@@ -164,14 +469,89 @@ def _ass_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
 
 
-def write_ass(words: list[dict], width: int, height: int, out_ass: str) -> None:
+def _resolve_font() -> tuple[str, str | None]:
+    """
+    Pick the subtitle font. Returns (font_name, fontsdir_or_None).
+
+    Preferred: the vendored Bebas Neue TTF (assets/fonts/) — libass is
+    pointed at that directory via the subtitles filter's fontsdir option,
+    so the exact condensed face renders regardless of what the runner has
+    installed. If the file is missing we fall back to condensed system
+    fonts and finally DejaVu Sans, and let fontconfig resolve the name
+    (fontsdir=None).
+    """
+    if os.path.isfile(SUB_FONT_FILE):
+        return SUB_FONT, SUB_FONT_DIR
+    print(
+        f"WARNING: vendored subtitle font missing at {SUB_FONT_FILE} — "
+        f"falling back to condensed system fonts {SUB_FONT_FALLBACKS}.",
+        file=sys.stderr,
+        flush=True,
+    )
+    return SUB_FONT_FALLBACKS[0], None
+
+
+def _video_rect_from_arg(arg: str | None, width: int,
+                         height: int) -> tuple[int, int, int, int]:
+    """
+    Resolve the rectangle the ACTUAL VIDEO IMAGE occupies inside the final
+    frame: (x, y, w, h). Defaults to the whole frame (unbranded jobs).
+    Values are clamped into the frame so a stale/sloppy hint can never
+    push subtitles off-screen.
+    """
+    if not arg:
+        return 0, 0, width, height
+    try:
+        x, y, w, h = (int(round(float(v))) for v in arg.split(","))
+    except ValueError:
+        print(f"ERROR: --video-rect must be 'x,y,w,h', got {arg!r}",
+              file=sys.stderr)
+        sys.exit(2)
+    if w <= 0 or h <= 0:
+        print(f"ERROR: --video-rect has non-positive size: {arg!r}",
+              file=sys.stderr)
+        sys.exit(2)
+    x = max(0, min(x, width - 1))
+    y = max(0, min(y, height - 1))
+    w = max(1, min(w, width - x))
+    h = max(1, min(h, height - y))
+    return x, y, w, h
+
+
+def write_ass(words: list[dict], width: int, height: int,
+              video_rect: tuple[int, int, int, int],
+              out_ass: str) -> None:
     """
     One ASS Dialogue event per word — the word pops on at its start time
     and off at its end time, so exactly one word is ever on screen.
+
+    The subtitle is anchored to the MIDDLE OF THE LOWER THIRD of the
+    ACTUAL VIDEO IMAGE (video_rect), not the overall frame: ASS bottom
+    margin = frame_height - desired_text_bottom, where the text block is
+    vertically centered on the lower-third midpoint of the video
+    rectangle. Text is displayed in ALL CAPS (the only transformation
+    ever applied to the original script wording).
     """
+    font_name, _fontsdir = _resolve_font()
+
+    rx, ry, rw, rh = video_rect
     font_size = max(24, int(round(height * SUB_FONT_FRACTION_OF_HEIGHT)))
     outline = max(2, int(round(height * SUB_OUTLINE_FRACTION)))
-    margin_v = int(round(height * SUB_MARGIN_V_FRACTION))
+
+    # Desired vertical center of the text line = midpoint of the video
+    # image's lower third. ASS positions Alignment=2 (bottom-center) text
+    # by its BASELINE at frame_height - MarginV; we want the text block
+    # (ascent+descent ~ font_size tall) centered on the anchor.
+    anchor_y = ry + rh * LOWER_THIRD_CENTER_FRACTION
+    baseline_y = anchor_y + font_size / 2.0
+    # Keep the whole text block inside the video image: baseline must not
+    # push the block's bottom past (rect bottom - clearance).
+    min_clearance = height * MIN_BOTTOM_CLEARANCE_FRACTION
+    max_baseline = ry + rh - min_clearance
+    if baseline_y > max_baseline:
+        baseline_y = max_baseline
+    margin_v = int(round(height - baseline_y))
+    margin_v = max(0, min(margin_v, height - 1))
 
     header = f"""[Script Info]
 ScriptType: v4.00+
@@ -182,22 +562,30 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Word,{SUB_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,{outline},0,2,40,40,{margin_v},1
+Style: Word,{font_name},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,{outline},0,2,40,40,{margin_v},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     lines = [header]
     for w in words:
+        # ALL CAPS is the ONLY transformation applied to the original
+        # script wording before display.
+        text = _ass_escape(w["word"].upper())
         lines.append(
             f"Dialogue: 0,{_ass_time(w['start'])},{_ass_time(w['end'])},"
-            f"Word,,0,0,0,,{_ass_escape(w['word'])}\n"
+            f"Word,,0,0,0,,{text}\n"
         )
     with open(out_ass, "w", encoding="utf-8") as f:
         f.writelines(lines)
-    print(f"ASS subtitle file written: {out_ass} "
-          f"({len(words)} word events, font {font_size}px, "
-          f"outline {outline}px)", flush=True)
+    print(
+        f"ASS subtitle file written: {out_ass} "
+        f"({len(words)} word events, font {font_name} {font_size}px, "
+        f"outline {outline}px, MarginV {margin_v}px — anchored to the "
+        f"lower third of the video image rect "
+        f"{video_rect} inside the {width}x{height} frame)",
+        flush=True,
+    )
 
 
 def burn_subtitles(video: str, ass_path: str, dst: str) -> None:
@@ -208,14 +596,24 @@ def burn_subtitles(video: str, ass_path: str, dst: str) -> None:
     rather than inheriting whatever ffmpeg would default to). Audio is
     stream-copied — it was already encoded to AAC-LC 48kHz stereo by
     cut_and_produce.py and must not be touched.
+
+    When the vendored font directory exists it is handed to libass via
+    the subtitles filter's `fontsdir` option so the condensed caption
+    font renders identically on every runner.
     """
     # Escape the ASS path for the filter (colons on Windows, quotes
     # everywhere); on the Linux runner a simple quoting suffices.
-    ass_filter = ass_path.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+    def _fescape(p: str) -> str:
+        return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+
+    subtitle_filter = f"subtitles='{_fescape(ass_path)}'"
+    _font, fontsdir = _resolve_font()
+    if fontsdir:
+        subtitle_filter += f":fontsdir='{_fescape(fontsdir)}'"
     cmd = [
         "ffmpeg", "-y",
         "-i", video,
-        "-vf", f"subtitles='{ass_filter}'",
+        "-vf", subtitle_filter,
         "-map", "0:v:0", "-map", "0:a:0",
         "-c:v", "libx264",
         "-profile:v", "high",
@@ -247,6 +645,21 @@ def main() -> None:
     ap.add_argument("merged_video_mp4")
     ap.add_argument("voiceover_wav")
     ap.add_argument("out_video_mp4")
+    ap.add_argument("--script-json", default=None,
+                    help="production.json / cuts.json / "
+                         "voiceover_manifest.json carrying the ORIGINAL "
+                         "script (voiceover_text per cut). When given, the "
+                         "script — not the transcription — is what gets "
+                         "displayed; the transcription supplies timing "
+                         "only. Strongly recommended: without it the "
+                         "transcription's wording is used as a legacy "
+                         "fallback.")
+    ap.add_argument("--video-rect", default=None,
+                    help="'x,y,w,h' rectangle (in output-frame pixels) that "
+                         "the ACTUAL VIDEO IMAGE occupies — after any "
+                         "branding/letterboxing. Subtitles are anchored to "
+                         "the middle of the lower third of THIS rectangle. "
+                         "Default: the whole frame (unbranded jobs).")
     ap.add_argument("--model", default="base", choices=["tiny", "base", "small"])
     ap.add_argument("--lang", default="auto")
     ap.add_argument("--work-dir", default=None,
@@ -258,20 +671,41 @@ def main() -> None:
         if not os.path.exists(req):
             print(f"Missing required input: {req}", file=sys.stderr)
             sys.exit(2)
+    if args.script_json and not os.path.exists(args.script_json):
+        print(f"Missing required input: {args.script_json}", file=sys.stderr)
+        sys.exit(2)
 
     out_dir = os.path.dirname(os.path.abspath(args.out_video_mp4)) or "."
     os.makedirs(out_dir, exist_ok=True)
     work_dir = args.work_dir or os.path.join(out_dir, "subtitle_work")
     os.makedirs(work_dir, exist_ok=True)
 
-    words = transcribe_words(args.voiceover_wav, args.model, args.lang,
-                             work_dir)
+    # Transcription = TIMING SOURCE ONLY.
+    timed_words = transcribe_words(args.voiceover_wav, args.model, args.lang,
+                                   work_dir)
+
+    if args.script_json:
+        # Original script = AUTHORITATIVE WORDING.
+        script_texts = load_script_texts(args.script_json)
+        words = align_words_to_script(timed_words, script_texts)
+    else:
+        print(
+            "WARNING: no --script-json given — falling back to the "
+            "transcription's own words for display. The original script is "
+            "the intended authoritative subtitle source; pass "
+            "production.json (or the voiceover manifest) via --script-json.",
+            file=sys.stderr,
+            flush=True,
+        )
+        words = timed_words
 
     width, height = probe_video_size(args.merged_video_mp4)
-    print(f"Video resolution: {width}x{height}", flush=True)
+    video_rect = _video_rect_from_arg(args.video_rect, width, height)
+    print(f"Video resolution: {width}x{height}; subtitle anchor rect: "
+          f"{video_rect}", flush=True)
 
     ass_path = os.path.join(work_dir, "subtitles.ass")
-    write_ass(words, width, height, ass_path)
+    write_ass(words, width, height, video_rect, ass_path)
 
     print(f"Burning subtitles into {args.out_video_mp4} ...", flush=True)
     burn_subtitles(args.merged_video_mp4, ass_path, args.out_video_mp4)

@@ -37,9 +37,13 @@ personal access token.
      music underneath at ~30% volume, and concatenates everything into
      **one merged `final.mp4`**.
    - `generate_subtitles.py` transcribes the merged voiceover for
-     word-level timestamps and burns word-by-word subtitles (bold white
-     with a thick black outline, bottom-third, phone-readable) into the
-     video.
+     word-level TIMING ONLY and burns word-by-word subtitles whose
+     wording is the ORIGINAL script (`voiceover_text`, verbatim) — the
+     transcription is never shown. Rendering: Bebas Neue (condensed
+     all-caps caption font, vendored in `assets/fonts/`), white with a
+     black outline, ALL CAPS, anchored to the middle of the lower third
+     of the actual video image (inside the branded canvas when branding
+     is applied, whatever the source aspect ratio).
    The finished `final.mp4` plus a zip containing it are attached to
    the Release — there are no per-scene files and no manual voiceover
    or subtitle work left to do.
@@ -60,7 +64,7 @@ personal access token.
 │   ├── generate_analysis_prompt.py
 │   ├── generate_voiceover.py    # Chatterbox TTS per cut
 │   ├── cut_and_produce.py       # reconcile/cut/mute/mix/merge -> final.mp4
-│   ├── generate_subtitles.py    # word-level transcribe + ASS burn-in
+│   ├── generate_subtitles.py    # word timing + script-worded ASS burn-in
 │   ├── write_status.py
 │   ├── cleanup.py
 │   └── requirements.txt

@@ -432,6 +432,46 @@ jobs:
               ;;
           esac
           echo "Branding flag: $flag -> $enable_arg"
+
+          # -----------------------------------------------------------------
+          # Compute the rectangle the ACTUAL VIDEO IMAGE will occupy inside
+          # the branded 1080x1920 canvas, BEFORE brand_scenes.py rewrites
+          # final.mp4. The brander letterboxes the video at native aspect
+          # ratio into the slot defined by brand_template.py (scale-to-fit
+          # + centered), so the placed rectangle is derived from the video's
+          # real dimensions and the slot constants — imported from
+          # brand_template.py itself so the two can never drift apart. The
+          # subtitle step uses this to anchor captions to the video image
+          # (lower third) instead of the branded canvas / title area, for
+          # ANY source aspect ratio (16:9, 9:16, 1:1, ...).
+          # -----------------------------------------------------------------
+          VIDEO_RECT=""
+          if [ "$enable_arg" = "--enabled" ] && [ -n "${BRANDING_USERNAME:-}" ]; then
+            VIDEO_RECT=$(python - <<'PY'
+          import json, subprocess, sys
+          sys.path.insert(0, "scripts")
+          from brand_template import SLOT_X, SLOT_Y, SLOT_W, SLOT_H
+          out = subprocess.check_output([
+              "ffprobe", "-v", "error", "-select_streams", "v:0",
+              "-show_entries", "stream=width,height",
+              "-of", "json", "work/out/final.mp4",
+          ], text=True)
+          s = json.loads(out)["streams"][0]
+          vw, vh = int(s["width"]), int(s["height"])
+          # Mirror of brand_scene.py's scale=...:force_original_aspect_ratio=
+          # decrease + centered pad, computed analytically.
+          scale = min(SLOT_W / vw, SLOT_H / vh)
+          dw, dh = vw * scale, vh * scale
+          dx = SLOT_X + (SLOT_W - dw) / 2.0
+          dy = SLOT_Y + (SLOT_H - dh) / 2.0
+          print(f"{int(round(dx))},{int(round(dy))},"
+                f"{int(round(dw))},{int(round(dh))}")
+          PY
+            )
+            echo "Actual video image rect inside branded canvas: $VIDEO_RECT"
+          fi
+          echo "VIDEO_RECT=$VIDEO_RECT" >> "$GITHUB_ENV"
+
           python scripts/brand_scenes.py work/out "$enable_arg" \
             --title "${JOB_TITLE:-}"
           applied=false
@@ -453,10 +493,27 @@ jobs:
           set -euo pipefail
           # Burn into a new file, then atomically swap over final.mp4 so
           # the shipped artifact is always the subtitled one.
+          #
+          # --script-json: the ORIGINAL script (production.json's
+          # voiceover_text per cut — the exact text the TTS spoke) is the
+          # authoritative subtitle wording. The transcription of the merged
+          # voiceover is used for word TIMING only, never for display text.
+          # --video-rect: when branding was applied, the rectangle the
+          # actual video image occupies inside the 1080x1920 canvas
+          # (computed above, before the brand pass). Subtitles are anchored
+          # to the middle of the LOWER THIRD of that rectangle so they sit
+          # inside the video image — never over the title/header chrome —
+          # for every aspect ratio. Empty (unbranded) => whole frame.
+          RECT_ARG=()
+          if [ -n "${VIDEO_RECT:-}" ]; then
+            RECT_ARG=(--video-rect "$VIDEO_RECT")
+          fi
           python scripts/generate_subtitles.py \
             work/out/final.mp4 \
             work/out/voiceover.wav \
-            work/out/final_subtitled.mp4
+            work/out/final_subtitled.mp4 \
+            --script-json work/production.json \
+            "${RECT_ARG[@]}"
           mv -f work/out/final_subtitled.mp4 work/out/final.mp4
           ls -lh work/out/
 
