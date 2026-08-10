@@ -14,7 +14,10 @@ Stages recognized by the frontend contract:
     queued
     stage_a_running
     awaiting_json_upload
+    stage_b_queued
     stage_b_running
+    stage_b_cancelling
+    cancelled
     complete
     error
 """

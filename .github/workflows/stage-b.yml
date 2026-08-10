@@ -1,5 +1,9 @@
 name: Stage B — Produce Final Video (voiceover + subtitles, one merged MP4)
 
+# This is deliberately keyed by the job id. Besides making a run easy for the
+# static site to identify after a refresh, it prevents cross-job run confusion.
+run-name: Stage B — ${{ inputs.job_id }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -137,7 +141,9 @@ jobs:
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_b_running" \
             --message "Stage B started: producing final video (voiceover, music, subtitles)" \
-            --release-tag "${{ steps.jid.outputs.release_tag }}"
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --extra "workflow_run_id=${{ github.run_id }}" \
+            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
@@ -613,4 +619,35 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json" || true
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} error (stage B)" || true
+          git push || true
+
+  stage_b_cancelled:
+    name: Record Stage B cancellation
+    needs: stage_b
+    if: ${{ cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Write cancelled status
+        shell: bash
+        run: |
+          set -euo pipefail
+          jid="${{ github.event.inputs.job_id }}"
+          jid="$(echo "$jid" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
+          python scripts/write_status.py "$jid" "cancelled" \
+            --message "Stage B was cancelled." \
+            --release-tag "clipforge-$jid" \
+            --extra "workflow_run_id=${{ github.run_id }}" \
+            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$jid/status.json"
+          git commit -m "clipforge: job $jid stage B cancelled" || echo "nothing to commit"
           git push || true

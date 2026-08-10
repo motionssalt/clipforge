@@ -580,6 +580,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--fg-faint); 
 .stage-badge.stage-await   { color: var(--accent); border-color: var(--accent-line); background: var(--accent-bg); }
 .stage-badge.stage-done    { color: var(--accent-ink); border-color: var(--accent); background: var(--accent); }
 .stage-badge.stage-error   { color: var(--danger-fg); border-color: var(--danger-line); background: var(--danger-bg); }
+.stage-badge.stage-cancelling { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
+.stage-badge.stage-cancelled { color: var(--fg-dim); border-color: var(--line-strong); background: var(--bg-raised); }
 
 .expiry {
   font-size: var(--fs-sm);
@@ -688,6 +690,17 @@ input[type="file"]::file-selector-button:hover { border-color: var(--fg-faint); 
 }
 
 .handoff-block { display: flex; flex-direction: column; gap: var(--s5); }
+
+.stage-b-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  padding: var(--s4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+.stage-b-controls .hint { margin: 0; }
 
 /* "Release ready" hand-off callout — the primary action of this state.
  * Uses an accent rule + tinted surface rather than a full glowing frame so it

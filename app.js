@@ -60,6 +60,8 @@
     musicFile: null,       // an optional picked music file (File object)
     busy: false,
     stageBDispatched: false,
+    stageBRun: null,      // matched GitHub Actions Stage B run for this job
+    cancellingStageB: false,
     branding: null,        // parsed branding.json, or null when none is saved
     brandingSha: null,     // blob sha of branding.json (needed to update it)
     brandingAvatarUrl: '', // raw.githubusercontent.com URL of the saved picture
@@ -86,6 +88,7 @@
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
     'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'music-file-input', 'music-hint',
+    'stage-b-controls', 'stage-b-controls-text', 'restart-stage-b', 'cancel-stage-b',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
     'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
@@ -804,6 +807,7 @@
         if (match) {
           state.runId = match.id;
           state.runHtmlUrl = match.html_url;
+          if (workflowFile === 'stage-b.yml') state.stageBRun = match;
           el['run-link'].href = match.html_url;
           show(el['run-link']);
           watchRunForEarlyFailure(match.id);
@@ -925,6 +929,8 @@
     state.releaseAssetsTag = null;
     state.validatedCuts = null;
     state.stageBDispatched = false;
+    state.stageBRun = null;
+    state.cancellingStageB = false;
     localStorage.removeItem(LS.activeJob);
     hide(el['status-section']);
     hide(el['active-job-bar']);
@@ -988,10 +994,12 @@
         return;
       }
       dismissBanner('status');
-      state.status = parsed;
+        state.status = parsed;
+      await refreshStageBRun();
       renderStage();
 
-      if (parsed.stage === 'complete' || parsed.stage === 'error' || !isKnownStage(parsed.stage)) {
+      if (isTerminalStageBRun() || (!stageFromRun() &&
+          (parsed.stage === 'complete' || parsed.stage === 'error' || parsed.stage === 'cancelled' || !isKnownStage(parsed.stage)))) {
         stopPolling();
         return;
       }
@@ -1013,8 +1021,51 @@
   }
 
   function isKnownStage(stage) {
-    return ['queued', 'stage_a_running', 'awaiting_json_upload',
-      'stage_b_running', 'complete', 'error'].indexOf(stage) !== -1;
+    return ['queued', 'stage_a_running', 'awaiting_json_upload', 'stage_b_queued',
+      'stage_b_running', 'stage_b_cancelling', 'cancelled', 'complete', 'error'].indexOf(stage) !== -1;
+  }
+
+  function isActiveStageBRun() {
+    return !!(state.stageBRun && ['queued', 'in_progress', 'waiting', 'requested', 'pending'].indexOf(state.stageBRun.status) !== -1);
+  }
+
+  function isTerminalStageBRun() {
+    return !!(state.stageBRun && state.stageBRun.status === 'completed');
+  }
+
+  function stageFromRun() {
+    if (!state.stageBRun) return '';
+    if (state.cancellingStageB || state.stageBRun.status === 'cancelling') return 'stage_b_cancelling';
+    if (isActiveStageBRun()) return state.stageBRun.status === 'queued' ? 'stage_b_queued' : 'stage_b_running';
+    if (state.stageBRun.status === 'completed' && state.stageBRun.conclusion === 'cancelled') return 'cancelled';
+    return '';
+  }
+
+  async function refreshStageBRun() {
+    if (!state.jobId || !isConfigured()) return;
+    try {
+      var id = state.status && state.status.extra && state.status.extra.workflow_run_id;
+      var run;
+      if (id) run = await gh('/repos/' + state.owner + '/' + state.repo + '/actions/runs/' + encodeURIComponent(id));
+      else {
+        var data = await gh('/repos/' + state.owner + '/' + state.repo +
+          '/actions/workflows/stage-b.yml/runs?event=workflow_dispatch&per_page=30');
+        var expectedTitle = 'Stage B — ' + state.jobId;
+        run = ((data && data.workflow_runs) || []).filter(function (candidate) {
+          return candidate.display_title === expectedTitle;
+        }).sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); })[0];
+      }
+      if (run) {
+        state.stageBRun = run;
+        state.runId = run.id;
+        state.runHtmlUrl = run.html_url;
+        el['run-link'].href = run.html_url;
+        show(el['run-link']);
+        if (run.status === 'completed') state.cancellingStageB = false;
+      }
+    } catch (err) {
+      if (err.name === 'AuthError' || err.name === 'RateLimitError') handleGlobalError(err);
+    }
   }
 
   /* ------------------------------------------------------------------ render */
@@ -1029,16 +1080,28 @@
       label: 'awaiting production.json', cls: 'stage-await', spin: false,
       text: 'Stage A complete. Download the artifacts, produce production.json, upload it below.'
     },
+    stage_b_queued: { label: 'stage b queued', cls: 'stage-running', spin: true, text: 'Stage B is queued.' },
     stage_b_running: {
       label: 'stage b', cls: 'stage-running', spin: true,
-      text: 'Stage B running — cutting each segment into its own scene file'
+      text: 'Stage B running — producing the final video'
     },
+    stage_b_cancelling: { label: 'cancelling', cls: 'stage-cancelling', spin: true, text: 'Cancelling Stage B…' },
+    cancelled: { label: 'cancelled', cls: 'stage-cancelled', spin: false, text: 'Stage B was cancelled.' },
     complete: { label: 'complete', cls: 'stage-done', spin: false, text: 'Job complete.' },
     error: { label: 'error', cls: 'stage-error', spin: false, text: 'The job reported an error.' }
   };
 
   function renderStage() {
     var s = state.status;
+    var actionStage = stageFromRun();
+    if (actionStage) {
+      s = Object.assign({}, s || {}, {
+        stage: actionStage,
+        message: actionStage === 'stage_b_cancelling' ? 'Cancelling Stage B…' :
+          actionStage === 'cancelled' ? 'Stage B was cancelled.' :
+          actionStage === 'stage_b_queued' ? 'Stage B is queued.' : 'Stage B is running.'
+      });
+    }
 
     // Nothing on GitHub yet.
     if (!s) {
@@ -1105,8 +1168,24 @@
     renderFacts(s);
     renderRaw(s);
 
+    renderStageBControls(stage);
+
     // Resume button appears when polling has stopped on a terminal-ish state.
-    toggleHidden(el['resume-btn'], state.polling || stage === 'complete' || stage === 'error');
+    toggleHidden(el['resume-btn'], state.polling || stage === 'complete' || stage === 'error' || stage === 'cancelled');
+  }
+
+  function renderStageBControls(stage) {
+    var active = isActiveStageBRun();
+    var terminal = ['complete', 'cancelled', 'error'].indexOf(stage) !== -1 && !active;
+    if (!active && !terminal) { hide(el['stage-b-controls']); return; }
+    show(el['stage-b-controls']);
+    el['restart-stage-b'].disabled = state.busy || !terminal;
+    el['cancel-stage-b'].disabled = state.busy || !active || state.cancellingStageB;
+    toggleHidden(el['restart-stage-b'], !terminal);
+    toggleHidden(el['cancel-stage-b'], !active);
+    text(el['stage-b-controls-text'], active
+      ? (state.cancellingStageB ? 'Cancellation requested. Waiting for GitHub Actions to stop the run.' : 'Stage B is active. Cancelling stops the GitHub Actions run.')
+      : 'Stage B can be run again using this job\'s committed production settings.');
   }
 
   function setBadge(label, cls) {
@@ -1629,7 +1708,9 @@
 
     state.busy = false;
     state.stageBDispatched = true;
-    showValidation(['Stage B dispatched. Waiting for status.json to move to stage_b_running…'], true);
+    state.cancellingStageB = false;
+    state.stageBRun = { status: 'queued', conclusion: null };
+    showValidation(['Stage B dispatched. Waiting for the GitHub Actions run to start…'], true);
     hide(el['handoff-block']);
     show(el['stage-spinner']);
     text(el['stage-text'], 'Stage B dispatched — waiting for the runner to pick it up…');
@@ -1640,6 +1721,65 @@
     hide(el['run-link']);
     findWorkflowRun('stage-b.yml', dispatchedAt);
     startPolling();
+  }
+
+  el['restart-stage-b'].addEventListener('click', function () { restartStageB(); });
+  el['cancel-stage-b'].addEventListener('click', function () { cancelStageB(); });
+
+  async function restartStageB() {
+    if (state.busy || !state.jobId || isActiveStageBRun()) return;
+    state.busy = true;
+    renderStage();
+    try {
+      var base = '/repos/' + state.owner + '/' + state.repo + '/contents/jobs/' + encodeURIComponent(state.jobId);
+      await gh(base + '/production.json?ref=' + REF + '&_=' + Date.now());
+      var musicRef = '';
+      try {
+        await gh(base + '/music.mp3?ref=' + REF + '&_=' + Date.now());
+        musicRef = 'path:jobs/' + state.jobId + '/music.mp3';
+      } catch (musicErr) {
+        if (musicErr.status !== 404) throw musicErr;
+      }
+      var dispatchedAt = new Date();
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/workflows/stage-b.yml/dispatches', {
+        method: 'POST', body: { ref: REF, inputs: {
+          job_id: state.jobId,
+          production_ref: 'path:jobs/' + state.jobId + '/production.json',
+          music_ref: musicRef
+        }}
+      });
+      state.stageBDispatched = true;
+      state.cancellingStageB = false;
+      state.stageBRun = { status: 'queued', conclusion: null };
+      findWorkflowRun('stage-b.yml', dispatchedAt);
+      startPolling();
+      renderStage();
+    } catch (err) {
+      banner('restart-stage-b', 'error', 'Could not restart Stage B: ' + err.message);
+      handleGlobalError(err, 'restart-stage-b');
+    } finally {
+      state.busy = false;
+      renderStage();
+    }
+  }
+
+  async function cancelStageB() {
+    if (state.busy || !isActiveStageBRun() || !state.stageBRun.id) return;
+    state.busy = true;
+    state.cancellingStageB = true;
+    renderStage();
+    try {
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/runs/' +
+        encodeURIComponent(state.stageBRun.id) + '/cancel', { method: 'POST' });
+      startPolling();
+    } catch (err) {
+      state.cancellingStageB = false;
+      banner('cancel-stage-b', 'error', 'Could not cancel Stage B: ' + err.message);
+      handleGlobalError(err, 'cancel-stage-b');
+    } finally {
+      state.busy = false;
+      renderStage();
+    }
   }
 
   /* ----------------------------------------------- complete: scene downloads */
