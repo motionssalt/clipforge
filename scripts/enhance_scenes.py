@@ -83,8 +83,9 @@ FILTER_CHAIN = (
     "format=yuv420p,setsar=1"
 )
 
-# Mobile-safe encoding parameters. These retain the output contract used by
-# cut_scenes.py: H.264 High@L4.0, yuv420p, CFR 30, and zero B-frames.
+# Mobile-safe encoding parameters. These retain the output contract now
+# owned by cut_and_produce.py: H.264 High@L4.0, yuv420p, CFR 30, and zero
+# B-frames.
 TARGET_FPS = 30
 TARGET_PIX_FMT = "yuv420p"
 X264_PROFILE = "high"
