@@ -34,3 +34,13 @@ onnxruntime==1.19.2
 # 10.x is the current supported line; it ships wheels for Python 3.11 so
 # the GitHub ubuntu-latest runner pip step stays offline-friendly.
 Pillow>=10.0.0
+
+# --- Voiceover TTS (Chatterbox by Resemble AI, MIT) --------------------------
+# Stage B (generate_voiceover.py) synthesizes each cut's voiceover_text with
+# Chatterbox — the best CPU-usable open-weights TTS with natural, expressive
+# delivery. GitHub Actions ubuntu-latest is CPU-only, which rules out the
+# GPU-heavy alternatives. Default voice only; no voice cloning anywhere.
+# Model weights (~6GB) download from HuggingFace on first run into $HF_HOME
+# (default ~/.cache/huggingface); stage-b.yml caches that path via
+# actions/cache keyed on this pinned version so later runs skip the download.
+chatterbox-tts==0.1.4
