@@ -1,7 +1,7 @@
 {
   "job_id": "20260810-195005-31426034120",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "error",
+  "message": "Stage B failed. See workflow run for logs.",
   "release_tag": "clipforge-20260810-195005-31426034120",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260810-195005-31426034120",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/transcript.json"
   },
   "created_at_epoch": 1786391600,
-  "updated_at_epoch": 1786393789,
+  "updated_at_epoch": 1786393825,
   "expires_at_epoch": 1786434800,
   "extra": {
     "duration_seconds": "1426",
