@@ -200,7 +200,7 @@ def main() -> None:
     )
     ap.add_argument(
         "scenes_dir",
-        help="Directory of scene_XX.mp4 files from cut_scenes.py",
+        help="Directory of scene_XX.mp4 files (or the merged final.mp4)",
     )
     ap.add_argument(
         "--enabled", dest="enabled", action="store_true", default=True,
@@ -245,9 +245,14 @@ def main() -> None:
               file=sys.stderr)
         sys.exit(2)
 
+    # Accept both the legacy per-scene layout (scene_*.mp4) and the new
+    # single merged file (final.mp4) produced by cut_and_produce.py.
     scenes = sorted(scenes_dir.glob("scene_*.mp4"))
+    merged = scenes_dir / "final.mp4"
+    if merged.is_file():
+        scenes.append(merged)
     if not scenes:
-        print(f"ERROR: no scene_*.mp4 files found in {scenes_dir}",
+        print(f"ERROR: no scene_*.mp4 / final.mp4 files found in {scenes_dir}",
               file=sys.stderr)
         sys.exit(2)
 
