@@ -1,7 +1,7 @@
 {
   "job_id": "20260810-195005-31426034120",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260810-195005-31426034120",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260810-195005-31426034120",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/clipforge-20260810-195005-31426034120-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-195005-31426034120/final.mp4"
   },
   "created_at_epoch": 1786391600,
-  "updated_at_epoch": 1786396226,
+  "updated_at_epoch": 1786397658,
   "expires_at_epoch": 1786434800,
   "extra": {
     "duration_seconds": "1426",
@@ -21,6 +23,8 @@
     "event_frame_count": "57",
     "shot_count": "267",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "The fastest Chimera Ant in the world picks a fight with the wrong smoker",
+    "branding_applied": false
   }
 }
