@@ -1,7 +1,7 @@
 {
   "job_id": "20260810-153045-31403977919",
-  "stage": "stage_b_running",
-  "message": "Stage B started: cutting original video",
+  "stage": "complete",
+  "message": "Scene videos are ready (one MP4 per cut segment).",
   "release_tag": "clipforge-20260810-153045-31403977919",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260810-153045-31403977919",
   "assets": {
@@ -10,10 +10,11 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-153045-31403977919/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-153045-31403977919/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-153045-31403977919/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-153045-31403977919/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-153045-31403977919/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260810-153045-31403977919/clipforge-20260810-153045-31403977919-final.zip"
   },
   "created_at_epoch": 1786375886,
-  "updated_at_epoch": 1786377401,
+  "updated_at_epoch": 1786378136,
   "expires_at_epoch": 1786419086,
   "extra": {
     "duration_seconds": "1426",
@@ -21,6 +22,8 @@
     "event_frame_count": "54",
     "shot_count": "267",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "Morel Ropes The Fastest Chimera Ant With A Trick That Took 5 Hours",
+    "branding_applied": false
   }
 }
