@@ -24,7 +24,7 @@
   };
 
   /* Persistent channel branding. Follows the same "repo is the database"
-   * pattern as job state (status.json / cuts.json) but lives OUTSIDE jobs/ —
+   * pattern as job state (status.json / production.json) but lives OUTSIDE jobs/ —
    * the hourly cleanup only touches jobs/<id>/ folders and clipforge-*
    * releases, so branding/branding.json + branding/profile_picture.<ext>
    * on the default branch survive forever and apply to every future job. */
@@ -56,7 +56,8 @@
     releaseAssets: null,   // [{name, id, browser_download_url}] cached per job
     releaseAssetsTag: null,
     countdownTimer: null,
-    validatedCuts: null,   // string contents of a validated cuts.json
+    validatedCuts: null,   // string contents of a validated production.json
+    musicFile: null,       // an optional picked music file (File object)
     busy: false,
     stageBDispatched: false,
     branding: null,        // parsed branding.json, or null when none is saved
@@ -84,7 +85,7 @@
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
-    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'enhance-toggle', 'brand-toggle',
+    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'music-file-input', 'music-hint',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
     'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
@@ -111,6 +112,29 @@
     var bin = '';
     for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     return btoa(bin);
+  }
+
+  /**
+   * Base64-encode a binary File (music upload) for the contents API.
+   * Reads the file as an ArrayBuffer and btoa()s it in chunks — the
+   * one-shot String.fromCharCode(...bytes) trick overflows the argument
+   * stack on multi-MB files.
+   */
+  function b64encodeFile(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('Could not read ' + file.name)); };
+      reader.onload = function () {
+        var bytes = new Uint8Array(reader.result);
+        var bin = '';
+        var CHUNK = 0x8000;
+        for (var i = 0; i < bytes.length; i += CHUNK) {
+          bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+        }
+        resolve(btoa(bin));
+      };
+      reader.readAsArrayBuffer(file);
+    });
   }
 
   /** Decode a base64 (possibly newline-wrapped) contents-API payload as UTF-8. */
@@ -372,9 +396,9 @@
   /* ---------------------------------------------------- channel branding */
 
   // Branding is validated live on every keystroke / file pick (same pattern
-  // as the cuts.json validator below) and committed to branding/ on the
+  // as the production.json validator below) and committed to branding/ on the
   // default branch via the contents API — the exact flow startStageB() uses
-  // for cuts.json.
+  // for production.json.
 
   function brandingErrors(username, displayName) {
     var errors = [];
@@ -884,7 +908,7 @@
     state.jobId = jobId;
     localStorage.setItem(LS.activeJob, jobId);
     text(el['active-job-id'], jobId);
-    text(el['cuts-path-hint'], 'jobs/' + jobId + '/cuts.json');
+    text(el['cuts-path-hint'], 'jobs/' + jobId + '/production.json');
     show(el['active-job-bar']);
     show(el['status-section']);
     dismissBanner('discover');
@@ -910,6 +934,9 @@
     setMsg(el['stage-a-msg'], '', null);
     ['run', 'discover', 'dispatch', 'status', 'generic', 'download'].forEach(dismissBanner);
     el['cuts-file-input'].value = '';
+    if (el['music-file-input']) el['music-file-input'].value = '';
+    state.musicFile = null;
+    if (el['music-hint']) { el['music-hint'].textContent = ''; }
     el['start-stage-b'].disabled = true;
     hide(el['cuts-validation']);
   }
@@ -999,8 +1026,8 @@
       text: 'Stage A running — downloading, transcribing, extracting frames'
     },
     awaiting_json_upload: {
-      label: 'awaiting cuts.json', cls: 'stage-await', spin: false,
-      text: 'Stage A complete. Download the artifacts, produce cuts.json, upload it below.'
+      label: 'awaiting production.json', cls: 'stage-await', spin: false,
+      text: 'Stage A complete. Download the artifacts, produce production.json, upload it below.'
     },
     stage_b_running: {
       label: 'stage b', cls: 'stage-running', spin: true,
@@ -1182,7 +1209,7 @@
   /**
    * Build the single, ready-to-paste text block the user hands to their AI
    * agent. It carries the Release URL together with a brief instruction that
-   * tells the agent to open 00_READ_THIS_FIRST first and return cuts.json.
+   * tells the agent to open 00_READ_THIS_FIRST first and return production.json.
    */
   function buildAgentPasteText(url) {
     return (
@@ -1190,7 +1217,7 @@
       'transcript, screenshots, and an analysis prompt file (its name starts ' +
       'with 00_READ_THIS_FIRST). Open/read that file first, then follow its ' +
       'instructions to analyze the transcript and screenshots and produce the ' +
-      'requested cuts.json output.'
+      'requested production.json output.'
     );
   }
 
@@ -1329,7 +1356,7 @@
     }
   }
 
-  /* ------------------------------------------------------- cuts.json validate */
+  /* ------------------------------------------------- production.json validate */
 
   el['cuts-file-input'].addEventListener('change', function () {
     state.validatedCuts = null;
@@ -1373,6 +1400,16 @@
     reader.readAsText(file);
   });
 
+  el['music-file-input'].addEventListener('change', function () {
+    var file = el['music-file-input'].files && el['music-file-input'].files[0];
+    state.musicFile = file || null;
+    if (el['music-hint']) {
+      el['music-hint'].textContent = file
+        ? 'Music: ' + file.name + ' — will be mixed under the voiceover at ~30% volume.'
+        : '';
+    }
+  });
+
   function showValidation(messages, ok) {
     var node = el['cuts-validation'];
     node.className = 'validation ' + (ok ? 'ok' : 'bad');
@@ -1393,7 +1430,7 @@
     // Optional one-per-job title (generated by the same agent step that
     // produces the cuts; see 00_READ_THIS_FIRST.txt). Validated when
     // present so a malformed title is caught before upload, never required
-    // so older cuts.json files keep working.
+    // so older production.json files keep working.
     if (doc.title !== undefined &&
         (typeof doc.title !== 'string' || doc.title.trim() === '')) {
       errors.push('`title` must be a non-empty string when present (or omit it entirely).');
@@ -1425,8 +1462,14 @@
       }
       if (!isInt(cut.start_seconds)) errors.push(at + '.start_seconds must be an integer.');
       if (!isInt(cut.end_seconds)) errors.push(at + '.end_seconds must be an integer.');
-      if (typeof cut.raw_narration !== 'string' || cut.raw_narration.trim() === '') {
-        errors.push(at + '.raw_narration must be a non-empty string.');
+      // voiceover_text is the final, ready-to-speak line for this cut. The
+      // legacy raw_narration field is accepted as a fallback so in-flight
+      // pre-rename cuts.json files still validate and run.
+      var vo = (typeof cut.voiceover_text === 'string' && cut.voiceover_text.trim() !== '')
+        ? cut.voiceover_text
+        : cut.raw_narration;
+      if (typeof vo !== 'string' || vo.trim() === '') {
+        errors.push(at + '.voiceover_text must be a non-empty string (legacy raw_narration accepted).');
       }
       if (!isInt(cut.start_seconds) || !isInt(cut.end_seconds)) return;
 
@@ -1465,17 +1508,17 @@
       return;
     }
     if (!state.validatedCuts) {
-      showValidation(['Select a valid cuts.json first.'], false);
+      showValidation(['Select a valid production.json first.'], false);
       return;
     }
 
     state.busy = true;
     el['start-stage-b'].disabled = true;
-    var path = 'jobs/' + state.jobId + '/cuts.json';
+    var path = 'jobs/' + state.jobId + '/production.json';
     showValidation(['Committing ' + path + '…'], true);
 
     var contentsPath = '/repos/' + state.owner + '/' + state.repo +
-      '/contents/jobs/' + encodeURIComponent(state.jobId) + '/cuts.json';
+      '/contents/jobs/' + encodeURIComponent(state.jobId) + '/production.json';
 
     // Existing file? Need its blob sha to update.
     var sha = null;
@@ -1494,7 +1537,7 @@
     }
 
     var body = {
-      message: 'clipforge: upload cuts.json for job ' + state.jobId,
+      message: 'clipforge: upload production.json for job ' + state.jobId,
       content: b64encodeUtf8(state.validatedCuts),
       branch: REF
     };
@@ -1510,28 +1553,51 @@
       return;
     }
 
-    // The enhance toggle drives Stage B's optional quality-enhancement
-    // filter chain (denoise + color grade + sharpen). Default is ON so
-    // the checkbox reflects the shipped default; unticking it dispatches
-    // Stage B with enhance='false' and the workflow skips the extra step
-    // (files go straight from cut to validate). The workflow input is a
-    // string because GitHub workflow_dispatch inputs are always strings.
-    var enhanceOn = !el['enhance-toggle'] || !!el['enhance-toggle'].checked;
-    var enhanceInput = enhanceOn ? 'true' : 'false';
-
-    // The brand toggle drives Stage B's optional branded-9:16 compositor
-    // step, same contract as enhance: default ON (checkbox reflects the
-    // shipped default), unticking dispatches with brand='false' and the
-    // workflow short-circuits the branding step to a no-op. When no
-    // channel branding is saved yet the workflow ships unbranded either
-    // way and reports branding_applied=false in status.json.
-    var brandOn = !el['brand-toggle'] || !!el['brand-toggle'].checked;
-    var brandInput = brandOn ? 'true' : 'false';
+    // Optional background music: when the user picked a file it is
+    // committed to jobs/<jobId>/music.mp3 (base64 via the contents API,
+    // same pattern as production.json) and passed to Stage B as
+    // music_ref. No file picked -> music_ref stays empty and the workflow
+    // skips music entirely.
+    var musicRef = '';
+    if (state.musicFile) {
+      var musicPath = 'jobs/' + state.jobId + '/music.mp3';
+      showValidation([path + ' committed. Committing ' + musicPath + '…'], true);
+      var musicContentsPath = '/repos/' + state.owner + '/' + state.repo +
+        '/contents/jobs/' + encodeURIComponent(state.jobId) + '/music.mp3';
+      var musicSha = null;
+      try {
+        var existingMusic = await gh(musicContentsPath + '?ref=' + REF + '&_=' + Date.now());
+        if (existingMusic && existingMusic.sha) musicSha = existingMusic.sha;
+      } catch (err) {
+        if (err.status !== 404 &&
+            (err.name === 'AuthError' || err.name === 'RateLimitError')) {
+          handleGlobalError(err);
+          state.busy = false;
+          el['start-stage-b'].disabled = false;
+          return;
+        }
+      }
+      var musicBody = {
+        message: 'clipforge: upload music.mp3 for job ' + state.jobId,
+        content: await b64encodeFile(state.musicFile),
+        branch: REF
+      };
+      if (musicSha) musicBody.sha = musicSha;
+      try {
+        await gh(musicContentsPath, { method: 'PUT', body: musicBody });
+      } catch (err) {
+        state.busy = false;
+        el['start-stage-b'].disabled = false;
+        showValidation(['Music commit failed: ' + err.message], false);
+        handleGlobalError(err, 'upload');
+        return;
+      }
+      musicRef = 'path:' + musicPath;
+    }
 
     showValidation([
-      path + ' committed. Dispatching stage-b.yml… ' +
-      '(quality enhancement: ' + (enhanceOn ? 'ON' : 'OFF') +
-      ', branded template: ' + (brandOn ? 'ON' : 'OFF') + ')'
+      path + ' committed' + (musicRef ? ' (+ music)' : '') +
+      '. Dispatching stage-b.yml… (voiceover + subtitles, one merged final.mp4)'
     ], true);
 
     var dispatchedAt = new Date();
@@ -1543,9 +1609,8 @@
           ref: REF,
           inputs: {
             job_id: state.jobId,
-            cuts_ref: 'path:jobs/' + state.jobId + '/cuts.json',
-            enhance: enhanceInput,
-            brand: brandInput
+            production_ref: 'path:jobs/' + state.jobId + '/production.json',
+            music_ref: musicRef
           }
         }
       });
@@ -1580,14 +1645,10 @@
   /* ----------------------------------------------- complete: scene downloads */
 
   /**
-   * Stage B no longer merges the cut segments into one video — it ships one
-   * scene_XX.mp4 per cut (plus output.txt) inside the final zip. The complete
-   * UI therefore lists EVERY scene file as its own download link, with the
-   * zip kept as a convenience "get everything at once" button.
-   *
-   * Scene links are discovered from the live Release asset list: Stage B
-   * attaches the individual scene MP4s to the Release in addition to the zip
-   * (see stage-b.yml), so each scene is downloadable on its own.
+   * Stage B ships ONE merged, finished video (final.mp4 — voiceover mixed
+   * in, subtitles burned in, optional music ducked underneath) both as a
+   * direct Release asset and inside the final zip. The complete UI
+   * surfaces the direct final.mp4 download plus the zip.
    */
   function renderFinalZip(s) {
     var assets = (s && s.assets) || {};
@@ -1612,7 +1673,10 @@
   }
 
   /**
-   * Render one download row per scene file found on the Release.
+   * Render the direct final.mp4 download row when the Release asset list
+   * has been fetched. Stage B ships ONE merged video (voiceover +
+   * subtitles + optional music), not per-scene files, so this is a
+   * single row — the zip below stays as the fallback/alternative.
    * Re-renders when loadReleaseAssets() refreshes the asset cache.
    */
   function renderSceneList(s) {
@@ -1620,23 +1684,22 @@
     if (!list) return;
     list.innerHTML = '';
 
-    var scenes = [];
+    var finals = [];
     if (state.releaseAssets && s.release_tag && state.releaseAssetsTag === s.release_tag) {
-      scenes = state.releaseAssets
-        .filter(function (a) { return /^scene_\d+\.mp4$/.test(a.name); })
-        .sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+      finals = state.releaseAssets
+        .filter(function (a) { return a.name === 'final.mp4'; });
     }
 
-    if (!scenes.length) {
+    if (!finals.length) {
       text(el['scene-list-hint'],
-        'Individual scene files are not listed on the Release (or have not been ' +
-        'fetched yet) — the final zip below contains every scene_XX.mp4 plus output.txt.');
+        'The direct final.mp4 asset is not listed on the Release (or has not been ' +
+        'fetched yet) — the zip below contains the same finished video.');
       show(el['scene-list-hint']);
       return;
     }
 
     hide(el['scene-list-hint']);
-    scenes.forEach(function (a) {
+    finals.forEach(function (a) {
       var row = document.createElement('div');
       row.className = 'scene-row';
 
@@ -1645,7 +1708,7 @@
       link.href = a.url;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = 'Download ' + a.name;
+      link.textContent = 'Download ' + a.name + ' directly';
       link.onclick = makeDownloadHandler(a.name, a.url);
 
       var size = document.createElement('span');
