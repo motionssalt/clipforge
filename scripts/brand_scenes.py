@@ -2,14 +2,15 @@
 """
 Stage B — per-scene branding orchestrator.
 
-Runs AFTER cut_scenes.py (and after enhance_scenes.py when that step is
-enabled) and BEFORE the per-scene ffprobe validation step in
-stage-b.yml. For each scene_*.mp4 in the scenes directory it composites
-the scene into the branded 1080x1920 template via brand_scene.py and
-rewrites the original file in place, using the exact atomic-swap
-pattern established by enhance_scenes.py:
+Runs AFTER cut_and_produce.py (and after enhance_scenes.py when that
+step is enabled) and BEFORE the ffprobe validation step in
+stage-b.yml. It accepts either the current single merged final.mp4 or
+the legacy per-scene scene_*.mp4 layout in the scenes directory. For
+each input MP4 it composites the video into the branded 1080x1920
+template via brand_scene.py and rewrites the original file in place,
+using the exact atomic-swap pattern established by enhance_scenes.py:
 
-    scene_XX.mp4  --brand-->  scene_XX.branded.mp4  --validate-->  os.replace()
+    <name>.mp4  --brand-->  <name>.branded.mp4  --validate-->  os.replace()
 
 The swap only happens once the branded file exists AND has passed
 brand_scene.py's own mobile-safe validation (1080x1920, H.264 High@L4.0,
@@ -218,7 +219,7 @@ def main() -> None:
         help=(
             "Per-job title rendered into the template's title block "
             "(defaults to the JOB_TITLE env var, which stage-b.yml "
-            "exports from cuts.json['title'])."
+            "exports from production.json['title'])."
         ),
     )
     ap.add_argument("--username", default="",
@@ -268,7 +269,7 @@ def main() -> None:
         f"  avatar   = {branding.profile_picture or 'placeholder disc'}\n"
         f"  title    = {args.title!r}\n"
         f"  badge    = {args.badge!r}\n"
-        f"  swap     = scene_XX.branded.mp4 -> os.replace -> scene_XX.mp4 "
+        f"  swap     = <name>.branded.mp4 -> os.replace -> <name>.mp4 "
         f"(only after mobile-safe validation passes).",
         flush=True,
     )
