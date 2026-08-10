@@ -2,8 +2,9 @@
 """
 Branded 9:16 compositor (Part 2 of the branding stack).
 
-Given ONE cut scene MP4 (as produced by cut_scenes.py, optionally
-enhanced by enhance_scenes.py), a branding record, and a job title, this
+Given ONE scene MP4 (a legacy per-scene scene_XX.mp4, or the merged
+final.mp4 produced by cut_and_produce.py — optionally enhanced by
+enhance_scenes.py), a branding record, and a job title, this
 script composites the scene into a professional-looking branded 9:16
 vertical template and writes the result back as a mobile-safe MP4.
 
@@ -21,13 +22,13 @@ this file" bar the cut/enhance stages already satisfy):
     transparent RGBA PNG that matches the canvas pixel-for-pixel with
     the slot area cut out (alpha=0). ffmpeg overlays this PNG on top of
     the letterboxed video, so the clip shows through the hole.
-  * Encoding: identical to cut_scenes.py — H.264 High@L4.0, yuv420p,
+  * Encoding: identical to cut_and_produce.py — H.264 High@L4.0, yuv420p,
     CFR 30, no B-frames, CRF 23 + VBV ceiling, +faststart, mp42 brand,
     no edit lists, exactly one video + one audio stream. Audio is
     stream-copied from the source scene because branding is a purely
     visual pass — re-encoding the AAC would only add generation loss.
   * Validation: after writing the branded MP4, the same mobile-safe
-    checks cut_scenes.py enforces (exactly 1 video + 1 audio stream,
+    checks cut_and_produce.py enforces (exactly 1 video + 1 audio stream,
     yuv420p, has_b_frames=0, start_time ~0, valid MP4 ftyp) are re-run.
     A failure fails the whole invocation with exit 3 — a bad branded
     scene must never silently ship.
@@ -67,11 +68,11 @@ from brand_template import Branding, build_template  # noqa: E402
 
 
 # =============================================================================
-# ENCODING PROFILE — MUST match cut_scenes.py / enhance_scenes.py
+# ENCODING PROFILE — MUST match cut_and_produce.py / enhance_scenes.py
 # =============================================================================
 # If any of these are changed, they must be changed in all three files
 # together and the mobile-playback checks re-verified. See the docstring
-# at the top of cut_scenes.py for the full rationale on each value.
+# at the top of cut_and_produce.py for the full rationale on each value.
 TARGET_FPS = 30
 TARGET_PIX_FMT = "yuv420p"
 X264_PROFILE = "high"
@@ -165,7 +166,7 @@ def composite(
 
     Audio: stream-copied from the source scene. Branding is a purely
     visual pass, so re-encoding the AAC would only add generation loss.
-    If the source has no audio (should not happen post-cut_scenes.py, but
+    If the source has no audio (should not happen post-cut_and_produce.py, but
     guarded anyway) a silent stereo AAC track is synthesised so the
     branded MP4 remains a valid 2-stream A/V file.
     """
@@ -194,7 +195,7 @@ def composite(
     ]
 
     if not has_audio:
-        # Guard rail — cut_scenes.py always writes an audio stream, but
+        # Guard rail — cut_and_produce.py always writes an audio stream, but
         # if somebody feeds this compositor a video-only file we still
         # produce a valid A/V MP4 rather than crashing ffmpeg's -map.
         cmd += [
@@ -209,7 +210,7 @@ def composite(
     cmd += ["-map", "0:a:0"] if has_audio else ["-map", "2:a:0"]
 
     cmd += [
-        # Video: same phone-safe H.264 profile as cut_scenes.py.
+        # Video: same phone-safe H.264 profile as cut_and_produce.py.
         "-c:v", "libx264",
         "-profile:v", X264_PROFILE,
         "-level:v", X264_LEVEL,
@@ -266,7 +267,7 @@ def composite(
 
 def validate(path: str) -> None:
     """
-    Re-enforce the exact mobile-safety bar from cut_scenes.py. Any
+    Re-enforce the exact mobile-safety bar from cut_and_produce.py. Any
     deviation fails with exit 3 so a bad branded scene never ships.
     """
     if not os.path.isfile(path):
@@ -389,10 +390,12 @@ def _cli() -> None:
             "using persistent channel branding + per-job title."
         )
     )
-    ap.add_argument("in_scene", help="Input scene_XX.mp4 (from cut_scenes.py)")
+    ap.add_argument("in_scene",
+                    help="Input scene MP4 — a legacy scene_XX.mp4 or the "
+                         "merged final.mp4 (from cut_and_produce.py)")
     ap.add_argument("out_scene", help="Output branded MP4 path")
     ap.add_argument("--title", default="",
-                    help="Per-job title (from cuts.json['title']).")
+                    help="Per-job title (from production.json['title']).")
     ap.add_argument("--username", default="")
     ap.add_argument("--display-name", default="")
     ap.add_argument("--profile-picture", default="",
