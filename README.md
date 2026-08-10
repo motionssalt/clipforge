@@ -1,15 +1,17 @@
 # ClipForge
 
 A personal, GitHub-only pipeline that turns any full-length source video
-into a short-form commentary clip. Static site on GitHub Pages drives
-GitHub Actions workflows; the repo (jobs folder + Releases) is the
-database. Single user, personal use, one repo, one personal access token.
+into a finished, ready-to-post short-form commentary video. Static site
+on GitHub Pages drives GitHub Actions workflows; the repo (jobs folder +
+Releases) is the database. Single user, personal use, one repo, one
+personal access token.
 
 ## What it does
 
 1. You paste any public video URL — a Google Drive share link **or** a
    direct download link to the video file (mkv/mp4, ~300 MB+) from any
-   host.
+   host. Optionally you can also attach a background music file (MP3 or
+   similar) for the finished video.
 2. **Stage A** downloads it, transcribes the audio locally with
    faster-whisper on CPU (no paid APIs), builds a compressed 720p copy,
    extracts 1 screenshot per second, and packages
@@ -19,17 +21,28 @@ database. Single user, personal use, one repo, one personal access token.
    that single URL to your external AI agent — it can read
    `00_READ_THIS_FIRST.txt`, `transcript.json`, and the screenshots from
    there in one step (no per-file download/upload roundtrip). The agent
-   returns a `cuts.json` carrying a top-level **`title`** — ONE catchy
-   title generated once per job, shared by every scene clip cut from
-   that video (not per scene).
-4. You upload `cuts.json` back through the site.
-5. **Stage B** cuts the ORIGINAL (full-quality) video at those
-   timestamps with ffmpeg and produces **one separate `scene_XX.mp4`
-   per cut segment** — the segments are intentionally NOT merged into
-   a single video. Every scene file is attached to the Release
-   individually, plus an `output.txt` (`MASTER_PROMPT.md` + raw
-   narration notes) and a zip bundling all of them together on the
-   same Release.
+   returns a `production.json` carrying a top-level **`title`** (ONE
+   catchy title generated once per job) and, per cut, a
+   **`voiceover_text`**: the FINAL, ready-to-speak narration line for
+   that cut — not notes, the actual spoken script.
+4. You upload `production.json` back through the site (and optionally a
+   music file at the same time).
+5. **Stage B** then produces ONE finished video in a single automated
+   pass:
+   - `generate_voiceover.py` synthesizes each cut's `voiceover_text` to
+     speech with Chatterbox TTS (CPU, no API keys, natural delivery).
+   - `cut_and_produce.py` reconciles every cut's length against its
+     voiceover (no drift), cuts the ORIGINAL full-quality video, mutes
+     the source audio, mixes the voiceover in, optionally mixes your
+     music underneath at ~30% volume, and concatenates everything into
+     **one merged `final.mp4`**.
+   - `generate_subtitles.py` transcribes the merged voiceover for
+     word-level timestamps and burns word-by-word subtitles (bold white
+     with a thick black outline, bottom-third, phone-readable) into the
+     video.
+   The finished `final.mp4` plus a zip containing it are attached to
+   the Release — there are no per-scene files and no manual voiceover
+   or subtitle work left to do.
 6. A **cleanup** workflow runs hourly and deletes every job, release
    and job folder older than 12 hours. Nothing lingers.
 
@@ -39,21 +52,23 @@ database. Single user, personal use, one repo, one personal access token.
 .
 ├── .github/workflows/
 │   ├── stage-a.yml       # ingest, transcribe, screenshot
-│   ├── stage-b.yml       # cut scenes with ffmpeg (separate files)
+│   ├── stage-b.yml       # voiceover -> cut/mix/merge -> subtitles
 │   └── cleanup.yml       # hourly, deletes >12h old jobs
 ├── scripts/
 │   ├── download_drive.py
 │   ├── transcribe.py            # faster-whisper CPU backend (swappable)
 │   ├── generate_analysis_prompt.py
-│   ├── cut_scenes.py
+│   ├── generate_voiceover.py    # Chatterbox TTS per cut
+│   ├── cut_and_produce.py       # reconcile/cut/mute/mix/merge -> final.mp4
+│   ├── generate_subtitles.py    # word-level transcribe + ASS burn-in
 │   ├── write_status.py
 │   ├── cleanup.py
 │   └── requirements.txt
 ├── branding/                    # persistent channel branding (site-managed)
 │   ├── branding.json            #   username, display name, picture path
 │   └── profile_picture.<ext>    #   optional avatar (png/jpg/webp)
-├── jobs/                        # per-job status.json + cuts.json land here
-├── MASTER_PROMPT.md             # commentary-script conversion prompt
+├── jobs/                        # per-job status.json + production.json land here
+├── MASTER_PROMPT.md             # RETIRED stub (no more second external agent)
 ├── SITE_BUILD_PROMPT.md         # hand to a site-generator to build the UI
 └── README.md
 ```
@@ -72,8 +87,9 @@ Tokens (classic) → **Generate new token (classic)**.
 
 Required scopes:
 
-- **`repo`** (full) — commit `status.json` / `cuts.json`, read/write
-  Release assets (including the private original-video asset).
+- **`repo`** (full) — commit `status.json` / `production.json` /
+  `music.mp3`, read/write Release assets (including the private
+  original-video asset).
 - **`workflow`** — trigger `workflow_dispatch` for Stage A and Stage B.
 
 Copy the token. The site will store it in your browser's
@@ -124,10 +140,11 @@ as job state — at `branding/branding.json` (+ the committed profile
 picture next to it), written directly by the site via the contents
 API. It deliberately lives OUTSIDE `jobs/`: the hourly cleanup only
 deletes `jobs/<id>/` folders and `clipforge-*` releases, so branding
-survives the 12-hour job TTL forever. Stage B records which branding
-(and which job title) a run used in that job's `status.json` `extra`
-— actually rendering the title / branding onto the video frames is a
-separate addition, not part of this storage step.
+survives the 12-hour job TTL forever. Stage B composites the merged
+video into the branded 1080x1920 template (channel avatar + name, job
+title, follow CTA) via `scripts/brand_scenes.py` when a username is
+configured, and records which branding a run used in that job's
+`status.json` `extra`.
 
 ### 6. Open the site and go
 
@@ -135,7 +152,9 @@ Visit the Pages URL, open Settings, paste owner + repo + token,
 save. Paste any public video URL (Google Drive share link or a direct
 video file link). Click Start Stage A. Watch the status update; when
 Stage A finishes, use the single **Open Release →** link and have your
-agent read `00_READ_THIS_FIRST.txt` from the Release first.
+agent read `00_READ_THIS_FIRST.txt` from the Release first. Upload the
+`production.json` it returns (plus an optional music file) to run
+Stage B and get the finished video.
 
 ## The 12-hour cleanup
 
@@ -184,31 +203,43 @@ whether Stage B ever ran. Override the TTL via the workflow's
   files sit at the repo root and Pages serves them.
 - Stage A stashes the original video as a *prerelease* asset on the
   same release that carries the analysis bundle. Stage B fetches it
-  back via the authenticated releases-assets API, cuts, uploads the
-  final zip, then deletes the original asset. This keeps everything
-  in one release for the cleanup job to scoop up.
-- Scenes in `cut_scenes.py` are cut in one self-contained ffmpeg
-  invocation per segment and re-encoded to a mobile-safe profile
-  (`libx264 High@L4.0 -crf 18 -preset veryfast`, yuv420p, 30 fps CFR,
-  +faststart, no edit lists, + AAC-LC 48 kHz stereo 192k). Reason:
-  stream-copy across arbitrary (non-keyframe) cut points is unreliable
-  and routinely produces black frames, A/V drift, or files phones
-  refuse to play. Each scene is an independent file — there is no
-  concat/merge step anywhere in the pipeline.
+  back via the authenticated releases-assets API, produces the final
+  video, uploads it (plus a zip), then deletes the original asset.
+  This keeps everything in one release for the cleanup job to scoop up.
+- `cut_and_produce.py` encodes to a mobile-safe profile (`libx264
+  High@L4.0 -crf 18 -preset veryfast`, yuv420p, 30 fps CFR, +faststart,
+  no edit lists, AAC-LC 48 kHz stereo 192k) in ONE ffmpeg pass using
+  the concat filter — see its module docstring for why stream-copy
+  shortcuts and the concat demuxer break phone playback. There is
+  exactly one merged output per job.
+- Voiceover timing is reconciled per cut in `cut_and_produce.py`:
+  short overruns are absorbed by slightly time-stretching the cut's
+  video, larger ones borrow footage from the start of the next cut,
+  and the totals are asserted to match within a small tolerance before
+  anything is encoded.
+- Background music (when uploaded) is trimmed or looped to exactly the
+  merged video's duration and ducked to ~30% volume so it sits under
+  the voiceover; the final MP4 has exactly one audio track
+  (voiceover + music), never the source audio.
+- Chatterbox model weights (~6GB) are cached in the Actions runner's
+  HuggingFace cache (`~/.cache/huggingface`) via `actions/cache` keyed
+  on the pinned `chatterbox-tts` version, so only the first run after a
+  version bump pays the download.
 - The site polls `status.json` every 5s while a job is running (back
   off to 15s after 10 minutes, per `SITE_BUILD_PROMPT.md`) — well
   within GitHub's default 5000-request/hour rate limit for a
   single-user tool.
 - Job IDs are `<UTC-YYYYMMDD-HHMMSS>-<GITHUB_RUN_ID>` unless the user
   supplies one from the site.
-- `cuts.json` is uploaded by the site directly to
-  `jobs/<jobId>/cuts.json` on `main`; Stage B is dispatched with
-  `cuts_ref=path:jobs/<jobId>/cuts.json`.
+- `production.json` is uploaded by the site directly to
+  `jobs/<jobId>/production.json` on `main`; Stage B is dispatched with
+  `production_ref=path:jobs/<jobId>/production.json` (and
+  `music_ref=path:jobs/<jobId>/music.mp3` when a music file was
+  uploaded).
 - **Per-job title.** The analysis prompt (`00_READ_THIS_FIRST.txt`)
-  asks the agent for a single top-level `title` in cuts.json — one
-  catchy, attention-grabbing title for the WHOLE job, decided after
-  the cuts are final. Every scene from that job shares it. Stage B
-  threads it into `output.txt` (its own `JOB TITLE` header, above the
-  narration notes, for the commentary agent) and into `status.json`
-  under `extra.title`. `title` is optional: an older cuts.json without
-  it still validates and runs.
+  asks the agent for a single top-level `title` in production.json —
+  one catchy, attention-grabbing title for the WHOLE job, decided
+  after the cuts are final. Stage B threads it into the branded
+  template and into `status.json` under `extra.title`. `title` is
+  optional: an older production.json without it still validates and
+  runs.
