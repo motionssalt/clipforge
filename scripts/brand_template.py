@@ -29,7 +29,7 @@ Why a Pillow overlay instead of pure ffmpeg drawtext / drawbox:
 This file has NO knowledge of ffmpeg, video codecs, or the Stage B
 workflow. It renders a PNG and reports geometry; nothing else. That
 keeps it composable with, and independent of, the mobile-safe encode
-stage in cut_scenes.py / enhance_scenes.py, and with the (separate)
+stage in cut_and_produce.py / enhance_scenes.py, and with the (separate)
 wiring step that plugs this compositor into stage-b.yml.
 
 Design bar (must match or exceed the previously-approved prototype):
