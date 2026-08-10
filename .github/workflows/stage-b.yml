@@ -81,7 +81,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip setuptools wheel
+          # NOTE: do NOT upgrade setuptools here. setuptools >= 81 removed the
+          # bundled `pkg_resources` module, which resemble-perth 1.0.1 (the
+          # Perth watermark chatterbox-tts 0.1.4 builds at init) imports at
+          # module load. resemble-perth declares no dependencies, so pip never
+          # installs a pkg_resources provider; without one,
+          # perth.PerthImplicitWatermarker resolves to None and Chatterbox
+          # dies with "TypeError: 'NoneType' object is not callable". The
+          # setuptools<81 runtime pin lives in scripts/requirements.txt.
+          python -m pip install --upgrade pip wheel "setuptools<81"
           # Build-time prereqs for pkuseg (see below): numpy headers plus a
           # modern Cython, both importable in the pkuseg build environment.
           # chatterbox-tts 0.1.4 requires numpy<1.26.0,>=1.24.0.

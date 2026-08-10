@@ -97,7 +97,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip setuptools wheel
+          # Do NOT upgrade setuptools to latest: setuptools >= 81 removed the
+          # bundled `pkg_resources` module that resemble-perth (pulled in by
+          # chatterbox-tts in scripts/requirements.txt) imports at load time.
+          # See the setuptools<81 pin and full explanation in requirements.txt.
+          python -m pip install --upgrade pip wheel "setuptools<81"
           # Build-time prereqs for pkuseg (see below): numpy headers plus a
           # modern Cython, both importable in the pkuseg build environment.
           # chatterbox-tts 0.1.4 requires numpy<1.26.0,>=1.24.0.
