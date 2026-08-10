@@ -1,0 +1,12 @@
+{
+  "job_id": "20260810-184124-31420325490",
+  "stage": "error",
+  "message": "Stage A failed. See workflow run for logs.",
+  "release_tag": "clipforge-20260810-184124-31420325490",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1786387324,
+  "updated_at_epoch": 1786387324,
+  "expires_at_epoch": 1786430524,
+  "extra": {}
+}
