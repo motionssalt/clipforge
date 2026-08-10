@@ -1,5 +1,16 @@
 # Stage B playback fix — root cause and what changed
 
+> **Note (current pipeline):** this is a historical bug-fix log. The
+> scripts it names — `scripts/cut_scenes.py` and
+> `scripts/cut_and_concat.py` — no longer exist in the repo, and Stage B
+> no longer produces per-scene `scene_XX.mp4` files. The encode-flags
+> knowledge documented below (the `-map` / `-sn -dn` / `-bf 0` /
+> `force-cfr` / `-video_track_timescale` policy and the strict
+> 1-video + 1-audio validation bar) now lives in
+> `scripts/cut_and_produce.py`, which produces the single merged
+> `final.mp4`. Read this file for the *why*; edit `cut_and_produce.py`
+> for the *how*.
+
 ## Symptom
 scene_XX.mp4 files from Stage B would not play properly on phones OR on PC.
 
