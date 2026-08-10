@@ -81,7 +81,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip setuptools wheel
+          # Pre-install numpy to satisfy pkuseg's build-time requirement.
+          # chatterbox-tts 0.1.4 requires numpy<1.26.0,>=1.24.0.
+          pip install "numpy>=1.24.0,<1.26.0"
+          # pkuseg 0.0.25 (chatterbox-tts dep) requires numpy at build time
+          # but lacks a pyproject.toml; install it without isolation.
+          pip install pkuseg==0.0.25 --no-build-isolation
           pip install -r scripts/requirements.txt
 
       # -------------------------------------------------------------------

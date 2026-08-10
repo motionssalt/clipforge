@@ -2,6 +2,7 @@
 # faster-whisper drives Stage A's Silero-VAD-gated Whisper transcription.
 # Its VAD filter (vad_filter=True in transcribe.py) needs onnxruntime to be
 # importable at runtime — see the onnxruntime pin below.
+numpy>=1.24.0,<1.26.0
 faster-whisper==1.0.3
 requests>=2.31.0
 
