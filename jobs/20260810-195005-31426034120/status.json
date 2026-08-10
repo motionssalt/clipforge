@@ -1,0 +1,12 @@
+{
+  "job_id": "20260810-195005-31426034120",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-20260810-195005-31426034120",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1786391600,
+  "updated_at_epoch": 1786391600,
+  "expires_at_epoch": 1786434800,
+  "extra": {}
+}
