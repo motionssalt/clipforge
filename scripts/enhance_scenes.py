@@ -7,7 +7,8 @@ The input contract remains deliberately small and stable:
 
 With ``--no-enabled`` this script does not read or rewrite any scene, so it is
 safe to wire directly to the existing site toggle. When enabled, each
-``scene_*.mp4`` is rewritten atomically only after it passes the same
+``scene_*.mp4`` (or the single merged ``final.mp4`` produced by
+cut_and_produce.py) is rewritten atomically only after it passes the same
 mobile-playback checks expected by the cutting stage.
 
 The picture chain is, in order:
@@ -206,7 +207,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Apply the anime Hald-LUT enhancement chain to cut scene MP4s in place."
     )
-    parser.add_argument("scenes_dir", help="Directory containing scene_*.mp4 from cut_scenes.py")
+    parser.add_argument("scenes_dir", help="Directory containing scene_*.mp4 (or the merged final.mp4)")
     parser.add_argument("--enabled", dest="enabled", action="store_true", default=True,
                         help="Apply enhancement (default).")
     parser.add_argument("--no-enabled", dest="enabled", action="store_false",
@@ -222,9 +223,14 @@ def main() -> None:
     scenes_dir = Path(args.scenes_dir)
     if not scenes_dir.is_dir():
         raise SystemExit(f"ERROR: scenes dir does not exist: {scenes_dir}")
+    # Accept both the legacy per-scene layout (scene_*.mp4) and the new
+    # single merged file (final.mp4) produced by cut_and_produce.py.
     scenes = sorted(scenes_dir.glob("scene_*.mp4"))
+    merged = scenes_dir / "final.mp4"
+    if merged.is_file():
+        scenes.append(merged)
     if not scenes:
-        raise SystemExit(f"ERROR: no scene_*.mp4 files found in {scenes_dir}")
+        raise SystemExit(f"ERROR: no scene_*.mp4 / final.mp4 files found in {scenes_dir}")
 
     print(
         f"Enhancing {len(scenes)} scene(s) with anime Hald-LUT chain:\n"
