@@ -44,11 +44,11 @@ workflow via the GitHub API, then polls the repo for a
 `jobs/<job-id>/status.json` file that Stage A writes. When status
 transitions to `awaiting_json_upload`, the UI shows ONE prominent
 link — the GitHub Release page URL itself (`release_url` from
-status.json, labeled e.g. "Open Release →") — plus a `cuts.json` file
+status.json, labeled e.g. "Open Release →") — plus a `production.json` file
 upload control. The Release page already lists every asset
 (`00_READ_THIS_FIRST.txt`, transcript, screenshots zip, original
 video) in one place, so the user hands that single link to an
-external AI agent, gets a `cuts.json` back, and
+external AI agent, gets a `production.json` back, and
 uploads it here. The site commits that file to the job folder, then
 dispatches Stage B. Stage B updates status through `stage_b_running`
 to `complete`, at which point the UI shows a download button for the
@@ -91,9 +91,9 @@ Handle exactly these values:
 | *(no status.json yet)*   | "Waiting for Stage A to start…" spinner |
 | `queued`                 | "Queued" |
 | `stage_a_running`        | "Stage A running — downloading, transcribing, extracting frames" + spinner + link to workflow run |
-| `awaiting_json_upload`   | Show a single prominent "Open Release →" link (the `release_url` from status.json — the Release page lists every asset in one place), plus a file input for `cuts.json` and a "Start Stage B" button. Do NOT render individual per-asset download links. |
+| `awaiting_json_upload`   | Show a single prominent "Open Release →" link (the `release_url` from status.json — the Release page lists every asset in one place), plus a file input for `production.json`, an optional music file input (any audio file), and a "Start Stage B" button. Do NOT render individual per-asset download links. |
 | `stage_b_running`        | "Stage B running — cutting each segment into its own scene file" + spinner |
-| `complete`               | One download row per individual scene file on the Release (`scene_01.mp4`, `scene_02.mp4`, … — fetched via the release-asset lookup, § 6.4), PLUS a big "Download final zip" button pointing at `assets.final_zip` (the zip contains every scene + `output.txt`) |
+| `complete`               | A "Download final.mp4 directly" row when the `final.mp4` asset is on the Release (fetched via the release-asset lookup, § 6.4), PLUS a big "Download final zip" button pointing at `assets.final_zip` (the zip contains just `final.mp4`). Stage B ships ONE finished, merged video — voiceover mixed in, subtitles burned in, optional music underneath — never per-scene files. |
 | `error`                  | Red banner with `message` field, plus a "Start over" button |
 
 Any unknown stage → render as `error` with the raw JSON dumped in a
@@ -110,7 +110,7 @@ except indirectly by triggering workflows. Shape:
 {
   "job_id": "20260804-121530-1234567",
   "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Upload cuts.json to start Stage B.",
+  "message": "Stage A complete. Upload production.json to start Stage B.",
   "release_tag": "clipforge-20260804-121530-1234567",
   "release_url": "https://github.com/<owner>/<repo>/releases/tag/clipforge-20260804-121530-1234567",
   "assets": {
@@ -136,7 +136,7 @@ except indirectly by triggering workflows. Shape:
 ```
 
 The last four `extra` keys are present only when the run had them:
-`title` when the uploaded cuts.json carried a top-level title (§ 6.5),
+`title` when the uploaded production.json carried a top-level title (§ 6.5),
 and the three `branding_*` keys when branding was saved in the repo
 (§ 12). Render them like any other `extra` facts; they are purely
 informational.
@@ -153,9 +153,9 @@ Notes for the site:
 - `assets` keys are the literal asset filenames from the Release, plus
   a `final_zip` key added by Stage B. The site uses `assets.final_zip`
   for the completion zip button. At `complete`, the site ALSO lists the
-  individual `scene_XX.mp4` files (Stage B attaches them to the Release
-  alongside the zip) as per-scene download links, discovered via the
-  release-asset lookup (§ 6.4). There is NO merged single video — never
+  `final.mp4` directly (Stage B attaches it to the Release alongside
+  the zip) as a download link, discovered via the release-asset lookup
+  (§ 6.4). There is exactly ONE merged, finished video per job — never
   present a lone video file as the only output.
 - `expires_at_epoch` is when the cleanup workflow will delete this job.
   Show a countdown ("expires in 11h 42m") once we reach
@@ -264,56 +264,74 @@ Accept: application/octet-stream
 with the bearer token to download. For public repos the
 `browser_download_url` opens directly in a new tab.
 
-### 6.5 Upload cuts.json for Stage B
+### 6.5 Upload production.json (+ optional music) for Stage B
 
-Two-step: commit the file into `jobs/<jobId>/cuts.json` on `main`, then
-dispatch Stage B pointing at that path.
+Two-step: commit the file into `jobs/<jobId>/production.json` on `main`,
+then dispatch Stage B pointing at that path. When the user also picked a
+background music file, commit it to `jobs/<jobId>/music.mp3` the same way
+(base64 of the raw file bytes via the contents API) BEFORE dispatching.
 
 Commit (create or update):
 
 ```
-PUT /repos/{owner}/{repo}/contents/jobs/{jobId}/cuts.json
+PUT /repos/{owner}/{repo}/contents/jobs/{jobId}/production.json
 
 {
-  "message": "clipforge: upload cuts.json for job {jobId}",
+  "message": "clipforge: upload production.json for job {jobId}",
   "content": "<base64 of file contents>",
   "branch": "main"
 }
 ```
 
-If the file already exists (user re-uploads), first:
+Optional music (only when a file was picked):
 
 ```
-GET /repos/{owner}/{repo}/contents/jobs/{jobId}/cuts.json?ref=main
+PUT /repos/{owner}/{repo}/contents/jobs/{jobId}/music.mp3
+
+{
+  "message": "clipforge: upload music.mp3 for job {jobId}",
+  "content": "<base64 of the audio file bytes>",
+  "branch": "main"
+}
+```
+
+If either file already exists (user re-uploads), first:
+
+```
+GET /repos/{owner}/{repo}/contents/jobs/{jobId}/production.json?ref=main
 ```
 
 grab the `sha`, and include it in the PUT body as `"sha": "..."`. On
 201 Created / 200 OK, continue.
 
-**Validate cuts.json client-side before upload.** Required shape:
+**Validate production.json client-side before upload.** Required shape:
 
 ```json
 {
   "video_duration_seconds": <int>,
   "title": "<optional string — ONE catchy title for the whole job>",
   "cuts": [
-    { "start_seconds": <int>, "end_seconds": <int>, "raw_narration": "<string>" },
+    { "start_seconds": <int>, "end_seconds": <int>, "voiceover_text": "<string>" },
     ...
   ],
   "target_total_duration_seconds": <int>
 }
 ```
 
-Reject if: `cuts` empty, any `end_seconds <= start_seconds`, any cut
-overlaps the previous, any cut is out of `[0, video_duration_seconds]`,
-or cuts are not sorted ascending. Show a specific error message before
-uploading.
+`voiceover_text` is the FINAL, ready-to-speak narration line for its cut —
+it is synthesized to speech verbatim by Stage B. Accept the legacy
+`raw_narration` field as a fallback when `voiceover_text` is absent so
+in-flight pre-rename files still run. Reject if: `cuts` empty, any cut
+missing both `voiceover_text` and `raw_narration` (or blank), any
+`end_seconds <= start_seconds`, any cut overlaps the previous, any cut is
+out of `[0, video_duration_seconds]`, or cuts are not sorted ascending.
+Show a specific error message before uploading.
 
 `title` is OPTIONAL (older agents won't emit it) but validated when
 present: it must be a non-empty string. When it is present, echo it in
 the validation success message (e.g. `Job title: "…"`) — it is the ONE
-title every scene clip of this job will share, generated by the same
-agent step that produced the cuts.
+title this job's finished video will carry, generated by the same agent
+step that produced the cuts.
 
 ### 6.6 Trigger Stage B
 
@@ -324,23 +342,28 @@ POST /repos/{owner}/{repo}/actions/workflows/stage-b.yml/dispatches
   "ref": "main",
   "inputs": {
     "job_id": "{jobId}",
-    "cuts_ref": "path:jobs/{jobId}/cuts.json"
+    "production_ref": "path:jobs/{jobId}/production.json",
+    "music_ref": "path:jobs/{jobId}/music.mp3"
   }
 }
 ```
 
+`music_ref` is sent only when a music file was actually uploaded; omit it
+(or send an empty string) otherwise and Stage B skips music entirely.
 Same 204-no-body response. Resume polling `status.json`. The stage
 will move through `stage_b_running` → `complete`.
 
-### 6.7 Download the scenes / final zip (stage == complete)
+### 6.7 Download the final video (stage == complete)
 
-Stage B ships one `scene_XX.mp4` per cut segment (NO merged video),
-each attached individually to the Release, plus `output.txt`, plus a
-final zip bundling all of them. Fetch the Release asset list (§ 6.4)
-and render one download link per `scene_XX.mp4` asset; then read
-`status.data.assets.final_zip` and present it as a big download link
-for the bundle. On private repos, download via the asset-id path
-(§ 6.4). On public repos, the direct URL works.
+Stage B ships ONE finished, merged `final.mp4` — every cut concatenated,
+its voiceover mixed in (source audio muted), word-by-word subtitles
+burned in, and the uploaded music ducked to ~30% underneath when one was
+provided. The Release carries `final.mp4` as a direct asset plus a final
+zip containing just that file. Fetch the Release asset list (§ 6.4) and
+render a "Download final.mp4 directly" link when the `final.mp4` asset is
+present; then read `status.data.assets.final_zip` and present it as a big
+download link for the bundle. On private repos, download via the asset-id
+path (§ 6.4). On public repos, the direct URL works.
 
 ---
 
