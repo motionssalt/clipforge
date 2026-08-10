@@ -1,4 +1,4 @@
-name: Stage B — Cut Scenes (Separate Files)
+name: Stage B — Produce Final Video (voiceover + subtitles, one merged MP4)
 
 on:
   workflow_dispatch:
@@ -7,18 +7,23 @@ on:
         description: "Job id (must match an existing Stage A release: clipforge-<job_id>)"
         required: true
         type: string
-      cuts_ref:
-        description: "Where cuts.json lives. One of: path:<repo-path> | asset:<asset-name> | url:<https-url>"
+      production_ref:
+        description: "Where production.json lives. One of: path:<repo-path> | asset:<asset-name> | url:<https-url>"
         required: true
         type: string
-        default: "path:jobs/<JOB_ID>/cuts.json"
+        default: "path:jobs/<JOB_ID>/production.json"
+      music_ref:
+        description: "Optional background music for this job. Empty = no music. One of: path:<repo-path> | asset:<asset-name> | url:<https-url> — the site commits uploads to jobs/<job_id>/music.mp3 and passes path:jobs/<job_id>/music.mp3"
+        required: false
+        type: string
+        default: ""
       enhance:
-        description: "Apply the tuned quality enhancement filter chain (denoise + color grade + sharpen) to each cut scene after cutting. Default true; set to false to ship unenhanced scenes for comparison."
+        description: "Apply the tuned quality enhancement filter chain (denoise + color grade + sharpen) to the merged video. Default true; set to false to ship unenhanced for comparison."
         required: false
         type: string
         default: "true"
       brand:
-        description: "Composite each cut scene into the branded 1080x1920 template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. Default true; set to false to ship unbranded scenes. When no username is configured yet the job ships unbranded either way."
+        description: "Composite the merged video into the branded 1080x1920 template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. Default true; set to false to ship unbranded. When no username is configured yet the job ships unbranded either way."
         required: false
         type: string
         default: "true"
@@ -79,12 +84,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r scripts/requirements.txt
 
+      # -------------------------------------------------------------------
+      # Chatterbox TTS model weights (~6GB) live under $HF_HOME (default
+      # ~/.cache/huggingface, models--ResembleAI--chatterbox) after the
+      # first download. Cache that directory keyed on the pinned
+      # chatterbox-tts version from scripts/requirements.txt so every run
+      # after the first restores the weights instead of re-downloading.
+      # -------------------------------------------------------------------
+      - name: Restore Chatterbox model cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: chatterbox-weights-${{ runner.os }}-${{
+            hashFiles('scripts/requirements.txt') }}
+          restore-keys: |
+            chatterbox-weights-${{ runner.os }}-
+
       - name: Write stage_b_running status
         shell: bash
         run: |
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_b_running" \
-            --message "Stage B started: cutting original video" \
+            --message "Stage B started: producing final video (voiceover, music, subtitles)" \
             --release-tag "${{ steps.jid.outputs.release_tag }}"
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -140,13 +161,13 @@ jobs:
           ls -lh "work/${orig_name}"
           echo "ORIGINAL_PATH=work/${orig_name}" >> "$GITHUB_ENV"
 
-      - name: Resolve cuts.json
+      - name: Resolve production.json
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          ref="${{ github.event.inputs.cuts_ref }}"
+          ref="${{ github.event.inputs.production_ref }}"
           jid="${{ steps.jid.outputs.job_id }}"
 
           # Support placeholder <JOB_ID> in the default form
@@ -156,14 +177,14 @@ jobs:
             path:*)
               src="${ref#path:}"
               if [ ! -f "$src" ]; then
-                echo "cuts.json not found at repo path: $src" >&2
+                echo "production.json not found at repo path: $src" >&2
                 exit 1
               fi
-              cp "$src" work/cuts.json
+              cp "$src" work/production.json
               ;;
             url:*)
               src="${ref#url:}"
-              curl -fSL --retry 3 -o work/cuts.json "$src"
+              curl -fSL --retry 3 -o work/production.json "$src"
               ;;
             asset:*)
               name="${ref#asset:}"
@@ -175,27 +196,76 @@ jobs:
               fi
               gh api -H "Accept: application/octet-stream" \
                 "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" \
-                > work/cuts.json
+                > work/production.json
               ;;
             *)
-              echo "Unknown cuts_ref format: $ref" >&2; exit 1;;
+              echo "Unknown production_ref format: $ref" >&2; exit 1;;
           esac
 
-          echo "cuts.json head:"
-          head -c 400 work/cuts.json; echo
+          echo "production.json head:"
+          head -c 400 work/production.json; echo
 
           # Extract the one-per-job title the analysis agent put in
-          # cuts.json (see generate_analysis_prompt.py). Optional: a
+          # production.json (see generate_analysis_prompt.py). Optional: a
           # missing/blank title exports an empty string and the rest of
           # the pipeline ships without a title line.
-          JOB_TITLE=$(python -c 'import json; print((json.load(open("work/cuts.json")).get("title") or "").strip())')
+          JOB_TITLE=$(python -c 'import json; print((json.load(open("work/production.json")).get("title") or "").strip())')
           echo "JOB_TITLE=$JOB_TITLE" >> "$GITHUB_ENV"
 
           if [ -n "$JOB_TITLE" ]; then
             echo "Job title: $JOB_TITLE"
           else
-            echo "No top-level title in cuts.json (optional field)."
+            echo "No top-level title in production.json (optional field)."
           fi
+
+      - name: Resolve optional background music
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ref="${{ github.event.inputs.music_ref }}"
+          jid="${{ steps.jid.outputs.job_id }}"
+
+          # Empty music_ref = no music for this job (the default path).
+          if [ -z "$ref" ]; then
+            echo "No music_ref supplied — final video ships without background music."
+            exit 0
+          fi
+
+          ref="${ref//<JOB_ID>/$jid}"
+
+          case "$ref" in
+            path:*)
+              src="${ref#path:}"
+              if [ ! -f "$src" ]; then
+                echo "music file not found at repo path: $src" >&2
+                exit 1
+              fi
+              cp "$src" work/music.mp3
+              ;;
+            url:*)
+              src="${ref#url:}"
+              curl -fSL --retry 3 -o work/music.mp3 "$src"
+              ;;
+            asset:*)
+              name="${ref#asset:}"
+              tag="${{ steps.jid.outputs.release_tag }}"
+              aid="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                    --jq ".assets[] | select(.name==\"$name\") | .id")"
+              if [ -z "$aid" ]; then
+                echo "music asset not found: $name" >&2; exit 1
+              fi
+              gh api -H "Accept: application/octet-stream" \
+                "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" \
+                > work/music.mp3
+              ;;
+            *)
+              echo "Unknown music_ref format: $ref" >&2; exit 1;;
+          esac
+
+          ls -lh work/music.mp3
+          echo "MUSIC_PATH=work/music.mp3" >> "$GITHUB_ENV"
 
       # -------------------------------------------------------------------
       # Persistent channel branding (branding/branding.json on the default
@@ -203,8 +273,8 @@ jobs:
       # It lives OUTSIDE jobs/ so the 12-hour cleanup never deletes it.
       # This step only RECORDS which branding (and which job title) this
       # run used in status.json's `extra` — actually rendering the title /
-      # branding onto the video frames is a separate addition and is
-      # deliberately not wired here.
+      # branding onto the video frames happens in the "Brand final video"
+      # step below via scripts/brand_scenes.py.
       # -------------------------------------------------------------------
       - name: Load persistent channel branding (branding/branding.json)
         shell: bash
@@ -239,37 +309,49 @@ jobs:
               print("No branding configured (empty username) — job runs unbranded.")
           PY
 
-      - name: Cut scenes with ffmpeg (NO concat — one MP4 per cut)
+      # -------------------------------------------------------------------
+      # New one-pass pipeline: voiceover -> cut+mix+merge -> subtitles.
+      # generate_voiceover.py    : Chatterbox TTS per cut + manifest.
+      # cut_and_produce.py       : timing reconciliation, mute source audio,
+      #                            mix voiceover (+ optional music), ONE
+      #                            merged mobile-safe MP4 + merged voiceover.
+      # generate_subtitles.py    : word-level transcribe of the merged
+      #                            voiceover, burn word-by-word subtitles.
+      # -------------------------------------------------------------------
+      - name: Generate voiceover (Chatterbox TTS, one clip per cut)
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p work/out/scenes
-          python scripts/cut_scenes.py \
-            "$ORIGINAL_PATH" \
-            work/cuts.json \
-            MASTER_PROMPT.md \
-            "work/out/scenes" \
-            "work/out/output.txt"
-          ls -lh work/out/ work/out/scenes/
-          # Hard fail if no scene files were produced.
-          shopt -s nullglob
-          scenes=(work/out/scenes/scene_*.mp4)
-          if [ ${#scenes[@]} -eq 0 ]; then
-            echo "No scene_*.mp4 files were produced" >&2
-            exit 1
+          mkdir -p work/voiceover
+          python scripts/generate_voiceover.py \
+            work/production.json \
+            work/voiceover
+          ls -lh work/voiceover/
+
+      - name: Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/out
+          MUSIC_ARG=()
+          if [ -n "${MUSIC_PATH:-}" ]; then
+            MUSIC_ARG=(--music "$MUSIC_PATH")
           fi
-          echo "Produced ${#scenes[@]} scene file(s)."
+          python scripts/cut_and_produce.py \
+            "$ORIGINAL_PATH" \
+            work/production.json \
+            work/voiceover/voiceover_manifest.json \
+            work/out/final.mp4 \
+            --voiceover-wav work/out/voiceover.wav \
+            "${MUSIC_ARG[@]}"
+          ls -lh work/out/
 
       # -------------------------------------------------------------------
-      # Quality enhancement filter chain (Stage B, optional).
-      #
-      # Runs strictly AFTER cutting and BEFORE per-scene validation, so any
-      # bug in the enhancement pass fails the same mobile-safety bar the cut
-      # pass has to satisfy. Kept as its own step so it composes cleanly
-      # with other Stage B additions (branding/overlay work is a separate
-      # step deliberately not wired here). The `enhance` workflow_dispatch
-      # input maps 1:1 to the site's on/off toggle: 'true' (default) runs
-      # the tuned chain, 'false' short-circuits the script to a no-op.
+      # Quality enhancement filter chain (optional), now applied to the ONE
+      # merged final.mp4 (enhance_scenes.py picks up final.mp4 in the
+      # directory it is given). Same toggle contract as before: the
+      # `enhance` workflow_dispatch input maps 1:1 to the site's on/off
+      # toggle. 'false' short-circuits the script to a no-op.
       # -------------------------------------------------------------------
       - name: Quality enhancement (denoise + color grade + sharpen)
         shell: bash
@@ -277,9 +359,6 @@ jobs:
           ENHANCE_FLAG: ${{ github.event.inputs.enhance }}
         run: |
           set -euo pipefail
-          # Default to "true" when the input is unset (e.g. a re-run of an
-          # older dispatch that didn't carry the enhance input yet), so
-          # the shipped default matches the site's default-on toggle.
           flag="${ENHANCE_FLAG:-true}"
           case "$flag" in
             true|1|yes|on|True|TRUE)  enable_arg="--enabled" ;;
@@ -290,61 +369,22 @@ jobs:
               ;;
           esac
           echo "Quality enhancement flag: $flag -> $enable_arg"
-          # Snapshot pre-enhance total bytes for a visible before/after log.
-          before_bytes=$(du -cb work/out/scenes/scene_*.mp4 | tail -1 | awk '{print $1}')
-          python scripts/enhance_scenes.py work/out/scenes "$enable_arg"
-          after_bytes=$(du -cb work/out/scenes/scene_*.mp4 | tail -1 | awk '{print $1}')
-          echo "scene bytes: ${before_bytes} -> ${after_bytes}"
-          # Guard the size bar from the addition brief: warn (do not fail)
-          # if enhancement inflated aggregate scene size by more than 25%.
-          # In tuning against real anime footage the delta was ~+1%; if this
-          # trips, the values likely need retuning against the current source.
-          # before_bytes / after_bytes are exported so the python subprocess
-          # actually sees them — shell vars aren't inherited automatically.
-          export before_bytes after_bytes
-          python - <<'PY'
-          import os
-          b = int(os.environ.get('before_bytes') or 0)
-          a = int(os.environ.get('after_bytes') or 0)
-          if b > 0:
-              pct = (a - b) / b * 100.0
-              print(f'aggregate size delta: {pct:+.1f}%')
-              if pct > 25.0:
-                  print(
-                      f'WARNING: enhancement inflated aggregate scene size '
-                      f'by {pct:.1f}% (> 25%). Values may need retuning.'
-                  )
-          PY
-
+          python scripts/enhance_scenes.py work/out "$enable_arg"
 
       # -------------------------------------------------------------------
-      # Branded 9:16 compositor (Stage B, optional).
-      #
-      # Runs strictly AFTER quality enhancement and BEFORE per-scene
-      # validation, so a branded scene has to pass the same mobile-safety
-      # bar as every other stage. Kept as its own step, mirroring the
-      # enhance step's structure: the `brand` workflow_dispatch input
-      # maps 1:1 to the site's on/off toggle ('true' default,
-      # 'false' short-circuits scripts/brand_scenes.py to a no-op).
-      #
-      # The orchestrator has three behavior paths — toggle off (no-op),
-      # toggle on but no username saved in branding/branding.json yet
-      # (no-op: an unconfigured channel ships unbranded, unchanged from
-      # before), and toggle on + username configured (each scene_*.mp4
-      # is composited into the branded 1080x1920 template and atomically
-      # swapped in place). BRANDING_APPLIED is exported here so the
-      # completion-status step can report branding_applied=true ONLY
-      # when the toggle was on AND a username was configured.
+      # Branded 9:16 compositor (optional), applied to the ONE merged
+      # final.mp4 (brand_scenes.py picks up final.mp4 in the directory it
+      # is given). Same three behavior paths as before: toggle off (no-op),
+      # toggle on but no username saved yet (no-op), toggle on + username
+      # configured (final.mp4 composited into the branded 1080x1920
+      # template and atomically swapped in place).
       # -------------------------------------------------------------------
-      - name: Brand scenes (composite into the branded 9:16 template)
+      - name: Brand final video (composite into the branded 9:16 template)
         shell: bash
         env:
           BRAND_FLAG: ${{ github.event.inputs.brand }}
         run: |
           set -euo pipefail
-          # Default to "true" when the input is unset (e.g. a re-run of
-          # an older dispatch that didn't carry the brand input yet), so
-          # the shipped default matches the site's default-on toggle.
           flag="${BRAND_FLAG:-true}"
           case "$flag" in
             true|1|yes|on|True|TRUE)  enable_arg="--enabled" ;;
@@ -355,45 +395,49 @@ jobs:
               ;;
           esac
           echo "Branding flag: $flag -> $enable_arg"
-          python scripts/brand_scenes.py work/out/scenes "$enable_arg"
-          # branding_applied requires BOTH the toggle on AND a configured
-          # username (BRANDING_USERNAME was exported by the earlier
-          # "Load persistent channel branding" step only when the saved
-          # branding.json actually has one).
+          python scripts/brand_scenes.py work/out "$enable_arg" \
+            --title "${JOB_TITLE:-}"
           applied=false
           if [ "$enable_arg" = "--enabled" ] && [ -n "${BRANDING_USERNAME:-}" ]; then
             applied=true
           fi
           echo "branding_applied=$applied"
           echo "BRANDING_APPLIED=$applied" >> "$GITHUB_ENV"
-          # The orchestrator asserts this itself, but double-check here so
-          # a leftover temp file can never leak into the release zip.
           shopt -s nullglob
-          leftovers=(work/out/scenes/*.branded.mp4)
+          leftovers=(work/out/*.branded.mp4)
           if [ ${#leftovers[@]} -ne 0 ]; then
             echo "Leftover temp files after branding: ${leftovers[*]}" >&2
             exit 1
           fi
 
-      - name: Validate every scene MP4 with ffprobe
+      - name: Burn word-by-word subtitles into the final video
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          scenes=(work/out/scenes/scene_*.mp4)
-          if [ ${#scenes[@]} -eq 0 ]; then
-            echo "FAIL: no scene_*.mp4 files to validate" >&2
+          # Burn into a new file, then atomically swap over final.mp4 so
+          # the shipped artifact is always the subtitled one.
+          python scripts/generate_subtitles.py \
+            work/out/final.mp4 \
+            work/out/voiceover.wav \
+            work/out/final_subtitled.mp4
+          mv -f work/out/final_subtitled.mp4 work/out/final.mp4
+          ls -lh work/out/
+
+      - name: Validate the merged final MP4 with ffprobe
+        shell: bash
+        run: |
+          set -euo pipefail
+          FINAL=work/out/final.mp4
+          if [ ! -f "$FINAL" ]; then
+            echo "FAIL: no merged final.mp4 to validate" >&2
             exit 1
           fi
-          echo "Validating ${#scenes[@]} scene file(s)…"
-          for SCENE in "${scenes[@]}"; do
-            echo ""
-            echo "=== $SCENE ==="
-            echo "--- ffprobe: format info ---"
-            ffprobe -v error -show_entries format=format_name,duration \
-              -of default=noprint_wrappers=1 "$SCENE"
-            echo "--- MP4 signature check ---"
-            python3 - "$SCENE" <<'PY'
+          echo "=== $FINAL ==="
+          echo "--- ffprobe: format info ---"
+          ffprobe -v error -show_entries format=format_name,duration \
+            -of default=noprint_wrappers=1 "$FINAL"
+          echo "--- MP4 signature check ---"
+          python3 - "$FINAL" <<'PY'
           import sys
           with open(sys.argv[1], 'rb') as f:
               sig = f.read(12)
@@ -402,22 +446,18 @@ jobs:
               sys.exit(1)
           print(f'PASS: {sys.argv[1]} has valid MP4 ftyp signature')
           PY
-            echo "--- ffprobe: stream summary ---"
-            ffprobe -v error -show_entries "stream=codec_type,codec_name,width,height" \
-              -of default=noprint_wrappers=1 \
-              "$SCENE"
-          done
-          echo ""
-          echo "All ${#scenes[@]} scene file(s) validated."
+          echo "--- ffprobe: stream summary ---"
+          ffprobe -v error -show_entries "stream=codec_type,codec_name,width,height" \
+            -of default=noprint_wrappers=1 \
+            "$FINAL"
 
-      - name: Zip final artifacts (all individual scene files + output.txt)
+      - name: Zip final artifact (the one finished video)
         shell: bash
         run: |
           set -euo pipefail
           cd work/out
           zip -q "clipforge-${{ steps.jid.outputs.job_id }}-final.zip" \
-            scenes/scene_*.mp4 \
-            "output.txt"
+            final.mp4
           echo "Zip contents:"
           unzip -l "clipforge-${{ steps.jid.outputs.job_id }}-final.zip"
           ls -lh
@@ -434,7 +474,7 @@ jobs:
             gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" || true
           fi
 
-      - name: Upload final zip + every individual scene file to the SAME release
+      - name: Upload final zip + the finished video to the SAME release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.jid.outputs.release_tag }}
@@ -445,22 +485,24 @@ jobs:
             clipforge-job-id: ${{ steps.jid.outputs.job_id }}
             stage: complete
 
-            Final artifacts (NO merged video — one MP4 per cut segment):
-              - scene_01.mp4, scene_02.mp4, … — the individual scene files
+            Final artifacts (ONE finished, ready-to-post video):
+              - final.mp4 — the merged video: all cuts concatenated,
+                voiceover mixed in (source audio muted), word-by-word
+                subtitles burned in, optional background music ducked
+                under the voiceover when one was uploaded.
               - clipforge-${{ steps.jid.outputs.job_id }}-final.zip
-                (contains scenes/scene_01.mp4, scene_02.mp4, … + output.txt)
+                (contains just final.mp4)
 
             This release is automatically deleted 12 hours after creation.
           make_latest: "false"
           prerelease: true
           files: |
             ${{ env.FINAL_ZIP }}
-            work/out/scenes/scene_*.mp4
-            work/out/output.txt
+            work/out/final.mp4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Resolve final asset URL
+      - name: Resolve final asset URLs
         id: finalasset
         shell: bash
         env:
@@ -471,16 +513,20 @@ jobs:
           url="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
                 --jq ".assets[] | select(.name | endswith(\"-final.zip\")) | .browser_download_url")"
           echo "final_url=$url" >> "$GITHUB_OUTPUT"
+          mp4="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                --jq ".assets[] | select(.name == \"final.mp4\") | .browser_download_url")"
+          echo "final_mp4_url=$mp4" >> "$GITHUB_OUTPUT"
 
       - name: Write complete status
         shell: bash
         run: |
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "complete" \
-            --message "Scene videos are ready (one MP4 per cut segment)." \
+            --message "Final video is ready (one merged MP4 with voiceover and subtitles)." \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
             --release-url "${{ steps.relmeta.outputs.release_url }}" \
-            --asset "final_zip=${{ steps.finalasset.outputs.final_url }}"
+            --asset "final_zip=${{ steps.finalasset.outputs.final_url }}" \
+            --asset "final_mp4=${{ steps.finalasset.outputs.final_mp4_url }}"
 
           # Merge the job title + the branding this run used into status.json
           # (same inline-merge pattern Stage A uses for the asset URLs).
@@ -495,8 +541,8 @@ jobs:
               extra["title"] = title
           # branding_applied is true ONLY when the brand toggle was on
           # AND a username was configured for this run (exported by the
-          # "Brand scenes" step). Always written — a definitive false is
-          # more useful to the site than an absent field.
+          # "Brand final video" step). Always written — a definitive false
+          # is more useful to the site than an absent field.
           extra["branding_applied"] = (
               os.environ.get("BRANDING_APPLIED", "false").lower() == "true"
           )
