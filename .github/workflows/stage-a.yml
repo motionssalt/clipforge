@@ -506,7 +506,7 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "awaiting_json_upload" \
-            --message "Stage A complete. Open the Release, hand it to your agent, then upload cuts.json to start Stage B." \
+            --message "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B." \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
             --release-url "${{ steps.assets.outputs.release_url }}" \
             --extra "duration_seconds=${DURATION_SECONDS}" \
@@ -539,7 +539,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
-          git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} awaiting cuts.json" || echo "nothing to commit"
+          git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} awaiting production.json" || echo "nothing to commit"
           git push
 
       - name: On failure, write error status
