@@ -250,46 +250,37 @@
           </div>
           <p class="hint rf-copy-hint">The <strong>Copy for AI agent</strong> button copies a ready-to-paste block
             (Release link + instructions to read <code>00_READ_THIS_FIRST</code> first and return
-            <code>cuts.json</code>) so you can hand off in one paste — no extra typing.</p>
+            <code>production.json</code>) so you can hand off in one paste — no extra typing.</p>
           <p class="hint" id="release-url-text"></p>
           <p class="hint" id="release-tag-line"></p>
         </div>
 
         <div class="panel-section">
-          <h3 class="sub-heading">Upload <code>cuts.json</code></h3>
+          <h3 class="sub-heading">Upload <code>production.json</code></h3>
           <p class="panel-note">Validated in-browser, committed to
-            <code id="cuts-path-hint">jobs/&lt;job-id&gt;/cuts.json</code>, then Stage B is dispatched.</p>
+            <code id="cuts-path-hint">jobs/&lt;job-id&gt;/production.json</code>, then Stage B is dispatched.</p>
           <div class="upload-row">
             <input type="file" id="cuts-file-input" accept="application/json,.json">
+          </div>
+
+          <div class="toggle-card">
+            <label class="toggle-line">
+              <span class="enhance-toggle-label">Optional background music</span>
+            </label>
+            <div class="upload-row">
+              <input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac">
+            </div>
+            <p class="hint toggle-desc">Pick any audio file (MP3 or similar) and it is committed to
+              <code>jobs/&lt;job-id&gt;/music.mp3</code> alongside the production.json, then trimmed or
+              looped to exactly the finished video's length and mixed <strong>under the voiceover at
+              ~30% volume</strong>. Skip it and the video ships with voiceover only. The final video
+              always has exactly one audio track — voiceover (+ music); the source video's own audio
+              is never kept.</p>
+            <p class="hint" id="music-hint"></p>
+          </div>
+
+          <div class="upload-row">
             <button type="button" id="start-stage-b" class="btn btn-accent" disabled>Start Stage B</button>
-          </div>
-
-          <div class="toggle-card">
-            <label class="toggle-line">
-              <input type="checkbox" id="enhance-toggle" checked>
-              <span class="enhance-toggle-label">Apply quality enhancement filter chain</span>
-            </label>
-            <p class="hint toggle-desc">Runs a tuned filter chain on each cut scene after cutting:
-              mild <strong>hqdn3d</strong> denoise (spatial+temporal, gentle so anime line-art doesn't smear),
-              a subtle <strong>eq</strong> color grade (contrast&nbsp;+6&#37;, saturation&nbsp;+15&#37;,
-              gamma&nbsp;0.98 for mobile screens), and a luma-only <strong>unsharp</strong> pass
-              (chroma sharpen off — it just fringes anime color edges). Toggle off to compare
-              enhanced vs unenhanced output; the encoding profile, file size and mobile-safety
-              checks are identical either way.</p>
-          </div>
-
-          <div class="toggle-card">
-            <label class="toggle-line">
-              <input type="checkbox" id="brand-toggle" checked>
-              <span class="brand-toggle-label">Composite scenes into the branded 9:16 template</span>
-            </label>
-            <p class="hint toggle-desc">Renders each cut scene onto the branded
-              <strong>1080×1920</strong> vertical canvas — your channel avatar and name up top,
-              the job title, and a follow / like / comment / share CTA — using the persistent
-              branding saved in Settings (<code>branding/branding.json</code>). The source clip is
-              letterboxed at its native aspect ratio, never stretched or cropped, and the output
-              passes the same mobile-safety checks either way. Toggle off to ship the raw cut
-              scenes. If no channel branding is saved yet, scenes ship unbranded even with this on.</p>
           </div>
 
           <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
@@ -299,11 +290,12 @@
       <!-- complete -->
       <div id="complete-block" class="complete-block is-hidden">
         <p class="done-kicker">Job complete</p>
-        <p class="hint">Stage B cut each segment into its <strong>own separate scene video</strong>
-          (no merged file). Download the scenes individually below, or grab everything at once.</p>
+        <p class="hint">Stage B produced <strong>one finished, ready-to-post video</strong>: all cuts
+          merged, voiceover mixed in (source audio muted), word-by-word subtitles burned in, and your
+          background music ducked underneath when one was uploaded. Download it below.</p>
         <div id="scene-list" class="scene-list"></div>
         <p class="hint" id="scene-list-hint"></p>
-        <a id="final-zip-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download final zip (all scenes + output.txt)</a>
+        <a id="final-zip-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download final video (final.mp4 zip)</a>
         <p class="hint" id="final-zip-hint"></p>
         <button type="button" id="complete-ack" class="btn btn-ghost btn-small">Acknowledge &amp; clear job</button>
       </div>
