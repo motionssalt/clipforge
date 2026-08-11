@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 """
-Stage B step 3 of 3: transcribe the merged voiceover for word-level
-timestamps and burn word-by-word animated subtitles into the final video.
+Stage B subtitle step: transcribe the merged voiceover for word-level
+timestamps and burn word-by-word animated subtitles INTO THE VIDEO
+ITSELF, before any branded 9:16 composition happens downstream.
 
-Runs AFTER cut_and_produce.py, which produces the merged video and a
-standalone merged voiceover WAV. The voiceover WAV (not the video's
-mixed audio, which may also carry background music) is what gets
-transcribed — music under speech would only degrade the word timing.
+Runs AFTER cut_and_produce.py (and after the optional enhance pass)
+but BEFORE brand_scenes.py. This ordering is deliberate and load-
+bearing: subtitles are pixels of the VIDEO CONTENT, not of the
+surrounding branded canvas. Burning them in at this stage — while the
+video is still at its own native aspect ratio — makes them a permanent
+part of the video image. When brand_scenes.py subsequently scales and
+letterboxes that video into the 1080x1920 branded slot, the captions
+ride inside the slot along with the rest of the picture; they cannot
+escape upward into the title/header chrome or downward past the CTA,
+because they are structurally part of the video pixels and are subject
+to the exact same scale+pad+position math that positions the slot.
+
+The voiceover WAV (not the video's mixed audio, which may also carry
+background music) is what gets transcribed — music under speech would
+only degrade the word timing.
 
 ---------------------------------------------------------------------------
 AUTHORITATIVE TEXT vs. TRANSCRIPTION
@@ -55,22 +67,16 @@ runner. If the vendored file is ever missing, the script falls back to
 Liberation Sans Narrow / Nimbus Sans Narrow / DejaVu Sans (in that
 order) rather than failing.
 
-Position: the subtitles belong to the VIDEO CONTENT, not to the branded
-canvas. Stage B may composite the merged video into a 1080x1920 branded
-template (brand_scenes.py) where the actual video image occupies only a
-slot inside the canvas (letterboxed, native aspect ratio preserved). To
-keep subtitles inside the real video image for EVERY aspect ratio
-(16:9, 9:16, 1:1, …), the exact rectangle the video image occupies in
-the final frame is passed in via --video-rect (computed upstream from
-the actual pre-branding video dimensions and the brander's slot
-geometry), and the subtitle baseline is anchored to the MIDDLE OF THE
-LOWER THIRD of that rectangle:
-
-    subtitle_center_y = rect_top + rect_height * 5/6
-
-with a minimum bottom clearance so text never kisses the video edge.
-When no --video-rect is given (unbranded jobs) the rectangle is the
-whole frame, which reduces to the classic bottom-third placement.
+Position: the subtitles belong to the VIDEO CONTENT. Because this step
+runs BEFORE any branded composition, the frame we render into IS the
+video image — no title bar, no avatar row, no CTA. Classic lower-third
+placement therefore applies to the whole frame with no rectangle math:
+the subtitle baseline is anchored to the middle of the frame's lower
+third, with a minimum bottom clearance so text never kisses the video
+edge. Any downstream brander that scales/letterboxes this video into a
+slot will move the captions with the video, guaranteeing they stay
+inside the video area of the branded canvas regardless of that slot's
+position or size.
 
 Rendering uses an ASS subtitle file with one timed event per word, burned
 in by ffmpeg's libass `subtitles=` filter. Per-word drawtext would need
@@ -80,7 +86,6 @@ Usage:
     python generate_subtitles.py <merged_video_mp4> <voiceover_wav>
                                  <out_video_mp4>
                                  [--script-json <production_or_manifest>]
-                                 [--video-rect <x,y,w,h>]
                                  [--model base|small|tiny] [--lang auto|en|...]
                                  [--transcript-json <path>] [--keep-work]
 
@@ -110,13 +115,22 @@ SUB_FONT = "Bebas Neue"
 # (it is bundled with every ubuntu runner base image).
 SUB_FONT_FALLBACKS = ["Liberation Sans Narrow", "Nimbus Sans Narrow",
                       "DejaVu Sans"]
-SUB_FONT_FRACTION_OF_HEIGHT = 0.06    # ~6% of frame height — phone-first
+# Font size as a fraction of the video's own height. Nudged down from
+# 6.0% to 5.2%: at the previous size a single word could sprawl across
+# most of the slot width once the video was scaled into the 1080x1920
+# branded canvas. 5.2% keeps the caption clearly readable on a phone at
+# arm's length while giving the word room to breathe inside the slot.
+SUB_FONT_FRACTION_OF_HEIGHT = 0.052
 SUB_OUTLINE_FRACTION = 0.0035         # stroke thickness vs frame height
-# Vertical anchor: middle of the LOWER THIRD of the actual video image.
+# Vertical anchor: middle of the LOWER THIRD of the frame. Because
+# subtitles are burned in BEFORE branding, the frame IS the video image
+# at this stage — no title bar, no avatar row, no CTA — so classic
+# lower-third placement applies to the whole frame with no rectangle
+# math.
 LOWER_THIRD_CENTER_FRACTION = 5.0 / 6.0
-# Minimum clearance between the text block and the video rectangle's
-# bottom edge, as a fraction of frame height, so text never kisses (or
-# crosses) the bottom edge of the video image.
+# Minimum clearance between the text block and the frame's bottom edge,
+# as a fraction of frame height, so text never kisses (or crosses) the
+# bottom edge of the video image.
 MIN_BOTTOM_CLEARANCE_FRACTION = 0.02
 # Minimum/maximum on-screen time per word so very fast or very slow words
 # still read naturally; gaps longer than WORD_GAP_MERGE_S between words
@@ -491,63 +505,40 @@ def _resolve_font() -> tuple[str, str | None]:
     return SUB_FONT_FALLBACKS[0], None
 
 
-def _video_rect_from_arg(arg: str | None, width: int,
-                         height: int) -> tuple[int, int, int, int]:
-    """
-    Resolve the rectangle the ACTUAL VIDEO IMAGE occupies inside the final
-    frame: (x, y, w, h). Defaults to the whole frame (unbranded jobs).
-    Values are clamped into the frame so a stale/sloppy hint can never
-    push subtitles off-screen.
-    """
-    if not arg:
-        return 0, 0, width, height
-    try:
-        x, y, w, h = (int(round(float(v))) for v in arg.split(","))
-    except ValueError:
-        print(f"ERROR: --video-rect must be 'x,y,w,h', got {arg!r}",
-              file=sys.stderr)
-        sys.exit(2)
-    if w <= 0 or h <= 0:
-        print(f"ERROR: --video-rect has non-positive size: {arg!r}",
-              file=sys.stderr)
-        sys.exit(2)
-    x = max(0, min(x, width - 1))
-    y = max(0, min(y, height - 1))
-    w = max(1, min(w, width - x))
-    h = max(1, min(h, height - y))
-    return x, y, w, h
-
-
 def write_ass(words: list[dict], width: int, height: int,
-              video_rect: tuple[int, int, int, int],
               out_ass: str) -> None:
     """
     One ASS Dialogue event per word — the word pops on at its start time
     and off at its end time, so exactly one word is ever on screen.
 
-    The subtitle is anchored to the MIDDLE OF THE LOWER THIRD of the
-    ACTUAL VIDEO IMAGE (video_rect), not the overall frame: ASS bottom
-    margin = frame_height - desired_text_bottom, where the text block is
-    vertically centered on the lower-third midpoint of the video
-    rectangle. Text is displayed in ALL CAPS (the only transformation
-    ever applied to the original script wording).
+    Because this step runs BEFORE any branded composition, the frame we
+    render into IS the video image — there is no title bar, no header
+    chrome, no CTA area on this canvas. Classic lower-third placement
+    therefore applies to the whole frame: the subtitle baseline is
+    anchored to the middle of the frame's lower third, and a minimum
+    bottom clearance keeps text from kissing the frame edge. Any
+    downstream brander that letterboxes this video into a slot moves the
+    subtitles with the video by construction, so they stay inside the
+    video area of the branded canvas regardless of slot geometry.
+
+    Text is displayed in ALL CAPS (the only transformation ever applied
+    to the original script wording).
     """
     font_name, _fontsdir = _resolve_font()
 
-    rx, ry, rw, rh = video_rect
     font_size = max(24, int(round(height * SUB_FONT_FRACTION_OF_HEIGHT)))
     outline = max(2, int(round(height * SUB_OUTLINE_FRACTION)))
 
-    # Desired vertical center of the text line = midpoint of the video
-    # image's lower third. ASS positions Alignment=2 (bottom-center) text
-    # by its BASELINE at frame_height - MarginV; we want the text block
+    # Desired vertical center of the text line = midpoint of the frame's
+    # lower third. ASS positions Alignment=2 (bottom-center) text by its
+    # BASELINE at frame_height - MarginV; we want the text block
     # (ascent+descent ~ font_size tall) centered on the anchor.
-    anchor_y = ry + rh * LOWER_THIRD_CENTER_FRACTION
+    anchor_y = height * LOWER_THIRD_CENTER_FRACTION
     baseline_y = anchor_y + font_size / 2.0
-    # Keep the whole text block inside the video image: baseline must not
-    # push the block's bottom past (rect bottom - clearance).
+    # Keep the whole text block inside the frame: baseline must not push
+    # the block's bottom past (frame bottom - clearance).
     min_clearance = height * MIN_BOTTOM_CLEARANCE_FRACTION
-    max_baseline = ry + rh - min_clearance
+    max_baseline = height - min_clearance
     if baseline_y > max_baseline:
         baseline_y = max_baseline
     margin_v = int(round(height - baseline_y))
@@ -582,8 +573,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f"ASS subtitle file written: {out_ass} "
         f"({len(words)} word events, font {font_name} {font_size}px, "
         f"outline {outline}px, MarginV {margin_v}px — anchored to the "
-        f"lower third of the video image rect "
-        f"{video_rect} inside the {width}x{height} frame)",
+        f"middle of the lower third of the {width}x{height} video frame; "
+        f"burned in BEFORE branding so captions ride with the video into "
+        f"any downstream branded slot)",
         flush=True,
     )
 
@@ -654,12 +646,6 @@ def main() -> None:
                          "only. Strongly recommended: without it the "
                          "transcription's wording is used as a legacy "
                          "fallback.")
-    ap.add_argument("--video-rect", default=None,
-                    help="'x,y,w,h' rectangle (in output-frame pixels) that "
-                         "the ACTUAL VIDEO IMAGE occupies — after any "
-                         "branding/letterboxing. Subtitles are anchored to "
-                         "the middle of the lower third of THIS rectangle. "
-                         "Default: the whole frame (unbranded jobs).")
     ap.add_argument("--model", default="base", choices=["tiny", "base", "small"])
     ap.add_argument("--lang", default="auto")
     ap.add_argument("--work-dir", default=None,
@@ -700,12 +686,15 @@ def main() -> None:
         words = timed_words
 
     width, height = probe_video_size(args.merged_video_mp4)
-    video_rect = _video_rect_from_arg(args.video_rect, width, height)
-    print(f"Video resolution: {width}x{height}; subtitle anchor rect: "
-          f"{video_rect}", flush=True)
+    print(
+        f"Video resolution: {width}x{height}; subtitles will be anchored "
+        f"to the middle of the lower third of this frame (the frame IS "
+        f"the video image at this stage — branding runs downstream).",
+        flush=True,
+    )
 
     ass_path = os.path.join(work_dir, "subtitles.ass")
-    write_ass(words, width, height, video_rect, ass_path)
+    write_ass(words, width, height, ass_path)
 
     print(f"Burning subtitles into {args.out_video_mp4} ...", flush=True)
     burn_subtitles(args.merged_video_mp4, ass_path, args.out_video_mp4)
