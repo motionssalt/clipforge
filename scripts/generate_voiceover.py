@@ -49,16 +49,42 @@ import sys
 import time
 
 
-# Sample rate Chatterbox emits (24 kHz). We keep the per-cut WAVs at the
-# model's native rate; cut_and_produce.py resamples to 48 kHz AAC during
-# the final encode, same as any other audio input.
+# Chatterbox emits 24 kHz WAVs.  Normalize each rendered clip before it
+# enters the production pipeline so dialogue loudness is deterministic rather
+# than depending on the model's conservative and variable raw output level.
+# The final muxer resamples these WAVs to 48 kHz AAC.
 VO_WAV_PREFIX = "voiceover_"
 MANIFEST_NAME = "voiceover_manifest.json"
+DIALOGUE_LUFS = -16
+DIALOGUE_TRUE_PEAK_DBTP = -1.5
+DIALOGUE_LRA = 7
 
 
 def sh(cmd: list[str]) -> None:
     print(f"$ {' '.join(cmd)}", flush=True)
     subprocess.run(cmd, check=True)
+
+
+def normalize_dialogue_in_place(path: str) -> None:
+    """Normalize one rendered TTS WAV to a stable dialogue target.
+
+    This is not a per-mix compensation gain: it makes each raw TTS render a
+    proper dialogue asset before it reaches any music processing.  A temporary
+    file and atomic replace ensure a partial/failed ffmpeg run never leaves a
+    corrupt manifest target behind.
+    """
+    tmp_path = f"{path}.normalized.wav"
+    cmd = [
+        "ffmpeg", "-y", "-i", path,
+        "-af", (
+            f"loudnorm=I={DIALOGUE_LUFS}:TP={DIALOGUE_TRUE_PEAK_DBTP}:"
+            f"LRA={DIALOGUE_LRA}"
+        ),
+        "-ar", "24000", "-ac", "1", "-c:a", "pcm_s16le",
+        tmp_path,
+    ]
+    sh(cmd)
+    os.replace(tmp_path, path)
 
 
 def probe_duration(path: str) -> float:
@@ -137,6 +163,7 @@ def synthesize_all(cuts: list[dict], out_dir: str) -> list[dict]:
         # Chatterbox returns a torch tensor at the model's sample rate.
         import torchaudio
         torchaudio.save(wav_path, wav, model.sr)
+        normalize_dialogue_in_place(wav_path)
         dur = probe_duration(wav_path)
         print(
             f"  -> {os.path.basename(wav_path)}: {dur:.2f}s "

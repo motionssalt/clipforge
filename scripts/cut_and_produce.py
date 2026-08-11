@@ -142,37 +142,21 @@ DURATION_TOLERANCE_S = 0.25
 MIN_CUT_SECONDS = 0.5
 
 # ---------- Audio level policy ----------
-# The main voiceover is amplified above its raw TTS level to sit clearly on
-# top of the background music. Chatterbox's raw output is conservative
-# (peaks well below 0 dBFS), so a linear 4.0x (~+12 dB) gain is applied to
-# every per-cut voiceover BEFORE it enters the concat and BEFORE any music
-# is mixed under it. This gain is applied inside the per-cut audio filter
-# chain that feeds the concat node, so it survives concat, survives the
-# music amix (normalize=0 does not touch pre-scaled inputs), and reaches
-# the encoded AAC track intact. The standalone merged voiceover-only WAV
-# used by generate_subtitles.py is written from the raw per-cut WAVs
-# (unamplified) — Whisper is level-invariant and that WAV never ships in
-# the final MP4 audio track.
+# Each TTS WAV is loudness-normalized by generate_voiceover.py to a dialogue
+# target before this script sees it.  Therefore the voice path stays at unity:
+# no arbitrary voice gain is used to fight the music.
 #
-# Background music is attenuated to MUSIC_VOLUME (0.33x of its uploaded
-# level, ~-9.6 dB — inside the requested 30-35% range) and mixed UNDER
-# the (already-amplified) voiceover with amix normalize=0 so neither
-# stream is silently renormalized. The attenuation is applied as a
-# `volume={MUSIC_VOLUME}` filter on the music branch itself, INSIDE the
-# same single-ffmpeg-pass filter graph that also encodes the final MP4,
-# and every downstream stage (enhance_scenes.py, generate_subtitles.py,
-# brand_scene.py) stream-copies the resulting AAC track (-c:a copy), so
-# the reduced music level physically survives into the shipped file.
-# Earlier attempts that only raised VOICEOVER_VOLUME could not fix the
-# audibility complaint because an unducked (1.0x) full-level music bed
-# still masked the narration; attenuating the music branch is the change
-# that actually opens up headroom for the voice.
-#
-# The final safety net is a wide-ceiling limiter (0.99 full-scale) that
-# ONLY catches true digital-clip peaks on loud overlaps; it does NOT act
-# as a compressor and does not undo the voiceover gain.
-VOICEOVER_VOLUME = 4.00
+# The music bed is reduced to one third of its uploaded amplitude and is then
+# side-chain ducked only while narration is present.  The static 0.33 gain is
+# the requested 30–35% baseline; ducking is deliberately on the MUSIC branch
+# (not the dialogue branch), preventing a loud master from masking speech.
+# When there is no narration, music remains at the requested baseline.
+VOICEOVER_VOLUME = 1.00
 MUSIC_VOLUME = 0.33
+MUSIC_DUCK_THRESHOLD = 0.015
+MUSIC_DUCK_RATIO = 10
+MUSIC_DUCK_ATTACK_MS = 20
+MUSIC_DUCK_RELEASE_MS = 350
 MIX_LIMITER_CEILING = 0.99
 
 
@@ -401,20 +385,10 @@ def produce_merged_video(src: str, plan: list[dict], vo_wavs: list[str],
             f"setsar=1"
             f"[v{i}]"
         )
-        # Audio: voiceover only — source audio is never mapped. Pad the
-        # voiceover with silence to the cut's planned length so concat
-        # sees equal-length A/V per segment.
-        #
-        # The VOICEOVER_VOLUME gain is applied HERE, at the per-cut audio
-        # node, BEFORE concat and BEFORE the music amix. Applying it here
-        # (rather than post-concat or post-mix) is load-bearing:
-        #   * it survives concat unchanged (concat is a passthrough for
-        #     already-scaled samples);
-        #   * it is amplified BEFORE amix runs with normalize=0, so amix
-        #     does not silently renormalize it back down;
-        #   * the downstream limiter is set to a wide 0.99 ceiling that
-        #     only clamps true digital-clip peaks, so the gain reaches
-        #     the encoded AAC track intact.
+        # Audio: normalized voiceover only — source audio is never mapped.
+        # Pad the voiceover with silence to the cut's planned length so concat
+        # sees equal-length A/V per segment.  The unity volume is intentional:
+        # generate_voiceover.py has already normalized dialogue assets.
         parts.append(
             f"[{n + i}:a:0]"
             f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=stereo,"
@@ -432,27 +406,30 @@ def produce_merged_video(src: str, plan: list[dict], vo_wavs: list[str],
     total_seconds = sum(p["video_seconds"] for p in plan)
 
     if music_idx is not None:
-        # Trim/loop music to exactly the merged duration, attenuate it by
-        # MUSIC_VOLUME (0.33x of its uploaded level — see the
-        # "Audio level policy" block above), and mix it UNDER the
-        # already-amplified voiceover. -stream_loop -1 on the input
-        # handles music shorter than the video; atrim handles music
-        # longer than it. amix with normalize=0 is mandatory so neither
-        # the (boosted) voiceover nor the music is silently renormalized
-        # against the other. The limiter sits at MIX_LIMITER_CEILING
-        # (0.99 full-scale) so it ONLY catches true digital-clip peaks —
-        # it does NOT act as a compressor and does NOT undo the
-        # voiceover gain.
+        # Trim/loop music to the merged duration, reduce it to 33% of the
+        # uploaded amplitude, then duck THAT already-reduced music whenever
+        # normalized narration is active.  `sidechaincompress` receives music
+        # as its first input and narration as its detector; its output is the
+        # processed music stream that is actually mapped into the final MP4.
+        # This prevents later mix stages from restoring the background level.
         parts.append(
             f"[{music_idx}:a:0]"
             f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=stereo,"
             f"aresample=async=1:first_pts=0,"
             f"atrim=0:{total_seconds:.3f},"
             f"volume={MUSIC_VOLUME}"
-            f"[music]"
+            f"[music_reduced]"
+        )
+        parts.append("[acat]asplit=2[voice_mix][voice_sidechain]")
+        parts.append(
+            f"[music_reduced][voice_sidechain]"
+            f"sidechaincompress=threshold={MUSIC_DUCK_THRESHOLD}:"
+            f"ratio={MUSIC_DUCK_RATIO}:attack={MUSIC_DUCK_ATTACK_MS}:"
+            f"release={MUSIC_DUCK_RELEASE_MS}:makeup=1"
+            f"[music_ducked]"
         )
         parts.append(
-            f"[acat][music]amix=inputs=2:duration=first:normalize=0,"
+            f"[voice_mix][music_ducked]amix=inputs=2:duration=first:normalize=0,"
             f"alimiter=limit={MIX_LIMITER_CEILING}"
             f"[aout]"
         )
@@ -792,8 +769,8 @@ def main() -> None:
 
     print(
         f"\nProducing ONE merged video from {len(plan)} cut(s) with "
-        f"voiceover mixed in at {int(VOICEOVER_VOLUME * 100)}% (source audio muted"
-        f"{', background music at ' + str(int(MUSIC_VOLUME * 100)) + '%' if args.music else ''}) "
+        f"normalized voiceover at unity (source audio muted"
+        f"{', background music at ' + str(int(MUSIC_VOLUME * 100)) + '% and ducked beneath speech' if args.music else ''}) "
         f"— mobile-safe encoding "
         f"(H.264 High@L{X264_LEVEL} {TARGET_PIX_FMT} CRF{X264_CRF}, "
         f"AAC-LC {AAC_SAMPLE_RATE}Hz stereo {AAC_BITRATE}, "
