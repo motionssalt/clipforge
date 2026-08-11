@@ -1,7 +1,7 @@
 {
   "job_id": "20260811-144739-31503472412",
-  "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-20260811-144739-31503472412",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260811-144739-31503472412",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-144739-31503472412/transcript.json"
   },
   "created_at_epoch": 1786459835,
-  "updated_at_epoch": 1786460303,
+  "updated_at_epoch": 1786461651,
   "expires_at_epoch": 1786503035,
   "extra": {
     "duration_seconds": "1416",
@@ -21,6 +21,8 @@
     "event_frame_count": "49",
     "shot_count": "365",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "workflow_run_id": "31506204070",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31506204070"
   }
 }
