@@ -229,7 +229,10 @@ The order below is the single most important thing in this document.
      `title` field described in the OUTPUT SCHEMA — ONE title for the
      whole job, decided AFTER your cuts are final (it must describe
      the story your selected cuts tell, not the source video in
-     general).
+     general). ALSO write the `hashtags` and `youtube_tags` arrays
+     described in the POSTING PACKAGE METADATA section — the same
+     one-per-job social-media metadata that ships alongside the
+     finished video.
 
 --------------------------------------------------------------------------------
 VIDEO METADATA (substituted by Stage A)
@@ -695,12 +698,69 @@ Rules for the title:
     payoff the viewer never sees is worse than a plain one.
 
 --------------------------------------------------------------------------------
+POSTING PACKAGE METADATA — hashtags + YouTube tags (top-level fields)
+--------------------------------------------------------------------------------
+
+Alongside the one-per-job `title`, every production.json also carries the
+social-media metadata the finished video will be posted with:
+
+  - `hashtags`   — a JSON array of hashtag strings.
+  - `youtube_tags` — a JSON array of YouTube keyword-tag strings.
+
+These are generated ONCE per job (like the title), from the SAME story your
+selected cuts tell, and shipped inside production.json so Stage B can drop
+them straight into the final artifact's metadata.txt (no second agent, no
+second pass).
+
+Rules for `hashtags`:
+
+  - JSON array of 5-8 strings.
+  - Each string is ONE hashtag INCLUDING the leading `#`
+    (e.g. `"#anime"`, `"#hunterxhunter"`). No spaces inside a hashtag,
+    no punctuation other than the leading `#`, no emoji.
+  - Mix broad-reach tags (the genre, the format) with niche tags (the
+    specific show / subject / character / trope your cuts are about),
+    ordered most-relevant-first.
+  - Tie them to what the cuts actually show — not the source video in
+    general and not a beat you left out. If a hashtag would only make
+    sense to someone who saw an un-selected part of the source,
+    drop it.
+  - No duplicates. No brand/handle hashtags for accounts you don't
+    control. No hashtag stuffing beyond 8.
+
+Rules for `youtube_tags`:
+
+  - JSON array of 10-20 strings.
+  - Each string is one YouTube keyword tag — plain lowercase words or
+    short phrases, NO leading `#`, NO commas inside a single tag, NO
+    quotes, NO emoji. Multi-word phrases are fine (`"hunter x hunter
+    hanzo fight"`).
+  - Mix broad + niche + long-tail, ordered most-relevant-first, so the
+    concatenated list stays under YouTube's 500-character total limit.
+  - Same content discipline as hashtags: describe the STORY the cuts
+    actually tell (subject, characters, key beats, genre, format),
+    not the whole source video.
+  - No duplicates. No repeating the title verbatim as a tag.
+
+--------------------------------------------------------------------------------
 OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
 --------------------------------------------------------------------------------
 
 {{
   "video_duration_seconds": {duration_seconds},
   "title": "ONE catchy, attention-grabbing title for this whole job — a single line of plain text shared by every scene clip cut from this file (see JOB TITLE above)",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2"
+    // ... 5-8 hashtags total, most-relevant-first, each including the leading '#'
+    // (see POSTING PACKAGE METADATA above)
+  ],
+  "youtube_tags": [
+    "keyword tag 1",
+    "keyword tag 2"
+    // ... 10-20 YouTube keyword tags total, most-relevant-first, no '#', no commas
+    // inside a single tag (see POSTING PACKAGE METADATA above)
+  ],
   "cuts": [
     {{
       "start_seconds": 142,
@@ -728,6 +788,12 @@ CONSTRAINTS
     that ends before its described beat is on screen is broken.
   - `title` is a single non-empty string: one catchy title for the WHOLE
     job (all cuts share it). One line, plain text, no emoji/quotes/markdown.
+  - `hashtags` is a JSON array of 5-8 non-empty strings, each beginning
+    with `#`, no spaces inside a hashtag, no duplicates. See the
+    POSTING PACKAGE METADATA section above.
+  - `youtube_tags` is a JSON array of 10-20 non-empty strings, no leading
+    `#`, no commas inside a single tag, no duplicates, joined length under
+    500 characters. See the POSTING PACKAGE METADATA section above.
   - `voiceover_text` is the final spoken line for its cut: plain prose
     meant to be READ ALOUD. No markdown, no timestamps inside it,
     no brackets, no parentheticals, no directions or commentary ABOUT

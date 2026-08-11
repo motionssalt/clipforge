@@ -601,15 +601,103 @@ jobs:
             -of default=noprint_wrappers=1 \
             "$FINAL"
 
-      - name: Zip final artifact (the one finished video)
+      # -------------------------------------------------------------------
+      # Social-media metadata TXT (title + hashtags + YouTube tags).
+      #
+      # The AUTHORITATIVE source of these values is the same production.json
+      # already resolved above — the analysis agent that writes the cuts +
+      # per-job `title` also writes the sibling `hashtags` array and
+      # `youtube_tags` array (see the POSTING PACKAGE METADATA section of
+      # 00_READ_THIS_FIRST.txt). We do NOT regenerate them here; we read
+      # them straight out of production.json and format them into a clean,
+      # copy-friendly TXT that ships next to final.mp4 inside the final
+      # ZIP.
+      #
+      # All three fields are OPTIONAL for backwards compatibility with
+      # older production.json files that pre-date the posting package.
+      # Any missing/empty field is written as a blank section so the file
+      # structure stays predictable and easy to copy from.
+      # -------------------------------------------------------------------
+      - name: Write social-media metadata.txt from production.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/out
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          doc = json.loads(Path("work/production.json").read_text(encoding="utf-8"))
+
+          title = (doc.get("title") or "")
+          if isinstance(title, str):
+              title = title.strip()
+          else:
+              title = ""
+
+          def clean_str_list(value):
+              if not isinstance(value, list):
+                  return []
+              out = []
+              for entry in value:
+                  if isinstance(entry, str):
+                      s = entry.strip()
+                      if s:
+                          out.append(s)
+              return out
+
+          hashtags = clean_str_list(doc.get("hashtags"))
+          youtube_tags = clean_str_list(doc.get("youtube_tags"))
+
+          # Hashtags: space-separated on one line — the exact form a poster
+          # pastes into a TikTok / Reels / Shorts caption.
+          hashtag_line = " ".join(hashtags)
+          # YouTube tags: comma-separated on one line — the exact form the
+          # YouTube upload flow accepts in its "Tags" field.
+          youtube_tag_line = ", ".join(youtube_tags)
+
+          lines = [
+              "TITLE:",
+              title,
+              "",
+              "HASHTAGS:",
+              hashtag_line,
+              "",
+              "YOUTUBE TAGS:",
+              youtube_tag_line,
+              "",
+          ]
+          Path("work/out/metadata.txt").write_text(
+              "\n".join(lines), encoding="utf-8"
+          )
+
+          print("metadata.txt written:")
+          print("  title       :", repr(title))
+          print("  hashtags    :", len(hashtags), "entr(y|ies)")
+          print("  youtube_tags:", len(youtube_tags), "entr(y|ies)")
+          PY
+          echo "--- metadata.txt ---"
+          cat work/out/metadata.txt
+          echo "--- end metadata.txt ---"
+
+      - name: Zip final artifact (finished video + metadata.txt)
         shell: bash
         run: |
           set -euo pipefail
           cd work/out
+          # Sanity check both artifacts exist before zipping — a missing
+          # metadata.txt would silently ship a video-only ZIP again.
+          test -f final.mp4    || { echo "FAIL: final.mp4 missing"    >&2; exit 1; }
+          test -f metadata.txt || { echo "FAIL: metadata.txt missing" >&2; exit 1; }
           zip -q "clipforge-${{ steps.jid.outputs.job_id }}-final.zip" \
-            final.mp4
+            final.mp4 metadata.txt
           echo "Zip contents:"
           unzip -l "clipforge-${{ steps.jid.outputs.job_id }}-final.zip"
+          # Verify BOTH expected members are present inside the ZIP — a
+          # regression that dropped metadata.txt would slip past 'zip -q'
+          # otherwise.
+          unzip -l "clipforge-${{ steps.jid.outputs.job_id }}-final.zip" | grep -q ' final.mp4$'    || { echo "FAIL: final.mp4 missing from final ZIP" >&2;    exit 1; }
+          unzip -l "clipforge-${{ steps.jid.outputs.job_id }}-final.zip" | grep -q ' metadata.txt$' || { echo "FAIL: metadata.txt missing from final ZIP" >&2; exit 1; }
           ls -lh
           echo "FINAL_ZIP=work/out/clipforge-${{ steps.jid.outputs.job_id }}-final.zip" >> "$GITHUB_ENV"
 
@@ -642,13 +730,17 @@ jobs:
             clipforge-job-id: ${{ steps.jid.outputs.job_id }}
             stage: complete
 
-            Final artifacts (ONE finished, ready-to-post video):
+            Final artifacts (ONE finished, ready-to-post video +
+            social-media metadata):
               - final.mp4 — the merged video: all cuts concatenated,
                 voiceover mixed in (source audio muted), word-by-word
                 subtitles burned in, optional background music ducked
                 under the voiceover when one was uploaded.
+              - metadata.txt — the posting package: the one-per-job
+                title, hashtags, and YouTube tags generated for this
+                specific video (sourced verbatim from production.json).
               - clipforge-${{ steps.jid.outputs.job_id }}-final.zip
-                (contains just final.mp4)
+                (contains final.mp4 + metadata.txt)
 
             This release is automatically deleted 12 hours after creation.
           make_latest: "false"
@@ -656,6 +748,7 @@ jobs:
           files: |
             ${{ env.FINAL_ZIP }}
             work/out/final.mp4
+            work/out/metadata.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
