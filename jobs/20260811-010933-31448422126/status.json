@@ -13,7 +13,11 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-010933-31448422126/transcript.json"
   },
   "created_at_epoch": 1786410743,
+<<<<<<< Updated upstream
   "updated_at_epoch": 1786411613,
+=======
+  "updated_at_epoch": 1786411937,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1786453943,
   "extra": {
     "duration_seconds": "1426",
