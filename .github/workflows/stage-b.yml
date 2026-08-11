@@ -528,16 +528,23 @@ jobs:
           ls -lh
           echo "FINAL_ZIP=work/out/clipforge-${{ steps.jid.outputs.job_id }}-final.zip" >> "$GITHUB_ENV"
 
-      - name: Delete original video asset from release (no longer needed)
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          orig_id="${{ steps.relmeta.outputs.orig_id }}"
-          if [ -n "$orig_id" ]; then
-            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" || true
-          fi
+      # -------------------------------------------------------------------
+      # NOTE: the original.<ext> release asset is intentionally NOT deleted
+      # here. It is the ONLY input the site's Stage B restart flow has to
+      # work with — restartStageB() in app.js re-dispatches stage-b.yml
+      # with the same job_id, and the "Load release metadata (find
+      # original video asset)" step above rediscovers original.<ext> on
+      # the same release tag. If we deleted it after a successful run,
+      # every subsequent restart would fail at that step with
+      # "Could not find original video asset in release" because there
+      # is no other authoritative copy of the source video (Stage A only
+      # publishes it as a release asset; there is no committed copy in
+      # jobs/<job_id>/ and the runner filesystem is ephemeral). The
+      # asset — like the rest of the release — is cleaned up wholesale
+      # by the hourly cleanup workflow 12 hours after job creation, so
+      # keeping it here does not leak storage; it just guarantees that
+      # Stage B can genuinely be restarted for the release's lifetime.
+      # -------------------------------------------------------------------
 
       - name: Upload final zip + the finished video to the SAME release
         uses: softprops/action-gh-release@v2
