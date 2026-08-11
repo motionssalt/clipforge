@@ -1,7 +1,7 @@
 {
   "job_id": "20260811-010933-31448422126",
-  "stage": "cancelled",
-  "message": "Stage B was cancelled.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-20260811-010933-31448422126",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260811-010933-31448422126",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-010933-31448422126/transcript.json"
   },
   "created_at_epoch": 1786410743,
-  "updated_at_epoch": 1786411392,
+  "updated_at_epoch": 1786411613,
   "expires_at_epoch": 1786453943,
   "extra": {
     "duration_seconds": "1426",
@@ -22,7 +22,7 @@
     "shot_count": "267",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "workflow_run_id": "31449065022",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31449065022"
+    "workflow_run_id": "31449148169",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31449148169"
   }
 }
