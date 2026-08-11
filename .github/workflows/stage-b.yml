@@ -83,6 +83,56 @@ jobs:
           echo "checked-out commit (HEAD)     : $(git rev-parse HEAD)"
           echo "checked-out commit subject    : $(git log -1 --pretty=%s)"
 
+      # ---------------------------------------------------------------------
+      # STATUS-PUBLISH CORRECTNESS — never run the status-commit steps from
+      # a detached HEAD.
+      #
+      # A restart pins the checkout to a commit SHA via `code_ref` so the
+      # run executes the NEWEST code (see the checkout step above). But
+      # checking out a raw SHA leaves HEAD DETACHED, and a detached checkout
+      # cannot `git push` — the status-commit steps below then die at the
+      # very end of an otherwise-successful Stage B run with:
+      #
+      #     fatal: You are not currently on a branch.
+      #
+      # The SHA pinned by the site IS the tip of the dispatch branch at
+      # click time (restartStageB() in app.js resolves REF -> SHA), so
+      # re-attaching the dispatch branch at this exact commit changes NO
+      # code content — HEAD stays on the identical tree, and the run still
+      # executes the newest pushed code. It only gives the status steps a
+      # real branch to commit to and push. If the branch has moved forward
+      # since click time, the rebase-then-push retry in the status steps
+      # carries this commit onto the new tip; the code this run EXECUTES
+      # is unaffected (the tree is already checked out).
+      #
+      # Normal (non-restart) dispatches check out the branch ref directly
+      # and are already on a branch — this step is a no-op for them.
+      # ---------------------------------------------------------------------
+      - name: Re-attach HEAD to the dispatch branch when the checkout pinned a SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git symbolic-ref -q HEAD > /dev/null; then
+            echo "HEAD is on branch '$(git symbolic-ref --short HEAD)' — nothing to do."
+            exit 0
+          fi
+          branch="${GITHUB_REF#refs/heads/}"
+          if [ "$branch" = "$GITHUB_REF" ] || [ -z "$branch" ]; then
+            # GITHUB_REF is not a branch ref (e.g. a tag dispatch). The
+            # application only ever dispatches on its default branch.
+            branch="main"
+          fi
+          echo "HEAD is detached at $(git rev-parse HEAD) (code_ref-pinned restart checkout)."
+          echo "Re-attaching branch '$branch' at this exact commit so status commits can be pushed."
+          # Fetch the branch's remote-tracking ref explicitly: a SHA-pinned
+          # checkout does not necessarily create refs/remotes/origin/<branch>.
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch"
+          # Create/reset the local branch AT THE PINNED COMMIT (no content
+          # change) and wire its upstream so pull --rebase / push work.
+          git checkout -B "$branch" HEAD
+          git branch --set-upstream-to="origin/$branch" "$branch"
+          echo "Now on branch '$branch' at $(git rev-parse HEAD) (upstream: origin/$branch)."
+
       - name: Resolve inputs
         id: jid
         shell: bash
@@ -178,9 +228,12 @@ jobs:
             --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} stage B running" || echo "nothing to commit"
-          git push || true
+          # Best-effort (the definitive status is written at the end), but
+          # still survive a non-fast-forward race with one rebase retry.
+          git push || { git pull --rebase --autostash || true; git push || true; }
 
       - name: Load release metadata (find original video asset)
         id: relmeta
@@ -664,7 +717,27 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} complete" || echo "nothing to commit"
-          git push
+          # Persisting the complete status is a HARD requirement — a Stage B
+          # run that produced the final video must not be reported as failed
+          # merely because this push raced another commit (e.g. the hourly
+          # cleanup job, or a site-side upload) or because the branch moved
+          # since a restart pinned its SHA. Rebase onto the latest branch
+          # tip and retry; only fail the step (loudly) if the status truly
+          # cannot be persisted.
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then
+              pushed=true
+              break
+            fi
+            echo "status push attempt $attempt failed — rebasing onto latest origin and retrying…" >&2
+            git pull --rebase --autostash
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "FATAL: could not persist the complete status to origin after 3 attempts." >&2
+            exit 1
+          fi
         env:
           JID: ${{ steps.jid.outputs.job_id }}
           JOB_TITLE: ${{ env.JOB_TITLE }}
@@ -686,7 +759,7 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json" || true
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} error (stage B)" || true
-          git push || true
+          git push || { git pull --rebase --autostash || true; git push || true; }
 
   stage_b_cancelled:
     name: Record Stage B cancellation
@@ -701,6 +774,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Ensure HEAD is on a branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git symbolic-ref -q HEAD > /dev/null; then
+            echo "HEAD is on branch '$(git symbolic-ref --short HEAD)' — nothing to do."
+            exit 0
+          fi
+          branch="${GITHUB_REF#refs/heads/}"
+          if [ "$branch" = "$GITHUB_REF" ] || [ -z "$branch" ]; then
+            branch="main"
+          fi
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch"
+          git checkout -B "$branch" HEAD
+          git branch --set-upstream-to="origin/$branch" "$branch"
       - name: Write cancelled status
         shell: bash
         run: |
@@ -717,4 +805,4 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/$jid/status.json"
           git commit -m "clipforge: job $jid stage B cancelled" || echo "nothing to commit"
-          git push || true
+          git push || { git pull --rebase --autostash || true; git push || true; }
