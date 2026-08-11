@@ -1,7 +1,7 @@
 {
   "job_id": "20260811-012425-31449190537",
-  "stage": "complete",
-  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
+  "stage": "cancelled",
+  "message": "Stage B was cancelled.",
   "release_tag": "clipforge-20260811-012425-31449190537",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260811-012425-31449190537",
   "assets": {
@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-012425-31449190537/final.mp4"
   },
   "created_at_epoch": 1786411653,
-  "updated_at_epoch": 1786437022,
+  "updated_at_epoch": 1786438380,
   "expires_at_epoch": 1786454853,
   "extra": {
     "duration_seconds": "1426",
@@ -24,8 +24,8 @@
     "shot_count": "267",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "workflow_run_id": "31471705236",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31471705236",
+    "workflow_run_id": "31475157723",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31475157723",
     "title": "The fastest Chimera Ant in the world picks a fight with the wrong smoker",
     "branding_applied": false
   }
