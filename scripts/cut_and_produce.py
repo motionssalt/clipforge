@@ -93,11 +93,12 @@ the per-cut node so the boost survives concat and the music amix, and
 padded with silence to the cut's (reconciled) video length so the concat
 filter sees equal-length A/V per segment. If a background music file was
 uploaded for the job it is trimmed (or looped) to exactly the merged
-video duration, scaled by MUSIC_VOLUME (100% of its uploaded level,
-i.e. NOT ducked), and mixed UNDER the (already-amplified) voiceover with
-amix normalize=0. A final wide-ceiling alimiter (MIX_LIMITER_CEILING =
+video duration, scaled DOWN by MUSIC_VOLUME (0.33x, ~-9.6 dB, i.e.
+roughly one third of its uploaded level, inside the requested 30-35%
+range), and mixed UNDER the (already-amplified) voiceover with amix
+normalize=0. A final wide-ceiling alimiter (MIX_LIMITER_CEILING =
 0.99 full-scale) catches only true digital-clip peaks on loud overlaps;
-it does NOT act as a compressor and does NOT undo the voiceover gain.
+it does NOT act as a compressor and does NOT undo either track's gain.
 The final MP4 has exactly one audio track: voiceover + music, no source
 audio.
 
@@ -153,15 +154,25 @@ MIN_CUT_SECONDS = 0.5
 # (unamplified) — Whisper is level-invariant and that WAV never ships in
 # the final MP4 audio track.
 #
-# Background music is kept at 100% of its uploaded level (no attenuation)
-# and is mixed UNDER the (already-amplified) voiceover with amix normalize=0
-# so neither stream is silently renormalized.
+# Background music is attenuated to MUSIC_VOLUME (0.33x of its uploaded
+# level, ~-9.6 dB — inside the requested 30-35% range) and mixed UNDER
+# the (already-amplified) voiceover with amix normalize=0 so neither
+# stream is silently renormalized. The attenuation is applied as a
+# `volume={MUSIC_VOLUME}` filter on the music branch itself, INSIDE the
+# same single-ffmpeg-pass filter graph that also encodes the final MP4,
+# and every downstream stage (enhance_scenes.py, generate_subtitles.py,
+# brand_scene.py) stream-copies the resulting AAC track (-c:a copy), so
+# the reduced music level physically survives into the shipped file.
+# Earlier attempts that only raised VOICEOVER_VOLUME could not fix the
+# audibility complaint because an unducked (1.0x) full-level music bed
+# still masked the narration; attenuating the music branch is the change
+# that actually opens up headroom for the voice.
 #
 # The final safety net is a wide-ceiling limiter (0.99 full-scale) that
-# ONLY catches true digital-clip peaks on loud overlaps; it does NOT act as
-# a compressor and does not undo the voiceover gain.
+# ONLY catches true digital-clip peaks on loud overlaps; it does NOT act
+# as a compressor and does not undo the voiceover gain.
 VOICEOVER_VOLUME = 4.00
-MUSIC_VOLUME = 1.00
+MUSIC_VOLUME = 0.33
 MIX_LIMITER_CEILING = 0.99
 
 
@@ -421,8 +432,8 @@ def produce_merged_video(src: str, plan: list[dict], vo_wavs: list[str],
     total_seconds = sum(p["video_seconds"] for p in plan)
 
     if music_idx is not None:
-        # Trim/loop music to exactly the merged duration, scale it by
-        # MUSIC_VOLUME (kept at 100% of its uploaded level — see the
+        # Trim/loop music to exactly the merged duration, attenuate it by
+        # MUSIC_VOLUME (0.33x of its uploaded level — see the
         # "Audio level policy" block above), and mix it UNDER the
         # already-amplified voiceover. -stream_loop -1 on the input
         # handles music shorter than the video; atrim handles music
