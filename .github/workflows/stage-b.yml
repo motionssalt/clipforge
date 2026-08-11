@@ -31,6 +31,11 @@ on:
         required: false
         type: string
         default: "true"
+      code_ref:
+        description: "Optional branch/tag/SHA to check out and run THIS Stage B execution from. The site's 'Restart Stage B' resolves the default branch to its current tip SHA at click time and passes it here so the restart ALWAYS runs the newest code, never the old run's commit. Empty = check out whatever ref the dispatch targeted (normal Stage B / direct-dispatch behavior)."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -46,10 +51,37 @@ jobs:
     timeout-minutes: 180
 
     steps:
+      # ---------------------------------------------------------------------
+      # RESTART CORRECTNESS — always run the NEWEST code on a restart.
+      #
+      # The site's "Restart Stage B" is NOT a GitHub "re-run" (which would
+      # pin the run to the ORIGINAL run's commit). It is a fresh
+      # workflow_dispatch that resolves the default branch to its CURRENT
+      # tip SHA and passes it as the `code_ref` input. actions/checkout
+      # accepts a branch, tag, OR a full commit SHA in `ref`, so pinning the
+      # checkout to that freshly-resolved SHA guarantees the restarted run
+      # executes the newest pushed code even if the branch-named dispatch
+      # ref raced the push.
+      #
+      # For a NORMAL Stage B dispatch (the site does not send `code_ref`,
+      # so it defaults to empty) we check out the dispatch target exactly as
+      # before — behavior unchanged.
+      # ---------------------------------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.code_ref != '' && github.event.inputs.code_ref || github.ref }}
+
+      - name: Log the exact code revision this run is executing
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "dispatch ref (github.ref)     : ${{ github.ref }}"
+          echo "dispatch sha (github.sha)     : ${{ github.sha }}"
+          echo "code_ref input (restart pin)  : ${{ github.event.inputs.code_ref }}"
+          echo "checked-out commit (HEAD)     : $(git rev-parse HEAD)"
+          echo "checked-out commit subject    : $(git log -1 --pretty=%s)"
 
       - name: Resolve inputs
         id: jid

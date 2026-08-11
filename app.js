@@ -1726,6 +1726,28 @@
   el['restart-stage-b'].addEventListener('click', function () { restartStageB(); });
   el['cancel-stage-b'].addEventListener('click', function () { cancelStageB(); });
 
+  /**
+   * Restart Stage B = a BRAND-NEW Stage B run on the LATEST code, not a
+   * replay of the old run.
+   *
+   * The GitHub Actions "re-run" API would re-execute the ORIGINAL run's
+   * pinned commit — that is exactly the stale-code behavior this button
+   * exists to avoid. So instead we dispatch a new workflow run and pin
+   * its checkout to the branch's CURRENT tip SHA:
+   *
+   *   1. Resolve REF (the default branch) to its tip SHA RIGHT NOW, at
+   *      click time — after any `git push` the user just made.
+   *   2. Dispatch stage-b.yml on REF (the dispatch API only accepts a
+   *      branch/tag ref, not a raw SHA — verified: SHA dispatch is 422),
+   *      passing the freshly-resolved SHA as the `code_ref` input.
+   *   3. stage-b.yml checks out `code_ref` (the SHA) instead of the
+   *      dispatch ref, so the run is GUARANTEED to execute the newest
+   *      code even if the branch-named dispatch raced the push.
+   *
+   * All job inputs (production.json, optional music.mp3, the original
+   * video release asset) are looked up by the unchanged job_id, so the
+   * restart reuses existing project state and Stage A is NOT re-run.
+   */
   async function restartStageB() {
     if (state.busy || !state.jobId || isActiveStageBRun()) return;
     state.busy = true;
@@ -1740,12 +1762,21 @@
       } catch (musicErr) {
         if (musicErr.status !== 404) throw musicErr;
       }
+
+      // Resolve the branch to its CURRENT tip SHA at click time. Cache-bust
+      // so a proxy never hands us a stale branch object.
+      var branch = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/branches/' + encodeURIComponent(REF) + '?_=' + Date.now());
+      var codeRef = branch && branch.commit && branch.commit.sha;
+      if (!codeRef) throw new Error('Could not resolve the latest commit of ' + REF + '.');
+
       var dispatchedAt = new Date();
       await gh('/repos/' + state.owner + '/' + state.repo + '/actions/workflows/stage-b.yml/dispatches', {
         method: 'POST', body: { ref: REF, inputs: {
           job_id: state.jobId,
           production_ref: 'path:jobs/' + state.jobId + '/production.json',
-          music_ref: musicRef
+          music_ref: musicRef,
+          code_ref: codeRef
         }}
       });
       state.stageBDispatched = true;

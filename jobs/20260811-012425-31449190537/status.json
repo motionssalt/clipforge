@@ -1,7 +1,7 @@
 {
   "job_id": "20260811-012425-31449190537",
-  "stage": "cancelled",
-  "message": "Stage B was cancelled.",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260811-012425-31449190537",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260811-012425-31449190537",
   "assets": {
