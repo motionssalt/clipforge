@@ -115,13 +115,46 @@ SUB_FONT = "Bebas Neue"
 # (it is bundled with every ubuntu runner base image).
 SUB_FONT_FALLBACKS = ["Liberation Sans Narrow", "Nimbus Sans Narrow",
                       "DejaVu Sans"]
-# Font size as a fraction of the video's own height. Nudged down from
-# 6.0% to 5.2%: at the previous size a single word could sprawl across
-# most of the slot width once the video was scaled into the 1080x1920
-# branded canvas. 5.2% keeps the caption clearly readable on a phone at
-# arm's length while giving the word room to breathe inside the slot.
-SUB_FONT_FRACTION_OF_HEIGHT = 0.052
-SUB_OUTLINE_FRACTION = 0.0035         # stroke thickness vs frame height
+# Font size as a fraction of the video's own height. History: was 6.0%
+# (too sprawling once the video was scaled into the 1080x1920 branded
+# slot), then 5.2% (readable but a touch small on a phone at arm's
+# length). Bumped moderately to 6.2%: noticeably more readable and
+# visually prominent, while still leaving enough width margin inside the
+# scaled slot that a long single word does not touch the sides. The
+# condensed Bebas Neue face keeps the on-screen footprint compact even
+# at this size.
+SUB_FONT_FRACTION_OF_HEIGHT = 0.062
+# Outline thickness scales with the frame height so the stroke stays
+# proportional to the (now larger) glyphs. 0.0040 keeps the outline
+# visually the same weight relative to the letterforms as 0.0035 was
+# against the previous font size.
+SUB_OUTLINE_FRACTION = 0.0040         # stroke thickness vs frame height
+
+# ---------- Per-word entrance animation ----------
+# The subtitles appear one word at a time. To give each word a polished
+# short-form / anime-style entrance without conflicting with the
+# word-by-word timing, every ASS Dialogue event is prefixed with a small
+# override that:
+#   * fades the word in over the first ~60ms (no fade-out — the next
+#     word must snap on cleanly without ghosting into this one);
+#   * pops the word in at 60% scale, overshoots to 106% by ~90ms, then
+#     settles at 100% by ~150ms (subtle scale bounce, kinetic-text feel).
+# Total animation length ~150ms — comfortably shorter than the 120ms
+# per-word minimum display floor plus the transcription's own MIN_WORD
+# margin, so even the fastest word fully resolves to its final size
+# before it leaves screen. The animation is applied inline via ASS
+# override tags at the start of each Dialogue text, so it is entirely
+# local to each word event: it never touches timing, positioning,
+# wording, or any downstream compositing step.
+# The transform origin defaults to the alignment anchor (bottom-center
+# via \an2 which matches the style's Alignment=2), so the scale grows
+# from the baseline center of the word — the visually correct pivot for
+# lower-third captions.
+SUB_WORD_ANIM_TAGS = (
+    "{\\an2\\fad(60,0)\\fscx60\\fscy60"
+    "\\t(0,90,\\fscx106\\fscy106)"
+    "\\t(90,150,\\fscx100\\fscy100)}"
+)
 # Vertical anchor: middle of the LOWER THIRD of the frame. Because
 # subtitles are burned in BEFORE branding, the frame IS the video image
 # at this stage — no title bar, no avatar row, no CTA — so classic
@@ -561,8 +594,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     lines = [header]
     for w in words:
         # ALL CAPS is the ONLY transformation applied to the original
-        # script wording before display.
-        text = _ass_escape(w["word"].upper())
+        # script wording before display. The per-word entrance animation
+        # is a purely visual override prepended to the Dialogue text —
+        # it does not modify the wording, the start/end timestamps, or
+        # the position; it only controls how the word scales and fades
+        # in during the first ~150ms of its own timespan.
+        text = SUB_WORD_ANIM_TAGS + _ass_escape(w["word"].upper())
         lines.append(
             f"Dialogue: 0,{_ass_time(w['start'])},{_ass_time(w['end'])},"
             f"Word,,0,0,0,,{text}\n"
@@ -575,7 +612,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f"outline {outline}px, MarginV {margin_v}px — anchored to the "
         f"middle of the lower third of the {width}x{height} video frame; "
         f"burned in BEFORE branding so captions ride with the video into "
-        f"any downstream branded slot)",
+        f"any downstream branded slot; each word carries a ~150ms "
+        f"scale-pop + fade-in entrance animation)",
         flush=True,
     )
 
