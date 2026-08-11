@@ -1,7 +1,7 @@
 {
   "job_id": "20260811-091144-31476601813",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260811-091144-31476601813",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260811-091144-31476601813",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/clipforge-20260811-091144-31476601813-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260811-091144-31476601813/final.mp4"
   },
   "created_at_epoch": 1786439693,
-  "updated_at_epoch": 1786440984,
+  "updated_at_epoch": 1786442198,
   "expires_at_epoch": 1786482893,
   "extra": {
     "duration_seconds": "1426",
@@ -23,6 +25,8 @@
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
     "workflow_run_id": "31478160197",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31478160197"
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/31478160197",
+    "title": "The fastest Chimera Ant in the world picks a fight with the wrong smoker",
+    "branding_applied": false
   }
 }
