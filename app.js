@@ -1365,9 +1365,40 @@
     if (!ids.length) { show(emptyEl); return; }
     hide(emptyEl);
 
+    // Keep live work visually separate from terminal records. This is only a
+    // presentation grouping: task state, sorting, selection and actions remain
+    // exactly the same as before.
+    var activeIds = [];
+    var historyIds = [];
     ids.forEach(function (id) {
-      listEl.appendChild(buildTaskCard(id));
+      var entry = state.tasks[id] || {};
+      var stage = entry.snapshot && entry.snapshot.stage;
+      var terminal = stage === 'complete' || stage === 'error' || stage === 'cancelled';
+      if (!terminal && !isTaskExpired(entry)) activeIds.push(id);
+      else historyIds.push(id);
     });
+
+    function appendGroup(label, groupIds) {
+      if (!groupIds.length) return;
+      var group = document.createElement('section');
+      group.className = 'task-group';
+      group.setAttribute('aria-label', label);
+
+      var heading = document.createElement('div');
+      heading.className = 'task-group-head';
+      heading.appendChild(document.createTextNode(label));
+      var count = document.createElement('span');
+      count.className = 'task-group-count';
+      count.textContent = String(groupIds.length);
+      heading.appendChild(count);
+      group.appendChild(heading);
+
+      groupIds.forEach(function (id) { group.appendChild(buildTaskCard(id)); });
+      listEl.appendChild(group);
+    }
+
+    appendGroup('Active tasks', activeIds);
+    appendGroup('Task history', historyIds);
   }
 
   function buildTaskCard(jobId) {
@@ -1755,6 +1786,22 @@
    * NOTHING outside those namespaces (other tasks, branding/, workflow
    * files, other releases) is ever touched.
    */
+  function confirmTaskDeletion(jobId) {
+    var dialog = $('confirm-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') {
+      return Promise.resolve(window.confirm('Delete task "' + jobId + '" and all of its artifacts? Other tasks are not affected.'));
+    }
+    text($('confirm-task-id'), jobId);
+    return new Promise(function (resolve) {
+      function finish() {
+        dialog.removeEventListener('close', finish);
+        resolve(dialog.returnValue === 'confirm');
+      }
+      dialog.addEventListener('close', finish);
+      dialog.showModal();
+    });
+  }
+
   async function deleteTask(jobId) {
     if (!jobId) return;
     if (state.taskDeleting[jobId]) return;
@@ -1762,14 +1809,7 @@
       banner('delete-task', 'error', 'Save your GitHub settings first.');
       return;
     }
-    var ok = window.confirm(
-      'Delete task "' + jobId + '" now?\n\n' +
-      'This removes ONLY this task:\n' +
-      '  • the jobs/' + jobId + '/ folder (status.json, production.json, music, etc.)\n' +
-      '  • the Release clipforge-' + jobId + ' and its tag\n' +
-      '  • any per-job branch\n\n' +
-      'Other tasks and their artifacts are NOT affected.'
-    );
+    var ok = await confirmTaskDeletion(jobId);
     if (!ok) return;
 
     state.taskDeleting[jobId] = true;
