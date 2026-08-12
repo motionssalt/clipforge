@@ -1466,13 +1466,37 @@
       var total = parsed.cuts.reduce(function (sum, c) {
         return sum + (c.end_seconds - c.start_seconds);
       }, 0);
+      // Posting-package echo (mirrors the title echo above): surface how many
+      // hashtags / YouTube tags the analysis agent produced so an operator can
+      // tell at a glance whether the uploaded production.json carries a full
+      // posting package (title + hashtags + youtube_tags -> metadata.txt in
+      // the Stage B ZIP has all three sections populated) or a legacy
+      // title-only JSON (older files pre-dating the posting package; the ZIP
+      // still ships fine, but the hashtag / YouTube-tag sections in the TXT
+      // will be blank). Zero counts are noted explicitly so the operator is
+      // not left guessing between "field absent" and "upload ok".
+      var hashtagsCount = Array.isArray(parsed.hashtags) ? parsed.hashtags.length : 0;
+      var youtubeTagsCount = Array.isArray(parsed.youtube_tags) ? parsed.youtube_tags.length : 0;
+      var postingLine = '';
+      if (hashtagsCount || youtubeTagsCount) {
+        postingLine =
+          '\nPosting package: ' +
+          hashtagsCount + ' hashtag' + (hashtagsCount === 1 ? '' : 's') + ', ' +
+          youtubeTagsCount + ' YouTube tag' + (youtubeTagsCount === 1 ? '' : 's') +
+          ' (shipped in the final ZIP as metadata.txt).';
+      } else {
+        postingLine =
+          '\nPosting package: none (no hashtags / youtube_tags in this production.json — ' +
+          'metadata.txt will ship with only the title populated).';
+      }
       showValidation([
         'Valid. ' + count + ' cut' + (count === 1 ? '' : 's') + ', ' +
         total + 's of source selected (target ' +
         parsed.target_total_duration_seconds + 's).' +
         (typeof parsed.title === 'string' && parsed.title.trim() !== ''
           ? '\nJob title: "' + parsed.title + '" (one title for every scene of this job.)'
-          : '')
+          : '') +
+        postingLine
       ], true);
       el['start-stage-b'].disabled = false;
     };
