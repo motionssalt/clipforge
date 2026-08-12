@@ -94,8 +94,8 @@ VOICE_REF_PATH = os.environ.get("CLIPFORGE_VOICE_REF", DEFAULT_VOICE_REF)
 #                          of clipped.
 #   temperature  = 0.8  -> the model default; broad enough emotional range,
 #                          not so wide it becomes erratic across cuts.
-VOICE_EXAGGERATION = 0.6
-VOICE_CFG_WEIGHT = 0.4
+VOICE_EXAGGERATION = 0.45
+VOICE_CFG_WEIGHT = 0.55
 VOICE_TEMPERATURE = 0.8
 
 
