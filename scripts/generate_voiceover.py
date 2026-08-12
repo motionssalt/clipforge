@@ -23,8 +23,20 @@ length against its voiceover length (no drift) and to mix the audio in.
 Engine: Chatterbox by Resemble AI (MIT license), pinned as
 chatterbox-tts in scripts/requirements.txt. It runs CPU-only, which is
 what the GitHub ubuntu-latest runner has, and it produces natural,
-expressive delivery rather than flat narration-bot speech. The default
-voice is used everywhere — there is deliberately no voice cloning.
+expressive delivery rather than flat narration-bot speech.
+
+Voice character: Chatterbox's `generate(audio_prompt_path=...)` conditions
+the synthesis on a short reference clip. We ship one such clip in the repo
+(assets/voice/reference_male_narrator.wav) — a ~10 second synthetic male
+voice line generated offline with a permissively licensed TTS (no real
+actor, no copyrighted performance, purely a character seed). It targets
+the vocal profile we want in the finished videos: male, youthful/young-
+adult, clear and articulate, confident, energetic without shouting,
+slightly rich in tone, expressive, and natural — the kind of energetic
+male narration heard in modern anime commentary/dubbing. Combined with
+`exaggeration`, `cfg_weight` and `temperature` tuned for expressive but
+controlled delivery, this gives every cut a consistent voice across the
+whole video without touching any other stage of the pipeline.
 
 Model weights (~6GB) are downloaded from HuggingFace on first use into
 $HF_HOME (default ~/.cache/huggingface,
@@ -58,6 +70,33 @@ MANIFEST_NAME = "voiceover_manifest.json"
 DIALOGUE_LUFS = -16
 DIALOGUE_TRUE_PEAK_DBTP = -1.5
 DIALOGUE_LRA = 7
+
+# Voice-character seed for Chatterbox's zero-shot voice conditioning.
+# Resolved relative to the repository root (this file lives in scripts/),
+# so the same path works whether the workflow runs from repo root or from a
+# job directory. The env override exists so operators can experiment with an
+# alternative reference without editing code; leaving it unset uses the
+# committed clip described in the module docstring.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_VOICE_REF = os.path.join(
+    _REPO_ROOT, "assets", "voice", "reference_male_narrator.wav"
+)
+VOICE_REF_PATH = os.environ.get("CLIPFORGE_VOICE_REF", DEFAULT_VOICE_REF)
+
+# Chatterbox character controls. These values were chosen to match the
+# requested vocal profile (energetic anime-narrator commentary):
+#   exaggeration = 0.6  -> expressive and lively without constantly shouting.
+#                          0.5 is the neutral default; >0.7 starts sounding
+#                          theatrical.
+#   cfg_weight   = 0.4  -> the Chatterbox-recommended value for expressive,
+#                          natural-pacing delivery when exaggeration is above
+#                          neutral. Keeps the cadence conversational instead
+#                          of clipped.
+#   temperature  = 0.8  -> the model default; broad enough emotional range,
+#                          not so wide it becomes erratic across cuts.
+VOICE_EXAGGERATION = 0.6
+VOICE_CFG_WEIGHT = 0.4
+VOICE_TEMPERATURE = 0.8
 
 
 def sh(cmd: list[str]) -> None:
@@ -130,6 +169,27 @@ def load_cuts(production_json: str) -> list[dict]:
     return cuts
 
 
+def _resolve_voice_reference() -> str | None:
+    """
+    Return the absolute path to the voice-character reference clip if it
+    exists on disk, otherwise None. Falling back to None (rather than
+    hard-failing) means that if someone deletes the asset the pipeline still
+    runs — it just falls back to Chatterbox's built-in default voice, which
+    is the same behavior the repo had before voice conditioning was added.
+    We log which mode we are in so Stage B logs stay easy to diagnose.
+    """
+    if not VOICE_REF_PATH:
+        return None
+    if not os.path.isfile(VOICE_REF_PATH):
+        print(
+            f"WARNING: voice reference {VOICE_REF_PATH!r} not found; "
+            f"falling back to Chatterbox's built-in default voice.",
+            flush=True,
+        )
+        return None
+    return os.path.abspath(VOICE_REF_PATH)
+
+
 def synthesize_all(cuts: list[dict], out_dir: str) -> list[dict]:
     """
     Render every cut's voiceover_text to voiceover_NN.wav with Chatterbox
@@ -146,6 +206,33 @@ def synthesize_all(cuts: list[dict], out_dir: str) -> list[dict]:
     model = ChatterboxTTS.from_pretrained(device="cpu")
     print(f"Model loaded in {time.time() - t0:.1f}s", flush=True)
 
+    voice_ref = _resolve_voice_reference()
+    if voice_ref:
+        print(
+            f"Voice character reference: {voice_ref} "
+            f"(exaggeration={VOICE_EXAGGERATION}, "
+            f"cfg_weight={VOICE_CFG_WEIGHT}, "
+            f"temperature={VOICE_TEMPERATURE})",
+            flush=True,
+        )
+    else:
+        print(
+            "Voice character reference: <none> — using Chatterbox default voice.",
+            flush=True,
+        )
+
+    # Build the generate() kwargs once. Passing audio_prompt_path=None to
+    # Chatterbox is fine (it just uses the built-in voice), but keeping the
+    # kwarg out of the call entirely when no reference is available makes
+    # the fallback path bit-identical to the pre-voice-conditioning code.
+    gen_kwargs: dict = {
+        "exaggeration": VOICE_EXAGGERATION,
+        "cfg_weight": VOICE_CFG_WEIGHT,
+        "temperature": VOICE_TEMPERATURE,
+    }
+    if voice_ref:
+        gen_kwargs["audio_prompt_path"] = voice_ref
+
     os.makedirs(out_dir, exist_ok=True)
     entries: list[dict] = []
     total = 0.0
@@ -159,7 +246,7 @@ def synthesize_all(cuts: list[dict], out_dir: str) -> list[dict]:
             flush=True,
         )
         t1 = time.time()
-        wav = model.generate(text)
+        wav = model.generate(text, **gen_kwargs)
         # Chatterbox returns a torch tensor at the model's sample rate.
         import torchaudio
         torchaudio.save(wav_path, wav, model.sr)

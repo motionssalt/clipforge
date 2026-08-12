@@ -9,3 +9,7 @@ work_release.json
 *.wav
 *.zip
 !scripts/*.py
+# Voice-character reference clip is a committed asset (see
+# scripts/generate_voiceover.py). The blanket *.wav rule above is meant
+# for generated per-cut voiceover WAVs under work/, not this repo asset.
+!assets/voice/*.wav
