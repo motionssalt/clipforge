@@ -1061,3 +1061,130 @@ input[type="file"]::file-selector-button:hover { border-color: var(--fg-faint); 
   .token-wrap { flex-wrap: wrap; }
   .token-wrap .btn { width: 100%; }
 }
+
+/* --------------------------------------------------------- live progress */
+
+/* Detail-panel progress block: an honest completed/total-step fraction of
+ * the real workflow run (or a stage-ladder position until step data lands). */
+.progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  margin-top: var(--s3);
+}
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-line), var(--accent));
+  transition: width 0.6s ease;
+}
+.progress-bar-fill.is-done       { background: linear-gradient(90deg, var(--accent-line), var(--accent)); }
+.progress-bar-fill.is-error       { background: linear-gradient(90deg, var(--danger-line), var(--danger)); }
+.progress-bar-fill.is-cancelled   { background: var(--fg-faint); }
+.progress-bar-fill.is-indeterminate {
+  width: 100%;
+  background: repeating-linear-gradient(
+    45deg, var(--accent-line) 0 12px, var(--bg-raised) 12px 24px);
+  animation: progress-slide 1.2s linear infinite;
+}
+@keyframes progress-slide { to { background-position: 34px 0; } }
+.progress-text {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--fg-dim);
+}
+
+/* Detail-panel activity block: current step + recent completed steps,
+ * straight from GitHub's Actions Jobs API for this task's own run. */
+.activity-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  margin-top: var(--s3);
+}
+.activity-current { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.activity-kicker {
+  font-size: var(--fs-sm);
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.activity-current-label {
+  font-size: var(--fs-base);
+  color: var(--accent-hi);
+  font-weight: 600;
+}
+.activity-recent-label {
+  margin: var(--s2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.activity-recent-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--fg-dim);
+}
+.activity-recent-list li::marker { color: var(--accent); }
+.activity-time { color: var(--fg-faint); }
+.activity-block .link-out { align-self: flex-start; }
+
+/* Per-task mini progress bar in the tasks list. */
+.task-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.task-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.task-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-line), var(--accent));
+  transition: width 0.6s ease;
+}
+.task-progress-fill.is-done { background: linear-gradient(90deg, var(--accent-line), var(--accent)); }
+.task-progress-fill.is-indeterminate {
+  width: 100%;
+  background: repeating-linear-gradient(
+    45deg, var(--accent-line) 0 10px, var(--bg-raised) 10px 20px);
+  animation: progress-slide 1.2s linear infinite;
+}
+.task-progress-text {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--fg-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

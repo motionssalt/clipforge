@@ -254,6 +254,25 @@
         <p id="stage-text" class="stage-text">Waiting for Stage A to start…</p>
       </div>
 
+      <!-- live progress indicator (driven by real workflow step data) -->
+      <div id="progress-block" class="progress-block is-hidden">
+        <div class="progress-bar" role="progressbar" aria-label="Task progress">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <p id="progress-text" class="progress-text"></p>
+      </div>
+
+      <!-- live activity (current + recent workflow steps) -->
+      <div id="activity-block" class="activity-block is-hidden">
+        <p class="activity-current">
+          <span class="activity-kicker">Current activity</span>
+          <span id="activity-current-label" class="activity-current-label"></span>
+        </p>
+        <p class="activity-recent-label">Recent activity</p>
+        <ul id="activity-recent-list" class="activity-recent-list is-hidden"></ul>
+        <a id="activity-run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">View live run on GitHub ↗</a>
+      </div>
+
       <!-- error banner -->
       <div id="error-block" class="error-block is-hidden" role="alert">
         <p class="error-title">Error</p>

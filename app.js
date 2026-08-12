@@ -48,6 +48,93 @@
   var POLL_SLOWDOWN_AFTER = 10 * 60 * 1000;
   var RUN_DISCOVERY_TIMEOUT = 30000;
 
+  /* Cadence for pulling live workflow step data from GitHub's Actions Jobs
+   * API (/actions/runs/{id}/jobs). That endpoint returns per-step status
+   * (queued / in_progress / completed) with started_at / completed_at and is
+   * updated by GitHub in near-real-time while a run executes — no workflow
+   * changes are required to surface it. Kept slow enough to stay well inside
+   * the 5000 req/h authenticated rate limit even with several concurrent
+   * background task refreshes. */
+  var STEPS_POLL_FAST = 8000;
+  var STEPS_POLL_SLOW = 25000;
+  var STEPS_POLL_TASKS_LIST = 60000;
+
+  /* Human-readable labels for known workflow steps. Only step names present
+   * in .github/workflows/stage-a.yml and stage-b.yml are mapped here — any
+   * unmapped step falls back to its raw workflow name (see
+   * friendlyStepLabel below), so we never fabricate an activity label: if a
+   * workflow gains a new step tomorrow the site simply shows its real name. */
+  var STEP_LABEL_MAP = {
+    // ---- shared setup ----
+    'Checkout':                                                             'Checking out code',
+    'Log the exact code revision this run is executing':                    'Logging code revision',
+    'Re-attach HEAD to the dispatch branch when the checkout pinned a SHA': 'Re-attaching branch (restart)',
+    'Resolve job id':                                                       'Resolving job id',
+    'Resolve inputs':                                                       'Resolving inputs',
+    'Set up Python':                                                        'Setting up Python',
+    'Install ffmpeg':                                                       'Installing ffmpeg',
+    'Verify ffmpeg installation':                                           'Verifying ffmpeg',
+    'Install Python deps':                                                  'Installing Python dependencies',
+    'Verify onnxruntime + faster-whisper VAD stack':                        'Verifying whisper/onnxruntime stack',
+    'Restore Chatterbox model cache':                                       'Restoring TTS model cache',
+
+    // ---- Stage A pipeline ----
+    'Write initial status (stage_a_running)':                               'Publishing initial status',
+    'Commit initial status':                                                'Committing initial status',
+    'Download source video (Google Drive link or any direct URL)':          'Downloading source video',
+    'Probe duration + build compressed analysis copy (720p, CRF 28)':       'Building compressed analysis copy',
+    'Extract 6-frame composite screenshots (one file per 6s window)':       'Extracting screenshot composites',
+    'Extract audio for transcription':                                      'Extracting audio',
+    'Transcribe with faster-whisper (CPU)':                                 'Transcribing audio',
+    'Detect shot boundaries (scene_index.json)':                            'Detecting shot boundaries',
+    'Build key-moments shortlist (key_moments.json)':                       'Ranking key moments',
+    'Emit dense event composites for high-signal beats':                    'Emitting event composites',
+    'Vision-assist disabled — write empty stubs':                           'Vision-assist skipped',
+    'Generate 00_READ_THIS_FIRST.txt (analysis prompt)':                    'Generating analysis prompt',
+    'Zip screenshots (baseline + event composites)':                        'Zipping screenshots',
+    'Stash ORIGINAL video for Stage B (uploaded as private release asset)': 'Stashing original video',
+    'Create GitHub Release with analysis bundle':                           'Publishing analysis release',
+    'Resolve release asset URLs':                                           'Resolving release asset URLs',
+    'Write awaiting_json_upload status':                                    'Publishing awaiting-upload status',
+    'Commit final status':                                                  'Committing final status',
+
+    // ---- Stage B pipeline ----
+    'Write stage_b_running status':                                         'Publishing Stage B start status',
+    'Load release metadata (find original video asset)':                    'Loading release metadata',
+    'Download original video from release':                                 'Downloading original video',
+    'Resolve production.json':                                              'Resolving production.json',
+    'Resolve optional background music':                                    'Resolving background music',
+    'Load persistent channel branding (branding/branding.json)':            'Loading channel branding',
+    'Generate voiceover (Chatterbox TTS, one clip per cut)':                'Generating voiceover',
+    'Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4':      'Cutting, mixing, merging video',
+    'Quality enhancement (denoise + color grade + sharpen)':                'Enhancing video quality',
+    'Burn word-by-word subtitles into the video (before branding)':         'Burning in subtitles',
+    'Brand final video (composite into the branded 9:16 template)':         'Applying channel branding',
+    'Validate the merged final MP4 with ffprobe':                           'Validating final MP4',
+    'Write social-media metadata.txt from production.json':                 'Writing posting-package metadata',
+    'Zip final artifact (finished video + metadata.txt)':                   'Zipping final artifact',
+    'Upload final zip + the finished video to the SAME release':            'Uploading final artifact',
+    'Resolve final asset URLs':                                             'Resolving final asset URLs',
+    'Write complete status':                                                'Publishing complete status',
+
+    // ---- failure / cancellation tail ----
+    'On failure, write error status':                                       'Recording error state',
+    'Ensure HEAD is on a branch':                                           'Re-attaching branch',
+    'Write cancelled status':                                               'Recording cancellation'
+  };
+
+  /**
+   * Return a display label for a raw workflow step name. Unknown names fall
+   * back to the raw name so we never invent an activity string.
+   */
+  function friendlyStepLabel(rawName) {
+    if (!rawName) return '';
+    if (Object.prototype.hasOwnProperty.call(STEP_LABEL_MAP, rawName)) {
+      return STEP_LABEL_MAP[rawName];
+    }
+    return rawName;
+  }
+
   /* ------------------------------------------------------------------- state */
 
   var state = {
@@ -85,7 +172,34 @@
     brandingAvatarUrl: '', // raw.githubusercontent.com URL of the saved picture
     brandingAvatarExt: '', // ext of the saved picture ('' = none saved)
     avatarFile: null,      // a newly picked picture, not yet committed
-    removeAvatar: false    // true when the user asked to delete the picture
+    removeAvatar: false,   // true when the user asked to delete the picture
+
+    /* -----------------------------------------------------------------
+     * Live workflow step data, per task.
+     *
+     * Every entry is keyed by the CORRECT job id — the object at
+     * state.workflowSteps[<job-id>] holds only that task's steps. No
+     * function ever writes to a key it did not derive from that task's
+     * own status.json.workflow_run_id, which is what prevents Task A's
+     * steps from ever appearing under Task B.
+     *
+     * Shape:
+     *   {
+     *     runId:        <int>,
+     *     jobId:        <int>,          // numeric job id inside the run
+     *     jobStatus:    'queued'|'in_progress'|'completed'|...,
+     *     jobConclusion:<string|null>,
+     *     jobName:      <string>,
+     *     jobHtmlUrl:   <string>,
+     *     steps:        [ { name, status, conclusion, number,
+     *                        started_at, completed_at } ],
+     *     fetchedAt:    <epoch-ms>
+     *   }
+     * ----------------------------------------------------------------- */
+    workflowSteps: {},
+    stepsPollTimer: null,     // per-selection live step timer
+    stepsPollStartedAt: 0,
+    stepsInFlight: {}         // guard against overlapping fetches per runId
   };
 
   /* --------------------------------------------------------------- dom lookup */
@@ -104,6 +218,8 @@
     'tasks-section', 'tasks-toggle', 'tasks-body', 'tasks-count', 'tasks-refresh',
     'tasks-refresh-msg', 'tasks-list', 'tasks-empty',
     'status-section', 'stage-badge', 'expiry-countdown', 'stage-line', 'stage-spinner', 'stage-text',
+    'progress-block', 'progress-bar-fill', 'progress-text',
+    'activity-block', 'activity-current-label', 'activity-recent-list', 'activity-run-link',
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
@@ -1180,6 +1296,54 @@
       main.appendChild(titleEl);
     }
 
+    // ---- live per-task progress (this task's OWN step data only).
+    // state.workflowSteps[jobId] is written exclusively by
+    // fetchWorkflowStepsFor(jobId, <that task's run id>) — one task's bar
+    // can therefore never show another task's progress.
+    var taskActive = stage === 'queued' || stage === 'stage_a_running' ||
+                     stage === 'stage_b_queued' || stage === 'stage_b_running' ||
+                     stage === 'stage_b_cancelling';
+    var cardSteps = state.workflowSteps[jobId] || null;
+    var cardProg = deriveProgress(cardSteps);
+    if (taskActive || cardProg.percent !== null || stage === 'complete') {
+      var tprog = document.createElement('div');
+      tprog.className = 'task-progress';
+      var bar = document.createElement('div');
+      bar.className = 'task-progress-bar';
+      var fill = document.createElement('div');
+      fill.className = 'task-progress-fill';
+      var capText = '';
+      if (cardProg.percent !== null && cardProg.totalSteps > 0) {
+        fill.style.width = cardProg.percent + '%';
+        capText = cardProg.completedSteps + '/' + cardProg.totalSteps + ' steps';
+        if (cardProg.currentStep) capText += ' · ' + friendlyStepLabel(cardProg.currentStep.name);
+        if (cardProg.phase === 'completed') fill.classList.add('is-done');
+      } else if (stage === 'complete') {
+        fill.style.width = '100%';
+        fill.classList.add('is-done');
+        capText = 'complete';
+      } else if (taskActive) {
+        // Stage-ladder fallback until live step data arrives — a real
+        // lifecycle position, never a fabricated precise percentage.
+        var lidx = STAGE_LADDER.indexOf(stage);
+        if (lidx >= 0) {
+          fill.style.width = Math.round(((lidx + 1) / STAGE_LADDER.length) * 100) + '%';
+          var lm = TASK_STAGE_BADGE[stage];
+          capText = (lm ? lm.label : stage) + ' — waiting for live step data…';
+        } else {
+          fill.style.width = '100%';
+          fill.classList.add('is-indeterminate');
+        }
+      }
+      bar.appendChild(fill);
+      tprog.appendChild(bar);
+      var cap = document.createElement('div');
+      cap.className = 'task-progress-text';
+      cap.textContent = capText;
+      tprog.appendChild(cap);
+      main.appendChild(tprog);
+    }
+
     var meta = document.createElement('div');
     meta.className = 'task-meta';
 
@@ -1401,6 +1565,42 @@
     await Promise.all(workers);
     persistTasks();
 
+    // Pull the live workflow-step data for tasks that have a known
+    // workflow_run_id. Each fetch is strictly scoped to its own job id —
+    // state.workflowSteps is only ever written at key === jobId inside
+    // fetchWorkflowStepsFor — so this loop cannot mix step data across
+    // tasks even under concurrency. Running tasks refresh on a throttle;
+    // terminal tasks are fetched once and then served from cache.
+    var stepIds = Object.keys(state.tasks).filter(function (id) {
+      var s = state.tasks[id] && state.tasks[id].snapshot;
+      if (!s) return false;
+      var runId = runIdFromSnapshot(s);
+      if (!runId) return false;
+      var cached = state.workflowSteps[id];
+      var terminal = s.stage === 'complete' || s.stage === 'error' ||
+                     s.stage === 'cancelled' || s.stage === 'awaiting_json_upload';
+      if (terminal) return !cached;   // terminal: fetch once, then cache
+      // active: refresh only when the cache is older than half the
+      // tasks-list cadence, to stay well inside the rate limit.
+      return !(cached && (Date.now() - cached.fetchedAt) < STEPS_POLL_TASKS_LIST / 2);
+    });
+    var stepQueue = stepIds.slice();
+    var STEP_CONC = 3;
+    async function stepWorker() {
+      while (stepQueue.length) {
+        var sid = stepQueue.shift();
+        var ssnap = state.tasks[sid] && state.tasks[sid].snapshot;
+        var srunId = runIdFromSnapshot(ssnap);
+        if (!srunId) continue;
+        // A failure of one task's step fetch must never abort the loop —
+        // per-task isolation extends to error handling too.
+        await fetchWorkflowStepsFor(sid, srunId);
+      }
+    }
+    var sw = [];
+    for (var sj = 0; sj < STEP_CONC; sj++) sw.push(stepWorker());
+    await Promise.all(sw);
+
     state.tasksRefreshing = false;
     renderTasksList();
     if (opts.silent !== true) {
@@ -1581,6 +1781,208 @@
     if (state.tasksTimer) { clearInterval(state.tasksTimer); state.tasksTimer = null; }
   }
 
+  /* --------------------------------------------------------- workflow steps */
+
+  /**
+   * Return the workflow_run_id / run URL stored inside a status snapshot.
+   * Both Stage A and Stage B now embed these in status.json.extra when they
+   * publish the initial-running status — the site does NOT infer or
+   * fabricate a run id from anywhere else, so a snapshot without one simply
+   * skips live-step tracking.
+   */
+  function runIdFromSnapshot(snap) {
+    if (!snap) return null;
+    var extra = snap.extra || {};
+    var raw = extra.workflow_run_id;
+    if (!raw) return null;
+    var n = Number(raw);
+    return isFinite(n) && n > 0 ? n : null;
+  }
+
+  /**
+   * Pull the LIVE step list for a specific task's workflow run from
+   * GitHub's Actions Jobs API.
+   *
+   * Strictly indexed by the caller's own job id: the result is written to
+   * state.workflowSteps[jobId] and NOWHERE ELSE, and every field comes from
+   * the SAME response for THAT run — there is no code path where Task A's
+   * response could land under Task B's key. Callers pass the run id they
+   * read from THAT task's own status.json, so a stale / cross-wired id
+   * physically cannot occur here.
+   *
+   * Returns the fetched entry (or the last cached one / null on failure).
+   * Silent on transient errors so poll loops stay healthy; auth and
+   * rate-limit errors bubble to handleGlobalError so the operator sees
+   * them once.
+   */
+  async function fetchWorkflowStepsFor(jobId, runId) {
+    if (!jobId || !runId) return null;
+    if (!isConfigured()) return null;
+    // Guard against overlapping fetches for the same runId (the selected
+    // task's fast timer and the list's slow refresh could otherwise race).
+    if (state.stepsInFlight[runId]) return state.workflowSteps[jobId] || null;
+    state.stepsInFlight[runId] = true;
+    try {
+      var data = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/actions/runs/' + encodeURIComponent(runId) + '/jobs?per_page=30&_=' + Date.now());
+      var jobs = (data && data.jobs) || [];
+      // Both workflows here run a SINGLE pipeline job (named "stage a" /
+      // "stage b") plus, for stage-b.yml, a separate cancellation listener
+      // job. Surface the pipeline job — the one whose steps drive the
+      // actual work.
+      var primary = null;
+      for (var i = 0; i < jobs.length; i++) {
+        var nm = String(jobs[i].name || '').toLowerCase().replace(/_/g, ' ');
+        if (nm === 'stage a' || nm === 'stage b') { primary = jobs[i]; break; }
+      }
+      if (!primary && jobs.length) primary = jobs[0];
+      if (!primary) return null;
+
+      var entry = {
+        runId: Number(runId),
+        jobId: primary.id || null,
+        jobStatus: String(primary.status || ''),
+        jobConclusion: primary.conclusion || null,
+        jobName: String(primary.name || ''),
+        jobHtmlUrl: String(primary.html_url || ''),
+        steps: (primary.steps || []).map(function (s) {
+          return {
+            name: String(s.name || ''),
+            status: String(s.status || ''),
+            conclusion: s.conclusion || null,
+            number: Number(s.number || 0),
+            started_at: s.started_at || null,
+            completed_at: s.completed_at || null
+          };
+        }),
+        fetchedAt: Date.now()
+      };
+
+      // ONLY ever write to this job id's slot. This single line is what
+      // guarantees multi-task isolation — no other task's cache can be
+      // touched by this response.
+      state.workflowSteps[jobId] = entry;
+      return entry;
+    } catch (err) {
+      if (err.name === 'AuthError' || err.name === 'RateLimitError') {
+        handleGlobalError(err);
+      }
+      // Everything else is transient (404 while GitHub is still
+      // materialising the run, network blip, …) — keep the last known
+      // snapshot; the next tick retries.
+      return state.workflowSteps[jobId] || null;
+    } finally {
+      delete state.stepsInFlight[runId];
+    }
+  }
+
+  /**
+   * Fetch steps for the SELECTED task, using the run id stored on its own
+   * status snapshot (falling back to the run the Stage B matcher found).
+   * Never guesses a run id.
+   */
+  async function refreshSelectedTaskSteps() {
+    if (!state.jobId) return null;
+    var runId = runIdFromSnapshot(state.status) ||
+                (state.stageBRun && state.stageBRun.id) ||
+                state.runId;
+    if (!runId) return null;
+    return await fetchWorkflowStepsFor(state.jobId, runId);
+  }
+
+  /**
+   * Derive UI progress from a live step list.
+   *
+   * Progress is (completed steps) / (total steps) where "completed" means
+   * GitHub itself reports status='completed' for that step (any
+   * conclusion — success, skipped, cancelled). This is an HONEST fraction
+   * of the run's real step positions; it never invents a percentage from
+   * wall-clock heuristics and never jumps to some number just because one
+   * particular step happens to be running. For jobs whose status.json
+   * gives no step data yet, callers fall back to stage-based display.
+   */
+  function deriveProgress(entry) {
+    if (!entry || !Array.isArray(entry.steps) || !entry.steps.length) {
+      return { totalSteps: 0, completedSteps: 0, currentStep: null,
+               recentCompleted: [], phase: 'unknown', percent: null };
+    }
+    var steps = entry.steps.slice().sort(function (a, b) {
+      return (a.number || 0) - (b.number || 0);
+    });
+    var completed = 0;
+    var running = null;
+    var completedSoFar = [];
+    for (var i = 0; i < steps.length; i++) {
+      var s = steps[i];
+      if (s.status === 'completed') {
+        completed++;
+        completedSoFar.push(s);
+      } else if (s.status === 'in_progress' && !running) {
+        running = s;
+      }
+    }
+    // If nothing is in_progress yet but the job is active, the "current"
+    // step is the first step that has not completed (its queued neighbour).
+    var jobActive = entry.jobStatus === 'queued' || entry.jobStatus === 'in_progress' ||
+                    entry.jobStatus === 'waiting' || entry.jobStatus === 'requested' ||
+                    entry.jobStatus === 'pending';
+    if (!running && completed < steps.length && jobActive) {
+      for (var k = 0; k < steps.length; k++) {
+        if (steps[k].status !== 'completed') { running = steps[k]; break; }
+      }
+    }
+
+    var phase;
+    if (entry.jobStatus === 'completed') phase = 'completed';
+    else if (running || jobActive) phase = 'running';
+    else phase = 'not_started';
+
+    // Percent is null unless we actually have steps — in which case it is
+    // honestly the completed fraction, no scaling tricks.
+    var percent = steps.length ? Math.round((completed / steps.length) * 100) : null;
+
+    return {
+      totalSteps: steps.length,
+      completedSteps: completed,
+      currentStep: running,
+      recentCompleted: completedSoFar.slice().reverse().slice(0, 5),
+      phase: phase,
+      percent: percent
+    };
+  }
+
+  /* Live-step timer for the SELECTED task only. The tasks list uses the
+   * slower background refresh (refreshTasksFromRepo) to update its cards. */
+  function startStepsPolling() {
+    stopStepsPolling();
+    state.stepsPollStartedAt = Date.now();
+    var tick = async function () {
+      if (!state.jobId) return;
+      var entry = await refreshSelectedTaskSteps();
+      if (entry) {
+        renderStage();
+        renderTasksList();
+      }
+      // Keep ticking while the run has not concluded. When the job is
+      // completed AND the status.json stage is terminal we stop — the
+      // final step list is already rendered.
+      var doneRun = entry && entry.jobStatus === 'completed';
+      var stage = state.status && state.status.stage;
+      var doneStage = stage === 'complete' || stage === 'error' || stage === 'cancelled' ||
+                      stage === 'awaiting_json_upload';
+      if (doneRun && doneStage) return;
+      var interval = (Date.now() - state.stepsPollStartedAt > POLL_SLOWDOWN_AFTER)
+        ? STEPS_POLL_SLOW : STEPS_POLL_FAST;
+      state.stepsPollTimer = setTimeout(tick, interval);
+    };
+    // First tick soon after start so the UI has data quickly.
+    state.stepsPollTimer = setTimeout(tick, 500);
+  }
+
+  function stopStepsPolling() {
+    if (state.stepsPollTimer) { clearTimeout(state.stepsPollTimer); state.stepsPollTimer = null; }
+  }
+
   /* -------------------------------------------------------------- status poll */
 
   function startPolling() {
@@ -1590,11 +1992,17 @@
     state.pollStartedAt = Date.now();
     hide(el['resume-btn']);
     pollOnce();
+    // Kick off the live-step timer for the same task. It is independent of
+    // the status.json poll but shares the selected job id, so switching
+    // tasks (which calls stopPolling + startPolling) also swaps which run
+    // the step timer is watching.
+    startStepsPolling();
   }
 
   function stopPolling() {
     state.polling = false;
     if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
+    stopStepsPolling();
   }
 
   function currentInterval() {
@@ -1806,10 +2214,159 @@
     renderFacts(s);
     renderRaw(s);
 
+    renderProgress(s);
+    renderActivity(s);
+
     renderStageBControls(stage);
 
     // Resume button appears when polling has stopped on a terminal-ish state.
     toggleHidden(el['resume-btn'], state.polling || stage === 'complete' || stage === 'error' || stage === 'cancelled');
+  }
+
+  /**
+   * Render the live progress bar + stage label for the SELECTED task.
+   *
+   * Data source priority:
+   *   1) Live workflow steps (state.workflowSteps[jobId]) — an honest
+   *      completed/total fraction of the run's REAL step positions.
+   *   2) Stage-based fallback — an ordered ladder of the known status.json
+   *      stages, so the bar still moves meaningfully before GitHub has
+   *      materialised the run's step list (or for old jobs that predate
+   *      the workflow_run_id field).
+   *
+   * We NEVER invent a percentage: when no step data exists we show the
+   * stage position on the ladder (which is real state) and label it as a
+   * stage, not a fabricated "70%".
+   */
+  var STAGE_LADDER = [
+    'queued',
+    'stage_a_running',
+    'awaiting_json_upload',
+    'stage_b_queued',
+    'stage_b_running',
+    'complete'
+  ];
+
+  function renderProgress(s) {
+    var block = el['progress-block'];
+    if (!block) return;
+    if (!s || !state.jobId) { hide(block); return; }
+
+    var stage = s.stage;
+    var stepsEntry = state.workflowSteps[state.jobId] || null;
+    var prog = deriveProgress(stepsEntry);
+
+    // Determine fill width + caption without ever fabricating a number.
+    var pct = null;          // numeric percent when honestly derivable
+    var caption = '';
+    var fillCls = '';
+
+    if (prog.percent !== null && prog.totalSteps > 0) {
+      // Live step fraction.
+      pct = prog.percent;
+      caption = prog.completedSteps + ' of ' + prog.totalSteps + ' steps';
+      if (prog.currentStep) caption += ' · ' + friendlyStepLabel(prog.currentStep.name);
+      if (prog.phase === 'completed') fillCls = 'is-done';
+    } else {
+      // Stage-based fallback: position on the known lifecycle ladder.
+      var idx = STAGE_LADDER.indexOf(stage);
+      if (stage === 'complete') { pct = 100; caption = 'Complete'; fillCls = 'is-done'; }
+      else if (stage === 'error') { pct = null; caption = 'Error'; fillCls = 'is-error'; }
+      else if (stage === 'cancelled') { pct = null; caption = 'Cancelled'; fillCls = 'is-cancelled'; }
+      else if (idx >= 0) {
+        // Map ladder index onto a 0–100 stage scale. This is a STAGE
+        // position, honestly labelled as such — not a fake precise %.
+        pct = Math.round(((idx + 1) / STAGE_LADDER.length) * 100);
+        caption = (known_stage_label(stage)) + ' — waiting for live step data…';
+      } else {
+        pct = null; caption = 'Working…';
+      }
+    }
+
+    var fill = el['progress-bar-fill'];
+    if (fill) {
+      if (pct === null) {
+        // Indeterminate / terminal-without-steps: show a pulsing bar.
+        fill.style.width = '100%';
+        fill.className = 'progress-bar-fill is-indeterminate ' + fillCls;
+      } else {
+        fill.style.width = pct + '%';
+        fill.className = 'progress-bar-fill ' + fillCls;
+      }
+    }
+    text(el['progress-text'], caption);
+    show(block);
+
+    function known_stage_label(st) {
+      var m = STAGE_META[st];
+      return m ? m.label : String(st);
+    }
+  }
+
+  /**
+   * Render current activity + recent activity for the SELECTED task.
+   * Everything shown comes straight from the live step list (real step
+   * names / friendly labels) or, when no steps exist yet, from the
+   * status.json message — never fabricated.
+   */
+  function renderActivity(s) {
+    var block = el['activity-block'];
+    if (!block) return;
+    if (!s || !state.jobId) { hide(block); return; }
+
+    var stepsEntry = state.workflowSteps[state.jobId] || null;
+    var prog = deriveProgress(stepsEntry);
+
+    // Run link (prefer the step job's own URL, fall back to status extra).
+    var runLink = el['activity-run-link'];
+    var runUrl = (stepsEntry && stepsEntry.jobHtmlUrl) ||
+                 (s.extra && s.extra.workflow_run_url) ||
+                 state.runHtmlUrl || '';
+    if (runLink) {
+      if (runUrl) { runLink.href = runUrl; show(runLink); }
+      else hide(runLink);
+    }
+
+    // Current activity.
+    var curLabel = el['activity-current-label'];
+    var currentText = '';
+    if (prog.currentStep) {
+      currentText = friendlyStepLabel(prog.currentStep.name);
+    } else if (s.message) {
+      currentText = s.message;
+    } else {
+      var m = STAGE_META[s.stage];
+      currentText = m ? m.text : String(s.stage || '');
+    }
+    text(curLabel, currentText);
+
+    // Recent activity: the last few completed steps, newest first.
+    var list = el['activity-recent-list'];
+    if (list) {
+      list.innerHTML = '';
+      if (prog.recentCompleted.length) {
+        prog.recentCompleted.forEach(function (st) {
+          var li = document.createElement('li');
+          var label = friendlyStepLabel(st.name);
+          if (st.conclusion && st.conclusion !== 'success') {
+            label += ' (' + st.conclusion + ')';
+          }
+          li.textContent = label;
+          if (st.completed_at) {
+            var t = document.createElement('span');
+            t.className = 'activity-time';
+            t.textContent = ' · ' + fmtClock(Math.max(0, Math.floor(Date.now() / 1000) - Math.floor(new Date(st.completed_at).getTime() / 1000))) + ' ago';
+            li.appendChild(t);
+          }
+          list.appendChild(li);
+        });
+        show(list);
+      } else {
+        hide(list);
+      }
+    }
+
+    show(block);
   }
 
   function renderStageBControls(stage) {

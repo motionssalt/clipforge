@@ -181,9 +181,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # workflow_run_id / workflow_run_url are exported here (same as
+          # Stage B) so the site can query GitHub's Actions Jobs API for
+          # live per-step status while Stage A runs.
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_a_running" \
             --message "Downloading source video" \
-            --release-tag "${{ steps.jid.outputs.release_tag }}"
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --extra "workflow_run_id=${{ github.run_id }}" \
+            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Commit initial status
         shell: bash
