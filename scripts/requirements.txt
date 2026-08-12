@@ -1,73 +1,42 @@
 # --- Transcription stack -----------------------------------------------------
 # faster-whisper drives Stage A's Silero-VAD-gated Whisper transcription.
 # Its VAD filter (vad_filter=True in transcribe.py) needs onnxruntime to be
-# importable at runtime — see the onnxruntime pin below.
-numpy>=1.24.0,<1.26.0
+# importable at runtime.
 faster-whisper==1.0.3
-requests>=2.31.0
+onnxruntime>=1.17,<2
 
-# --- onnxruntime (used by faster-whisper's Silero VAD) -----------------------
-# faster-whisper 1.0.3 declares:  onnxruntime >=1.14, <2
+# --- Imaging -----------------------------------------------------------------
+# Pillow is used by brand_scene.py / brand_scenes.py for the overlay
+# composition (avatar, username, hashtags) that Stage B burns onto the
+# final MP4.
+Pillow>=10.3,<12
+
+# --- Numerics ----------------------------------------------------------------
+# numpy is a first-class dependency of faster-whisper and of a couple of
+# our own helpers (subtitle timing math, key-moment scoring). Kept
+# unpinned within a broad range so it resolves compatibly with whatever
+# version faster-whisper wants at install time.
+numpy>=1.24,<3
+
+# --- HTTP --------------------------------------------------------------------
+# `requests` is used by the drive downloader and by a couple of GitHub
+# helpers on the runner side. The Gemini TTS voiceover script deliberately
+# uses only urllib from the stdlib so it never depends on this being
+# importable, but keeping requests here matches the rest of the pipeline.
+requests>=2.32,<3
+
+# --- Voiceover TTS (Gemini API) ---------------------------------------------
 #
-# We pin 1.19.2 because:
-#   * it's inside faster-whisper's `<2` window (Silero VAD is unchanged
-#     between 1.17 and 1.19, so the earlier "swallowed silence" fix keeps
-#     working with no code changes);
-#   * unlike 1.17.x it ships wheels built against NumPy 2's C ABI, so it
-#     imports cleanly under either NumPy 1.x or 2.x — this is the ABI
-#     mismatch that caused the previous "Applying the VAD filter requires
-#     the onnxruntime package" regression: `import onnxruntime` was
-#     crashing during import under NumPy 2.x wheels, and faster-whisper's
-#     VAD loader caught the ImportError and re-raised it as the vague
-#     "missing package" message;
-#   * it's still the CPU-wheel-friendly 1.19 line — no GPU/CUDA
-#     assumptions that would break ubuntu-latest.
-onnxruntime==1.19.2
-
-# --- Branded template compositor (brand_template.py / brand_scene.py) --------
-# Pillow is used to pre-render the 1080x1920 branded chrome (avatar ring,
-# name row, category badge, auto-fitted title, follow button, engagement
-# prompt) as a single transparent RGBA PNG that ffmpeg then overlays onto
-# each letterboxed scene. Doing it in Pillow rather than in ffmpeg's
-# drawtext/drawbox gives us: proper word-wrapping + auto-shrink for
-# titles of any length, rounded corners, ring strokes, and soft shadows —
-# all trivial in Pillow, painful (or impossible) in a filter graph.
-# 10.x is the current supported line; it ships wheels for Python 3.11 so
-# the GitHub ubuntu-latest runner pip step stays offline-friendly.
-Pillow>=10.0.0
-
-# --- Voiceover TTS (Chatterbox by Resemble AI, MIT) --------------------------
-# Stage B (generate_voiceover.py) synthesizes each cut's voiceover_text with
-# Chatterbox — the best CPU-usable open-weights TTS with natural, expressive
-# delivery. GitHub Actions ubuntu-latest is CPU-only, which rules out the
-# GPU-heavy alternatives. Default voice only; no voice cloning anywhere.
-# Model weights (~6GB) download from HuggingFace on first run into $HF_HOME
-# (default ~/.cache/huggingface); stage-b.yml caches that path via
-# actions/cache keyed on this pinned version so later runs skip the download.
-chatterbox-tts==0.1.4
-
-# --- setuptools < 81: runtime requirement of resemble-perth ------------------
-# chatterbox-tts 0.1.4 depends on resemble-perth==1.0.1 for its Perth audio
-# watermark (chatterbox/tts.py: `self.watermarker = perth.PerthImplicitWatermarker()`).
-# perth/perth_net/__init__.py (IDENTICAL in resemble-perth 1.0.0 and 1.0.1)
-# starts with `from pkg_resources import resource_filename`, but
-# resemble-perth declares ZERO dependencies in its wheel metadata, so pip
-# never installs a pkg_resources provider for it. setuptools removed the
-# bundled `pkg_resources` module in version 81, so on a modern toolchain
-# (the workflow upgrades setuptools to latest, e.g. 84.x) that import raises
-# ModuleNotFoundError, and perth/__init__.py swallows it:
-#     try:
-#         from .perth_net.perth_net_implicit.perth_watermarker import \
-#             PerthImplicitWatermarker
-#     except ImportError:
-#         PerthImplicitWatermarker = None
-# The attribute then exists but is None, and Chatterbox initialization dies
-# with `TypeError: 'NoneType' object is not callable` (verified by direct
-# reproduction: `perth.PerthImplicitWatermarker` is None under
-# setuptools>=81 and a working class under setuptools<81; even perth's own
-# pkg_resources deprecation warning says to pin to Setuptools<81).
-# Pinning setuptools<81 restores pkg_resources and the real Perth
-# watermarker — watermarking stays ENABLED, no Chatterbox fork, no
-# code changes to the pipeline. This is a runtime pin: pkuseg etc. build
-# fine against setuptools 80.x as well.
-setuptools<81
+# Stage B synthesizes voiceovers with Google's Gemini API TTS. The call is
+# a plain HTTPS POST implemented with urllib from the standard library —
+# no third-party SDK is required and, deliberately, no Gemini SDK is
+# pinned here. This keeps the install lean and lets stage-b.yml skip the
+# ~6 GB Chatterbox model cache and the setuptools<81 / pkuseg-from-sdist
+# workaround that Chatterbox previously needed.
+#
+# Gemini API keys are supplied at run time via the GEMINI_API_KEYS env
+# variable, populated by stage-b.yml from a GitHub Actions repository
+# secret managed by the site's Settings panel (Gemini TTS keys).
+# Voice character / model choice / directorial style prompt live in
+# scripts/generate_voiceover.py and were selected specifically to
+# reproduce a Jujutsu Kaisen / Hunter x Hunter narrator delivery.

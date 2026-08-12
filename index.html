@@ -86,6 +86,38 @@
             </div>
           </form>
 
+          <details class="branding-disclosure" id="gemini-keys-disclosure">
+            <summary>
+              <span>
+                <span class="heading-kicker">Voiceover credentials</span>
+                <strong>Gemini TTS keys</strong>
+              </span>
+              <span class="summary-action">Manage</span>
+            </summary>
+            <div class="branding-block panel-section">
+              <p class="panel-note">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with libsodium sealed box in this browser before upload). Multiple keys are supported — Stage B fails over cleanly on quota, rate-limit, invalid-key, or transient API errors.</p>
+              <form id="gemini-key-form" autocomplete="off">
+                <div class="field">
+                  <label for="gemini-key-input">Add a Gemini API key</label>
+                  <div class="token-wrap">
+                    <input type="password" id="gemini-key-input" name="gemini_key" placeholder="AIza…" spellcheck="false" autocapitalize="off" autocomplete="off">
+                    <button type="button" id="gemini-key-reveal" class="btn btn-ghost btn-small" aria-pressed="false">Show</button>
+                  </div>
+                  <p class="hint">The raw key never touches the repo, logs, or artifacts. Only a masked fingerprint (first 4 + last 4 characters) is committed for display.</p>
+                </div>
+                <div class="actions">
+                  <button type="submit" id="gemini-key-add" class="btn btn-secondary">Add key</button>
+                  <span id="gemini-key-msg" class="inline-msg" aria-live="polite"></span>
+                </div>
+              </form>
+              <div class="gemini-keys-list-block">
+                <div class="heading-kicker">Configured keys</div>
+                <ul id="gemini-keys-list" class="gemini-keys-list" aria-live="polite"></ul>
+                <p id="gemini-keys-empty" class="hint">No Gemini API keys configured yet.</p>
+              </div>
+            </div>
+          </details>
+
           <details class="branding-disclosure">
             <summary>
               <span>
@@ -383,6 +415,7 @@
   <p>Tasks auto-delete 12 hours after creation. Download final artifacts before they expire.</p>
 </footer>
 
-<script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/browsers/sodium.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>

@@ -173,3 +173,12 @@ input[type="file"]::file-selector-button{margin-right:9px;padding:7px 10px;borde
 @media(max-width:430px){
   .launch-options{grid-template-columns:1fr}.header-right{max-width:56%}.repo-indicator{max-width:100%}.page-intro h1{font-size:26px}.panel-head{gap:10px}.section-icon{width:32px;height:32px}.panel-head h2{font-size:14px}.panel-badge,.stage-badge{font-size:7.5px}.token-wrap{flex-direction:column}.token-wrap .btn{width:100%}.actions .inline-msg{width:100%}.task-card{padding:14px}.task-head{align-items:flex-start}.task-actions{display:grid;grid-template-columns:1fr auto}.task-actions .btn{width:100%}.live-overview{grid-template-columns:minmax(0,1fr)}.progress-label-row{align-items:flex-start;flex-direction:column;gap:3px}.progress-text{text-align:left}.rf-actions{flex-direction:column}.rf-actions .btn{width:100%}.handoff-header,.completion-heading{align-items:flex-start}.upload-row .btn,.stage-b-launch .btn{width:100%}.completion-actions{flex-direction:column;align-items:stretch}.site-footer{font-size:10px}
 }
+
+/* Gemini TTS keys list (Settings panel) */
+.gemini-keys-list-block{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--input);margin-top:10px}
+.gemini-keys-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.gemini-keys-list:empty{display:none}
+.gemini-key-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-3)}
+.gemini-key-fp{flex:1;min-width:0;color:var(--text-2);font:11px var(--mono, monospace);overflow-wrap:anywhere}
+.gemini-key-added{color:var(--text-3);font-size:10px;white-space:nowrap}
+.gemini-key-row .btn{flex:0 0 auto}

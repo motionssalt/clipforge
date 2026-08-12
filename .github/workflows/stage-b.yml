@@ -167,55 +167,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # NOTE: do NOT upgrade setuptools here. setuptools >= 81 removed the
-          # bundled `pkg_resources` module, which resemble-perth 1.0.1 (the
-          # Perth watermark chatterbox-tts 0.1.4 builds at init) imports at
-          # module load. resemble-perth declares no dependencies, so pip never
-          # installs a pkg_resources provider; without one,
-          # perth.PerthImplicitWatermarker resolves to None and Chatterbox
-          # dies with "TypeError: 'NoneType' object is not callable". The
-          # setuptools<81 runtime pin lives in scripts/requirements.txt.
-          python -m pip install --upgrade pip wheel "setuptools<81"
-          # Build-time prereqs for pkuseg (see below): numpy headers plus a
-          # modern Cython, both importable in the pkuseg build environment.
-          # chatterbox-tts 0.1.4 requires numpy<1.26.0,>=1.24.0.
-          pip install "numpy>=1.24.0,<1.26.0" cython
-          # pkuseg 0.0.25 (exact pin of chatterbox-tts) has no Python 3.11
-          # wheels, so pip builds it from the sdist. The sdist ships stale
-          # pre-generated .cpp files produced by an old Cython that contain
-          # `#include "longintrepr.h"` — a CPython internal header removed
-          # in Python 3.11 — and pkuseg's setup.py only re-runs cythonize()
-          # when PKG-INFO is absent (i.e. NOT in an sdist), so the stale
-          # sources are compiled verbatim and the build dies with
-          # "fatal error: longintrepr.h: No such file or directory".
-          # Fix: unpack the sdist, delete the stale .cpp files so modern
-          # Cython regenerates them from the .pyx sources, then build with
-          # --no-build-isolation so setup.py's top-level `import numpy`
-          # and the re-cythonization see the packages installed above.
-          workdir="$(mktemp -d)"
-          pip download pkuseg==0.0.25 --no-deps --no-binary :all: \
-            --no-build-isolation -d "$workdir"
-          tar -xzf "$workdir/pkuseg-0.0.25.tar.gz" -C "$workdir"
-          find "$workdir/pkuseg-0.0.25" -name '*.cpp' -delete
-          pip install "$workdir/pkuseg-0.0.25" --no-build-isolation
-          rm -rf "$workdir"
+          # Gemini TTS replaced Chatterbox for voiceover generation, so
+          # the previous setuptools<81 / pkuseg-from-sdist workaround
+          # (needed only by resemble-perth's pkg_resources import) is
+          # gone. Standard modern pip / setuptools / wheel are enough for
+          # the remaining stack (faster-whisper + onnxruntime + Pillow +
+          # requests + numpy). The Gemini TTS call itself uses only
+          # urllib from the stdlib and needs no additional package.
+          python -m pip install --upgrade pip wheel setuptools
           pip install -r scripts/requirements.txt
-
-      # -------------------------------------------------------------------
-      # Chatterbox TTS model weights (~6GB) live under $HF_HOME (default
-      # ~/.cache/huggingface, models--ResembleAI--chatterbox) after the
-      # first download. Cache that directory keyed on the pinned
-      # chatterbox-tts version from scripts/requirements.txt so every run
-      # after the first restores the weights instead of re-downloading.
-      # -------------------------------------------------------------------
-      - name: Restore Chatterbox model cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: chatterbox-weights-${{ runner.os }}-${{
-            hashFiles('scripts/requirements.txt') }}
-          restore-keys: |
-            chatterbox-weights-${{ runner.os }}-
 
       - name: Write stage_b_running status
         shell: bash
@@ -446,21 +406,38 @@ jobs:
 
       # -------------------------------------------------------------------
       # New one-pass pipeline: voiceover -> cut+mix+merge -> subtitles.
-      # generate_voiceover.py    : Chatterbox TTS per cut + manifest.
+      # generate_voiceover.py    : Gemini TTS per cut + manifest.
       # cut_and_produce.py       : timing reconciliation, mute source audio,
       #                            mix voiceover (+ optional music), ONE
       #                            merged mobile-safe MP4 + merged voiceover.
       # generate_subtitles.py    : word-level transcribe of the merged
       #                            voiceover, burn word-by-word subtitles.
       # -------------------------------------------------------------------
-      - name: Generate voiceover (Chatterbox TTS, one clip per cut)
+      - name: Generate voiceover (Gemini TTS, one clip per cut)
         shell: bash
+        env:
+          # Newline-separated list of Gemini API keys, populated from the
+          # GEMINI_API_KEYS repository secret managed by the site's
+          # Settings panel (Gemini TTS keys). scripts/generate_voiceover.py
+          # iterates the list per cut and transparently fails over on
+          # 401/403/429/5xx / API_KEY_INVALID responses; if every key
+          # fails for a cut across every model / voice combination the
+          # job stops with a clear error asking the operator to rotate
+          # keys. The secret is never printed and never written to disk.
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           set -euo pipefail
+          if [ -z "${GEMINI_API_KEYS:-}" ]; then
+            echo "FATAL: the GEMINI_API_KEYS repository secret is empty." >&2
+            echo "Add at least one Gemini API key in the site's Settings" >&2
+            echo "panel (Gemini TTS keys) before running Stage B." >&2
+            exit 2
+          fi
           mkdir -p work/voiceover
           python scripts/generate_voiceover.py \
             work/production.json \
             work/voiceover
+          # List only file names + sizes; never dump env or secrets.
           ls -lh work/voiceover/
 
       - name: Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4

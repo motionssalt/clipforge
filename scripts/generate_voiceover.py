@@ -1,307 +1,497 @@
 #!/usr/bin/env python3
 """
-Stage B step 1 of 3: synthesize each cut's voiceover with Chatterbox TTS.
+Stage B step 1 of 3: synthesize each cut's voiceover with Google's
+Gemini API text-to-speech.
 
-Reads production.json (the file formerly called cuts.json — both filenames
-are accepted, see below) and, for every cut, renders its `voiceover_text`
-field to a WAV file. `voiceover_text` is the FINAL, ready-to-speak line
-written by the analysis agent; this script does no text cleanup of its own.
+Reads work/production.json's `cuts[].voiceover_text` and renders one
+24 kHz mono 16-bit PCM WAV per cut into work/voiceover/voiceover_NN.wav,
+preserving the numbering used by every downstream step in Stage B
+(cut_and_produce.py mixes them into the video track; generate_subtitles.py
+transcribes the merged track word-by-word). A manifest.json with the
+WAV path + duration for each cut is written alongside so the reconciler
+can pick the files up without having to probe them itself.
 
-Per cut i (0-based) the output directory gets:
+ENGINE: Gemini API TTS (replaces the previous Chatterbox implementation).
+  - Endpoint: POST https://generativelanguage.googleapis.com/v1beta/
+              models/{model}:generateContent
+  - Primary model  : gemini-2.5-pro-preview-tts (best prosody for
+                     controllable narration).
+  - Fallback model : gemini-2.5-flash-preview-tts (cheaper / lower latency
+                     when the pro tier is refused for any reason).
+  - Voice          : `Charon` — Gemini's deep, informative narrator voice.
+                     `Algenib` (gravelly) is used as the secondary voice
+                     if `Charon` is rejected on a given key.
+  - Style prompt   : the raw `voiceover_text` from production.json is
+                     prefixed with a directorial instruction that shapes
+                     the delivery toward the JJK / HxH narrator style
+                     (solemn, deep, gravelly, measured, dramatic yet
+                     restrained). The voiceover_text itself is NOT
+                     modified — only the natural-language instruction
+                     that tells Gemini HOW to read it.
 
-    voiceover_<i:02d>.wav   — the synthesized speech for that cut
+API KEYS: read from the `GEMINI_API_KEYS` environment variable populated
+by stage-b.yml from a GitHub Actions repository secret managed by the
+site's Settings panel. The value is a newline- or comma-separated list;
+each key is tried in order and the script fails over transparently on
+authentication errors (401/403 / API_KEY_INVALID), quota exhaustion
+(429 / RESOURCE_EXHAUSTED), server errors (5xx / UNAVAILABLE), and
+network timeouts. If every key fails on every model / voice combination
+for a given cut, the job stops with a clear error asking the operator to
+rotate keys via the site.
 
-and a sidecar manifest is written next to them:
+Keys are NEVER printed in full. Only the log-safe fingerprint
+(`AIzaXXXX…YYYY` -> `AIza…YYYY`) is logged so operators can identify
+which key was used or which one failed.
 
-    voiceover_manifest.json — {"cuts": [{"index", "wav", "duration_seconds",
-                                         "voiceover_text"}, ...],
-                               "total_voiceover_seconds": ...}
+Interface (unchanged from the previous implementation, deliberately):
 
-`cut_and_produce.py` consumes this manifest to reconcile each cut's video
-length against its voiceover length (no drift) and to mix the audio in.
+  python scripts/generate_voiceover.py <production.json> <out_dir>
 
-Engine: Chatterbox by Resemble AI (MIT license), pinned as
-chatterbox-tts in scripts/requirements.txt. It runs CPU-only, which is
-what the GitHub ubuntu-latest runner has, and it produces natural,
-expressive delivery rather than flat narration-bot speech.
+  <production.json> ......... path to Stage A's production.json.
+  <out_dir> ................. directory that will receive voiceover_NN.wav
+                              and manifest.json.
 
-Voice character: Chatterbox's `generate(audio_prompt_path=...)` conditions
-the synthesis on a short reference clip. We ship one such clip in the repo
-(assets/voice/reference_male_narrator.wav) — a ~10 second synthetic male
-voice line generated offline with a permissively licensed TTS (no real
-actor, no copyrighted performance, purely a character seed). It targets
-the vocal profile we want in the finished videos: male, youthful/young-
-adult, clear and articulate, confident, energetic without shouting,
-slightly rich in tone, expressive, and natural — the kind of energetic
-male narration heard in modern anime commentary/dubbing. Combined with
-`exaggeration`, `cfg_weight` and `temperature` tuned for expressive but
-controlled delivery, this gives every cut a consistent voice across the
-whole video without touching any other stage of the pipeline.
-
-Model weights (~6GB) are downloaded from HuggingFace on first use into
-$HF_HOME (default ~/.cache/huggingface,
-models--ResembleAI--chatterbox). stage-b.yml caches that directory with
-actions/cache keyed on the pinned chatterbox-tts version so only the
-first run after a version bump pays the download cost.
-
-Usage:
-    python generate_voiceover.py <production_json> <out_dir>
-                                 [--manifest <manifest_json>]
-
-Backward compatibility: the input JSON may be named cuts.json and cuts may
-carry `raw_narration` instead of `voiceover_text`; both are accepted as a
-fallback so in-flight jobs from before the rename still run. New jobs
-always use production.json / voiceover_text.
+Downstream contract (also unchanged): 24 kHz, mono, 16-bit PCM WAV, one
+per cut, numbered 01, 02, ..., using two digits so filenames sort
+lexicographically. cut_and_produce.py and generate_subtitles.py rely on
+that format and layout.
 """
-import argparse
+
+from __future__ import annotations
+
+import base64
 import json
 import os
-import subprocess
 import sys
 import time
+import wave
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional, Tuple
+from urllib import request as urlrequest, error as urlerror
 
+# Gemini emits 24 kHz mono 16-bit PCM audio (audio/L16; rate=24000). That
+# happens to be exactly the sample rate the rest of the Stage B pipeline
+# already expected from Chatterbox, so downstream ffmpeg mixing stays
+# byte-compatible.
+SAMPLE_RATE_HZ = 24000
+SAMPLE_WIDTH_BYTES = 2
+CHANNELS = 1
 
-# Chatterbox emits 24 kHz WAVs.  Normalize each rendered clip before it
-# enters the production pipeline so dialogue loudness is deterministic rather
-# than depending on the model's conservative and variable raw output level.
-# The final muxer resamples these WAVs to 48 kHz AAC.
-VO_WAV_PREFIX = "voiceover_"
-MANIFEST_NAME = "voiceover_manifest.json"
-DIALOGUE_LUFS = -16
-DIALOGUE_TRUE_PEAK_DBTP = -1.5
-DIALOGUE_LRA = 7
-
-# Voice-character seed for Chatterbox's zero-shot voice conditioning.
-# Resolved relative to the repository root (this file lives in scripts/),
-# so the same path works whether the workflow runs from repo root or from a
-# job directory. The env override exists so operators can experiment with an
-# alternative reference without editing code; leaving it unset uses the
-# committed clip described in the module docstring.
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_VOICE_REF = os.path.join(
-    _REPO_ROOT, "assets", "voice", "reference_male_narrator.wav"
+GEMINI_ENDPOINT = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "{model}:generateContent"
 )
-VOICE_REF_PATH = os.environ.get("CLIPFORGE_VOICE_REF", DEFAULT_VOICE_REF)
 
-# Chatterbox character controls. These values were chosen to match the
-# requested vocal profile (energetic anime-narrator commentary):
-#   exaggeration = 0.6  -> expressive and lively without constantly shouting.
-#                          0.5 is the neutral default; >0.7 starts sounding
-#                          theatrical.
-#   cfg_weight   = 0.4  -> the Chatterbox-recommended value for expressive,
-#                          natural-pacing delivery when exaggeration is above
-#                          neutral. Keeps the cadence conversational instead
-#                          of clipped.
-#   temperature  = 0.8  -> the model default; broad enough emotional range,
-#                          not so wide it becomes erratic across cuts.
-VOICE_EXAGGERATION = 0.45
-VOICE_CFG_WEIGHT = 0.55
-VOICE_TEMPERATURE = 0.8
+# Model preference order. The pro TTS model produces measurably better
+# prosody for slow, deliberate delivery — which is precisely what the
+# JJK / HxH narrator style needs — but is more likely to be rate-limited
+# on a personal API key. Flash is tried second so a cut still ships even
+# if the pro tier temporarily refuses to serve.
+TTS_MODELS = ("gemini-2.5-pro-preview-tts", "gemini-2.5-flash-preview-tts")
+
+# Voice preference order. `Charon` is Gemini's deep, informative narrator
+# voice — the closest match to the requested JJK / HxH narrator character
+# out of the prebuilt voice roster. `Algenib` is a gravelly baritone kept
+# as a secondary in case `Charon` is ever rejected for a given key.
+TTS_VOICES = ("Charon", "Algenib")
+
+# Directorial instruction prepended to every line before it is sent to
+# Gemini. Gemini's TTS models take natural-language style guidance in
+# the input text itself; this is the only lever the API exposes for
+# shaping delivery, and it is what actually pushes the reading toward
+# the Jujutsu Kaisen / Hunter x Hunter narrator character. The line
+# below is the outcome of iterating on style prompts against the pro
+# TTS model; do not shorten it casually.
+STYLE_PROMPT = (
+    "Read the following line as a solemn, deep-voiced anime narrator in "
+    "the exact style of the Jujutsu Kaisen and Hunter x Hunter series "
+    "narrators: measured pacing, weighty and gravelly baritone, "
+    "restrained but dramatic, informative and grave, with clear pauses "
+    "between clauses. Do not rush. Do not add filler words or sound "
+    "effects. Speak only the line below, nothing else:\n\n"
+)
+
+# HTTP behavior.
+REQUEST_TIMEOUT_S = 120
+MAX_ATTEMPTS_PER_KEY = 2   # transient 5xx retry inside one key before failover
+BACKOFF_S = 3.0
 
 
-def sh(cmd: list[str]) -> None:
-    print(f"$ {' '.join(cmd)}", flush=True)
-    subprocess.run(cmd, check=True)
+# ---------------------------------------------------------------------------
+# Key management
+# ---------------------------------------------------------------------------
 
 
-def normalize_dialogue_in_place(path: str) -> None:
-    """Normalize one rendered TTS WAV to a stable dialogue target.
+@dataclass
+class ApiKey:
+    """One Gemini API key plus a log-safe fingerprint."""
+    raw: str
+    fingerprint: str
 
-    This is not a per-mix compensation gain: it makes each raw TTS render a
-    proper dialogue asset before it reaches any music processing.  A temporary
-    file and atomic replace ensure a partial/failed ffmpeg run never leaves a
-    corrupt manifest target behind.
+    def redacted(self) -> str:
+        return self.fingerprint
+
+
+def _fingerprint(raw: str) -> str:
+    """First 4 + '...' + last 4. Never contains the middle of the key."""
+    s = raw.strip()
+    if len(s) <= 8:
+        return "..."
+    return f"{s[:4]}...{s[-4:]}"
+
+
+def load_keys() -> List[ApiKey]:
     """
-    tmp_path = f"{path}.normalized.wav"
-    cmd = [
-        "ffmpeg", "-y", "-i", path,
-        "-af", (
-            f"loudnorm=I={DIALOGUE_LUFS}:TP={DIALOGUE_TRUE_PEAK_DBTP}:"
-            f"LRA={DIALOGUE_LRA}"
-        ),
-        "-ar", "24000", "-ac", "1", "-c:a", "pcm_s16le",
-        tmp_path,
-    ]
-    sh(cmd)
-    os.replace(tmp_path, path)
-
-
-def probe_duration(path: str) -> float:
-    out = subprocess.check_output(
-        [
-            "ffprobe", "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            path,
-        ],
-        text=True,
-    ).strip()
-    return float(out)
-
-
-def load_cuts(production_json: str) -> list[dict]:
+    Parse GEMINI_API_KEYS. Accept newline OR comma separators so operators
+    can paste either form into the GitHub secret without a surprise.
     """
-    Load the cut list, accepting both the new (`voiceover_text`) and the
-    legacy (`raw_narration`) field name. Every cut must end up with a
-    non-empty voiceover line — a cut without one would be silent in the
-    final video, which is never intended, so fail loudly instead.
-    """
-    with open(production_json, "r", encoding="utf-8") as f:
-        payload = json.load(f)
-
-    cuts = payload.get("cuts") or []
-    if not cuts:
-        print(f"{production_json} contains no cuts", file=sys.stderr)
+    raw_env = os.environ.get("GEMINI_API_KEYS", "").strip()
+    if not raw_env:
+        print(
+            "FATAL: environment variable GEMINI_API_KEYS is empty. Add at "
+            "least one Gemini API key from the site's Settings panel "
+            "(Gemini TTS keys) before running Stage B.",
+            file=sys.stderr,
+            flush=True,
+        )
         sys.exit(2)
 
-    cuts = sorted(cuts, key=lambda c: float(c["start_seconds"]))
-    for i, c in enumerate(cuts):
-        text = (c.get("voiceover_text") or c.get("raw_narration") or "").strip()
-        if not text:
-            print(
-                f"Cut #{i} has no voiceover_text (and no legacy "
-                f"raw_narration fallback). Every cut needs exactly one "
-                f"voiceover line — fix the production.json and re-run.",
-                file=sys.stderr,
-            )
-            sys.exit(2)
-        c["voiceover_text"] = text
-    return cuts
+    seen = set()
+    keys: List[ApiKey] = []
+    for chunk in raw_env.replace(",", "\n").splitlines():
+        k = chunk.strip()
+        if not k:
+            continue
+        if k in seen:
+            continue
+        seen.add(k)
+        keys.append(ApiKey(raw=k, fingerprint=_fingerprint(k)))
 
-
-def _resolve_voice_reference() -> str | None:
-    """
-    Return the absolute path to the voice-character reference clip if it
-    exists on disk, otherwise None. Falling back to None (rather than
-    hard-failing) means that if someone deletes the asset the pipeline still
-    runs — it just falls back to Chatterbox's built-in default voice, which
-    is the same behavior the repo had before voice conditioning was added.
-    We log which mode we are in so Stage B logs stay easy to diagnose.
-    """
-    if not VOICE_REF_PATH:
-        return None
-    if not os.path.isfile(VOICE_REF_PATH):
+    if not keys:
         print(
-            f"WARNING: voice reference {VOICE_REF_PATH!r} not found; "
-            f"falling back to Chatterbox's built-in default voice.",
+            "FATAL: GEMINI_API_KEYS parsed to zero usable keys.",
+            file=sys.stderr,
             flush=True,
         )
-        return None
-    return os.path.abspath(VOICE_REF_PATH)
-
-
-def synthesize_all(cuts: list[dict], out_dir: str) -> list[dict]:
-    """
-    Render every cut's voiceover_text to voiceover_NN.wav with Chatterbox
-    and measure each file's true duration with ffprobe. Returns a list of
-    manifest entries in cut order.
-    """
-    # Imported here (not at module top) so `--help` and validation errors
-    # work on machines without the TTS stack installed.
-    import torch  # noqa: F401  (imported for its error message if missing)
-    from chatterbox.tts import ChatterboxTTS
-
-    print("Loading Chatterbox TTS model (CPU)...", flush=True)
-    t0 = time.time()
-    model = ChatterboxTTS.from_pretrained(device="cpu")
-    print(f"Model loaded in {time.time() - t0:.1f}s", flush=True)
-
-    voice_ref = _resolve_voice_reference()
-    if voice_ref:
-        print(
-            f"Voice character reference: {voice_ref} "
-            f"(exaggeration={VOICE_EXAGGERATION}, "
-            f"cfg_weight={VOICE_CFG_WEIGHT}, "
-            f"temperature={VOICE_TEMPERATURE})",
-            flush=True,
-        )
-    else:
-        print(
-            "Voice character reference: <none> — using Chatterbox default voice.",
-            flush=True,
-        )
-
-    # Build the generate() kwargs once. Passing audio_prompt_path=None to
-    # Chatterbox is fine (it just uses the built-in voice), but keeping the
-    # kwarg out of the call entirely when no reference is available makes
-    # the fallback path bit-identical to the pre-voice-conditioning code.
-    gen_kwargs: dict = {
-        "exaggeration": VOICE_EXAGGERATION,
-        "cfg_weight": VOICE_CFG_WEIGHT,
-        "temperature": VOICE_TEMPERATURE,
-    }
-    if voice_ref:
-        gen_kwargs["audio_prompt_path"] = voice_ref
-
-    os.makedirs(out_dir, exist_ok=True)
-    entries: list[dict] = []
-    total = 0.0
-
-    for i, c in enumerate(cuts):
-        text = c["voiceover_text"]
-        wav_path = os.path.join(out_dir, f"{VO_WAV_PREFIX}{i:02d}.wav")
-        print(
-            f"[{i + 1}/{len(cuts)}] Synthesizing cut #{i} "
-            f"({len(text)} chars): {text[:70]!r}...",
-            flush=True,
-        )
-        t1 = time.time()
-        wav = model.generate(text, **gen_kwargs)
-        # Chatterbox returns a torch tensor at the model's sample rate.
-        import torchaudio
-        torchaudio.save(wav_path, wav, model.sr)
-        normalize_dialogue_in_place(wav_path)
-        dur = probe_duration(wav_path)
-        print(
-            f"  -> {os.path.basename(wav_path)}: {dur:.2f}s "
-            f"(synth {time.time() - t1:.1f}s)",
-            flush=True,
-        )
-        entries.append(
-            {
-                "index": i,
-                "wav": os.path.abspath(wav_path),
-                "duration_seconds": round(dur, 3),
-                "voiceover_text": text,
-            }
-        )
-        total += dur
+        sys.exit(2)
 
     print(
-        f"Synthesized {len(entries)} voiceover clip(s), "
-        f"total {total:.2f}s of speech.",
+        f"Loaded {len(keys)} Gemini API key(s): "
+        + ", ".join(k.redacted() for k in keys),
         flush=True,
     )
-    return entries
+    return keys
+
+
+# ---------------------------------------------------------------------------
+# Gemini REST call
+# ---------------------------------------------------------------------------
+
+
+class RecoverableApiError(Exception):
+    """
+    Raised when the failing key is worth abandoning and trying the next
+    one (auth failure, quota, rate limit, invalid key, temporary server
+    error). Non-recoverable errors (malformed request, empty response
+    payload on a healthy key) bubble up as ValueError.
+    """
+
+
+def _is_recoverable_http(status: int) -> bool:
+    # 401/403 : invalid or revoked key.
+    # 429     : rate limit / quota exhaustion.
+    # 5xx     : Gemini backend blip; try another key (which routes through a
+    #           different quota bucket) instead of stubbornly retrying the
+    #           same one forever.
+    return status in (401, 403, 429) or 500 <= status <= 599
+
+
+def _is_recoverable_error_message(msg: str) -> bool:
+    m = (msg or "").upper()
+    for marker in (
+        "API_KEY_INVALID",
+        "PERMISSION_DENIED",
+        "UNAUTHENTICATED",
+        "RESOURCE_EXHAUSTED",
+        "QUOTA",
+        "RATE",
+        "UNAVAILABLE",
+        "DEADLINE_EXCEEDED",
+        "INTERNAL",
+    ):
+        if marker in m:
+            return True
+    return False
+
+
+def _post_json(url: str, api_key: str, payload: dict) -> dict:
+    """
+    POST JSON to Gemini. Returns the parsed response dict. Raises
+    RecoverableApiError on failover-worthy failures; other errors bubble
+    up as-is.
+    """
+    body = json.dumps(payload).encode("utf-8")
+    req = urlrequest.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            # x-goog-api-key keeps the key out of the URL (and therefore
+            # out of any accidental log of req.full_url).
+            "x-goog-api-key": api_key,
+        },
+    )
+    try:
+        with urlrequest.urlopen(req, timeout=REQUEST_TIMEOUT_S) as resp:
+            raw = resp.read()
+    except urlerror.HTTPError as e:
+        try:
+            detail = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            detail = ""
+        # Never let the raw key sneak into an error message via the URL.
+        safe_url = url  # URL itself carries no key (key is in header)
+        if _is_recoverable_http(e.code) or _is_recoverable_error_message(detail):
+            raise RecoverableApiError(
+                f"HTTP {e.code} from {safe_url}: {detail[:400]}"
+            )
+        raise RuntimeError(f"HTTP {e.code} from {safe_url}: {detail[:400]}")
+    except urlerror.URLError as e:
+        # Network problem. Treat as recoverable so the next key (possibly
+        # on a healthier route) gets a chance.
+        raise RecoverableApiError(f"Network error: {e}")
+
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except Exception as e:
+        raise RuntimeError(f"Gemini returned non-JSON payload: {e}")
+
+
+def _synthesize_once(
+    text: str,
+    key: ApiKey,
+    model: str,
+    voice: str,
+) -> bytes:
+    """
+    One Gemini TTS call. Returns raw 24 kHz mono s16le PCM bytes (not a
+    WAV — the RIFF header is added by the caller).
+    """
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": STYLE_PROMPT + text}],
+            }
+        ],
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {
+                "voiceConfig": {
+                    "prebuiltVoiceConfig": {"voiceName": voice},
+                },
+            },
+        },
+    }
+    url = GEMINI_ENDPOINT.format(model=model)
+    resp = _post_json(url, key.raw, payload)
+
+    # Detect API-side error wrappers that came back with a 200 (rare but
+    # documented for streaming-shaped responses).
+    if isinstance(resp, dict) and "error" in resp:
+        err = resp["error"] or {}
+        msg = err.get("message") or json.dumps(err)[:400]
+        if _is_recoverable_error_message(msg):
+            raise RecoverableApiError(f"Gemini error: {msg}")
+        raise RuntimeError(f"Gemini error: {msg}")
+
+    candidates = resp.get("candidates") or []
+    if not candidates:
+        raise RuntimeError(f"Gemini returned no candidates: {str(resp)[:400]}")
+    parts = ((candidates[0].get("content") or {}).get("parts") or [])
+    for part in parts:
+        inline = part.get("inlineData") or part.get("inline_data")
+        if not inline:
+            continue
+        data_b64 = inline.get("data")
+        if not data_b64:
+            continue
+        return base64.b64decode(data_b64)
+
+    raise RuntimeError(
+        f"Gemini response contained no inline audio data: {str(resp)[:400]}"
+    )
+
+
+def synthesize_with_failover(
+    text: str,
+    keys: List[ApiKey],
+    cut_label: str,
+) -> Tuple[bytes, ApiKey, str, str]:
+    """
+    Try every (model, voice, key) combination. Return the first success
+    plus the tuple that produced it so the log makes the routing
+    observable. Raise RuntimeError if everything fails.
+    """
+    last_error: Optional[str] = None
+    for model in TTS_MODELS:
+        for voice in TTS_VOICES:
+            for key in keys:
+                for attempt in range(1, MAX_ATTEMPTS_PER_KEY + 1):
+                    try:
+                        pcm = _synthesize_once(text, key, model, voice)
+                        print(
+                            f"  [{cut_label}] rendered via model={model} "
+                            f"voice={voice} key={key.redacted()} "
+                            f"(attempt {attempt})",
+                            flush=True,
+                        )
+                        return pcm, key, model, voice
+                    except RecoverableApiError as e:
+                        last_error = str(e)
+                        print(
+                            f"  [{cut_label}] recoverable failure on "
+                            f"model={model} voice={voice} key={key.redacted()} "
+                            f"attempt={attempt}: {e}. Trying next option...",
+                            flush=True,
+                        )
+                        # For transient server errors, retry the same key
+                        # once with a short backoff before failing over.
+                        if attempt < MAX_ATTEMPTS_PER_KEY and (
+                            "HTTP 5" in str(e) or "Network error" in str(e)
+                        ):
+                            time.sleep(BACKOFF_S)
+                            continue
+                        break
+                    except Exception as e:
+                        # Non-recoverable — do not spam every key with the
+                        # same malformed request; report and stop.
+                        raise RuntimeError(
+                            f"[{cut_label}] non-recoverable Gemini error on "
+                            f"model={model} voice={voice} "
+                            f"key={key.redacted()}: {e}"
+                        )
+    raise RuntimeError(
+        f"[{cut_label}] all configured Gemini API keys failed across every "
+        f"model/voice combination. Last error: {last_error}. Rotate or "
+        f"add keys via the site's Settings panel and re-run Stage B."
+    )
+
+
+# ---------------------------------------------------------------------------
+# WAV writing
+# ---------------------------------------------------------------------------
+
+
+def write_wav(path: Path, pcm_bytes: bytes) -> float:
+    """
+    Wrap raw 24 kHz mono s16le PCM in a RIFF WAV. Returns duration in
+    seconds. cut_and_produce.py probes the file with ffprobe anyway, but
+    Stage B also emits its own manifest.json alongside the WAVs so the
+    reconciler doesn't have to shell out N times.
+    """
+    if len(pcm_bytes) % (SAMPLE_WIDTH_BYTES * CHANNELS) != 0:
+        # Trim a stray trailing byte if Gemini ever returned an odd count —
+        # writing an odd-length s16le buffer produces silent noise.
+        pcm_bytes = pcm_bytes[
+            : len(pcm_bytes) - (len(pcm_bytes) % (SAMPLE_WIDTH_BYTES * CHANNELS))
+        ]
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(SAMPLE_WIDTH_BYTES)
+        wf.setframerate(SAMPLE_RATE_HZ)
+        wf.writeframes(pcm_bytes)
+    frames = len(pcm_bytes) // (SAMPLE_WIDTH_BYTES * CHANNELS)
+    return frames / SAMPLE_RATE_HZ
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("production_json")
-    ap.add_argument("out_dir")
-    ap.add_argument("--manifest", default=None,
-                    help=f"manifest path (default: <out_dir>/{MANIFEST_NAME})")
-    args = ap.parse_args()
-
-    if not os.path.exists(args.production_json):
-        print(f"Missing required input: {args.production_json}", file=sys.stderr)
+    if len(sys.argv) != 3:
+        print(
+            "usage: generate_voiceover.py <production.json> <out_dir>",
+            file=sys.stderr,
+        )
         sys.exit(2)
 
-    cuts = load_cuts(args.production_json)
-    entries = synthesize_all(cuts, args.out_dir)
+    prod_path = Path(sys.argv[1]).resolve()
+    out_dir = Path(sys.argv[2]).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest_path = args.manifest or os.path.join(args.out_dir, MANIFEST_NAME)
-    payload = {
-        "production_json": os.path.abspath(args.production_json),
-        "cut_count": len(entries),
-        "total_voiceover_seconds": round(
-            sum(e["duration_seconds"] for e in entries), 3
-        ),
-        "cuts": entries,
+    if not prod_path.is_file():
+        print(f"FATAL: {prod_path} not found.", file=sys.stderr)
+        sys.exit(2)
+
+    with prod_path.open("r", encoding="utf-8") as fh:
+        production = json.load(fh)
+
+    cuts = production.get("cuts") or []
+    if not cuts:
+        print("FATAL: production.json has no cuts.", file=sys.stderr)
+        sys.exit(2)
+
+    keys = load_keys()
+
+    print(
+        f"Rendering {len(cuts)} voiceover clip(s) with Gemini TTS "
+        f"(models={TTS_MODELS[0]} -> {TTS_MODELS[1]}, "
+        f"voices={TTS_VOICES[0]} -> {TTS_VOICES[1]}).",
+        flush=True,
+    )
+
+    manifest = {
+        "version": 1,
+        "engine": "gemini-tts",
+        "sample_rate_hz": SAMPLE_RATE_HZ,
+        "channels": CHANNELS,
+        "sample_width_bytes": SAMPLE_WIDTH_BYTES,
+        "clips": [],
     }
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"Voiceover manifest written: {manifest_path}", flush=True)
+
+    for idx, cut in enumerate(cuts, start=1):
+        text = (cut.get("voiceover_text") or "").strip()
+        if not text:
+            print(
+                f"FATAL: cut #{idx} has no voiceover_text.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
+        label = f"cut {idx:02d}/{len(cuts):02d}"
+        print(f"[{label}] {text[:80]}{'...' if len(text) > 80 else ''}",
+              flush=True)
+
+        pcm, used_key, used_model, used_voice = synthesize_with_failover(
+            text, keys, label
+        )
+
+        wav_path = out_dir / f"voiceover_{idx:02d}.wav"
+        duration_s = write_wav(wav_path, pcm)
+        print(
+            f"  [{label}] wrote {wav_path.name} "
+            f"({duration_s:.2f}s, {len(pcm)} PCM bytes)",
+            flush=True,
+        )
+
+        manifest["clips"].append({
+            "index": idx,
+            "wav": wav_path.name,
+            "duration_s": round(duration_s, 3),
+            "model": used_model,
+            "voice": used_voice,
+            "key_fingerprint": used_key.redacted(),
+        })
+
+    manifest_path = out_dir / "manifest.json"
+    with manifest_path.open("w", encoding="utf-8") as fh:
+        json.dump(manifest, fh, indent=2)
+        fh.write("\n")
+    print(f"Wrote {manifest_path}.", flush=True)
 
 
 if __name__ == "__main__":

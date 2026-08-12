@@ -42,6 +42,19 @@
   var BRANDING_AVATAR_STEM = 'branding/profile_picture.';   // + png|jpg|webp
   var BRANDING_AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
+  /* Gemini TTS keys.
+   *
+   * The RAW keys live only in the GitHub Actions repository secret
+   * `GEMINI_API_KEYS`, written from this browser using the Actions Secrets
+   * REST API (which requires a libsodium sealed_box-encrypted value).
+   * GitHub never returns secret values back over the API, so a companion
+   * file `branding/gemini_keys.json` stores ONLY masked fingerprints so the
+   * site can list configured keys without ever committing plaintext keys.
+   * Both files live outside jobs/ so the hourly cleanup never touches them. */
+  var GEMINI_SECRET_NAME = 'GEMINI_API_KEYS';
+  var GEMINI_KEYS_META_PATH = 'branding/gemini_keys.json';
+  var GEMINI_KEY_MIN_LEN = 20;
+
   var POLL_FAST = 5000;        // first 10 minutes
   var POLL_SLOW = 15000;       // after 10 minutes
   var POLL_RATELIMIT = 60000;  // after hitting a rate limit
@@ -171,6 +184,16 @@
     brandingSha: null,     // blob sha of branding.json (needed to update it)
     brandingAvatarUrl: '', // raw.githubusercontent.com URL of the saved picture
     brandingAvatarExt: '', // ext of the saved picture ('' = none saved)
+
+    /* Gemini TTS keys. `geminiKeys` holds the plaintext keys IN MEMORY ONLY
+     * for the current browser session so that adding a second key does not
+     * require re-typing every prior key. It is populated by keys the user
+     * types in this session, never from any GitHub response (GitHub never
+     * returns secret values). Persisted state across reloads is: the
+     * encrypted secret on GitHub + the masked fingerprints file. */
+    geminiKeys: null,          // Array<string> | null (null = unknown this session)
+    geminiKeyMeta: [],         // [{fingerprint, added_at_epoch}]
+    geminiKeyMetaSha: null,    // blob sha of gemini_keys.json
     avatarFile: null,      // a newly picked picture, not yet committed
     removeAvatar: false,   // true when the user asked to delete the picture
 
@@ -247,6 +270,8 @@
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
     'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
+    'gemini-keys-disclosure', 'gemini-key-form', 'gemini-key-input', 'gemini-key-reveal',
+    'gemini-key-add', 'gemini-key-msg', 'gemini-keys-list', 'gemini-keys-empty',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
   ].forEach(function (id) {
     el[id] = $(id);
@@ -542,6 +567,7 @@
     openSettings(false);
     probeRepo();
     loadBranding();
+    loadGeminiKeysMeta();
     // Now that we have credentials, populate the Tasks list from the
     // repo and keep it warm.
     refreshTasksFromRepo({ silent: true });
@@ -821,6 +847,317 @@
 
     state.busy = false;
     refreshBrandingValidity();
+  }
+
+  /* -------------------------------------------------------- Gemini TTS keys */
+
+  /* SECURITY MODEL
+   *   - Raw keys are transmitted only:
+   *       (a) from this browser to api.github.com over TLS, as a libsodium
+   *           sealed_box ciphertext (never as plaintext);
+   *       (b) from the Actions runner to generativelanguage.googleapis.com
+   *           in the x-goog-api-key header (see scripts/generate_voiceover.py).
+   *   - Raw keys are NEVER persisted to disk in the repo, and NEVER written
+   *     to any log, workflow output, artifact, or committed file.
+   *   - branding/gemini_keys.json stores ONLY masked fingerprints for display.
+   *   - The libsodium bundle is loaded from a public CDN; encryption happens
+   *     entirely client-side before the ciphertext leaves the browser. */
+
+  var _sodiumReady = null;
+  function sodiumReady() {
+    if (_sodiumReady) return _sodiumReady;
+    _sodiumReady = new Promise(function (resolve, reject) {
+      var start = Date.now();
+      (function poll() {
+        if (typeof window !== 'undefined' && window.sodium && window.sodium.ready) {
+          window.sodium.ready.then(function () { resolve(window.sodium); }, reject);
+          return;
+        }
+        if (Date.now() - start > 15000) {
+          reject(new Error('libsodium failed to load from CDN (network blocked?).'));
+          return;
+        }
+        setTimeout(poll, 100);
+      })();
+    });
+    return _sodiumReady;
+  }
+
+  /** Log-safe fingerprint: first 4 + ellipsis + last 4. Matches the format
+   *  scripts/generate_voiceover.py prints on the runner. */
+  function geminiFingerprint(key) {
+    var s = String(key || '');
+    if (s.length <= 8) return '\u2026';
+    return s.slice(0, 4) + '\u2026' + s.slice(-4);
+  }
+
+  function validateGeminiKey(key) {
+    var s = String(key || '').trim();
+    if (!s) return 'Enter a Gemini API key.';
+    if (s.length < GEMINI_KEY_MIN_LEN) return 'That key looks too short to be a Gemini API key.';
+    if (/\s/.test(s)) return 'API keys must not contain whitespace.';
+    return null;
+  }
+
+  async function loadGeminiKeysMeta() {
+    if (!isConfigured()) return;
+    state.geminiKeyMeta = [];
+    state.geminiKeyMetaSha = null;
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + GEMINI_KEYS_META_PATH + '?ref=' + REF + '&_=' + Date.now());
+      var parsed;
+      try {
+        parsed = JSON.parse(b64decodeUtf8(file.content));
+      } catch (e) {
+        setMsg(el['gemini-key-msg'], GEMINI_KEYS_META_PATH + ' is not valid JSON \u2014 add a key to repair it.', 'bad');
+        renderGeminiKeys();
+        return;
+      }
+      state.geminiKeyMetaSha = file.sha || null;
+      var list = Array.isArray(parsed.keys) ? parsed.keys : [];
+      state.geminiKeyMeta = list.filter(function (e) { return e && e.fingerprint; })
+        .map(function (e) {
+          return {
+            fingerprint: String(e.fingerprint),
+            added_at_epoch: Number(e.added_at_epoch) || 0
+          };
+        });
+    } catch (err) {
+      if (err.status === 404) {
+        // Never saved yet.
+      } else if (err.name === 'AuthError' || err.name === 'RateLimitError') {
+        handleGlobalError(err);
+        return;
+      } else {
+        setMsg(el['gemini-key-msg'], 'Could not load key list: ' + err.message, 'bad');
+      }
+    }
+    renderGeminiKeys();
+  }
+
+  function renderGeminiKeys() {
+    var list = el['gemini-keys-list'];
+    var empty = el['gemini-keys-empty'];
+    if (!list || !empty) return;
+    list.innerHTML = '';
+    if (!state.geminiKeyMeta.length) {
+      show(empty);
+      return;
+    }
+    hide(empty);
+    state.geminiKeyMeta.forEach(function (entry) {
+      var li = document.createElement('li');
+      li.className = 'gemini-key-row';
+      var fp = document.createElement('span');
+      fp.className = 'gemini-key-fp';
+      fp.textContent = entry.fingerprint;
+      var added = document.createElement('span');
+      added.className = 'gemini-key-added';
+      added.textContent = entry.added_at_epoch
+        ? 'added ' + new Date(entry.added_at_epoch * 1000).toLocaleDateString()
+        : '';
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-small';
+      del.textContent = 'Delete';
+      del.addEventListener('click', function () { deleteGeminiKey(entry.fingerprint); });
+      li.appendChild(fp);
+      li.appendChild(added);
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  async function encryptForActionsSecret(rawValue, publicKeyB64) {
+    var sodium = await sodiumReady();
+    var binkey = sodium.from_base64(publicKeyB64, sodium.base64_variants.ORIGINAL);
+    var binsec = sodium.from_string(rawValue);
+    var enc = sodium.crypto_box_seal(binsec, binkey);
+    return sodium.to_base64(enc, sodium.base64_variants.ORIGINAL);
+  }
+
+  async function persistGeminiKeys(rawKeys, metaEntries) {
+    var pk = await gh('/repos/' + state.owner + '/' + state.repo +
+      '/actions/secrets/public-key');
+    if (!pk || !pk.key || !pk.key_id) {
+      throw new Error('GitHub did not return an Actions public key for this repo.');
+    }
+    if (rawKeys.length === 0) {
+      try {
+        await gh('/repos/' + state.owner + '/' + state.repo +
+          '/actions/secrets/' + encodeURIComponent(GEMINI_SECRET_NAME),
+          { method: 'DELETE' });
+      } catch (err) {
+        if (err.status !== 404) throw err;
+      }
+    } else {
+      var joined = rawKeys.join('\n');
+      var encrypted = await encryptForActionsSecret(joined, pk.key);
+      await gh('/repos/' + state.owner + '/' + state.repo +
+        '/actions/secrets/' + encodeURIComponent(GEMINI_SECRET_NAME), {
+          method: 'PUT',
+          body: { encrypted_value: encrypted, key_id: pk.key_id }
+        });
+    }
+
+    var doc = {
+      version: 1,
+      note: 'Masked fingerprints only. Raw keys live in the GEMINI_API_KEYS repo secret and are never committed.',
+      keys: metaEntries,
+      updated_at_epoch: Math.floor(Date.now() / 1000)
+    };
+    await putRepoFile(GEMINI_KEYS_META_PATH,
+      b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
+      'clipforge: update Gemini API key metadata (masked fingerprints only)');
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + GEMINI_KEYS_META_PATH + '?ref=' + REF + '&_=' + Date.now());
+      state.geminiKeyMetaSha = file.sha || null;
+    } catch (_) { /* best effort */ }
+  }
+
+  async function addGeminiKey() {
+    if (state.busy) return;
+    if (!isConfigured()) {
+      setMsg(el['gemini-key-msg'], 'Save your GitHub settings above first.', 'bad');
+      return;
+    }
+    var raw = (el['gemini-key-input'].value || '').trim();
+    var problem = validateGeminiKey(raw);
+    if (problem) {
+      setMsg(el['gemini-key-msg'], problem, 'bad');
+      return;
+    }
+    var fp = geminiFingerprint(raw);
+    if (state.geminiKeyMeta.some(function (e) { return e.fingerprint === fp; })) {
+      setMsg(el['gemini-key-msg'], 'A key with that fingerprint is already configured.', 'bad');
+      return;
+    }
+
+    state.busy = true;
+    el['gemini-key-add'].disabled = true;
+    setMsg(el['gemini-key-msg'], 'Encrypting and uploading\u2026', null);
+
+    try {
+      // GitHub secrets are opaque replacements, not append operations. If a
+      // prior session's keys exist but this browser doesn't hold them, we
+      // must warn before overwriting.
+      var raws, metaEntries;
+      var knownFps = (state.geminiKeys || []).map(geminiFingerprint);
+      var haveAllKnown = state.geminiKeyMeta.every(function (e) {
+        return knownFps.indexOf(e.fingerprint) !== -1;
+      });
+
+      if (state.geminiKeyMeta.length === 0) {
+        raws = [raw];
+        metaEntries = [{ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) }];
+      } else if (haveAllKnown && state.geminiKeys && state.geminiKeys.length) {
+        raws = state.geminiKeys.slice();
+        raws.push(raw);
+        metaEntries = state.geminiKeyMeta.slice();
+        metaEntries.push({ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) });
+      } else {
+        var confirmed = window.confirm(
+          'Adding this key from a fresh browser session will OVERWRITE the existing GEMINI_API_KEYS secret with only this new key.\n\n' +
+          'GitHub never returns secret values, so the site cannot combine the new key with the previously-saved keys unless you enter them again in this session.\n\n' +
+          'Existing fingerprints that will be discarded:\n  \u2022 ' +
+          state.geminiKeyMeta.map(function (e) { return e.fingerprint; }).join('\n  \u2022 ') +
+          '\n\nProceed?'
+        );
+        if (!confirmed) {
+          setMsg(el['gemini-key-msg'], 'Cancelled.', null);
+          state.busy = false;
+          el['gemini-key-add'].disabled = false;
+          return;
+        }
+        raws = [raw];
+        metaEntries = [{ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) }];
+      }
+
+      await persistGeminiKeys(raws, metaEntries);
+      state.geminiKeys = raws;
+      state.geminiKeyMeta = metaEntries;
+      el['gemini-key-input'].value = '';
+      renderGeminiKeys();
+      setMsg(el['gemini-key-msg'], 'Key added. Stage B will use it on the next voiceover run.', 'ok');
+    } catch (err) {
+      setMsg(el['gemini-key-msg'], 'Add failed: ' + err.message, 'bad');
+      handleGlobalError(err, 'gemini-key');
+    }
+
+    state.busy = false;
+    el['gemini-key-add'].disabled = false;
+  }
+
+  async function deleteGeminiKey(fingerprint) {
+    if (state.busy) return;
+    if (!isConfigured()) {
+      setMsg(el['gemini-key-msg'], 'Save your GitHub settings above first.', 'bad');
+      return;
+    }
+
+    var known = state.geminiKeys || [];
+    var knownFps = known.map(geminiFingerprint);
+    var isTargetKnown = knownFps.indexOf(fingerprint) !== -1;
+    var otherUnknown = state.geminiKeyMeta.filter(function (e) {
+      return e.fingerprint !== fingerprint && knownFps.indexOf(e.fingerprint) === -1;
+    });
+
+    if (otherUnknown.length > 0) {
+      var ok = window.confirm(
+        'Deleting ' + fingerprint + ' now will REBUILD the GEMINI_API_KEYS secret from the keys this session still knows. ' +
+        'GitHub never returns secret values, so the following keys will also be removed from the secret unless you re-enter them first:\n  \u2022 ' +
+        otherUnknown.map(function (e) { return e.fingerprint; }).join('\n  \u2022 ') +
+        '\n\nProceed?'
+      );
+      if (!ok) return;
+    }
+
+    state.busy = true;
+    setMsg(el['gemini-key-msg'], 'Deleting ' + fingerprint + '\u2026', null);
+
+    try {
+      var newRaws = known.filter(function (k) { return geminiFingerprint(k) !== fingerprint; });
+      var newMeta;
+      if (otherUnknown.length > 0) {
+        newMeta = state.geminiKeyMeta.filter(function (e) {
+          return e.fingerprint !== fingerprint && knownFps.indexOf(e.fingerprint) !== -1;
+        });
+      } else {
+        newMeta = state.geminiKeyMeta.filter(function (e) { return e.fingerprint !== fingerprint; });
+      }
+
+      await persistGeminiKeys(newRaws, newMeta);
+      state.geminiKeys = newRaws;
+      state.geminiKeyMeta = newMeta;
+      renderGeminiKeys();
+      setMsg(el['gemini-key-msg'],
+        isTargetKnown
+          ? 'Deleted ' + fingerprint + '.'
+          : 'Deleted ' + fingerprint + ' from the fingerprint list.',
+        'ok');
+    } catch (err) {
+      setMsg(el['gemini-key-msg'], 'Delete failed: ' + err.message, 'bad');
+      handleGlobalError(err, 'gemini-key');
+    }
+
+    state.busy = false;
+  }
+
+  if (el['gemini-key-reveal']) {
+    el['gemini-key-reveal'].addEventListener('click', function () {
+      var revealed = el['gemini-key-input'].type === 'text';
+      el['gemini-key-input'].type = revealed ? 'password' : 'text';
+      el['gemini-key-reveal'].textContent = revealed ? 'Show' : 'Hide';
+      el['gemini-key-reveal'].setAttribute('aria-pressed', revealed ? 'false' : 'true');
+    });
+  }
+  if (el['gemini-key-form']) {
+    el['gemini-key-form'].addEventListener('submit', function (e) {
+      e.preventDefault();
+      addGeminiKey();
+    });
   }
 
   function setMsg(node, message, kind) {
@@ -3538,6 +3875,7 @@
 
     probeRepo();
     loadBranding();
+    loadGeminiKeysMeta();
 
     // Populate the Tasks list from the repo (source of truth) and then
     // keep it warm in the background. Every task is refreshed
