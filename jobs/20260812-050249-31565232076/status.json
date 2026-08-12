@@ -1,7 +1,7 @@
 {
   "job_id": "20260812-050249-31565232076",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260812-050249-31565232076",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260812-050249-31565232076",
   "assets": {
@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-050249-31565232076/final.mp4"
   },
   "created_at_epoch": 1786511208,
-  "updated_at_epoch": 1786546871,
+  "updated_at_epoch": 1786548674,
   "expires_at_epoch": 1786554408,
   "extra": {
     "workflow_run_id": "31609890159",
