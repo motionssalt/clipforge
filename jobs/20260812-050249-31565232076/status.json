@@ -1,7 +1,12 @@
 {
   "job_id": "20260812-050249-31565232076",
+<<<<<<< Updated upstream
   "stage": "stage_b_running",
   "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+=======
+  "stage": "cancelled",
+  "message": "Stage B was cancelled.",
+>>>>>>> Stashed changes
   "release_tag": "clipforge-20260812-050249-31565232076",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260812-050249-31565232076",
   "assets": {
@@ -15,7 +20,11 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-050249-31565232076/final.mp4"
   },
   "created_at_epoch": 1786511208,
+<<<<<<< Updated upstream
   "updated_at_epoch": 1786553313,
+=======
+  "updated_at_epoch": 1786554466,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1786554408,
   "extra": {
     "workflow_run_id": "31619366733",
