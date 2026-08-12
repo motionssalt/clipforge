@@ -20,7 +20,17 @@
     token: 'clipforge_token',
     owner: 'clipforge_owner',
     repo: 'clipforge_repo',
-    activeJob: 'clipforge_active_job_id'
+    // The id currently loaded into the status panel below the Tasks list.
+    // Single-value on purpose: the status panel only ever shows one task at
+    // a time (the one the operator is inspecting) but the Tasks list above
+    // it keeps EVERY known task addressable.
+    activeJob: 'clipforge_active_job_id',
+    // Multi-task tracking. Persisted as a compact map of
+    //   { "<job-id>": { snapshot: <last known status.json>, seen_at: <epoch> } }
+    // so the Tasks list can render the moment the app boots — the repo is
+    // still the source of truth and each entry is re-fetched on refresh,
+    // but this cache avoids losing awareness of a task between reloads.
+    jobsCache: 'clipforge_jobs_v1'
   };
 
   /* Persistent channel branding. Follows the same "repo is the database"
@@ -62,6 +72,14 @@
     stageBDispatched: false,
     stageBRun: null,      // matched GitHub Actions Stage B run for this job
     cancellingStageB: false,
+    // Multi-task registry (see LS.jobsCache): id -> { snapshot, seen_at }.
+    // Independent per-task state. Never overwritten wholesale when a new
+    // task starts; new tasks are inserted, existing ones only update their
+    // own row.
+    tasks: {},
+    tasksTimer: null,      // background refresh timer for the Tasks list
+    tasksRefreshing: false,
+    taskDeleting: {},      // id -> true while a delete is in flight
     branding: null,        // parsed branding.json, or null when none is saved
     brandingSha: null,     // blob sha of branding.json (needed to update it)
     brandingAvatarUrl: '', // raw.githubusercontent.com URL of the saved picture
@@ -83,6 +101,8 @@
     'language-input', 'target-duration-select', 'focus-input', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
+    'tasks-section', 'tasks-toggle', 'tasks-body', 'tasks-count', 'tasks-refresh',
+    'tasks-refresh-msg', 'tasks-list', 'tasks-empty',
     'status-section', 'stage-badge', 'expiry-countdown', 'stage-line', 'stage-spinner', 'stage-text',
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
@@ -334,11 +354,13 @@
       el['settings-state'].classList.add('ok');
       text(el['repo-indicator'], state.owner + '/' + state.repo);
       show(el['stage-a-section']);
+      show(el['tasks-section']);
     } else {
       text(el['settings-state'], 'not configured');
       el['settings-state'].classList.remove('ok');
       text(el['repo-indicator'], 'no repo configured');
       hide(el['stage-a-section']);
+      hide(el['tasks-section']);
       hide(el['status-section']);
     }
   }
@@ -385,6 +407,10 @@
     openSettings(false);
     probeRepo();
     loadBranding();
+    // Now that we have credentials, populate the Tasks list from the
+    // repo and keep it warm.
+    refreshTasksFromRepo({ silent: true });
+    startTasksTimer();
     if (!state.jobId) offerResumeFromRepo();
   });
 
@@ -393,6 +419,7 @@
     localStorage.removeItem(LS.owner);
     localStorage.removeItem(LS.repo);
     localStorage.removeItem(LS.activeJob);
+    localStorage.removeItem(LS.jobsCache);
     location.reload();
   });
 
@@ -916,8 +943,20 @@
     show(el['active-job-bar']);
     show(el['status-section']);
     dismissBanner('discover');
+    // Ensure the task registry has an entry the moment we adopt an id (even
+    // before status.json has landed) so the Tasks list surfaces it.
+    ensureTaskEntry(jobId);
+    renderTasksList();
   }
 
+  /**
+   * Clear ONLY the currently-selected task from the detail panel. The
+   * task itself is NOT touched — it stays in the Tasks list, still has its
+   * own status.json / release / expiration in the repo, and can be
+   * re-selected at any moment. Independent per-task lifetimes require
+   * that "deselect" and "delete" be two different actions; this is the
+   * former. See deleteTask() for the latter.
+   */
   function clearActiveJob() {
     stopPolling();
     stopCountdown();
@@ -945,6 +984,601 @@
     if (el['music-hint']) { el['music-hint'].textContent = ''; }
     el['start-stage-b'].disabled = true;
     hide(el['cuts-validation']);
+    renderTasksList();
+  }
+
+  /* ------------------------------------------------------ multi-task registry */
+
+  /** Persist the in-memory task registry to localStorage. */
+  function persistTasks() {
+    try {
+      localStorage.setItem(LS.jobsCache, JSON.stringify(state.tasks || {}));
+    } catch (e) {
+      // quota exhausted or storage disabled — not fatal, the repo is the
+      // source of truth on next refresh.
+    }
+  }
+
+  /** Load the task registry from localStorage. Silently discards corrupt data. */
+  function loadTasksFromStorage() {
+    try {
+      var raw = localStorage.getItem(LS.jobsCache);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        state.tasks = parsed;
+      }
+    } catch (e) {
+      state.tasks = {};
+    }
+  }
+
+  /**
+   * Insert a minimal placeholder entry for a job id we have just adopted
+   * (e.g. right after Stage A dispatch, before status.json exists). No-ops
+   * when a fuller entry is already present.
+   */
+  function ensureTaskEntry(jobId) {
+    if (!jobId) return;
+    if (!state.tasks[jobId]) {
+      state.tasks[jobId] = {
+        snapshot: null,
+        seen_at: Math.floor(Date.now() / 1000)
+      };
+      persistTasks();
+    }
+  }
+
+  /** Record the latest status.json snapshot for a task. */
+  function recordTaskSnapshot(jobId, snapshot) {
+    if (!jobId || !snapshot) return;
+    state.tasks[jobId] = {
+      snapshot: snapshot,
+      seen_at: Math.floor(Date.now() / 1000)
+    };
+    persistTasks();
+  }
+
+  /** Drop a task from the registry (does not touch the repo). */
+  function forgetTask(jobId) {
+    if (!jobId) return;
+    if (state.tasks[jobId]) {
+      delete state.tasks[jobId];
+      persistTasks();
+    }
+  }
+
+  /** Sorted list of task ids we currently know about, newest-first. */
+  function taskIdsSorted() {
+    var ids = Object.keys(state.tasks || {});
+    return ids.sort(function (a, b) {
+      var ea = state.tasks[a] && state.tasks[a].snapshot;
+      var eb = state.tasks[b] && state.tasks[b].snapshot;
+      var ca = (ea && Number(ea.created_at_epoch)) || 0;
+      var cb = (eb && Number(eb.created_at_epoch)) || 0;
+      if (cb !== ca) return cb - ca;
+      // Fallback: ids are timestamp-prefixed — lexical descending
+      // approximates newest-first when created_at is not yet known.
+      return a < b ? 1 : a > b ? -1 : 0;
+    });
+  }
+
+  /** True when the task is past its expiration. */
+  function isTaskExpired(entry) {
+    var snap = entry && entry.snapshot;
+    if (!snap) return false;
+    var exp = Number(snap.expires_at_epoch) || 0;
+    if (!exp) return false;
+    return exp <= Math.floor(Date.now() / 1000);
+  }
+
+  var TASK_STAGE_CLASS = {
+    queued:              'is-running',
+    stage_a_running:     'is-running',
+    awaiting_json_upload:'is-await',
+    stage_b_queued:      'is-running',
+    stage_b_running:     'is-running',
+    stage_b_cancelling:  'is-running',
+    cancelled:           'is-cancelled',
+    complete:            'is-done',
+    error:               'is-error'
+  };
+
+  var TASK_STAGE_BADGE = {
+    queued:              { label: 'queued', cls: 'stage-running' },
+    stage_a_running:     { label: 'stage a', cls: 'stage-running' },
+    awaiting_json_upload:{ label: 'awaiting production.json', cls: 'stage-await' },
+    stage_b_queued:      { label: 'stage b queued', cls: 'stage-running' },
+    stage_b_running:     { label: 'stage b', cls: 'stage-running' },
+    stage_b_cancelling:  { label: 'cancelling', cls: 'stage-cancelling' },
+    cancelled:           { label: 'cancelled', cls: 'stage-cancelled' },
+    complete:            { label: 'complete', cls: 'stage-done' },
+    error:               { label: 'error', cls: 'stage-error' }
+  };
+
+  /**
+   * Render the multi-task list. Each row is fully self-contained —
+   * selecting one task never mutates another row's state, and clicking
+   * Delete on one card only wires up removal of that specific task.
+   */
+  function renderTasksList() {
+    var listEl = el['tasks-list'];
+    var emptyEl = el['tasks-empty'];
+    var countEl = el['tasks-count'];
+    if (!listEl) return;
+
+    var ids = taskIdsSorted();
+
+    if (countEl) {
+      var n = ids.length;
+      text(countEl, n + ' task' + (n === 1 ? '' : 's'));
+      if (n > 0) countEl.classList.add('ok'); else countEl.classList.remove('ok');
+    }
+
+    if (isConfigured()) show(el['tasks-section']); else hide(el['tasks-section']);
+
+    listEl.innerHTML = '';
+    if (!ids.length) { show(emptyEl); return; }
+    hide(emptyEl);
+
+    ids.forEach(function (id) {
+      listEl.appendChild(buildTaskCard(id));
+    });
+  }
+
+  function buildTaskCard(jobId) {
+    var entry = state.tasks[jobId] || {};
+    var snap = entry.snapshot || null;
+    var stage = snap && snap.stage;
+    var stageMeta = TASK_STAGE_BADGE[stage] || { label: stage ? 'unknown' : 'pending', cls: 'stage-unknown' };
+    var extraClass = TASK_STAGE_CLASS[stage] || '';
+    var isSelected = state.jobId === jobId;
+    var expired = isTaskExpired(entry);
+
+    var card = document.createElement('div');
+    card.className = 'task-card ' + extraClass + (isSelected ? ' is-selected' : '');
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('data-job-id', jobId);
+
+    // ---- main column
+    var main = document.createElement('div');
+    main.className = 'task-main';
+
+    var head = document.createElement('div');
+    head.className = 'task-head';
+
+    var idEl = document.createElement('code');
+    idEl.className = 'task-id';
+    idEl.textContent = jobId;
+    head.appendChild(idEl);
+
+    var badge = document.createElement('span');
+    badge.className = 'stage-badge ' + stageMeta.cls;
+    badge.textContent = stageMeta.label;
+    head.appendChild(badge);
+
+    if (isSelected) {
+      var selBadge = document.createElement('span');
+      selBadge.className = 'panel-badge ok';
+      selBadge.textContent = 'selected';
+      head.appendChild(selBadge);
+    }
+    if (expired) {
+      var expBadge = document.createElement('span');
+      expBadge.className = 'stage-badge stage-error';
+      expBadge.textContent = 'expired';
+      head.appendChild(expBadge);
+    }
+
+    main.appendChild(head);
+
+    var title = snap && snap.extra && snap.extra.title;
+    if (title) {
+      var titleEl = document.createElement('div');
+      titleEl.className = 'task-title';
+      titleEl.textContent = title;
+      main.appendChild(titleEl);
+    }
+
+    var meta = document.createElement('div');
+    meta.className = 'task-meta';
+
+    function metaRow(labelStr, valueStr, extraCls) {
+      var span = document.createElement('span');
+      var strong = document.createElement('strong');
+      strong.textContent = labelStr + ': ';
+      span.appendChild(strong);
+      span.appendChild(document.createTextNode(valueStr));
+      if (extraCls) span.className = extraCls;
+      meta.appendChild(span);
+    }
+
+    if (snap && snap.created_at_epoch) {
+      metaRow('created', fmtEpoch(snap.created_at_epoch));
+    } else {
+      metaRow('created', fmtEpoch(entry.seen_at || 0));
+    }
+    if (snap && snap.updated_at_epoch) {
+      metaRow('updated', fmtEpoch(snap.updated_at_epoch));
+    }
+
+    // Elapsed = updated - created for terminal states, else now - created.
+    var createdEp = snap && Number(snap.created_at_epoch) || 0;
+    if (createdEp) {
+      var end;
+      var isTerminal = stage === 'complete' || stage === 'error' || stage === 'cancelled';
+      if (isTerminal && snap && Number(snap.updated_at_epoch)) {
+        end = Number(snap.updated_at_epoch);
+      } else {
+        end = Math.floor(Date.now() / 1000);
+      }
+      metaRow(isTerminal ? 'elapsed' : 'running for', fmtDuration(end - createdEp));
+    }
+
+    if (snap && Number(snap.expires_at_epoch)) {
+      var remaining = Number(snap.expires_at_epoch) - Math.floor(Date.now() / 1000);
+      var cls = '';
+      var valueStr;
+      if (remaining <= 0) {
+        valueStr = 'expired';
+        cls = 'task-expiry-gone';
+      } else if (remaining <= 3600) {
+        valueStr = 'in ' + fmtDuration(remaining);
+        cls = 'task-expiry-warn';
+      } else {
+        valueStr = 'in ' + fmtClock(remaining);
+      }
+      metaRow('expires', valueStr, cls);
+    }
+
+    if (snap && snap.message) {
+      var msgSpan = document.createElement('span');
+      var strong2 = document.createElement('strong');
+      strong2.textContent = 'stage: ';
+      msgSpan.appendChild(strong2);
+      msgSpan.appendChild(document.createTextNode(snap.message));
+      meta.appendChild(msgSpan);
+    }
+
+    var runUrl = snap && snap.extra && snap.extra.workflow_run_url;
+    if (runUrl) {
+      var link = document.createElement('a');
+      link.href = runUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.className = 'link-out';
+      link.textContent = 'View workflow run ↗';
+      meta.appendChild(link);
+    }
+    var relUrl = snap && snap.release_url;
+    if (relUrl) {
+      var relLink = document.createElement('a');
+      relLink.href = relUrl;
+      relLink.target = '_blank';
+      relLink.rel = 'noopener noreferrer';
+      relLink.className = 'link-out';
+      relLink.textContent = 'Open Release ↗';
+      meta.appendChild(relLink);
+    }
+
+    main.appendChild(meta);
+    card.appendChild(main);
+
+    // ---- actions column
+    var actions = document.createElement('div');
+    actions.className = 'task-actions';
+
+    var selectBtn = document.createElement('button');
+    selectBtn.type = 'button';
+    selectBtn.className = 'btn btn-small ' + (isSelected ? 'btn-ghost' : 'btn-accent');
+    selectBtn.textContent = isSelected ? 'Selected' : 'Select';
+    selectBtn.disabled = isSelected || !!state.taskDeleting[jobId];
+    selectBtn.addEventListener('click', function () { selectTask(jobId); });
+    actions.appendChild(selectBtn);
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-danger-ghost btn-small';
+    delBtn.textContent = state.taskDeleting[jobId] ? 'Deleting…' : 'Delete';
+    delBtn.disabled = !!state.taskDeleting[jobId] || (isSelected && state.busy);
+    delBtn.addEventListener('click', function () { deleteTask(jobId); });
+    actions.appendChild(delBtn);
+
+    card.appendChild(actions);
+    return card;
+  }
+
+  /**
+   * Load an already-known task into the detail panel below. This is the
+   * multi-task equivalent of what `setActiveJob` used to do implicitly on
+   * dispatch — but here it can happen against ANY task without touching
+   * the others.
+   */
+  function selectTask(jobId) {
+    if (!jobId) return;
+    if (state.jobId === jobId) return;
+    // Fully reset the DETAIL panel's per-selection state — do NOT touch
+    // the task registry. Other tasks keep their snapshots, their
+    // GitHub-side status, and their expirations.
+    stopPolling();
+    stopCountdown();
+    state.status = null;
+    state.runId = null;
+    state.runHtmlUrl = null;
+    state.releaseAssets = null;
+    state.releaseAssetsTag = null;
+    state.validatedCuts = null;
+    state.stageBDispatched = false;
+    state.stageBRun = null;
+    state.cancellingStageB = false;
+    hide(el['run-link']);
+    text(el['raw-status-code'], '(nothing yet)');
+    el['cuts-file-input'].value = '';
+    if (el['music-file-input']) el['music-file-input'].value = '';
+    state.musicFile = null;
+    if (el['music-hint']) el['music-hint'].textContent = '';
+    el['start-stage-b'].disabled = true;
+    hide(el['cuts-validation']);
+    ['run', 'discover', 'dispatch', 'status', 'generic', 'download'].forEach(dismissBanner);
+
+    setActiveJob(jobId);
+
+    // Seed the detail panel with the last known snapshot immediately so
+    // the UI doesn't flash empty, then start live polling.
+    var entry = state.tasks[jobId];
+    if (entry && entry.snapshot) {
+      state.status = entry.snapshot;
+    }
+    renderStage();
+    startPolling();
+    // Scroll status into view so the operator can see the switch.
+    if (el['status-section']) {
+      el['status-section'].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /**
+   * Discover jobs from the repo and refresh every entry's snapshot.
+   * Runs on Settings save, on Tasks-refresh click, and periodically in
+   * the background. Each entry is fetched independently so a single
+   * failure never wipes the whole list.
+   */
+  async function refreshTasksFromRepo(opts) {
+    opts = opts || {};
+    if (!isConfigured() || state.tasksRefreshing) return;
+    state.tasksRefreshing = true;
+    if (opts.silent !== true) setMsg(el['tasks-refresh-msg'], 'Refreshing…', null);
+
+    var repoIds;
+    try {
+      repoIds = await listJobDirs();
+    } catch (err) {
+      state.tasksRefreshing = false;
+      if (err.name === 'AuthError' || err.name === 'RateLimitError') {
+        handleGlobalError(err);
+      } else if (opts.silent !== true) {
+        setMsg(el['tasks-refresh-msg'], 'Refresh failed: ' + err.message, 'bad');
+      }
+      return;
+    }
+
+    // Drop cached entries that no longer exist in the repo (e.g. cleanup
+    // deleted them, or another operator deleted them). This only removes
+    // rows; it never touches the currently-selected task's live state
+    // beyond dropping it from the list — the operator can still see the
+    // detail panel until they navigate away.
+    var repoSet = {};
+    repoIds.forEach(function (id) { repoSet[id] = true; });
+    Object.keys(state.tasks).forEach(function (id) {
+      if (!repoSet[id]) delete state.tasks[id];
+    });
+
+    // Fetch each id's status.json in parallel, capped at 5 concurrent.
+    var queue = repoIds.slice();
+    var CONC = 5;
+    async function worker() {
+      while (queue.length) {
+        var id = queue.shift();
+        try {
+          var file = await gh('/repos/' + state.owner + '/' + state.repo +
+            '/contents/jobs/' + encodeURIComponent(id) + '/status.json?ref=' + REF +
+            '&_=' + Date.now());
+          var parsed = JSON.parse(b64decodeUtf8(file.content));
+          recordTaskSnapshot(id, parsed);
+        } catch (err) {
+          if (err.name === 'AuthError' || err.name === 'RateLimitError') {
+            handleGlobalError(err);
+            queue.length = 0;
+            return;
+          }
+          // 404 (folder without status.json yet) — keep a placeholder.
+          ensureTaskEntry(id);
+        }
+      }
+    }
+    var workers = [];
+    for (var i = 0; i < CONC; i++) workers.push(worker());
+    await Promise.all(workers);
+    persistTasks();
+
+    state.tasksRefreshing = false;
+    renderTasksList();
+    if (opts.silent !== true) {
+      var n = Object.keys(state.tasks).length;
+      setMsg(el['tasks-refresh-msg'],
+        'Refreshed. ' + n + ' task' + (n === 1 ? '' : 's') + ' known.', 'ok');
+      setTimeout(function () { setMsg(el['tasks-refresh-msg'], '', null); }, 4000);
+    }
+  }
+
+  /**
+   * Delete ONE task's persistent footprint from the repo. Every artifact
+   * this app writes is namespaced by <job-id>, so deletion is a
+   * closed-set operation:
+   *   1) the GitHub Release tagged clipforge-<id> + its underlying git tag
+   *   2) any per-job branch clipforge-job/<id>
+   *   3) every file under jobs/<id>/ on the default branch
+   * NOTHING outside those namespaces (other tasks, branding/, workflow
+   * files, other releases) is ever touched.
+   */
+  async function deleteTask(jobId) {
+    if (!jobId) return;
+    if (state.taskDeleting[jobId]) return;
+    if (!isConfigured()) {
+      banner('delete-task', 'error', 'Save your GitHub settings first.');
+      return;
+    }
+    var ok = window.confirm(
+      'Delete task "' + jobId + '" now?\n\n' +
+      'This removes ONLY this task:\n' +
+      '  • the jobs/' + jobId + '/ folder (status.json, production.json, music, etc.)\n' +
+      '  • the Release clipforge-' + jobId + ' and its tag\n' +
+      '  • any per-job branch\n\n' +
+      'Other tasks and their artifacts are NOT affected.'
+    );
+    if (!ok) return;
+
+    state.taskDeleting[jobId] = true;
+    renderTasksList();
+    banner('delete-task', 'info', 'Deleting task ' + jobId + '…');
+
+    try {
+      // If the caller is deleting the currently-selected task, stop
+      // polling it now so the poll loop can't recreate/read anything
+      // mid-delete.
+      if (state.jobId === jobId) {
+        stopPolling();
+        stopCountdown();
+      }
+
+      // 1) Release + tag. Look up by tag; ignore 404.
+      var tag = 'clipforge-' + jobId;
+      try {
+        var rel = await gh('/repos/' + state.owner + '/' + state.repo +
+          '/releases/tags/' + encodeURIComponent(tag));
+        if (rel && rel.id) {
+          await gh('/repos/' + state.owner + '/' + state.repo +
+            '/releases/' + rel.id, { method: 'DELETE' });
+        }
+      } catch (err) {
+        if (err.status !== 404) throw err;
+      }
+      try {
+        await gh('/repos/' + state.owner + '/' + state.repo +
+          '/git/refs/tags/' + encodeURIComponent(tag), { method: 'DELETE' });
+      } catch (err) {
+        if (err.status !== 404 && err.status !== 422) throw err;
+      }
+
+      // 2) Optional per-job branch.
+      try {
+        await gh('/repos/' + state.owner + '/' + state.repo +
+          '/git/refs/heads/' + encodeURIComponent('clipforge-job/' + jobId),
+          { method: 'DELETE' });
+      } catch (err) {
+        if (err.status !== 404 && err.status !== 422) throw err;
+      }
+
+      // 3) Every file under jobs/<id>/ on the default branch. The
+      //    contents API requires a per-file DELETE with its blob SHA.
+      //    We list the folder and delete each entry. Nothing outside
+      //    jobs/<id>/ is inspected, so unrelated task data cannot
+      //    possibly be touched.
+      var folderPath = 'jobs/' + jobId;
+      var listing;
+      try {
+        listing = await gh('/repos/' + state.owner + '/' + state.repo +
+          '/contents/' + folderPath + '?ref=' + REF + '&_=' + Date.now());
+      } catch (err) {
+        if (err.status === 404) listing = [];
+        else throw err;
+      }
+      if (Array.isArray(listing)) {
+        for (var i = 0; i < listing.length; i++) {
+          var entry = listing[i];
+          if (!entry || !entry.path || !entry.sha) continue;
+          // Defensive: refuse to delete anything outside this task's folder.
+          if (entry.path.indexOf(folderPath + '/') !== 0) continue;
+          if (entry.type === 'dir') {
+            // Nested folder — recurse one level (the pipeline does not
+            // create sub-folders under jobs/<id>/, but be safe).
+            await deleteFolderRecursive(entry.path, jobId);
+            continue;
+          }
+          await gh('/repos/' + state.owner + '/' + state.repo +
+            '/contents/' + entry.path, {
+              method: 'DELETE',
+              body: {
+                message: 'clipforge: delete ' + entry.path + ' (manual task delete)',
+                sha: entry.sha,
+                branch: REF
+              }
+            });
+        }
+      }
+
+      // Local bookkeeping.
+      forgetTask(jobId);
+      if (state.jobId === jobId) clearActiveJob();
+
+      dismissBanner('delete-task');
+      banner('delete-task', 'info', 'Deleted task ' + jobId + '.');
+      setTimeout(function () { dismissBanner('delete-task'); }, 4000);
+    } catch (err) {
+      banner('delete-task', 'error', 'Delete failed for ' + jobId + ': ' + err.message);
+      handleGlobalError(err, 'delete-task');
+    } finally {
+      delete state.taskDeleting[jobId];
+      renderTasksList();
+    }
+  }
+
+  /** Recursive helper for deleteTask() — same guard rails, one level deeper. */
+  async function deleteFolderRecursive(folderPath, ownerJobId) {
+    var listing;
+    try {
+      listing = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + folderPath + '?ref=' + REF + '&_=' + Date.now());
+    } catch (err) {
+      if (err.status === 404) return;
+      throw err;
+    }
+    if (!Array.isArray(listing)) return;
+    for (var i = 0; i < listing.length; i++) {
+      var entry = listing[i];
+      if (!entry || !entry.path || !entry.sha) continue;
+      // Namespace guard: never step outside this task's own tree.
+      if (entry.path.indexOf('jobs/' + ownerJobId + '/') !== 0) continue;
+      if (entry.type === 'dir') {
+        await deleteFolderRecursive(entry.path, ownerJobId);
+      } else {
+        await gh('/repos/' + state.owner + '/' + state.repo +
+          '/contents/' + entry.path, {
+            method: 'DELETE',
+            body: {
+              message: 'clipforge: delete ' + entry.path + ' (manual task delete)',
+              sha: entry.sha,
+              branch: REF
+            }
+          });
+      }
+    }
+  }
+
+  /** Background timer: pull fresh snapshots for every known task. */
+  function startTasksTimer() {
+    stopTasksTimer();
+    // First silent refresh, then a slow tick. The selected task has its
+    // own faster polling loop, so this one only needs to keep the LIST
+    // reasonably fresh.
+    state.tasksTimer = setInterval(function () {
+      if (document.hidden) return;
+      refreshTasksFromRepo({ silent: true });
+    }, 60000);
+  }
+
+  function stopTasksTimer() {
+    if (state.tasksTimer) { clearInterval(state.tasksTimer); state.tasksTimer = null; }
   }
 
   /* -------------------------------------------------------------- status poll */
@@ -995,8 +1629,12 @@
       }
       dismissBanner('status');
         state.status = parsed;
+      // Feed the newest snapshot into the multi-task registry so the Tasks
+      // list above stays fresh independently of whichever task is selected.
+      recordTaskSnapshot(state.jobId, parsed);
       await refreshStageBRun();
       renderStage();
+      renderTasksList();
 
       if (isTerminalStageBRun() || (!stageFromRun() &&
           (parsed.stage === 'complete' || parsed.stage === 'error' || parsed.stage === 'cancelled' || !isKnownStage(parsed.stage)))) {
@@ -2007,12 +2645,33 @@
     openRaw(el['raw-toggle'].getAttribute('aria-expanded') !== 'true');
   });
 
-  /* ------------------------------------------------------- start over / resume */
+  /* --------------------------------------------------- tasks panel wiring */
 
+  if (el['tasks-toggle']) {
+    el['tasks-toggle'].addEventListener('click', function () {
+      var open = el['tasks-toggle'].getAttribute('aria-expanded') === 'true';
+      el['tasks-toggle'].setAttribute('aria-expanded', open ? 'false' : 'true');
+      toggleHidden(el['tasks-body'], open);
+    });
+  }
+  if (el['tasks-refresh']) {
+    el['tasks-refresh'].addEventListener('click', function () {
+      refreshTasksFromRepo({ silent: false });
+    });
+  }
+
+  /* ------------------------------------------------------- deselect / resume */
+
+  /**
+   * "Deselect" — hide the detail panel for the current task WITHOUT
+   * deleting anything. The task remains in the Tasks list above with its
+   * own live status, its own expiration, and its own artifacts on
+   * GitHub. Use the per-row Delete button to permanently remove a task.
+   */
   function startOver() {
     clearActiveJob();
     hide(el['resume-offer']);
-    setMsg(el['stage-a-msg'], 'Cleared. Start a new Stage A run above.', null);
+    setMsg(el['stage-a-msg'], 'Deselected. Pick another task above or start a new Stage A run.', null);
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
@@ -2075,17 +2734,32 @@
 
   function boot() {
     loadSettings();
+    loadTasksFromStorage();
     openSettings(!isConfigured());
     openRaw(false);
+
+    // Render the Tasks list from the localStorage cache immediately so
+    // the list is populated even before the first repo refresh returns.
+    renderTasksList();
 
     if (!isConfigured()) return;
 
     probeRepo();
     loadBranding();
 
+    // Populate the Tasks list from the repo (source of truth) and then
+    // keep it warm in the background. Every task is refreshed
+    // independently — selecting or deleting one never blocks the others.
+    refreshTasksFromRepo({ silent: true });
+    startTasksTimer();
+
     var active = localStorage.getItem(LS.activeJob);
     if (active) {
       setActiveJob(active);
+      // Seed the detail panel with the cached snapshot so it renders
+      // instantly; the fresh copy arrives via startPolling().
+      var entry = state.tasks[active];
+      if (entry && entry.snapshot) state.status = entry.snapshot;
       show(el['status-section']);
       renderStage();
       startPolling();
@@ -2098,6 +2772,9 @@
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
     if (state.jobId && state.polling && !state.pollTimer) pollOnce();
+    // Also refresh the Tasks list so the operator returning to the tab
+    // sees current state for every task, not just the selected one.
+    if (isConfigured()) refreshTasksFromRepo({ silent: true });
   });
 
   boot();

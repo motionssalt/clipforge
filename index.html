@@ -186,7 +186,7 @@
 
       <div id="active-job-bar" class="active-job-bar is-hidden">
         <div class="ajb-item">
-          <span class="ajb-label">Active job</span>
+          <span class="ajb-label">Selected task</span>
           <code id="active-job-id" class="job-id">—</code>
         </div>
         <div class="ajb-item">
@@ -194,7 +194,7 @@
         </div>
         <div class="ajb-item ajb-right">
           <button type="button" id="resume-btn" class="btn btn-ghost btn-small is-hidden">Resume polling</button>
-          <button type="button" id="start-over-btn" class="btn btn-danger-ghost btn-small">Start over</button>
+          <button type="button" id="start-over-btn" class="btn btn-ghost btn-small">Deselect</button>
         </div>
       </div>
 
@@ -206,10 +206,39 @@
     </div>
   </section>
 
-  <!-- ============ SECTION 3 — JOB STATUS ============ -->
+  <!-- ============ SECTION 3 — TASKS ============ -->
+  <section id="tasks-section" class="panel is-hidden" aria-labelledby="tasks-heading">
+    <button type="button" id="tasks-toggle" class="panel-head" aria-expanded="true" aria-controls="tasks-body">
+      <span class="panel-step">3</span>
+      <h2 id="tasks-heading">Tasks</h2>
+      <span class="head-meta">
+        <span id="tasks-count" class="panel-badge">0 tasks</span>
+        <span class="chevron" aria-hidden="true">▾</span>
+      </span>
+    </button>
+
+    <div id="tasks-body" class="panel-body">
+      <p class="panel-note">
+        Every task lives independently at <code>jobs/&lt;job-id&gt;/</code> in the repo with its own
+        <code>status.json</code>, its own release <code>clipforge-&lt;job-id&gt;</code>, and its own
+        12-hour lifetime. Starting a new task never touches the others.
+        <strong>Select</strong> a task to load it into the status panel below.
+      </p>
+
+      <div class="tasks-toolbar">
+        <button type="button" id="tasks-refresh" class="btn btn-ghost btn-small">Refresh</button>
+        <span id="tasks-refresh-msg" class="inline-msg" aria-live="polite"></span>
+      </div>
+
+      <div id="tasks-list" class="tasks-list" role="list"></div>
+      <p id="tasks-empty" class="hint tasks-empty">No tasks yet. Start Stage A above.</p>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 4 — JOB STATUS ============ -->
   <section id="status-section" class="panel is-hidden" aria-labelledby="status-heading">
     <div class="panel-head static">
-      <span class="panel-step">3</span>
+      <span class="panel-step">4</span>
       <h2 id="status-heading">Job status</h2>
       <span class="head-meta">
         <span id="stage-badge" class="stage-badge stage-unknown">—</span>
