@@ -4,375 +4,383 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClipForge — MOTIONSALT</title>
-<meta name="description" content="ClipForge job console: dispatch Stage A, hand off artifacts, upload production.json, run Stage B.">
+<meta name="description" content="ClipForge production console for AI-assisted video processing, workflow tracking, and final delivery.">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to workspace</a>
 
 <header class="site-header">
-  <div class="header-inner">
-    <h1 id="app-title">ClipForge</h1>
-    <p class="brand-tag">MOTIONSALT</p>
-  </div>
+  <a class="brand-lockup" href="#main-content" aria-label="ClipForge home">
+    <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+    <span class="header-inner">
+      <span id="app-title">ClipForge</span>
+      <span class="brand-tag">by MOTIONSALT</span>
+    </span>
+  </a>
   <div class="header-right">
+    <span class="connection-dot" aria-hidden="true"></span>
     <span id="repo-indicator" class="repo-indicator" aria-live="polite">no repo configured</span>
   </div>
 </header>
 
-<!-- global banners -->
 <div id="banner-stack" class="banner-stack" aria-live="polite"></div>
 
 <main id="main-content">
+  <header class="page-intro">
+    <div>
+      <p class="eyebrow">Production workspace</p>
+      <h1>From source video to finished cut.</h1>
+      <p class="intro-copy">Run the two-stage production pipeline, follow every task in real time, and collect delivery-ready outputs in one place.</p>
+    </div>
+    <div class="pipeline-summary" aria-label="Production pipeline">
+      <span><b>01</b> Analyze</span><i aria-hidden="true"></i><span><b>02</b> Direct</span><i aria-hidden="true"></i><span><b>03</b> Produce</span>
+    </div>
+  </header>
 
-  <!-- ============ SECTION 1 — SETTINGS ============ -->
-  <section id="settings-section" class="panel" aria-labelledby="settings-heading">
-    <button type="button" id="settings-toggle" class="panel-head" aria-expanded="true" aria-controls="settings-body">
-      <span class="panel-step">1</span>
-      <h2 id="settings-heading">Settings</h2>
-      <span class="head-meta">
-        <span id="settings-state" class="panel-badge">not configured</span>
-        <span class="chevron" aria-hidden="true">▾</span>
-      </span>
-    </button>
+  <div class="workspace-layout">
+    <aside class="control-rail" aria-label="Production controls">
+      <section id="settings-section" class="panel settings-panel" aria-labelledby="settings-heading">
+        <button type="button" id="settings-toggle" class="panel-head" aria-expanded="true" aria-controls="settings-body">
+          <span class="section-icon settings-icon" aria-hidden="true"></span>
+          <span class="heading-copy">
+            <span class="heading-kicker">Connection</span>
+            <h2 id="settings-heading">Repository settings</h2>
+          </span>
+          <span class="head-meta">
+            <span id="settings-state" class="panel-badge">not configured</span>
+            <span class="chevron" aria-hidden="true"></span>
+          </span>
+        </button>
 
-    <div id="settings-body" class="panel-body">
-      <form id="settings-form" autocomplete="off">
-        <div class="field-row">
-          <div class="field">
-            <label for="owner-input">GitHub owner</label>
-            <input type="text" id="owner-input" name="owner" placeholder="motionssalt" spellcheck="false" autocapitalize="off" required>
-            <p class="hint">Username or org that owns the repo.</p>
-          </div>
-          <div class="field">
-            <label for="repo-input">Repo name</label>
-            <input type="text" id="repo-input" name="repo" placeholder="clipforge" spellcheck="false" autocapitalize="off" required>
-            <p class="hint">Repo holding <code>.github/workflows/stage-a.yml</code>.</p>
-          </div>
-        </div>
+        <div id="settings-body" class="panel-body">
+          <p class="panel-note setup-note">Connect the private GitHub repository that runs your ClipForge workflows. Credentials stay in this browser.</p>
+          <form id="settings-form" autocomplete="off">
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="owner-input">GitHub owner</label>
+                <input type="text" id="owner-input" name="owner" placeholder="motionssalt" spellcheck="false" autocapitalize="off" required>
+              </div>
+              <div class="field">
+                <label for="repo-input">Repository</label>
+                <input type="text" id="repo-input" name="repo" placeholder="clipforge" spellcheck="false" autocapitalize="off" required>
+              </div>
+            </div>
 
-        <div class="field">
-          <label for="token-input">Personal access token</label>
-          <div class="token-wrap">
-            <input type="password" id="token-input" name="token" placeholder="ghp_… / github_pat_…" spellcheck="false" autocapitalize="off" autocomplete="off" required>
-            <button type="button" id="token-reveal" class="btn btn-ghost btn-small" aria-pressed="false">Show</button>
-          </div>
-          <p class="hint">
-            Required scopes: <code>repo</code> (full — commits, dispatches, release assets) and
-            <code>workflow</code> (needed for <code>workflow_dispatch</code>).
-            Stored only in this browser's <code>localStorage</code>; sent only to
-            <code>api.github.com</code> as a bearer header.
-          </p>
-        </div>
-
-        <div class="actions">
-          <button type="submit" id="settings-save" class="btn btn-accent">Save</button>
-          <button type="button" id="settings-clear" class="btn btn-danger-ghost">Clear</button>
-          <span id="settings-msg" class="inline-msg" aria-live="polite"></span>
-        </div>
-      </form>
-
-      <div class="branding-block panel-section">
-        <h3 class="sub-heading">Channel branding</h3>
-        <p class="panel-note">Saved once in the repo at <code>branding/branding.json</code> and
-          applied to every future job — jobs come and go (12-hour cleanup), this stays.
-          Uses the same token from the fields above.</p>
-        <form id="branding-form" autocomplete="off">
-          <div class="branding-head">
-            <img id="branding-preview" class="branding-preview is-hidden" alt="" aria-hidden="true">
-            <div id="branding-current" class="hint">No branding saved yet.</div>
-          </div>
-          <div class="field-row">
             <div class="field">
-              <label for="branding-username-input">Username <span class="req">required</span></label>
-              <input type="text" id="branding-username-input" name="username" placeholder="motionsalt" spellcheck="false" autocapitalize="off" maxlength="64">
-              <p class="hint">Handle, without the <code>@</code>. Lowercase letters, numbers, <code>_</code> and <code>-</code> only.</p>
+              <label for="token-input">Personal access token</label>
+              <div class="token-wrap">
+                <input type="password" id="token-input" name="token" placeholder="ghp_… / github_pat_…" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+                <button type="button" id="token-reveal" class="btn btn-ghost btn-small" aria-pressed="false">Show</button>
+              </div>
+              <p class="hint">Requires <code>repo</code> and <code>workflow</code>. Sent only to <code>api.github.com</code>.</p>
             </div>
+
+            <div class="actions form-actions">
+              <button type="submit" id="settings-save" class="btn btn-accent">Save connection</button>
+              <button type="button" id="settings-clear" class="btn btn-text danger-text">Clear</button>
+              <span id="settings-msg" class="inline-msg" aria-live="polite"></span>
+            </div>
+          </form>
+
+          <details class="branding-disclosure">
+            <summary>
+              <span>
+                <span class="heading-kicker">Reusable profile</span>
+                <strong>Channel branding</strong>
+              </span>
+              <span class="summary-action">Configure</span>
+            </summary>
+            <div class="branding-block panel-section">
+              <p class="panel-note">Saved at <code>branding/branding.json</code> and applied to every future job.</p>
+              <form id="branding-form" autocomplete="off">
+                <div class="branding-head">
+                  <img id="branding-preview" class="branding-preview is-hidden" alt="" aria-hidden="true">
+                  <div>
+                    <span class="heading-kicker">Current identity</span>
+                    <div id="branding-current" class="hint">No branding saved yet.</div>
+                  </div>
+                </div>
+                <div class="field-row two-up">
+                  <div class="field">
+                    <label for="branding-username-input">Username <span class="req">required</span></label>
+                    <input type="text" id="branding-username-input" name="username" placeholder="motionssalt" spellcheck="false" autocapitalize="off" maxlength="64">
+                    <p class="hint">Without <code>@</code>; lowercase letters, numbers, <code>_</code> and <code>-</code>.</p>
+                  </div>
+                  <div class="field">
+                    <label for="branding-display-name-input">Display name <span class="opt">optional</span></label>
+                    <input type="text" id="branding-display-name-input" name="display_name" placeholder="MOTIONSALT" spellcheck="false" maxlength="64">
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="branding-avatar-input">Profile picture <span class="opt">optional</span></label>
+                  <input type="file" id="branding-avatar-input" accept="image/png,image/jpeg,image/webp">
+                  <p class="hint">PNG, JPEG, or WebP up to 5 MB. Leave empty to keep the current image.</p>
+                </div>
+                <div class="actions">
+                  <button type="submit" id="branding-save" class="btn btn-secondary" disabled>Save branding</button>
+                  <button type="button" id="branding-clear-avatar" class="btn btn-text btn-small is-hidden">Remove picture</button>
+                  <span id="branding-msg" class="inline-msg" aria-live="polite"></span>
+                </div>
+              </form>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section id="stage-a-section" class="panel launch-panel is-hidden" aria-labelledby="stage-a-heading">
+        <div class="panel-head static">
+          <span class="section-icon launch-icon" aria-hidden="true"></span>
+          <span class="heading-copy">
+            <span class="heading-kicker">New production</span>
+            <h2 id="stage-a-heading">Start a task</h2>
+          </span>
+        </div>
+
+        <div class="panel-body">
+          <form id="stage-a-form" autocomplete="off">
+            <div class="field primary-field">
+              <label for="video-url-input">Source video URL <span class="req">required</span></label>
+              <input type="url" id="video-url-input" name="video_url" placeholder="https://…/video.mp4 or Drive link" spellcheck="false" required>
+              <p class="hint">Public video URL or anyone-with-link Google Drive share.</p>
+            </div>
+
             <div class="field">
-              <label for="branding-display-name-input">Display name <span class="opt">optional</span></label>
-              <input type="text" id="branding-display-name-input" name="display_name" placeholder="MOTIONSALT" spellcheck="false" maxlength="64">
-              <p class="hint">Shown to viewers. Falls back to the username when blank.</p>
+              <label for="focus-input">Editorial focus <span class="opt">optional</span></label>
+              <textarea id="focus-input" name="focus" placeholder="A specific scene, moment, or plot thread…" spellcheck="true" autocapitalize="sentences" maxlength="500" rows="3"></textarea>
+              <p class="hint">Leave blank to consider the whole video.</p>
+            </div>
+
+            <div class="field-row launch-options">
+              <div class="field">
+                <label for="target-duration-select">Output length</label>
+                <select id="target-duration-select" name="target_duration_seconds">
+                  <option value="30">30 seconds</option>
+                  <option value="60">1 minute</option>
+                  <option value="120" selected>2 minutes</option>
+                  <option value="180">3 minutes</option>
+                  <option value="300">5 minutes</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="whisper-model-select">Whisper model</label>
+                <select id="whisper-model-select" name="whisper_model">
+                  <option value="tiny">tiny</option>
+                  <option value="base" selected>base</option>
+                  <option value="small">small</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="language-input">Language</label>
+                <input type="text" id="language-input" name="language" value="auto" spellcheck="false" autocapitalize="off">
+              </div>
+              <div class="field">
+                <label for="job-slug-input">Task slug <span class="opt">optional</span></label>
+                <input type="text" id="job-slug-input" name="job_id" placeholder="auto-generate" spellcheck="false" autocapitalize="off">
+              </div>
+            </div>
+
+            <div class="actions launch-actions">
+              <button type="submit" id="start-stage-a" class="btn btn-accent btn-big"><span aria-hidden="true">▶</span> Start Stage A</button>
+              <span id="stage-a-msg" class="inline-msg" aria-live="polite"></span>
+            </div>
+          </form>
+
+          <div id="resume-offer" class="resume-offer is-hidden">
+            <div><span class="heading-kicker">Task found</span><p>Resume <code id="resume-offer-id">—</code>?</p></div>
+            <div class="actions">
+              <button type="button" id="resume-offer-btn" class="btn btn-secondary btn-small">Resume</button>
+              <button type="button" id="resume-dismiss-btn" class="btn btn-text btn-small">Ignore</button>
             </div>
           </div>
-          <div class="field">
-            <label for="branding-avatar-input">Profile picture <span class="opt">optional</span></label>
-            <input type="file" id="branding-avatar-input" accept="image/png,image/jpeg,image/webp">
-            <p class="hint">PNG / JPEG / WebP, up to 5&nbsp;MB — committed as <code>branding/profile_picture.&lt;ext&gt;</code>.
-              Leave empty to keep the picture already saved.</p>
-          </div>
-          <div class="actions">
-            <button type="submit" id="branding-save" class="btn btn-accent" disabled>Save branding</button>
-            <button type="button" id="branding-clear-avatar" class="btn btn-ghost btn-small is-hidden">Remove saved picture</button>
-            <span id="branding-msg" class="inline-msg" aria-live="polite"></span>
-          </div>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ SECTION 2 — START STAGE A ============ -->
-  <section id="stage-a-section" class="panel is-hidden" aria-labelledby="stage-a-heading">
-    <div class="panel-head static">
-      <span class="panel-step">2</span>
-      <h2 id="stage-a-heading">Start Stage A</h2>
-    </div>
-
-    <div class="panel-body">
-      <form id="stage-a-form" autocomplete="off">
-        <div class="field">
-          <label for="video-url-input">Video URL <span class="req">required</span></label>
-          <input type="url" id="video-url-input" name="video_url" placeholder="https://example.com/video.mp4  — or a Google Drive share link" spellcheck="false" required>
-          <p class="hint">Any public video URL: a direct link to an <code>.mp4</code>/<code>.mkv</code> file, or a Google Drive share link (anyone-with-link).</p>
         </div>
+      </section>
+    </aside>
 
-        <div class="field-row">
-          <div class="field">
-            <label for="job-slug-input">Job slug <span class="opt">optional</span></label>
-            <input type="text" id="job-slug-input" name="job_id" placeholder="auto-generate" spellcheck="false" autocapitalize="off">
-            <p class="hint">Blank sends <code>""</code> and Stage A generates the id.</p>
-          </div>
-          <div class="field">
-            <label for="whisper-model-select">Whisper model</label>
-            <select id="whisper-model-select" name="whisper_model">
-              <option value="tiny">tiny</option>
-              <option value="base" selected>base</option>
-              <option value="small">small</option>
-            </select>
-            <p class="hint">Default <code>base</code>.</p>
-          </div>
-          <div class="field">
-            <label for="language-input">Language hint</label>
-            <input type="text" id="language-input" name="language" value="auto" spellcheck="false" autocapitalize="off">
-            <p class="hint">Default <code>auto</code>.</p>
-          </div>
-          <div class="field">
-            <label for="target-duration-select">Target output length</label>
-            <select id="target-duration-select" name="target_duration_seconds">
-              <option value="30">30 seconds</option>
-              <option value="60">1 minute</option>
-              <option value="120" selected>2 minutes</option>
-              <option value="180">3 minutes</option>
-              <option value="300">5 minutes</option>
-            </select>
-            <p class="hint">Total length of the final cut.</p>
-          </div>
-        </div>
+    <section class="operations-column" aria-label="Task operations">
+      <section id="tasks-section" class="panel tasks-panel is-hidden" aria-labelledby="tasks-heading">
+        <button type="button" id="tasks-toggle" class="panel-head" aria-expanded="true" aria-controls="tasks-body">
+          <span class="section-icon tasks-icon" aria-hidden="true"></span>
+          <span class="heading-copy">
+            <span class="heading-kicker">Production queue</span>
+            <h2 id="tasks-heading">Tasks</h2>
+          </span>
+          <span class="head-meta">
+            <span id="tasks-count" class="panel-badge">0 tasks</span>
+            <span class="chevron" aria-hidden="true"></span>
+          </span>
+        </button>
 
-        <div class="field">
-          <label for="focus-input">Focus <span class="opt">optional</span></label>
-          <input
-            type="text"
-            id="focus-input"
-            name="focus"
-            placeholder="e.g. the confrontation between X and Y — leave blank to consider the whole video"
-            spellcheck="true"
-            autocapitalize="sentences"
-            maxlength="500">
-          <p class="hint">
-            Narrow the whole analysis to <strong>one specific scene, moment, or plot thread</strong>
-            in this video. When set, the downstream agent is instructed to ignore other unrelated
-            plot threads — even objectively strong ones — and build the entire cut around this focus.
-            Leave blank to consider the whole video (default behavior).
-          </p>
-        </div>
-
-        <div class="actions">
-          <button type="submit" id="start-stage-a" class="btn btn-accent">Start Stage A</button>
-          <span id="stage-a-msg" class="inline-msg" aria-live="polite"></span>
-        </div>
-      </form>
-
-      <div id="active-job-bar" class="active-job-bar is-hidden">
-        <div class="ajb-item">
-          <span class="ajb-label">Selected task</span>
-          <code id="active-job-id" class="job-id">—</code>
-        </div>
-        <div class="ajb-item">
-          <a id="run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">View workflow run ↗</a>
-        </div>
-        <div class="ajb-item ajb-right">
-          <button type="button" id="resume-btn" class="btn btn-ghost btn-small is-hidden">Resume polling</button>
-          <button type="button" id="start-over-btn" class="btn btn-ghost btn-small">Deselect</button>
-        </div>
-      </div>
-
-      <div id="resume-offer" class="resume-offer is-hidden">
-        <p>Found an existing job on GitHub: <code id="resume-offer-id">—</code></p>
-        <button type="button" id="resume-offer-btn" class="btn btn-accent btn-small">Resume this job</button>
-        <button type="button" id="resume-dismiss-btn" class="btn btn-ghost btn-small">Ignore</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ SECTION 3 — TASKS ============ -->
-  <section id="tasks-section" class="panel is-hidden" aria-labelledby="tasks-heading">
-    <button type="button" id="tasks-toggle" class="panel-head" aria-expanded="true" aria-controls="tasks-body">
-      <span class="panel-step">3</span>
-      <h2 id="tasks-heading">Tasks</h2>
-      <span class="head-meta">
-        <span id="tasks-count" class="panel-badge">0 tasks</span>
-        <span class="chevron" aria-hidden="true">▾</span>
-      </span>
-    </button>
-
-    <div id="tasks-body" class="panel-body">
-      <p class="panel-note">
-        Every task lives independently at <code>jobs/&lt;job-id&gt;/</code> in the repo with its own
-        <code>status.json</code>, its own release <code>clipforge-&lt;job-id&gt;</code>, and its own
-        12-hour lifetime. Starting a new task never touches the others.
-        <strong>Select</strong> a task to load it into the status panel below.
-      </p>
-
-      <div class="tasks-toolbar">
-        <button type="button" id="tasks-refresh" class="btn btn-ghost btn-small">Refresh</button>
-        <span id="tasks-refresh-msg" class="inline-msg" aria-live="polite"></span>
-      </div>
-
-      <div id="tasks-list" class="tasks-list" role="list"></div>
-      <p id="tasks-empty" class="hint tasks-empty">No tasks yet. Start Stage A above.</p>
-    </div>
-  </section>
-
-  <!-- ============ SECTION 4 — JOB STATUS ============ -->
-  <section id="status-section" class="panel is-hidden" aria-labelledby="status-heading">
-    <div class="panel-head static">
-      <span class="panel-step">4</span>
-      <h2 id="status-heading">Job status</h2>
-      <span class="head-meta">
-        <span id="stage-badge" class="stage-badge stage-unknown">—</span>
-        <span id="expiry-countdown" class="expiry is-hidden" aria-live="off"></span>
-      </span>
-    </div>
-
-    <div class="panel-body">
-
-      <!-- live stage line -->
-      <div id="stage-line" class="stage-line">
-        <span id="stage-spinner" class="spinner is-hidden" role="status" aria-label="working"></span>
-        <p id="stage-text" class="stage-text">Waiting for Stage A to start…</p>
-      </div>
-
-      <!-- live progress indicator (driven by real workflow step data) -->
-      <div id="progress-block" class="progress-block is-hidden">
-        <div class="progress-bar" role="progressbar" aria-label="Task progress">
-          <div id="progress-bar-fill" class="progress-bar-fill"></div>
-        </div>
-        <p id="progress-text" class="progress-text"></p>
-      </div>
-
-      <!-- live activity (current + recent workflow steps) -->
-      <div id="activity-block" class="activity-block is-hidden">
-        <p class="activity-current">
-          <span class="activity-kicker">Current activity</span>
-          <span id="activity-current-label" class="activity-current-label"></span>
-        </p>
-        <p class="activity-recent-label">Recent activity</p>
-        <ul id="activity-recent-list" class="activity-recent-list is-hidden"></ul>
-        <a id="activity-run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">View live run on GitHub ↗</a>
-      </div>
-
-      <!-- error banner -->
-      <div id="error-block" class="error-block is-hidden" role="alert">
-        <p class="error-title">Error</p>
-        <p id="error-message" class="error-message"></p>
-        <div class="actions">
-          <a id="error-run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">View workflow run ↗</a>
-          <button type="button" id="error-start-over" class="btn btn-danger-ghost btn-small">Start over</button>
-        </div>
-      </div>
-
-      <!-- awaiting_json_upload: artifacts + upload -->
-      <div id="handoff-block" class="handoff-block is-hidden">
-
-        <div id="release-link-callout" class="read-first">
-          <p class="rf-kicker">Release ready</p>
-          <p class="rf-body">Everything your external agent needs — <code>00_READ_THIS_FIRST.txt</code>
-            (read that first), <code>transcript.json</code>, and <code>screenshots.zip</code> — is attached
-            to one GitHub Release. Hand the agent this single link and it can grab all assets in one step,
-            no per-file download/upload roundtrip.</p>
-          <div class="actions rf-actions">
-            <button type="button" id="copy-agent-prompt" class="btn btn-big btn-accent" disabled aria-live="polite">Copy for AI agent</button>
-            <a id="release-url-link" class="btn btn-big btn-ghost" href="#" target="_blank" rel="noopener noreferrer">Open Release ↗</a>
-          </div>
-          <p class="hint rf-copy-hint">The <strong>Copy for AI agent</strong> button copies a ready-to-paste block
-            (Release link + instructions to read <code>00_READ_THIS_FIRST</code> first and return
-            <code>production.json</code>) so you can hand off in one paste — no extra typing.</p>
-          <p class="hint" id="release-url-text"></p>
-          <p class="hint" id="release-tag-line"></p>
-        </div>
-
-        <div class="panel-section">
-          <h3 class="sub-heading">Upload <code>production.json</code></h3>
-          <p class="panel-note">Validated in-browser, committed to
-            <code id="cuts-path-hint">jobs/&lt;job-id&gt;/production.json</code>, then Stage B is dispatched.</p>
-          <div class="upload-row">
-            <input type="file" id="cuts-file-input" accept="application/json,.json">
-          </div>
-
-          <div class="toggle-card">
-            <label class="toggle-line">
-              <span class="enhance-toggle-label">Optional background music</span>
-            </label>
-            <div class="upload-row">
-              <input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac">
+        <div id="tasks-body" class="panel-body">
+          <div class="section-toolbar">
+            <p class="panel-note">Live work appears first. Completed, failed, and cancelled tasks move into history automatically.</p>
+            <div class="tasks-toolbar">
+              <button type="button" id="tasks-refresh" class="btn btn-ghost btn-small"><span class="refresh-icon" aria-hidden="true">↻</span> Refresh</button>
+              <span id="tasks-refresh-msg" class="inline-msg" aria-live="polite"></span>
             </div>
-            <p class="hint toggle-desc">Pick any audio file (MP3 or similar) and it is committed to
-              <code>jobs/&lt;job-id&gt;/music.mp3</code> alongside the production.json, then trimmed or
-              looped to exactly the finished video's length and mixed <strong>under the voiceover at
-              ~30% volume</strong>. Skip it and the video ships with voiceover only. The final video
-              always has exactly one audio track — voiceover (+ music); the source video's own audio
-              is never kept.</p>
-            <p class="hint" id="music-hint"></p>
+          </div>
+          <div id="tasks-list" class="tasks-list" role="list"></div>
+          <div id="tasks-empty" class="tasks-empty">
+            <span class="empty-icon" aria-hidden="true"></span>
+            <strong>No production tasks yet</strong>
+            <p>Start Stage A to create your first task.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="status-section" class="panel status-panel is-hidden" aria-labelledby="status-heading">
+        <div class="panel-head static status-head">
+          <span class="section-icon status-icon" aria-hidden="true"></span>
+          <span class="heading-copy">
+            <span class="heading-kicker">Selected task</span>
+            <h2 id="status-heading">Task overview</h2>
+          </span>
+          <span class="head-meta">
+            <span id="stage-badge" class="stage-badge stage-unknown">—</span>
+            <span id="expiry-countdown" class="expiry is-hidden" aria-live="off"></span>
+          </span>
+        </div>
+
+        <div class="panel-body status-body">
+          <div id="active-job-bar" class="active-job-bar is-hidden">
+            <div class="ajb-item">
+              <span class="ajb-label">Task ID</span>
+              <code id="active-job-id" class="job-id">—</code>
+            </div>
+            <div class="ajb-item">
+              <a id="run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">Open GitHub run ↗</a>
+            </div>
+            <div class="ajb-item ajb-right">
+              <button type="button" id="resume-btn" class="btn btn-ghost btn-small is-hidden">Resume updates</button>
+              <button type="button" id="start-over-btn" class="btn btn-text btn-small">Deselect</button>
+            </div>
           </div>
 
-          <div class="upload-row">
-            <button type="button" id="start-stage-b" class="btn btn-accent" disabled>Start Stage B</button>
+          <div class="live-overview">
+            <div id="stage-line" class="stage-line">
+              <span id="stage-spinner" class="spinner is-hidden" role="status" aria-label="working"></span>
+              <div><span class="heading-kicker">Current state</span><p id="stage-text" class="stage-text">Waiting for Stage A to start…</p></div>
+            </div>
+
+            <div id="progress-block" class="progress-block is-hidden">
+              <div class="progress-label-row"><span>Overall progress</span><p id="progress-text" class="progress-text"></p></div>
+              <div class="progress-bar" role="progressbar" aria-label="Task progress">
+                <div id="progress-bar-fill" class="progress-bar-fill"></div>
+              </div>
+            </div>
           </div>
 
-          <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
+          <div id="activity-block" class="activity-block is-hidden">
+            <div class="activity-heading-row">
+              <p class="activity-current"><span class="activity-kicker">Now processing</span><span id="activity-current-label" class="activity-current-label"></span></p>
+              <a id="activity-run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">Live run ↗</a>
+            </div>
+            <div class="activity-timeline">
+              <p class="activity-recent-label">Recent activity</p>
+              <ul id="activity-recent-list" class="activity-recent-list is-hidden"></ul>
+            </div>
+          </div>
+
+          <div id="error-block" class="error-block is-hidden" role="alert">
+            <div class="callout-icon" aria-hidden="true">!</div>
+            <div class="callout-content">
+              <p class="error-title">Task needs attention</p>
+              <p id="error-message" class="error-message"></p>
+              <div class="actions">
+                <a id="error-run-link" class="link-out is-hidden" href="#" target="_blank" rel="noopener noreferrer">Inspect workflow ↗</a>
+                <button type="button" id="error-start-over" class="btn btn-text danger-text btn-small">Deselect task</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="handoff-block" class="handoff-block is-hidden">
+            <div id="release-link-callout" class="read-first">
+              <div class="handoff-header"><span class="callout-icon success" aria-hidden="true">✓</span><div><p class="rf-kicker">Stage A complete</p><h3>Ready for creative direction</h3></div></div>
+              <p class="rf-body">The Release contains <code>00_READ_THIS_FIRST.txt</code>, the transcript, and screenshots. Share one prepared instruction with your AI agent, then return its <code>production.json</code>.</p>
+              <div class="actions rf-actions">
+                <button type="button" id="copy-agent-prompt" class="btn btn-big btn-accent" disabled aria-live="polite">Copy agent brief</button>
+                <a id="release-url-link" class="btn btn-big btn-secondary" href="#" target="_blank" rel="noopener noreferrer">Open Release ↗</a>
+              </div>
+              <details class="handoff-details">
+                <summary>Release details</summary>
+                <p class="hint" id="release-url-text"></p>
+                <p class="hint" id="release-tag-line"></p>
+              </details>
+            </div>
+
+            <div class="upload-workspace panel-section">
+              <div class="upload-intro">
+                <span class="step-number">2</span>
+                <div><h3 class="sub-heading">Upload production plan</h3><p class="panel-note">Validated in this browser, committed to <code id="cuts-path-hint">jobs/&lt;job-id&gt;/production.json</code>, then used to run Stage B.</p></div>
+              </div>
+              <div class="upload-row primary-upload"><input type="file" id="cuts-file-input" accept="application/json,.json"></div>
+
+              <div class="music-option">
+                <div><label for="music-file-input" class="enhance-toggle-label">Background music <span class="opt">optional</span></label><p class="hint">Trimmed or looped to the final duration and mixed beneath the voiceover.</p></div>
+                <div class="upload-row"><input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac"></div>
+                <p class="hint" id="music-hint"></p>
+              </div>
+
+              <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
+              <div class="upload-row stage-b-launch"><button type="button" id="start-stage-b" class="btn btn-accent btn-big" disabled><span aria-hidden="true">▶</span> Start Stage B</button></div>
+            </div>
+          </div>
+
+          <div id="stage-b-controls" class="stage-b-controls is-hidden" aria-live="polite">
+            <div><span class="heading-kicker">Workflow controls</span><p id="stage-b-controls-text" class="hint"></p></div>
+            <div class="actions">
+              <button type="button" id="restart-stage-b" class="btn btn-secondary btn-small">Restart Stage B</button>
+              <button type="button" id="cancel-stage-b" class="btn btn-danger-ghost btn-small">Cancel Stage B</button>
+            </div>
+          </div>
+
+          <div id="complete-block" class="complete-block is-hidden">
+            <div class="completion-heading"><span class="completion-mark" aria-hidden="true">✓</span><div><p class="done-kicker">Production complete</p><h3>Your final cut is ready.</h3></div></div>
+            <p class="hint completion-copy">Cuts are merged, voiceover is mixed, subtitles are burned in, and optional background music is ducked underneath.</p>
+            <div id="scene-list" class="scene-list"></div>
+            <p class="hint" id="scene-list-hint"></p>
+            <div class="completion-actions"><a id="final-zip-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download final video</a><button type="button" id="complete-ack" class="btn btn-text btn-small">Deselect task</button></div>
+            <p class="hint" id="final-zip-hint"></p>
+          </div>
+
+          <details class="technical-details">
+            <summary>Technical details</summary>
+            <div class="technical-content">
+              <dl id="job-facts" class="job-facts is-hidden"></dl>
+              <div class="raw-wrap">
+                <button type="button" id="raw-toggle" class="btn btn-ghost btn-small" aria-expanded="false" aria-controls="raw-status">Show raw status.json</button>
+                <pre id="raw-status" class="raw-status is-hidden"><code id="raw-status-code">(nothing yet)</code></pre>
+              </div>
+            </div>
+          </details>
         </div>
-      </div>
-
-      <!-- Stage B lifecycle controls -->
-      <div id="stage-b-controls" class="stage-b-controls is-hidden" aria-live="polite">
-        <p id="stage-b-controls-text" class="hint"></p>
-        <div class="actions">
-          <button type="button" id="restart-stage-b" class="btn btn-accent btn-small">Restart Stage B</button>
-          <button type="button" id="cancel-stage-b" class="btn btn-danger-ghost btn-small">Cancel Stage B</button>
-        </div>
-      </div>
-
-      <!-- complete -->
-      <div id="complete-block" class="complete-block is-hidden">
-        <p class="done-kicker">Job complete</p>
-        <p class="hint">Stage B produced <strong>one finished, ready-to-post video</strong>: all cuts
-          merged, voiceover mixed in (source audio muted), word-by-word subtitles burned in, and your
-          background music ducked underneath when one was uploaded. Download it below.</p>
-        <div id="scene-list" class="scene-list"></div>
-        <p class="hint" id="scene-list-hint"></p>
-        <a id="final-zip-link" class="btn btn-big btn-accent" href="#" target="_blank" rel="noopener noreferrer">Download final video (final.mp4 zip)</a>
-        <p class="hint" id="final-zip-hint"></p>
-        <button type="button" id="complete-ack" class="btn btn-ghost btn-small">Acknowledge &amp; clear job</button>
-      </div>
-
-      <!-- job facts -->
-      <dl id="job-facts" class="job-facts is-hidden"></dl>
-
-      <!-- raw status -->
-      <div class="raw-wrap">
-        <button type="button" id="raw-toggle" class="btn btn-ghost btn-small" aria-expanded="false" aria-controls="raw-status">Show raw status.json</button>
-        <pre id="raw-status" class="raw-status is-hidden"><code id="raw-status-code">(nothing yet)</code></pre>
-      </div>
-
-    </div>
-  </section>
-
+      </section>
+    </section>
+  </div>
 </main>
 
+<dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title">
+  <form method="dialog" class="confirm-dialog-card">
+    <div class="confirm-dialog-icon" aria-hidden="true">!</div>
+    <div class="confirm-dialog-content">
+      <p class="heading-kicker">Permanent action</p>
+      <h2 id="confirm-title">Delete this task?</h2>
+      <p id="confirm-message">This removes the task folder, Release, tag, and any per-job branch. Other tasks are not affected.</p>
+      <code id="confirm-task-id"></code>
+    </div>
+    <div class="confirm-dialog-actions">
+      <button type="submit" value="cancel" class="btn btn-ghost">Keep task</button>
+      <button type="submit" value="confirm" class="btn btn-danger-ghost">Delete task</button>
+    </div>
+  </form>
+</dialog>
+
 <footer class="site-footer">
-  <p>Every job auto-deletes 12 hours after creation — download your artifacts before they expire.</p>
+  <span class="footer-brand">ClipForge / MOTIONSALT</span>
+  <p>Tasks auto-delete 12 hours after creation. Download final artifacts before they expire.</p>
 </footer>
 
 <script src="app.js"></script>
