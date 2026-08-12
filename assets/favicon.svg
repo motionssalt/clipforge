@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ClipForge">
-  <rect width="64" height="64" rx="12" fill="#0a0b0d"/>
-  <path d="M14 20h20v6H14zM14 30h14v6H14zM14 40h20v6H14z" fill="#35e0a1"/>
-  <path d="M40 14l12 18-12 18-5-4 9-14-9-14z" fill="#35e0a1" opacity="0.75"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#131a24"/><rect x="13" y="14" width="38" height="36" rx="10" fill="#201d3f" stroke="#7c6cf2" stroke-width="2"/><path d="M24 38V28l7 5-7 5Zm12 4V22h5v20h-5Z" fill="#53d7e8"/></svg>
