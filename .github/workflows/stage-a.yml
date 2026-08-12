@@ -1,5 +1,10 @@
 name: Stage A — Ingest, Transcribe, Screenshot
 
+# Keyed by the job id when one is supplied so runs are easy to tell apart
+# in the Actions tab and so the site can match a run to its task by title.
+# Blank (auto-generated id) dispatches read as "Stage A — auto".
+run-name: Stage A — ${{ github.event.inputs.job_id || 'auto' }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -42,7 +47,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: clipforge-stage-a-${{ github.event.inputs.job_id }}
+  # Multi-task isolation: when a job slug is supplied, runs for the SAME
+  # slug serialize (two runs must never write one job folder at once), but
+  # a blank slug must NOT collapse every task into a single shared group —
+  # otherwise Task B would queue behind Task A instead of running
+  # independently in parallel. github.run_id is unique per run, so a blank
+  # slug yields a per-run group (true parallelism) while a named slug
+  # still dedupes per task.
+  group: clipforge-stage-a-${{ github.event.inputs.job_id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -198,9 +210,29 @@ jobs:
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Rebase FIRST: with multiple tasks running concurrently, another
+          # task's status commit (or a site-side upload) may have landed on
+          # origin since checkout. A plain push would then fail
+          # non-fast-forward and this task would silently have NO visible
+          # status for the whole Stage A run (the old code swallowed that
+          # with `|| echo non-fatal`). Retry with rebase so the initial
+          # status — which carries this run's workflow_run_id for live
+          # step tracking — actually reaches origin.
+          git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
           git commit -m "clipforge: init job ${{ steps.jid.outputs.job_id }}" || echo "nothing to commit"
-          git push || echo "push failed (non-fatal for run)"
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "initial status push attempt $attempt failed — rebasing and retrying…" >&2
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          # Still non-fatal as a last resort: the final status commit later
+          # in this same workspace carries this commit along with it.
+          if [ "$pushed" != "true" ]; then
+            echo "WARN: initial status push failed after 3 attempts; the final status commit will carry it." >&2
+          fi
 
       - name: Download source video (Google Drive link or any direct URL)
         shell: bash
@@ -572,7 +604,22 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} awaiting production.json" || echo "nothing to commit"
-          git push
+          # Persisting the awaiting_json_upload status is a HARD
+          # requirement: if this push lost a race with another task's
+          # commit and the step failed, the failure handler below would
+          # stamp a false `error` status over an otherwise-successful
+          # Stage A run. Rebase and retry before giving up.
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "final status push attempt $attempt failed — rebasing onto latest origin and retrying…" >&2
+            git pull --rebase --autostash
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "FATAL: could not persist the awaiting_json_upload status to origin after 3 attempts." >&2
+            exit 1
+          fi
 
       - name: On failure, write error status
         if: failure()
@@ -587,4 +634,12 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json" || true
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} error" || true
-          git push || true
+          # Best-effort, but retry with rebase so a concurrent task's push
+          # doesn't silently drop this task's error status.
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          true

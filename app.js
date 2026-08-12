@@ -174,6 +174,25 @@
     avatarFile: null,      // a newly picked picture, not yet committed
     removeAvatar: false,   // true when the user asked to delete the picture
 
+    /* -------------------------------------------------------------
+     * Per-task workflow-run matching.
+     *
+     * findWorkflowRun() and discoverJobId() are shared by Stage A and
+     * Stage B starts. When two tasks are started close together, two of
+     * these loops can be alive at the same time; each needs its OWN
+     * matching context so Task A's run can never be adopted as Task B's.
+     *
+     *   watch: [ { workflowFile, dispatchedAt, jobId, slug, before,
+     *              token, settled } ]
+     *
+     * Each entry is fully self-contained. `jobId` (when known) scopes the
+     * run match by the workflow's run-name ("Stage B — <job-id>" /
+     * "Stage A — <job-id>" / "Stage A — auto"), which the workflows
+     * stamp deterministically from the job_id input. That is the
+     * load-bearing mechanism that prevents cross-task run adoption.
+     * ------------------------------------------------------------- */
+    watch: [],
+
     /* -----------------------------------------------------------------
      * Live workflow step data, per task.
      *
@@ -823,6 +842,35 @@
     }
   }
 
+  /* ---------------------------------------------------------------- watch */
+
+  /**
+   * Push a new watch context (one per dispatch). Returns the entry so the
+   * caller can read it back after matching settles. Entries are independent:
+   * matching Task A never reads or mutates Task B's entry.
+   */
+  function pushWatch(opts) {
+    var w = {
+      workflowFile: opts.workflowFile,
+      dispatchedAt: opts.dispatchedAt,
+      jobId: opts.jobId || null,         // known slug (stage-b / slug stage-a)
+      slug: opts.slug || '',             // raw slug input (stage-a only)
+      before: opts.before || null,       // folder snapshot (blank-slug stage-a)
+      token: Math.random().toString(36).slice(2),
+      settled: false
+    };
+    state.watch.push(w);
+    return w;
+  }
+
+  /** Remove a watch entry once its run/job has been resolved. */
+  function settleWatch(w) {
+    if (!w) return;
+    w.settled = true;
+    var i = state.watch.indexOf(w);
+    if (i !== -1) state.watch.splice(i, 1);
+  }
+
   /* ------------------------------------------------------------- stage A flow */
 
   el['stage-a-form'].addEventListener('submit', function (e) {
@@ -917,54 +965,105 @@
     hide(el['resume-offer']);
     renderStage();
 
+    // Register a self-contained watch context for THIS dispatch so its
+    // run matching / folder discovery stays scoped to this task even when
+    // another task is started a moment later (multi-task isolation).
+    var watch = pushWatch({
+      workflowFile: 'stage-a.yml',
+      dispatchedAt: dispatchedAt,
+      jobId: slug || null,
+      slug: slug,
+      before: before
+    });
+
     // If the user supplied a slug, we can start polling that path right away.
     if (slug) setActiveJob(slug);
 
     state.busy = false;
     el['start-stage-a'].disabled = false;
 
-    findWorkflowRun('stage-a.yml', dispatchedAt);
-    if (!slug) discoverJobId(before);
+    findWorkflowRun(watch);
+    if (!slug) discoverJobId(watch);
     else startPolling();
   }
 
-  /** Locate the run created by our dispatch; surface a hint if none appears. */
-  async function findWorkflowRun(workflowFile, dispatchedAt) {
+  /**
+   * Locate the run created by ONE specific dispatch.
+   *
+   * Multi-task isolation: the match is scoped by the run's display title,
+   * which both workflows stamp deterministically from the job_id input
+   * (`run-name: Stage B — <job-id>` / `Stage A — <job-id>` / `Stage A —
+   * auto`). Two Stage B dispatches for different tasks therefore cannot
+   * cross-adopt each other's runs, and a Stage A dispatch with a slug can
+   * no longer grab the newest Stage A run belonging to a different task.
+   * Only a blank-slug Stage A dispatch (title "Stage A — auto") falls back
+   * to "newest matching title after dispatch time"; the parallel
+   * discoverJobId() watches folders so the task itself is still adopted
+   * correctly.
+   *
+   * The result is only applied to the live selection (state.runId /
+   * state.stageBRun) when this watch's task is still the selected one — a
+   * late-arriving match for a previously-dispatched task can never
+   * overwrite the run the operator is now watching.
+   */
+  async function findWorkflowRun(watch) {
+    var workflowFile = watch.workflowFile;
+    var dispatchedAt = watch.dispatchedAt;
     var deadline = Date.now() + RUN_DISCOVERY_TIMEOUT;
     var cushion = dispatchedAt.getTime() - 60000; // clock-skew cushion
+
+    // Expected run title for THIS task's dispatch.
+    var expectedTitle = null;
+    if (workflowFile === 'stage-b.yml') {
+      expectedTitle = 'Stage B — ' + (watch.jobId || state.jobId || '');
+    } else if (workflowFile === 'stage-a.yml') {
+      expectedTitle = 'Stage A — ' + (watch.slug || 'auto');
+    }
 
     while (Date.now() < deadline) {
       try {
         var data = await gh('/repos/' + state.owner + '/' + state.repo +
           '/actions/workflows/' + workflowFile +
-          '/runs?event=workflow_dispatch&per_page=10');
+          '/runs?event=workflow_dispatch&per_page=15');
         var runs = (data && data.workflow_runs) || [];
-        var match = runs
-          .filter(function (r) {
-            return new Date(r.created_at).getTime() >= cushion &&
-              (r.status === 'queued' || r.status === 'in_progress' || r.status === 'waiting' ||
-                r.status === 'requested' || r.status === 'pending');
-          })
+        var candidates = runs.filter(function (r) {
+          return new Date(r.created_at).getTime() >= cushion;
+        });
+        if (expectedTitle) {
+          candidates = candidates.filter(function (r) {
+            return String(r.display_title || '') === expectedTitle;
+          });
+        }
+        var match = candidates
           .sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); })[0];
 
         if (match) {
-          state.runId = match.id;
-          state.runHtmlUrl = match.html_url;
-          if (workflowFile === 'stage-b.yml') state.stageBRun = match;
-          el['run-link'].href = match.html_url;
-          show(el['run-link']);
-          watchRunForEarlyFailure(match.id);
+          settleWatch(watch);
+          // Only adopt the run into the live selection when this dispatch's
+          // task is still what the operator is looking at.
+          var stillSelected = !watch.jobId || watch.jobId === state.jobId ||
+            (workflowFile === 'stage-a.yml' && !watch.slug);
+          if (stillSelected) {
+            state.runId = match.id;
+            state.runHtmlUrl = match.html_url;
+            if (workflowFile === 'stage-b.yml') state.stageBRun = match;
+            el['run-link'].href = match.html_url;
+            show(el['run-link']);
+            watchRunForEarlyFailure(match.id, watch);
+          }
           return;
         }
       } catch (err) {
         if (err.name === 'AuthError' || err.name === 'RateLimitError') {
           handleGlobalError(err);
+          settleWatch(watch);
           return;
         }
       }
       await sleep(3000);
     }
 
+    settleWatch(watch);
     banner('dispatch', 'warn',
       'Workflow may not be enabled. Check `.github/workflows/' + workflowFile +
       '` in the repo Actions tab.');
@@ -972,12 +1071,15 @@
 
   /**
    * Watch the run only to catch early workflow failures. status.json remains
-   * authoritative for stage state.
+   * authoritative for stage state. Scoped to the specific watch entry so a
+   * task switch (which clears state.runId) cleanly detaches this watcher.
    */
-  async function watchRunForEarlyFailure(runId) {
+  async function watchRunForEarlyFailure(runId, watch) {
     while (state.runId === runId) {
       await sleep(15000);
       if (state.runId !== runId) return;
+      // If the operator switched to a different task, stop watching.
+      if (watch && watch.jobId && state.jobId !== watch.jobId) return;
       var stage = state.status && state.status.stage;
       if (stage === 'complete' || stage === 'error') return;
 
@@ -1017,33 +1119,59 @@
     }
   }
 
-  /** Poll jobs/ until a folder that was not in `before` shows up. */
-  async function discoverJobId(before) {
+  /**
+   * Poll jobs/ until a folder that was not in this dispatch's `before`
+   * snapshot shows up. Scoped to its own watch entry: each blank-slug
+   * Stage A dispatch carries its own pre-dispatch folder snapshot, so two
+   * concurrent dispatches compare against DIFFERENT baselines and cannot
+   * both adopt the same new folder.
+   */
+  async function discoverJobId(watch) {
+    var before = (watch && watch.before) || [];
     var known = {};
-    (before || []).forEach(function (n) { known[n] = true; });
+    before.forEach(function (n) { known[n] = true; });
     var deadline = Date.now() + 15 * 60 * 1000;
 
     text(el['stage-text'], 'Dispatched. Waiting for Stage A to create the job folder…');
     show(el['stage-spinner']);
 
-    while (Date.now() < deadline && !state.jobId) {
+    while (Date.now() < deadline) {
+      // A folder was already adopted for this dispatch (or the operator
+      // switched tasks) — stop discovering.
+      if (!watch || watch.settled) return;
+      if (state.jobId && watch.workflowFile === 'stage-a.yml' && !watch.slug) {
+        // state.jobId now points at this (or another) task; settle.
+        settleWatch(watch);
+        return;
+      }
       await sleep(5000);
       var now;
       try {
         now = await listJobDirs();
       } catch (err) {
         handleGlobalError(err);
-        if (err.name === 'AuthError') return;
+        if (err.name === 'AuthError') { settleWatch(watch); return; }
         continue;
       }
       var fresh = now.filter(function (n) { return !known[n]; }).sort();
       if (fresh.length) {
-        setActiveJob(fresh[fresh.length - 1]);
-        startPolling();
+        settleWatch(watch);
+        // Only adopt into the live selection if the operator has not
+        // already selected something else meanwhile.
+        if (!state.jobId) {
+          setActiveJob(fresh[fresh.length - 1]);
+          startPolling();
+        } else {
+          // Another task got selected first; still register the new folder
+          // in the task list so it is tracked independently.
+          ensureTaskEntry(fresh[fresh.length - 1]);
+          renderTasksList();
+        }
         return;
       }
     }
 
+    settleWatch(watch);
     if (!state.jobId) {
       banner('discover', 'warn',
         'No new job folder appeared under jobs/ yet. The run may still be downloading, ' +
@@ -1534,7 +1662,13 @@
     var repoSet = {};
     repoIds.forEach(function (id) { repoSet[id] = true; });
     Object.keys(state.tasks).forEach(function (id) {
-      if (!repoSet[id]) delete state.tasks[id];
+      if (!repoSet[id]) {
+        delete state.tasks[id];
+        // Drop the cached step list too — the run is gone from the repo's
+        // job tree, so its live-step cache is dead weight and must not be
+        // resurrected if the id is ever reused.
+        delete state.workflowSteps[id];
+      }
     });
 
     // Fetch each id's status.json in parallel, capped at 5 concurrent.
@@ -1717,8 +1851,12 @@
         }
       }
 
-      // Local bookkeeping.
+      // Local bookkeeping: drop the registry entry AND this task's live
+      // step cache so a concurrently-running background refresh cannot
+      // resurrect a ghost row, and so no other task can inherit stale
+      // step data through a reused id.
       forgetTask(jobId);
+      delete state.workflowSteps[jobId];
       if (state.jobId === jobId) clearActiveJob();
 
       dismissBanner('delete-task');
@@ -2036,7 +2174,7 @@
         return;
       }
       dismissBanner('status');
-        state.status = parsed;
+      state.status = parsed;
       // Feed the newest snapshot into the multi-task registry so the Tasks
       // list above stays fresh independently of whichever task is selected.
       recordTaskSnapshot(state.jobId, parsed);
@@ -2044,8 +2182,15 @@
       renderStage();
       renderTasksList();
 
-      if (isTerminalStageBRun() || (!stageFromRun() &&
-          (parsed.stage === 'complete' || parsed.stage === 'error' || parsed.stage === 'cancelled' || !isKnownStage(parsed.stage)))) {
+      // Only stop when the STATUS is terminal (or unknown). We do NOT stop
+      // merely because a workflow run object completed: during Stage A the
+      // "Stage B run" slot is empty, and even for Stage B the final
+      // status.json commit lands AFTER the run ends — polling must continue
+      // until that terminal status is actually read, or the UI would stick
+      // on `stage_b_running` forever. See refreshStageBRun() for why the
+      // stageBRun slot is never populated during Stage A.
+      if (parsed.stage === 'complete' || parsed.stage === 'error' ||
+          parsed.stage === 'cancelled' || !isKnownStage(parsed.stage)) {
         stopPolling();
         return;
       }
@@ -2087,22 +2232,52 @@
     return '';
   }
 
+  /**
+   * Resolve the CURRENT Stage B run for the SELECTED task.
+   *
+   * Multi-task / multi-stage correctness:
+   *
+   *  1. The `workflow_run_id` in status.json belongs to WHICHEVER stage
+   *     last published status. During Stage A it is the STAGE A run — so
+   *     we must never load it into the Stage B slot. Doing so (the old
+   *     behavior) made the UI render "Stage B is running" during Stage A,
+   *     and made the Cancel button target the Stage A run.
+   *  2. Stage A's own status.json still carries that id purely so the
+   *     live-step tracker (runIdFromSnapshot / fetchWorkflowStepsFor) can
+   *     show real per-step progress — that path is unchanged.
+   *  3. The Stage B slot is only populated from a status.json that is in
+   *     a Stage B (or later) phase, or from a title-scoped Stage B run
+   *     lookup ("Stage B — <job-id>") — which can never match another
+   *     task's run because the title embeds this task's job id.
+   */
   async function refreshStageBRun() {
     if (!state.jobId || !isConfigured()) return;
     try {
+      var stage = state.status && state.status.stage;
+      var inStageBPhase = ['stage_b_queued', 'stage_b_running',
+        'stage_b_cancelling', 'cancelled', 'complete', 'error'].indexOf(stage) !== -1;
       var id = state.status && state.status.extra && state.status.extra.workflow_run_id;
-      var run;
-      if (id) run = await gh('/repos/' + state.owner + '/' + state.repo + '/actions/runs/' + encodeURIComponent(id));
-      else {
+      var run = null;
+      if (inStageBPhase && id) {
+        // status.json's run id IS the Stage B run at this point.
+        run = await gh('/repos/' + state.owner + '/' + state.repo +
+          '/actions/runs/' + encodeURIComponent(id));
+      } else if (state.stageBDispatched || stage === 'stage_b_queued' || stage === 'stage_b_running') {
+        // Stage B dispatched but status.json hasn't caught up yet: match by
+        // the title the workflow stamps from the job_id input. This is
+        // scoped to THIS task — it cannot return another task's run.
         var data = await gh('/repos/' + state.owner + '/' + state.repo +
           '/actions/workflows/stage-b.yml/runs?event=workflow_dispatch&per_page=30');
         var expectedTitle = 'Stage B — ' + state.jobId;
         run = ((data && data.workflow_runs) || []).filter(function (candidate) {
           return candidate.display_title === expectedTitle;
-        }).sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); })[0];
+        }).sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); })[0] || null;
       }
       if (run) {
         state.stageBRun = run;
+        // Surface the run link, but do NOT clobber state.runId while Stage
+        // A is the active stage — state.runId may currently point at the
+        // Stage A run whose failure watch is still meaningful.
         state.runId = run.id;
         state.runHtmlUrl = run.html_url;
         el['run-link'].href = run.html_url;
@@ -2986,7 +3161,14 @@
     state.runId = null;
     state.runHtmlUrl = null;
     hide(el['run-link']);
-    findWorkflowRun('stage-b.yml', dispatchedAt);
+    // Scoped watch: the match is restricted to runs titled
+    // "Stage B — <this job id>", so a second task's Stage B dispatch can
+    // never be adopted as this task's run.
+    findWorkflowRun(pushWatch({
+      workflowFile: 'stage-b.yml',
+      dispatchedAt: dispatchedAt,
+      jobId: state.jobId
+    }));
     startPolling();
   }
 
@@ -3049,7 +3231,13 @@
       state.stageBDispatched = true;
       state.cancellingStageB = false;
       state.stageBRun = { status: 'queued', conclusion: null };
-      findWorkflowRun('stage-b.yml', dispatchedAt);
+      // Same title-scoped matching as a normal Stage B start, so a restart
+      // of THIS task only ever adopts THIS task's new run.
+      findWorkflowRun(pushWatch({
+        workflowFile: 'stage-b.yml',
+        dispatchedAt: dispatchedAt,
+        jobId: state.jobId
+      }));
       startPolling();
       renderStage();
     } catch (err) {
@@ -3063,6 +3251,13 @@
 
   async function cancelStageB() {
     if (state.busy || !isActiveStageBRun() || !state.stageBRun.id) return;
+    // Never cancel a run that is not a Stage B run for THIS task. The
+    // stageBRun slot is only ever populated from a Stage-B-phase status
+    // or a title-scoped Stage B lookup (see refreshStageBRun), but guard
+    // defensively so a stale object can never target another task's run.
+    var expectedTitle = 'Stage B — ' + state.jobId;
+    if (state.stageBRun.display_title &&
+        String(state.stageBRun.display_title) !== expectedTitle) return;
     state.busy = true;
     state.cancellingStageB = true;
     renderStage();

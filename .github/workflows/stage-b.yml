@@ -232,8 +232,21 @@ jobs:
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} stage B running" || echo "nothing to commit"
           # Best-effort (the definitive status is written at the end), but
-          # still survive a non-fast-forward race with one rebase retry.
-          git push || { git pull --rebase --autostash || true; git push || true; }
+          # with multiple tasks running concurrently a single retry is not
+          # always enough — loop with rebase so this task's stage_b_running
+          # status (which carries this run's workflow_run_id for live step
+          # tracking) reliably reaches origin even when another task's push
+          # lands first.
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "stage_b_running status push attempt $attempt failed — rebasing and retrying…" >&2
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "WARN: stage_b_running status push failed after 3 attempts; the final status commit will carry it." >&2
+          fi
 
       - name: Load release metadata (find original video asset)
         id: relmeta
@@ -852,7 +865,13 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/${{ steps.jid.outputs.job_id }}/status.json" || true
           git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} error (stage B)" || true
-          git push || { git pull --rebase --autostash || true; git push || true; }
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          true
 
   stage_b_cancelled:
     name: Record Stage B cancellation
@@ -898,4 +917,10 @@ jobs:
           git pull --rebase --autostash || true
           git add "jobs/$jid/status.json"
           git commit -m "clipforge: job $jid stage B cancelled" || echo "nothing to commit"
-          git push || { git pull --rebase --autostash || true; git push || true; }
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          true
