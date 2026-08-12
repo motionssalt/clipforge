@@ -113,17 +113,29 @@ TTS_VOICES = ("Charon", "Algenib")
 # Directorial instruction prepended to every line before it is sent to
 # Gemini. Gemini's TTS models take natural-language style guidance in
 # the input text itself; this is the only lever the API exposes for
-# shaping delivery, and it is what actually pushes the reading toward
-# the Jujutsu Kaisen / Hunter x Hunter narrator character. The line
-# below is the outcome of iterating on style prompts against the pro
-# TTS model; do not shorten it casually.
+# shaping delivery (there is no numeric speed/rate parameter in the
+# generateContent speechConfig — pace is steered entirely through this
+# prompt). This is what actually pushes the reading toward the Jujutsu
+# Kaisen / Hunter x Hunter narrator character AND controls how fast it
+# talks. The previous wording ("measured pacing... Do not rush...
+# clear pauses between clauses") was directly telling the model to
+# speak slowly, which was the real cause of the sluggish narration —
+# not a missing speed setting. Keep the same voice/tone description
+# (deep, gravelly, dramatic anime-narrator baritone) but replace the
+# pacing instruction with an explicit fast/rapid-fire one aimed at
+# short-form content. Do not shorten this casually.
 STYLE_PROMPT = (
-    "Read the following line as a solemn, deep-voiced anime narrator in "
-    "the exact style of the Jujutsu Kaisen and Hunter x Hunter series "
-    "narrators: measured pacing, weighty and gravelly baritone, "
-    "restrained but dramatic, informative and grave, with clear pauses "
-    "between clauses. Do not rush. Do not add filler words or sound "
-    "effects. Speak only the line below, nothing else:\n\n"
+    "Read the following line as a deep-voiced, gravelly anime narrator "
+    "in the style of the Jujutsu Kaisen and Hunter x Hunter series "
+    "narrators, but deliver it FAST: rapid-fire, energetic, hype, "
+    "high-momentum pacing suited to a fast-cut TikTok or YouTube Shorts "
+    "video. Speak noticeably quicker than a normal audiobook or "
+    "documentary narrator — push the tempo hard and keep it driving "
+    "forward with minimal space between words and clauses, while still "
+    "keeping the same weighty, dramatic, gravelly baritone character "
+    "and staying clearly intelligible. Do not sound slow, deliberate, "
+    "or heavily paused. Do not add filler words or sound effects. "
+    "Speak only the line below, nothing else:\n\n"
 )
 
 # HTTP behavior.
