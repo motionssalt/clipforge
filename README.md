@@ -235,8 +235,9 @@ whether Stage B ever ran. Override the TTL via the workflow's
   style prompt; `gemini-2.5-flash-preview-tts` + voice `Algenib` are
   automatic fallbacks). API keys live only in the `GEMINI_API_KEYS`
   repository secret — added, listed (masked) and deleted from the
-  site's Settings panel; the browser encrypts each value with libsodium
-  sealed box before sending it to the GitHub Actions Secrets API, and
+  site's Settings panel; the browser encrypts each value with a libsodium
+  sealed box (vendored same-origin under assets/vendor/, no CDN
+  dependency) before sending it to the GitHub Actions Secrets API, and
   the raw keys are never written to the repo, to logs, or to any
   artifact.
 - The site polls `status.json` every 5s while a job is running (back

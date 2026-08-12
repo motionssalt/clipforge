@@ -95,7 +95,7 @@
               <span class="summary-action">Manage</span>
             </summary>
             <div class="branding-block panel-section">
-              <p class="panel-note">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with libsodium sealed box in this browser before upload). Multiple keys are supported — Stage B fails over cleanly on quota, rate-limit, invalid-key, or transient API errors.</p>
+              <p class="panel-note">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the libsodium bundle ships with the site itself, so no third-party CDN request is made). Multiple keys are supported — Stage B fails over cleanly on quota, rate-limit, invalid-key, or transient API errors.</p>
               <form id="gemini-key-form" autocomplete="off">
                 <div class="field">
                   <label for="gemini-key-input">Add a Gemini API key</label>
@@ -415,7 +415,11 @@
   <p>Tasks auto-delete 12 hours after creation. Download final artifacts before they expire.</p>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/libsodium-wrappers@0.7.13/dist/browsers/sodium.js" defer></script>
+<!-- libsodium is vendored same-origin (assets/vendor/) so key management
+     never depends on a third-party CDN. libsodium.js MUST load before
+     libsodium-wrappers.js: the wrapper reads window.libsodium at load time. -->
+<script src="assets/vendor/libsodium.js" defer></script>
+<script src="assets/vendor/libsodium-wrappers.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

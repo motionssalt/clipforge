@@ -860,7 +860,10 @@
    *   - Raw keys are NEVER persisted to disk in the repo, and NEVER written
    *     to any log, workflow output, artifact, or committed file.
    *   - branding/gemini_keys.json stores ONLY masked fingerprints for display.
-   *   - The libsodium bundle is loaded from a public CDN; encryption happens
+   *   - The libsodium bundle is vendored with the site itself
+   *   (assets/vendor/libsodium.js + libsodium-wrappers.js, loaded via
+   *   <script> tags in index.html BEFORE app.js) so no third-party CDN
+   *   is ever contacted; encryption happens
    *     entirely client-side before the ciphertext leaves the browser. */
 
   var _sodiumReady = null;
@@ -874,7 +877,7 @@
           return;
         }
         if (Date.now() - start > 15000) {
-          reject(new Error('libsodium failed to load from CDN (network blocked?).'));
+          reject(new Error('libsodium did not initialize. The bundled files assets/vendor/libsodium.js and assets/vendor/libsodium-wrappers.js must be reachable and loaded before app.js in index.html.'));
           return;
         }
         setTimeout(poll, 100);
