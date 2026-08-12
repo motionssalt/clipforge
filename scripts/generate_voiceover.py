@@ -7,8 +7,8 @@ Reads work/production.json's `cuts[].voiceover_text` and renders one
 24 kHz mono 16-bit PCM WAV per cut into work/voiceover/voiceover_NN.wav,
 preserving the numbering used by every downstream step in Stage B
 (cut_and_produce.py mixes them into the video track; generate_subtitles.py
-transcribes the merged track word-by-word). A manifest.json with the
-WAV path + duration for each cut is written alongside so the reconciler
+transcribes the merged track word-by-word). A voiceover_manifest.json with
+the WAV path + duration for each cut is written alongside so the reconciler
 can pick the files up without having to probe them itself.
 
 ENGINE: Gemini API TTS (replaces the previous Chatterbox implementation).
@@ -49,7 +49,7 @@ Interface (unchanged from the previous implementation, deliberately):
 
   <production.json> ......... path to Stage A's production.json.
   <out_dir> ................. directory that will receive voiceover_NN.wav
-                              and manifest.json.
+                              and voiceover_manifest.json.
 
 Downstream contract (also unchanged): 24 kHz, mono, 16-bit PCM WAV, one
 per cut, numbered 01, 02, ..., using two digits so filenames sort
@@ -83,12 +83,26 @@ GEMINI_ENDPOINT = (
     "{model}:generateContent"
 )
 
-# Model preference order. The pro TTS model produces measurably better
-# prosody for slow, deliberate delivery — which is precisely what the
-# JJK / HxH narrator style needs — but is more likely to be rate-limited
-# on a personal API key. Flash is tried second so a cut still ships even
-# if the pro tier temporarily refuses to serve.
-TTS_MODELS = ("gemini-2.5-pro-preview-tts", "gemini-2.5-flash-preview-tts")
+# Gemini's 429 body from the failed production run identified the real
+# problem: gemini-2.5-pro-preview-tts returned
+# `generate_content_free_tier_requests, limit: 0` for the configured keys.
+# That is a model-access policy, not a retryable quota window. The actual
+# successful voiceovers in that run were all Flash + Charon, so keep that
+# voice intact and make the reachable model the default. A billed deployment
+# can explicitly opt into trying Pro first without changing source code.
+_FLASH_MODEL = "gemini-2.5-flash-preview-tts"
+_PRO_MODEL = "gemini-2.5-pro-preview-tts"
+if os.environ.get("GEMINI_TTS_TRY_PRO", "").strip().lower() in {"1", "true", "yes", "on"}:
+    TTS_MODELS = (_PRO_MODEL, _FLASH_MODEL)
+else:
+    TTS_MODELS = (_FLASH_MODEL,)
+
+# Cooldown state is intentionally process-local: each Stage B run is a single
+# process. A key that cannot serve a request is therefore skipped for the rest
+# of its useful cooldown instead of being hammered once per remaining cut.
+KEY_COOLDOWN_S = 10 * 60
+_key_cooldown_until: dict[int, float] = {}
+_key_model_blocked: set[tuple[int, str]] = set()
 
 # Voice preference order. `Charon` is Gemini's deep, informative narrator
 # voice — the closest match to the requested JJK / HxH narrator character
@@ -190,12 +204,11 @@ def load_keys() -> List[ApiKey]:
 
 
 class RecoverableApiError(Exception):
-    """
-    Raised when the failing key is worth abandoning and trying the next
-    one (auth failure, quota, rate limit, invalid key, temporary server
-    error). Non-recoverable errors (malformed request, empty response
-    payload on a healthy key) bubble up as ValueError.
-    """
+    """A failure where another usable key may still complete the request."""
+
+    def __init__(self, message: str, status: Optional[int] = None):
+        super().__init__(message)
+        self.status = status
 
 
 def _is_recoverable_http(status: int) -> bool:
@@ -255,7 +268,7 @@ def _post_json(url: str, api_key: str, payload: dict) -> dict:
         safe_url = url  # URL itself carries no key (key is in header)
         if _is_recoverable_http(e.code) or _is_recoverable_error_message(detail):
             raise RecoverableApiError(
-                f"HTTP {e.code} from {safe_url}: {detail[:400]}"
+                f"HTTP {e.code} from {safe_url}: {detail[:400]}", status=e.code
             )
         raise RuntimeError(f"HTTP {e.code} from {safe_url}: {detail[:400]}")
     except urlerror.URLError as e:
@@ -303,7 +316,9 @@ def _synthesize_once(
         err = resp["error"] or {}
         msg = err.get("message") or json.dumps(err)[:400]
         if _is_recoverable_error_message(msg):
-            raise RecoverableApiError(f"Gemini error: {msg}")
+            raise RecoverableApiError(
+                f"Gemini error: {msg}", status=err.get("code")
+            )
         raise RuntimeError(f"Gemini error: {msg}")
 
     candidates = resp.get("candidates") or []
@@ -324,58 +339,124 @@ def _synthesize_once(
     )
 
 
+def _is_model_policy_denial(error: RecoverableApiError) -> bool:
+    """True for Gemini's permanent per-model free-tier `limit: 0` response."""
+    message = str(error).upper()
+    return "LIMIT: 0" in message or "LIMIT:0" in message
+
+
+def _is_auth_failure(error: RecoverableApiError) -> bool:
+    message = str(error).upper()
+    return error.status in (401, 403) or any(
+        marker in message for marker in ("API_KEY_INVALID", "UNAUTHENTICATED", "PERMISSION_DENIED")
+    )
+
+
 def synthesize_with_failover(
     text: str,
     keys: List[ApiKey],
     cut_label: str,
-) -> Tuple[bytes, ApiKey, str, str]:
+    start_index: int = 0,
+) -> Tuple[bytes, ApiKey, str, str, int]:
+    """Use a round-robin key pool with model-aware failure handling.
+
+    Keys are the outer loop, as in Accentura. A temporary 429 moves to a
+    different usable key; a `limit: 0` model denial only blocks that model on
+    that key and can still fall through to Flash. The returned cursor spreads
+    successful requests across healthy keys on subsequent cuts.
     """
-    Try every (model, voice, key) combination. Return the first success
-    plus the tuple that produced it so the log makes the routing
-    observable. Raise RuntimeError if everything fails.
-    """
+    if not keys:
+        raise RuntimeError(f"[{cut_label}] no Gemini API keys configured.")
+
     last_error: Optional[str] = None
-    for model in TTS_MODELS:
-        for voice in TTS_VOICES:
-            for key in keys:
+    attempted = 0
+    total = len(keys)
+    for offset in range(total):
+        key_index = (start_index + offset) % total
+        key = keys[key_index]
+        now = time.monotonic()
+        cooldown_until = _key_cooldown_until.get(key_index, 0.0)
+        if cooldown_until > now:
+            if cooldown_until == float("inf"):
+                cooldown_label = "rest of job"
+            else:
+                cooldown_label = f"{int(cooldown_until - now)}s"
+            print(
+                f"  [{cut_label}] skipping key={key.redacted()} "
+                f"(cooldown {cooldown_label})", flush=True,
+            )
+            continue
+
+        for model in TTS_MODELS:
+            if (key_index, model) in _key_model_blocked:
+                continue
+            model_denied = False
+            key_cooling = False
+            for voice in TTS_VOICES:
                 for attempt in range(1, MAX_ATTEMPTS_PER_KEY + 1):
+                    attempted += 1
                     try:
                         pcm = _synthesize_once(text, key, model, voice)
                         print(
-                            f"  [{cut_label}] rendered via model={model} "
-                            f"voice={voice} key={key.redacted()} "
-                            f"(attempt {attempt})",
-                            flush=True,
+                            f"  [{cut_label}] rendered via model={model} voice={voice} "
+                            f"key={key.redacted()} (attempt {attempt})", flush=True,
                         )
-                        return pcm, key, model, voice
-                    except RecoverableApiError as e:
-                        last_error = str(e)
-                        print(
-                            f"  [{cut_label}] recoverable failure on "
-                            f"model={model} voice={voice} key={key.redacted()} "
-                            f"attempt={attempt}: {e}. Trying next option...",
-                            flush=True,
-                        )
-                        # For transient server errors, retry the same key
-                        # once with a short backoff before failing over.
+                        return pcm, key, model, voice, (key_index + 1) % total
+                    except RecoverableApiError as error:
+                        last_error = str(error)
+                        if _is_model_policy_denial(error):
+                            _key_model_blocked.add((key_index, model))
+                            model_denied = True
+                            print(
+                                f"  [{cut_label}] key={key.redacted()} has no access to "
+                                f"model={model} (Gemini limit: 0); blocking this key/model "
+                                "pair for this job.", flush=True,
+                            )
+                            break
+                        if _is_auth_failure(error):
+                            _key_cooldown_until[key_index] = float("inf")
+                            key_cooling = True
+                            print(
+                                f"  [{cut_label}] key={key.redacted()} authentication failure; "
+                                "skipping it for the rest of this job.", flush=True,
+                            )
+                            break
+                        if error.status == 429 or "RESOURCE_EXHAUSTED" in str(error).upper():
+                            _key_cooldown_until[key_index] = time.monotonic() + KEY_COOLDOWN_S
+                            key_cooling = True
+                            print(
+                                f"  [{cut_label}] key={key.redacted()} rate/quota limited; "
+                                f"cooling down for {KEY_COOLDOWN_S}s.", flush=True,
+                            )
+                            break
                         if attempt < MAX_ATTEMPTS_PER_KEY and (
-                            "HTTP 5" in str(e) or "Network error" in str(e)
+                            (error.status is not None and error.status >= 500) or "NETWORK ERROR" in str(error).upper()
                         ):
                             time.sleep(BACKOFF_S)
                             continue
-                        break
-                    except Exception as e:
-                        # Non-recoverable — do not spam every key with the
-                        # same malformed request; report and stop.
-                        raise RuntimeError(
-                            f"[{cut_label}] non-recoverable Gemini error on "
-                            f"model={model} voice={voice} "
-                            f"key={key.redacted()}: {e}"
+                        print(
+                            f"  [{cut_label}] transient Gemini failure on model={model} "
+                            f"voice={voice} key={key.redacted()}: {error}", flush=True,
                         )
+                        break
+                    except Exception as error:
+                        raise RuntimeError(
+                            f"[{cut_label}] non-recoverable Gemini error on model={model} "
+                            f"voice={voice} key={key.redacted()}: {error}"
+                        ) from error
+                if model_denied or key_cooling:
+                    break
+            if key_cooling:
+                break
+
+    if attempted == 0:
+        raise RuntimeError(
+            f"[{cut_label}] every configured Gemini key is in cooldown; "
+            "wait for the cooldown or update the configured keys."
+        )
     raise RuntimeError(
-        f"[{cut_label}] all configured Gemini API keys failed across every "
-        f"model/voice combination. Last error: {last_error}. Rotate or "
-        f"add keys via the site's Settings panel and re-run Stage B."
+        f"[{cut_label}] all usable Gemini keys failed. Last error: {last_error}. "
+        "Check model access, project billing/quota, and configured keys."
     )
 
 
@@ -388,7 +469,7 @@ def write_wav(path: Path, pcm_bytes: bytes) -> float:
     """
     Wrap raw 24 kHz mono s16le PCM in a RIFF WAV. Returns duration in
     seconds. cut_and_produce.py probes the file with ffprobe anyway, but
-    Stage B also emits its own manifest.json alongside the WAVs so the
+    Stage B also emits voiceover_manifest.json alongside the WAVs so the
     reconciler doesn't have to shell out N times.
     """
     if len(pcm_bytes) % (SAMPLE_WIDTH_BYTES * CHANNELS) != 0:
@@ -439,8 +520,8 @@ def main() -> None:
 
     print(
         f"Rendering {len(cuts)} voiceover clip(s) with Gemini TTS "
-        f"(models={TTS_MODELS[0]} -> {TTS_MODELS[1]}, "
-        f"voices={TTS_VOICES[0]} -> {TTS_VOICES[1]}).",
+        f"(models={' -> '.join(TTS_MODELS)}, voices={' -> '.join(TTS_VOICES)}, "
+        f"keys={len(keys)}).",
         flush=True,
     )
 
@@ -450,9 +531,10 @@ def main() -> None:
         "sample_rate_hz": SAMPLE_RATE_HZ,
         "channels": CHANNELS,
         "sample_width_bytes": SAMPLE_WIDTH_BYTES,
-        "clips": [],
+        "cuts": [],
     }
 
+    key_cursor = 0
     for idx, cut in enumerate(cuts, start=1):
         text = (cut.get("voiceover_text") or "").strip()
         if not text:
@@ -466,8 +548,8 @@ def main() -> None:
         print(f"[{label}] {text[:80]}{'...' if len(text) > 80 else ''}",
               flush=True)
 
-        pcm, used_key, used_model, used_voice = synthesize_with_failover(
-            text, keys, label
+        pcm, used_key, used_model, used_voice, key_cursor = synthesize_with_failover(
+            text, keys, label, start_index=key_cursor
         )
 
         wav_path = out_dir / f"voiceover_{idx:02d}.wav"
@@ -478,16 +560,19 @@ def main() -> None:
             flush=True,
         )
 
-        manifest["clips"].append({
+        manifest["cuts"].append({
             "index": idx,
-            "wav": wav_path.name,
-            "duration_s": round(duration_s, 3),
+            # cut_and_produce.py is called from the repository root, so
+            # record a path that exists from that process's working directory.
+            "wav": str(wav_path),
+            "duration_seconds": round(duration_s, 3),
             "model": used_model,
             "voice": used_voice,
             "key_fingerprint": used_key.redacted(),
         })
 
-    manifest_path = out_dir / "manifest.json"
+    # Exact Stage B/cut_and_produce.py contract.
+    manifest_path = out_dir / "voiceover_manifest.json"
     with manifest_path.open("w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
         fh.write("\n")
