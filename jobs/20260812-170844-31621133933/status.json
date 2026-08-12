@@ -1,7 +1,7 @@
 {
   "job_id": "20260812-170844-31621133933",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260812-170844-31621133933",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260812-170844-31621133933",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/clipforge-20260812-170844-31621133933-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260812-170844-31621133933/final.mp4"
   },
   "created_at_epoch": 1786554633,
-  "updated_at_epoch": 1786560984,
+  "updated_at_epoch": 1786561991,
   "expires_at_epoch": 1786597833,
   "extra": {
     "workflow_run_id": "31630046524",
@@ -23,6 +25,8 @@
     "event_frame_count": "49",
     "shot_count": "365",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "A Ninja Breaks a 12-Year-Old's Arm and Still Can't Make Him Surrender",
+    "branding_applied": false
   }
 }
