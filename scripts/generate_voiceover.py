@@ -131,6 +131,12 @@ REQUEST_TIMEOUT_S = 120
 MAX_ATTEMPTS_PER_KEY = 2   # transient 5xx retry inside one key before failover
 BACKOFF_S = 3.0
 
+# An empty/no-audio 200 response is transient but retrying instantly
+# usually just reproduces it; give Gemini a moment and allow more
+# attempts per voice than for a hard 5xx.
+NO_AUDIO_MAX_ATTEMPTS = 3   # per voice, before moving on in the ladder
+NO_AUDIO_BACKOFF_S = 5.0
+
 
 # ---------------------------------------------------------------------------
 # Key management
@@ -209,6 +215,21 @@ class RecoverableApiError(Exception):
     def __init__(self, message: str, status: Optional[int] = None):
         super().__init__(message)
         self.status = status
+
+
+class NoAudioError(Exception):
+    """Gemini answered 200 but returned no usable inline audio.
+
+    This is NOT a key problem: the key authenticated fine and was not
+    rate-limited. Gemini's TTS models intermittently return a candidate
+    with `finishReason: "OTHER"` and no `content.parts` at all (the model
+    declined to synthesize that one request — a transient, content- or
+    timing-dependent hiccup, observed in production on an otherwise
+    healthy run). It must therefore be RETRIED with backoff (same key,
+    then next voice / model / key through the normal failover ladder),
+    never treated as key invalid/quota, and never allowed to abort the
+    whole Stage B run on first sight.
+    """
 
 
 def _is_recoverable_http(status: int) -> bool:
@@ -323,7 +344,14 @@ def _synthesize_once(
 
     candidates = resp.get("candidates") or []
     if not candidates:
-        raise RuntimeError(f"Gemini returned no candidates: {str(resp)[:400]}")
+        # promptFeedback would name a hard block reason (e.g. SAFETY);
+        # an empty candidates list with no block is the same transient
+        # no-audio case, so route both through NoAudioError.
+        feedback = resp.get("promptFeedback") or {}
+        raise NoAudioError(
+            f"Gemini returned no candidates "
+            f"(promptFeedback={str(feedback)[:200]}): {str(resp)[:300]}"
+        )
     parts = ((candidates[0].get("content") or {}).get("parts") or [])
     for part in parts:
         inline = part.get("inlineData") or part.get("inline_data")
@@ -332,10 +360,19 @@ def _synthesize_once(
         data_b64 = inline.get("data")
         if not data_b64:
             continue
-        return base64.b64decode(data_b64)
+        pcm = base64.b64decode(data_b64)
+        if pcm:
+            return pcm
+        # Decoded to zero bytes — not usable audio, keep looking.
 
-    raise RuntimeError(
-        f"Gemini response contained no inline audio data: {str(resp)[:400]}"
+    # 200 OK but nothing we can turn into sound. finishReason tells the
+    # story: "OTHER" (seen in the failed production run) = the model
+    # bailed mid-request for a transient internal reason; "STOP" with no
+    # parts is the same shape. Either way: retryable, not key-fatal.
+    finish = candidates[0].get("finishReason") or "?"
+    raise NoAudioError(
+        f"Gemini response contained no inline audio data "
+        f"(finishReason={finish}): {str(resp)[:300]}"
     )
 
 
@@ -393,6 +430,7 @@ def synthesize_with_failover(
             model_denied = False
             key_cooling = False
             for voice in TTS_VOICES:
+                no_audio_attempts = 0
                 for attempt in range(1, MAX_ATTEMPTS_PER_KEY + 1):
                     attempted += 1
                     try:
@@ -402,6 +440,33 @@ def synthesize_with_failover(
                             f"key={key.redacted()} (attempt {attempt})", flush=True,
                         )
                         return pcm, key, model, voice, (key_index + 1) % total
+                    except NoAudioError as error:
+                        # Transient: 200 OK, healthy key, but no audio in
+                        # the response (e.g. finishReason=OTHER). Retry the
+                        # SAME key/voice a few times with backoff — this is
+                        # what the failed production run needed — then walk
+                        # the voice -> model -> key ladder. Never cool down
+                        # the key for this; it did nothing wrong.
+                        last_error = str(error)
+                        no_audio_attempts += 1
+                        if no_audio_attempts < NO_AUDIO_MAX_ATTEMPTS:
+                            print(
+                                f"  [{cut_label}] Gemini returned no audio on "
+                                f"model={model} voice={voice} key={key.redacted()} "
+                                f"(attempt {no_audio_attempts}/{NO_AUDIO_MAX_ATTEMPTS}); "
+                                f"retrying in {NO_AUDIO_BACKOFF_S:.0f}s — transient, "
+                                "key stays healthy.", flush=True,
+                            )
+                            time.sleep(NO_AUDIO_BACKOFF_S)
+                            attempt -= 1  # no-audio retries don't burn 5xx attempts
+                            continue
+                        print(
+                            f"  [{cut_label}] still no audio after "
+                            f"{NO_AUDIO_MAX_ATTEMPTS} attempts on model={model} "
+                            f"voice={voice} key={key.redacted()}; moving to the "
+                            "next voice/model/key.", flush=True,
+                        )
+                        break
                     except RecoverableApiError as error:
                         last_error = str(error)
                         if _is_model_policy_denial(error):
@@ -440,6 +505,20 @@ def synthesize_with_failover(
                         )
                         break
                     except Exception as error:
+                        # Genuinely unknown failure shape. Give it ONE
+                        # same-key retry before declaring it non-recoverable:
+                        # a truncated connection can surface as a JSON
+                        # decode error, and one retry is cheap insurance.
+                        last_error = str(error)
+                        if attempt < MAX_ATTEMPTS_PER_KEY:
+                            print(
+                                f"  [{cut_label}] unexpected Gemini error on "
+                                f"model={model} voice={voice} key={key.redacted()}: "
+                                f"{error} — one retry in {BACKOFF_S:.0f}s before "
+                                "failing this combination.", flush=True,
+                            )
+                            time.sleep(BACKOFF_S)
+                            continue
                         raise RuntimeError(
                             f"[{cut_label}] non-recoverable Gemini error on model={model} "
                             f"voice={voice} key={key.redacted()}: {error}"
