@@ -1,7 +1,7 @@
 {
   "job_id": "20260813-100108-31689197856",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260813-100108-31689197856",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260813-100108-31689197856",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/clipforge-20260813-100108-31689197856-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260813-100108-31689197856/final.mp4"
   },
   "created_at_epoch": 1786615401,
-  "updated_at_epoch": 1786627151,
+  "updated_at_epoch": 1786627801,
   "expires_at_epoch": 1786658601,
   "extra": {
     "workflow_run_id": "31704196332",
@@ -23,6 +25,8 @@
     "event_frame_count": "52",
     "shot_count": "306",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "Feitan vs Zazan: The Phantom Troupe Sadist Turns a Chimera Ant Queen to Ash",
+    "branding_applied": false
   }
 }
