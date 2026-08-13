@@ -13,27 +13,19 @@ mobile-playback checks expected by the cutting stage.
 
 The picture chain is, in order:
 
-    light hqdn3d denoise → level-8 Hald CLUT grade → contrast-adaptive
-    sharpen → threshold-protected line-ink unsharp → gradfun debanding
+    non-local-means anime denoise → supplied 3D color-cube grade → gentle
+    contrast-adaptive sharpen → threshold-protected line-ink unsharp → gradfun debanding
     → yuv420p
 
 Rationale for each stage:
 
-* ``hqdn3d`` removes H.264 CRF23 compression shimmer *before* it can be
-  amplified by later sharpening — the standard "denoise before sharpen"
-  ordering. Kept intentionally light so flat cel-shaded regions and ink
-  edges are not blurred.
-* ``haldclut`` applies the bundled 64³ 3D LUT
-  (``assets/anime_grade_haldclut_l8.png``). The LUT carries the entire
-  grade: cool-teal midtones, orange/warm hair-and-skin highlights, deep
-  crushed shadows, filmic contrast. Because the LUT already darkens
-  shadows and lifts contrast, a follow-on ``curves=preset=increase_contrast``
-  was previously stacked on top and made shadows too heavy — that step is
-  intentionally dropped here.
-* ``cas`` (contrast-adaptive sharpen) restores texture the denoise softened.
-* ``unsharp`` sharpens line ink specifically: the ``0.35`` luma threshold
-  keeps the pass off flat cel regions, preventing the halos/ringing an
-  unconditional unsharp would introduce on anime.
+* ``nlmeans`` is used spatially at a high but bounded strength because the
+  supplied reference contains visible film-like grain. This removes grain
+  while preserving anime contours better than aggressive global sharpening.
+* The supplied 64³ color-cube asset carries the requested grade. It is the
+  only color transform in this stage; no contrast curve is stacked after it.
+* ``cas`` and ``unsharp`` are deliberately gentle so line ink stays clean and
+  the pass does not create halos, ringing, or crunchy edges.
 * ``gradfun`` cleans up any banding the encode introduced on the smooth
   cel gradients — always the last chroma-domain step before
   ``format=yuv420p`` locks the output pixel format.
@@ -54,32 +46,28 @@ import subprocess
 import sys
 from pathlib import Path
 
-# hqdn3d=luma_spatial:chroma_spatial:luma_tmp:chroma_tmp. This is intentionally
-# light: it cleans compression shimmer before sharpening, rather than blurring
-# flat cel regions or ink edges.
-DENOISE = "hqdn3d=0.8:0.6:3.0:2.0"
+DENOISE = "nlmeans=s=30:p=7:r=15"
+LUT_FILTER = "haldclut=shortest=1"
 
-# The level-8 Hald CLUT is a 512×512 PNG encoding a 64×64×64 colour cube.
-# It is a *shipped* asset — see ``scripts/generate_anime_haldclut.py`` for
-# the migration note. Do not overwrite it from a procedural generator.
-LUT_ASSET = Path(__file__).resolve().parents[1] / "assets" / "anime_grade_haldclut_l8.png"
+# The supplied level-8 color cube is a 512×512 PNG encoding a 64×64×64
+# mapping. It is a shipped asset and must not be procedurally overwritten.
+LUT_ASSET = Path(__file__).resolve().parents[1] / "assets" / "anime_reference_color_cube_l8.png"
 
 # Contrast-adaptive sharpen: restores texture after denoise across the whole
 # frame in a locally content-aware way (does not ring on flat areas).
-EDGE_SHARPEN = "cas=strength=0.75"
+EDGE_SHARPEN = "cas=strength=0.30"
 
-# Luma-only unsharp with a hard 0.35 threshold: only pixels whose local
-# contrast exceeds the threshold are sharpened, which targets line ink and
-# skips flat cel-shaded regions. The chroma matrix is zeroed via the
-# trailing 5:5:0 so colour is never sharpened (avoids chromatic halos).
-LINE_SHARPEN = "unsharp=7:7:0.85:5:5:0.35"
+# Luma-only unsharp with a hard 0.35 threshold: only pixels whose local contrast exceeds the threshold are
+# sharpened, targeting line ink while skipping flat cel-shaded regions. The
+# chroma matrix is zeroed via the trailing 5:5:0 to avoid chromatic halos.
+LINE_SHARPEN = "unsharp=5:5:0.20:5:5:0.12"
 
 # gradfun cleans any 8-bit banding introduced by the encode. Kept mild
 # (strength 1.2, radius 16) so it does not eat fine texture.
 DEBAND = "gradfun=1.2:16"
 
 FILTER_CHAIN = (
-    f"{DENOISE},haldclut,{EDGE_SHARPEN},{LINE_SHARPEN},{DEBAND},"
+    f"{DENOISE},{LUT_FILTER},{EDGE_SHARPEN},{LINE_SHARPEN},{DEBAND},"
     "format=yuv420p,setsar=1"
 )
 
@@ -118,16 +106,16 @@ def probe_json(path: str) -> dict:
 
 
 def enhance_one(src: str, dst: str) -> None:
-    """Grade and sharpen one scene using the bundled Hald CLUT."""
+    """Denoise, apply the supplied color cube, and gently sharpen one scene."""
     graph = (
         f"[0:v]{DENOISE}[denoised];"
-        f"[denoised][1:v]haldclut=shortest=1,{EDGE_SHARPEN},"
+        f"[denoised][1:v]{LUT_FILTER},{EDGE_SHARPEN},"
         f"{LINE_SHARPEN},{DEBAND},format=yuv420p,setsar=1[enhanced]"
     )
     cmd = [
         "ffmpeg", "-y",
         "-i", src,
-        # The LUT must be a looping second video input; ``shortest=1`` makes
+        # The supplied color cube must be a looping second video input; ``shortest=1`` makes
         # output duration follow the scene, not this infinite image stream.
         "-loop", "1", "-framerate", str(TARGET_FPS), "-i", str(LUT_ASSET),
         "-filter_complex", graph,
@@ -219,7 +207,7 @@ def main() -> None:
         print("Quality enhancement DISABLED via --no-enabled — scene files left untouched.", flush=True)
         return
     if not LUT_ASSET.is_file():
-        raise SystemExit(f"ERROR: bundled Hald CLUT asset missing: {LUT_ASSET}")
+        raise SystemExit(f"ERROR: bundled color-cube asset missing: {LUT_ASSET}")
 
     scenes_dir = Path(args.scenes_dir)
     if not scenes_dir.is_dir():
@@ -234,7 +222,7 @@ def main() -> None:
         raise SystemExit(f"ERROR: no scene_*.mp4 / final.mp4 files found in {scenes_dir}")
 
     print(
-        f"Enhancing {len(scenes)} scene(s) with anime Hald-LUT chain:\n"
+        f"Enhancing {len(scenes)} scene(s) with supplied color-cube chain:\n"
         f"  {FILTER_CHAIN} (LUT: {LUT_ASSET.name})\n"
         f"  H.264 High@L{X264_LEVEL}, {TARGET_PIX_FMT}, CRF {X264_CRF}, "
         f"preset={X264_PRESET}, tune={X264_TUNE}, CFR {TARGET_FPS}, no B-frames.",
