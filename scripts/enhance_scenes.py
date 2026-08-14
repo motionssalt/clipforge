@@ -20,12 +20,16 @@ The picture chain is, in order:
 Rationale for each stage:
 
 * ``nlmeans`` is used spatially at a high but bounded strength because the
-  supplied reference contains visible film-like grain. This removes grain
-  while preserving anime contours better than aggressive global sharpening.
-* The supplied 64³ color-cube asset carries the requested grade. It is the
-  only color transform in this stage; no contrast curve is stacked after it.
+  supplied quality-enhanced reference is visibly de-grained (the source
+  carries heavy film-like grain). This removes grain while preserving anime
+  contours better than aggressive global sharpening.
+* The supplied 64³ color-cube asset carries the requested grade (the
+  cool/teal LUT shown in the provided grid reference). It is the only color
+  transform in this stage; no contrast curve is stacked after it. The
+  previous grade has been fully removed — this asset IS the only LUT.
 * ``cas`` and ``unsharp`` are deliberately gentle so line ink stays clean and
-  the pass does not create halos, ringing, or crunchy edges.
+  the pass does not create halos, ringing, or crunchy edges — matching the
+  natural-looking, clean-linework quality of the enhanced reference.
 * ``gradfun`` cleans up any banding the encode introduced on the smooth
   cel gradients — always the last chroma-domain step before
   ``format=yuv420p`` locks the output pixel format.
@@ -46,21 +50,23 @@ import subprocess
 import sys
 from pathlib import Path
 
-DENOISE = "nlmeans=s=30:p=7:r=15"
+DENOISE = "nlmeans=s=30:p=7:r=15"  # strong spatial denoise: matches the de-grained look of the quality-enhanced reference
 LUT_FILTER = "haldclut=shortest=1"
 
 # The supplied level-8 color cube is a 512×512 PNG encoding a 64×64×64
-# mapping. It is a shipped asset and must not be procedurally overwritten.
+# mapping. It is rebuilt from the user-provided 8×8 tile-grid LUT reference
+# (64 tiles, B per tile, R on tile-x, G on tile-y) and must not be
+# procedurally overwritten.
 LUT_ASSET = Path(__file__).resolve().parents[1] / "assets" / "anime_reference_color_cube_l8.png"
 
 # Contrast-adaptive sharpen: restores texture after denoise across the whole
 # frame in a locally content-aware way (does not ring on flat areas).
-EDGE_SHARPEN = "cas=strength=0.30"
+EDGE_SHARPEN = "cas=strength=0.20"  # gentler: reference linework is clean, not crunchy
 
 # Luma-only unsharp with a hard 0.35 threshold: only pixels whose local contrast exceeds the threshold are
 # sharpened, targeting line ink while skipping flat cel-shaded regions. The
 # chroma matrix is zeroed via the trailing 5:5:0 to avoid chromatic halos.
-LINE_SHARPEN = "unsharp=5:5:0.20:5:5:0.12"
+LINE_SHARPEN = "unsharp=5:5:0.12:5:5:0.08"  # gentler: avoids over-sharpened/crunchy ink
 
 # gradfun cleans any 8-bit banding introduced by the encode. Kept mild
 # (strength 1.2, radius 16) so it does not eat fine texture.
