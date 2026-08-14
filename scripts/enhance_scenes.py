@@ -13,25 +13,43 @@ mobile-playback checks expected by the cutting stage.
 
 The picture chain is, in order:
 
-    non-local-means anime denoise → supplied 3D color-cube grade → gentle
-    contrast-adaptive sharpen → threshold-protected line-ink unsharp → gradfun debanding
-    → yuv420p
+    light hqdn3d shimmer denoise → supplied 3D color-cube grade → strong
+    contrast-adaptive sharpen → threshold-protected line-ink unsharp → gradfun
+    debanding → yuv420p
 
 Rationale for each stage:
 
-* ``nlmeans`` is used spatially at a high but bounded strength because the
-  supplied quality-enhanced reference is visibly de-grained (the source
-  carries heavy film-like grain). This removes grain while preserving anime
-  contours better than aggressive global sharpening.
+* ``hqdn3d`` is used lightly and only to remove H.264 compression shimmer
+  *before* it can be amplified by the later sharpening. It is deliberately
+  weak (luma 0.8 / chroma 0.6 spatial, 3.0 / 2.0 temporal) so it cleans
+  mosquito noise without flattening flat cel regions or dissolving ink
+  edges. This is the classic fast "denoise before sharpen" first step; it
+  is NOT a heavy restoration denoise.
+  IMPORTANT: do NOT swap this back to ``nlmeans``. A strong ``nlmeans``
+  (e.g. ``s=30``) is a non-local-means patch matcher whose per-pixel cost
+  is orders of magnitude higher than ``hqdn3d``. It single-handedly pushed
+  end-to-end processing from ~15 minutes to over an hour per video, and
+  because it smooths high-frequency texture indiscriminately it produced
+  the exact "plastered / blurry / over-smooth / artificial" look this pass
+  is meant to avoid. ``hqdn3d`` is both dramatically faster and the right
+  tool for anime linework.
 * The supplied 64³ color-cube asset carries the requested grade (the
   cool/teal LUT shown in the provided grid reference). It is the only color
-  transform in this stage; no contrast curve is stacked after it. The
-  previous grade has been fully removed — this asset IS the only LUT.
-* ``cas`` and ``unsharp`` are deliberately gentle so line ink stays clean and
-  the pass does not create halos, ringing, or crunchy edges — matching the
-  natural-looking, clean-linework quality of the enhanced reference.
-* ``gradfun`` cleans up any banding the encode introduced on the smooth
-  cel gradients — always the last chroma-domain step before
+  transform in this stage; no contrast curve is stacked after it. This
+  grade is confirmed good and is left untouched.
+* ``cas`` (contrast-adaptive sharpen) restores the texture and edge
+  definition the source needs, in a locally content-aware way that does
+  not ring on flat areas. It is run at a strong-but-controlled strength so
+  the footage reads as crisp and detailed, not soft.
+* ``unsharp`` then sharpens line ink specifically: the luma threshold keeps
+  the pass off flat cel-shaded regions so it targets contours rather than
+  introducing halos, while the zeroed chroma matrix avoids chromatic
+  fringing. Together, ``cas`` + ``unsharp`` deliver the unsharp-mask-style
+  crispness, clean edge definition, and perceived detail of a high-quality
+  anime edit — the opposite of the smoothed, plastered look produced by
+  over-denoising.
+* ``gradfun`` cleans up any 8-bit banding the encode introduced on the
+  smooth cel gradients — always the last chroma-domain step before
   ``format=yuv420p`` locks the output pixel format.
 * ``setsar=1`` guarantees square-pixel output regardless of source SAR.
 
@@ -50,7 +68,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-DENOISE = "nlmeans=s=30:p=7:r=15"  # strong spatial denoise: matches the de-grained look of the quality-enhanced reference
+# hqdn3d=luma_spatial:chroma_spatial:luma_tmp:chroma_tmp. Intentionally
+# light: it cleans compression shimmer before sharpening rather than
+# blurring flat cel regions or ink edges. Fast — this is what keeps the
+# enhancement pass in the ~15-minute range instead of the >1-hour range
+# that the previous heavy nlmeans denoise caused.
+DENOISE = "hqdn3d=0.8:0.6:3.0:2.0"
 LUT_FILTER = "haldclut=shortest=1"
 
 # The supplied level-8 color cube is a 512×512 PNG encoding a 64×64×64
@@ -59,14 +82,19 @@ LUT_FILTER = "haldclut=shortest=1"
 # procedurally overwritten.
 LUT_ASSET = Path(__file__).resolve().parents[1] / "assets" / "anime_reference_color_cube_l8.png"
 
-# Contrast-adaptive sharpen: restores texture after denoise across the whole
-# frame in a locally content-aware way (does not ring on flat areas).
-EDGE_SHARPEN = "cas=strength=0.20"  # gentler: reference linework is clean, not crunchy
+# Contrast-adaptive sharpen: restores texture and edge definition across
+# the whole frame in a locally content-aware way (does not ring on flat
+# areas). Run at a strong-but-controlled strength so the result reads as
+# crisp and detailed, not soft or plastered.
+EDGE_SHARPEN = "cas=strength=0.75"
 
-# Luma-only unsharp with a hard 0.35 threshold: only pixels whose local contrast exceeds the threshold are
-# sharpened, targeting line ink while skipping flat cel-shaded regions. The
-# chroma matrix is zeroed via the trailing 5:5:0 to avoid chromatic halos.
-LINE_SHARPEN = "unsharp=5:5:0.12:5:5:0.08"  # gentler: avoids over-sharpened/crunchy ink
+# Luma-only unsharp with a hard threshold: only pixels whose local contrast
+# exceeds the threshold are sharpened, which targets line ink and skips
+# flat cel-shaded regions (no halos/ringing on flat areas). The chroma
+# matrix is zeroed via the trailing 5:5:0 so colour is never sharpened
+# (avoids chromatic halos). This is the unsharp-mask-style crispness that
+# gives anime linework its clean, well-defined contours.
+LINE_SHARPEN = "unsharp=7:7:0.85:5:5:0.35"
 
 # gradfun cleans any 8-bit banding introduced by the encode. Kept mild
 # (strength 1.2, radius 16) so it does not eat fine texture.
