@@ -1,7 +1,7 @@
 {
   "job_id": "20260814-093953-31789011915",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260814-093953-31789011915",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260814-093953-31789011915",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/clipforge-20260814-093953-31789011915-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260814-093953-31789011915/final.mp4"
   },
   "created_at_epoch": 1786700510,
-  "updated_at_epoch": 1786710445,
+  "updated_at_epoch": 1786715423,
   "expires_at_epoch": 1786743710,
   "extra": {
     "workflow_run_id": "31800332201",
@@ -23,6 +25,8 @@
     "event_frame_count": "59",
     "shot_count": "345",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "A Fortune Teller Reads the Phantom Troupe's Leader and a City Burns as His Requiem",
+    "branding_applied": false
   }
 }
