@@ -1,7 +1,7 @@
 {
   "job_id": "20260816-024155-31922489461",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260816-024155-31922489461",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260816-024155-31922489461",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/clipforge-20260816-024155-31922489461-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260816-024155-31922489461/final.mp4"
   },
   "created_at_epoch": 1786848234,
-  "updated_at_epoch": 1786880659,
+  "updated_at_epoch": 1786881291,
   "expires_at_epoch": 1786891434,
   "extra": {
     "workflow_run_id": "31945099620",
@@ -23,6 +25,8 @@
     "event_frame_count": "55",
     "shot_count": "360",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "Gon Sacrifices His Own Hands to Defeat the Bomber",
+    "branding_applied": false
   }
 }
