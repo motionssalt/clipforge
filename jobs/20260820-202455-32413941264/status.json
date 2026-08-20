@@ -1,7 +1,7 @@
 {
   "job_id": "20260820-202455-32413941264",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260820-202455-32413941264",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260820-202455-32413941264",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/clipforge-20260820-202455-32413941264-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-202455-32413941264/final.mp4"
   },
   "created_at_epoch": 1787257571,
-  "updated_at_epoch": 1787259734,
+  "updated_at_epoch": 1787260334,
   "expires_at_epoch": 1787300771,
   "extra": {
     "workflow_run_id": "32417244966",
@@ -23,6 +25,8 @@
     "event_frame_count": "56",
     "shot_count": "389",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "Netero's Final Gambit Turns the King of Ants' Victory Into a Trap",
+    "branding_applied": false
   }
 }
