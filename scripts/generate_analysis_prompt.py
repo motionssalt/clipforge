@@ -171,6 +171,37 @@ actions, reactions, expressions, visual gags, scene changes — not just
 paraphrase the dialogue. The transcript alone is almost never enough for
 this; the indexes plus the screenshots are how you actually see the video.
 
+WRITE IT TO BE ENGAGING, NOT JUST ACCURATE.
+An accurate description that reads like a flat summary will bore viewers
+into scrolling away, even if every fact in it is correct. The bar is not
+"did I describe what happened" — it's "does this make someone want to
+know what happens next." Concretely:
+  - SHORT SENTENCES. One beat, one idea, one sentence. A cut with three
+    things happening in it is three short sentences, not one sentence
+    with three clauses stitched together with "while" / "as" / "and".
+    Long compound sentences flatten tension; short ones create rhythm
+    and let each beat land before the next one starts.
+  - SET UP, THEN SUBVERT. When the source material has an expectation
+    followed by a reversal (a character is confident and gets proven
+    wrong, a plan seems to fail and then doesn't, someone underestimates
+    an opponent), write it that way on purpose: state the expectation
+    plainly, then land the subversion as its own short beat or sentence
+    ("He was sure he'd already won. He hadn't."). Do not flatten a
+    twist into a single matter-of-fact clause alongside everything else.
+  - NARRATE THE REACTION, NOT JUST THE EVENT. The emotional engine of a
+    scene is usually how a character FEELS about what just happened, not
+    only the raw event. If a character is shocked, afraid, humiliated,
+    triumphant, or in despair, say so as a beat of its own — don't bury
+    it inside a longer sentence about the action itself.
+  - DO NOT SKIP THE LOW POINT. If the source material has a moment where
+    the outcome looks uncertain, bad, or like a failure before the real
+    resolution lands, keep that beat in — going straight from
+    action to resolution without the moment of doubt in between removes
+    the exact tension that makes a payoff satisfying.
+  - Vary sentence length on purpose: a short, blunt sentence right after
+    a longer one reads as a punch. Do not let every sentence in a cut
+    settle into the same length and rhythm.
+
 CHARACTER IDENTIFICATION IS YOUR JOB.
 The pipeline no longer runs a local face-clustering step. That step was
 misidentifying people (splitting the same character into two labels, or
@@ -566,13 +597,18 @@ STEP 3 (assemble cuts).
               This check is more important than hitting the target
               total duration exactly.
 
-        - For each cut, write a `voiceover_text` field: a plain,
-          matter-of-fact description of WHAT HAPPENS in that segment,
-          the way a viewer who can see the screen would describe it to
-          someone who cannot. Cover the visual sequence of events
-          (actions, reactions, expressions, scene changes, on-screen
-          text, visual gags) as well as any essential dialogue, in
-          chronological order.
+        - For each cut, write a `voiceover_text` field: an engaging,
+          confident description of WHAT HAPPENS in that segment, the
+          way a good storyteller — not a dry summarizer — would
+          describe it to someone who cannot see the screen. Cover the
+          visual sequence of events (actions, reactions, expressions,
+          scene changes, on-screen text, visual gags) as well as any
+          essential dialogue, in chronological order, but write it
+          with short punchy sentences, clear setup-then-payoff
+          structure, and the character's emotional reaction stated as
+          its own beat — see "WRITE IT TO BE ENGAGING, NOT JUST
+          ACCURATE" above. Do not default to one long clause-stacked
+          sentence per beat.
 
         CHARACTER LABELS IN voiceover_text:
         - Identify each recurring character yourself from the
@@ -765,7 +801,7 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 170,
-      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, in a flat, confident, matter-of-fact voice, third person present tense by default. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
+      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, using SHORT sentences (one beat per sentence, not clause-stacked run-ons), a confident third person present tense by default, clear setup-then-payoff structure on any beat that has a reversal or twist, and the character's emotional reaction stated as its own short beat where relevant. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
     }}
     // ... more cuts, ordered chronologically ...
   ],
@@ -794,18 +830,25 @@ CONSTRAINTS
   - `youtube_tags` is a JSON array of 10-20 non-empty strings, no leading
     `#`, no commas inside a single tag, no duplicates, joined length under
     500 characters. See the POSTING PACKAGE METADATA section above.
-  - `voiceover_text` is the final spoken line for its cut: plain prose
-    meant to be READ ALOUD. No markdown, no timestamps inside it,
-    no brackets, no parentheticals, no directions or commentary ABOUT
-    the video — everything in it is heard by the viewer verbatim. Its
-    spoken length should roughly fit the cut's duration (about
-    2.5 words per second); keep it tight rather than breathless.
-    no name guessing when unsure — but when the transcript provides
-    clear name evidence for a character, using that name is NOT a
-    guess: use the real name, consistently, in every cut. Use the SAME
-    label (real name, or a descriptor only when no name evidence
-    exists) across every cut for the same character. Describe what is
-    visually happening, not just what is said.
+  - `voiceover_text` is the final spoken line for its cut: engaging
+    prose meant to be READ ALOUD, not a flat matter-of-fact summary.
+    No markdown, no timestamps inside it, no brackets, no
+    parentheticals, no directions or commentary ABOUT the video —
+    everything in it is heard by the viewer verbatim. Its spoken
+    length should roughly fit the cut's duration (about 2.5 words per
+    second); keep it tight rather than breathless. Favor several
+    short sentences over one long compound sentence — short sentences
+    read faster, hit harder, and give the narration a pulse instead
+    of a monotone. When the beat has a reversal, expectation, or twist,
+    write the setup and the payoff as distinct sentences rather than
+    folding both into one clause. State a character's emotional
+    reaction as its own short beat where the source material supports
+    it. no name guessing when unsure — but when the transcript
+    provides clear name evidence for a character, using that name is
+    NOT a guess: use the real name, consistently, in every cut. Use
+    the SAME label (real name, or a descriptor only when no name
+    evidence exists) across every cut for the same character. Describe
+    what is visually happening, not just what is said.
   - Across cuts, `voiceover_text` fields must read as consecutive scenes
     of ONE continuous story, not as independent highlight descriptions.
     Where there is a real gap between adjacent cuts (location change,
