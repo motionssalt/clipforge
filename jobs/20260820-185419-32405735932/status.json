@@ -1,7 +1,7 @@
 {
   "job_id": "20260820-185419-32405735932",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260820-185419-32405735932",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260820-185419-32405735932",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/clipforge-20260820-185419-32405735932-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260820-185419-32405735932/final.mp4"
   },
   "created_at_epoch": 1787252127,
-  "updated_at_epoch": 1787255693,
+  "updated_at_epoch": 1787256144,
   "expires_at_epoch": 1787295327,
   "extra": {
     "workflow_run_id": "32411166060",
@@ -23,6 +25,8 @@
     "event_frame_count": "56",
     "shot_count": "389",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "Meruem Finally Realizes Netero Is More Than a Human",
+    "branding_applied": false
   }
 }
