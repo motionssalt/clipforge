@@ -68,18 +68,22 @@ Timing reconciliation (no drift)
 The final video's total length MUST equal the total voiceover length, and
 each cut's video must stay in lockstep with its own voiceover. Before any
 ffmpeg work, every cut is reconciled against its measured voiceover
-duration:
+duration by retiming the cut's own footage ONLY:
 
-  - Voiceover longer, gap < STRETCH_THRESHOLD_S: slightly time-stretch the
-    cut's VIDEO (not the voiceover) with a video-only PTS retime
-    (setpts), kept under MAX_STRETCH_FACTOR so it stays visually
-    unnoticeable.
-  - Voiceover longer, gap >= STRETCH_THRESHOLD_S: extend the cut by
-    borrowing footage from the START of the next cut (pull the boundary
-    forward), adjusting the next cut's own start so no footage is used
-    twice. No next cut (or not enough footage there) -> fall back to
-    time-stretch and log clearly.
-  - Video longer than voiceover (rare): trim the cut's tail to match.
+  - Voiceover longer than the cut's footage: slow the cut's video down
+    (video-only PTS retime via setpts) so its duration exactly matches
+    the voiceover.
+  - Voiceover shorter than the cut's footage: speed the cut's video up
+    (same mechanism, factor > 1) so its duration exactly matches the
+    voiceover.
+
+The cut's `start_seconds`/`end_seconds` boundaries are NEVER moved and no
+footage is ever borrowed from an adjacent cut or trimmed away — every
+frame of the originally selected clip stays in the final video, and the
+full voiceover is always heard, because retiming (not reselecting
+footage) is the only mechanism used to match durations. There is no
+stretch-factor ceiling: however far the durations differ, the video is
+slowed or sped up by exactly that amount.
 
 After reconciliation the script asserts, loudly, that the total planned
 video duration matches the total voiceover duration within tolerance.
@@ -131,15 +135,11 @@ AAC_SAMPLE_RATE = "48000"
 AAC_CHANNELS = "2"
 
 # ---------- Timing reconciliation ----------
-# Gap below which a too-long voiceover is absorbed by slightly stretching
-# the cut's video; at/above it we instead borrow footage from the next cut.
-STRETCH_THRESHOLD_S = 1.0
-# Hard ceiling on video time-stretch so the retime stays unnoticeable.
-MAX_STRETCH_FACTOR = 1.15
+# Every cut is retimed (slowed or sped up) to exactly match its voiceover
+# duration. There is no borrowing from adjacent cuts, no boundary
+# trimming, and no stretch-factor ceiling — see the module docstring.
 # Post-reconciliation assertion tolerance: |total_video - total_voiceover|.
 DURATION_TOLERANCE_S = 0.25
-# Never stretch a cut below this much actual footage (safety floor).
-MIN_CUT_SECONDS = 0.5
 
 # ---------- Audio level policy ----------
 # Each TTS WAV is loudness-normalized by generate_voiceover.py to a dialogue
@@ -185,17 +185,20 @@ def reconcile_cuts(cuts: list[dict], vo_durations: list[float],
                    src_duration: float) -> list[dict]:
     """
     Adjust every cut so its planned video duration matches its voiceover
-    duration. Returns a NEW list of cut dicts with updated
-    start_seconds/end_seconds plus a per-cut `stretch` factor (1.0 = none)
-    and `video_seconds` (the planned output duration for that cut).
+    duration EXACTLY, by retiming the cut's own footage — never by
+    changing start_seconds/end_seconds, borrowing from another cut, or
+    trimming footage away. Returns a NEW list of cut dicts carrying the
+    original start_seconds/end_seconds (untouched) plus a per-cut
+    `stretch` factor (setpts multiplier: <1.0 speeds the video up, >1.0
+    slows it down, 1.0 = already an exact match) and `video_seconds`
+    (the planned output duration for that cut, equal to its voiceover
+    duration).
 
-    Borrowing rule: when cut i needs more footage than it has, the extra
-    is taken from the START of cut i+1 (cut i's end moves forward by the
-    gap, cut i+1's start moves forward by the same amount). Footage is
-    never double-used because the boundary moves as one.
+    `src_duration` is accepted for interface compatibility with callers
+    but is no longer used: boundaries never move, so there is nothing to
+    clamp against the source video's total length.
     """
     n = len(cuts)
-    # Mutable working copies.
     plan = [
         {
             "start_seconds": float(c["start_seconds"]),
@@ -208,125 +211,30 @@ def reconcile_cuts(cuts: list[dict], vo_durations: list[float],
     for i in range(n):
         vo = vo_durations[i]
         video_len = plan[i]["end_seconds"] - plan[i]["start_seconds"]
-        gap = vo - video_len  # >0: voiceover longer than footage
-
-        if abs(gap) < 0.05:
-            plan[i]["video_seconds"] = vo
-            if gap != 0:
-                plan[i]["stretch"] = video_len / vo
-            continue
-
-        if gap < 0:
-            # Video longer than voiceover (rare): trim the tail.
-            plan[i]["end_seconds"] = plan[i]["start_seconds"] + vo
-            plan[i]["video_seconds"] = vo
-            print(
-                f"  [reconcile] cut #{i}: video {video_len:.2f}s > voiceover "
-                f"{vo:.2f}s — trimming tail by {-gap:.2f}s",
-                flush=True,
-            )
-            continue
-
-        # Voiceover longer than footage.
-        if gap < STRETCH_THRESHOLD_S:
-            factor = video_len / vo  # <1.0 -> slow video down slightly
-            if factor < 1.0 / MAX_STRETCH_FACTOR:
-                # Would exceed the stretch ceiling; treat like a big gap.
-                _borrow_or_stretch(plan, i, vo, src_duration, n)
-            else:
-                plan[i]["stretch"] = factor
-                plan[i]["video_seconds"] = vo
-                print(
-                    f"  [reconcile] cut #{i}: voiceover {vo:.2f}s vs video "
-                    f"{video_len:.2f}s (gap {gap:.2f}s < {STRETCH_THRESHOLD_S}s) "
-                    f"— stretching video by {1.0 / factor:.3f}x",
-                    flush=True,
-                )
-        else:
-            _borrow_or_stretch(plan, i, vo, src_duration, n)
-
-    return plan
-
-
-def _borrow_or_stretch(plan: list[dict], i: int, vo: float,
-                       src_duration: float, n: int) -> None:
-    """
-    Large positive gap for cut i: borrow from the start of cut i+1 when
-    possible, else stretch (with a clear log line either way).
-    """
-    video_len = plan[i]["end_seconds"] - plan[i]["start_seconds"]
-    gap = vo - video_len
-
-    borrowed = 0.0
-    if i + 1 < n:
-        next_start = plan[i + 1]["start_seconds"]
-        next_len = plan[i + 1]["end_seconds"] - plan[i + 1]["start_seconds"]
-        # Leave the next cut at least MIN_CUT_SECONDS of its own footage.
-        available = max(0.0, next_len - MIN_CUT_SECONDS)
-        # The boundary between cut i and cut i+1 is min(next_start,
-        # src_duration); cut i can extend at most up to the next cut's
-        # (shifted) start, but in the normal case end_i <= start_{i+1}
-        # so we also cap by what's contiguous: borrowing means cut i
-        # absorbs [end_i, end_i + borrowed) which must equal the region
-        # [start_{i+1}, start_{i+1} + borrowed) — true when cuts are
-        # adjacent. When they aren't adjacent (a real gap of unselected
-        # footage exists between them) we borrow from that gap first,
-        # which is FREE: it doesn't shrink the next cut at all.
-        free_gap = max(0.0, next_start - plan[i]["end_seconds"])
-        take_from_gap = min(gap, free_gap)
-        still_need = gap - take_from_gap
-        take_from_next = min(still_need, available)
-
-        borrowed = take_from_gap + take_from_next
-        plan[i]["end_seconds"] += take_from_gap + take_from_next
-        if take_from_next > 0:
-            plan[i + 1]["start_seconds"] += take_from_next
-        if take_from_gap > 0:
-            print(
-                f"  [reconcile] cut #{i}: extended {take_from_gap:.2f}s into "
-                f"unselected footage before cut #{i + 1}",
-                flush=True,
-            )
-        if take_from_next > 0:
-            print(
-                f"  [reconcile] cut #{i}: borrowed {take_from_next:.2f}s from "
-                f"the start of cut #{i + 1} (its start moved forward)",
-                flush=True,
-            )
-    else:
-        # Last cut: can still extend into unselected tail footage.
-        free_tail = max(0.0, src_duration - plan[i]["end_seconds"])
-        borrowed = min(gap, free_tail)
-        plan[i]["end_seconds"] += borrowed
-        if borrowed > 0:
-            print(
-                f"  [reconcile] cut #{i} (last): extended {borrowed:.2f}s "
-                f"into unselected tail footage",
-                flush=True,
-            )
-
-    remaining = vo - (plan[i]["end_seconds"] - plan[i]["start_seconds"])
-    if remaining > 0.01:
-        # Not enough footage anywhere -> stretch the video to cover the
-        # rest, logging clearly even past the stretch ceiling.
-        new_len = plan[i]["end_seconds"] - plan[i]["start_seconds"]
-        factor = new_len / vo
-        plan[i]["stretch"] = factor
         plan[i]["video_seconds"] = vo
-        over = ""
-        if factor < 1.0 / MAX_STRETCH_FACTOR:
-            over = (
-                f" WARNING: stretch {1.0 / factor:.3f}x exceeds the "
-                f"{MAX_STRETCH_FACTOR}x ceiling — no more footage available."
-            )
+
+        if video_len <= 0 or abs(vo - video_len) < 0.01:
+            # Already matches (or a degenerate zero-length cut, left
+            # alone rather than dividing by zero).
+            continue
+
+        # setpts={stretch}*PTS makes the clip's own duration become
+        # video_len * stretch. To land exactly on the voiceover length:
+        #   video_len * stretch = vo   =>   stretch = vo / video_len
+        # stretch > 1.0 spreads the same frames over MORE time (slows
+        # the clip down); stretch < 1.0 compresses them into LESS time
+        # (speeds the clip up). Applied unconditionally, with no cap.
+        stretch = vo / video_len
+        plan[i]["stretch"] = stretch
+        direction = "slowing down" if stretch > 1.0 else "speeding up"
         print(
-            f"  [reconcile] cut #{i}: borrowed {borrowed:.2f}s, still "
-            f"{remaining:.2f}s short — stretching video by "
-            f"{1.0 / factor:.3f}x to cover the rest.{over}",
+            f"  [reconcile] cut #{i}: footage {video_len:.2f}s vs voiceover "
+            f"{vo:.2f}s — {direction} the clip by {stretch:.3f}x to match "
+            f"exactly (no boundary change, no borrowed footage).",
             flush=True,
         )
-    else:
-        plan[i]["video_seconds"] = vo
+
+    return plan
 
 
 # ---------------------------------------------------------------------------

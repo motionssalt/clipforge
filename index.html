@@ -351,10 +351,24 @@
               <div class="upload-row primary-upload"><input type="file" id="cuts-file-input" accept="application/json,.json"></div>
 
               <div class="music-option">
-                <div><label for="music-file-input" class="enhance-toggle-label">Background music <span class="opt">optional</span></label><p class="hint">Trimmed or looped to the final duration and mixed beneath the voiceover.</p></div>
-                <div class="upload-row"><input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac"></div>
+                <div><label class="enhance-toggle-label">Background music <span class="opt">optional</span></label><p class="hint">Trimmed or looped to the final duration and mixed beneath the voiceover.</p></div>
+
+                <div class="audio-library panel-section">
+                  <div class="audio-library-header">
+                    <h4 class="sub-heading" style="margin:0;">Audio library</h4>
+                    <p class="hint">Committed once, kept forever — pick a track here instead of re-uploading it on a slow connection. Add more any time.</p>
+                  </div>
+                  <div id="audio-library-list" class="audio-library-list" aria-live="polite">
+                    <p class="hint" id="audio-library-empty">Loading library…</p>
+                  </div>
+                  <div class="upload-row"><input type="file" id="audio-library-add-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" multiple></div>
+                  <p class="hint" id="audio-library-add-hint">Add one or more tracks to the library (does not select them for this job).</p>
+                </div>
+
+                <div class="upload-row"><label for="music-file-input" class="hint">Or upload a one-off track for just this job:</label><input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac"></div>
                 <p class="hint" id="music-hint"></p>
               </div>
+
 
               <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>
               <div class="upload-row stage-b-launch"><button type="button" id="start-stage-b" class="btn btn-accent btn-big" disabled><span aria-hidden="true">▶</span> Start Stage B</button></div>

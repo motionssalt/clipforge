@@ -167,7 +167,10 @@
     releaseAssetsTag: null,
     countdownTimer: null,
     validatedCuts: null,   // string contents of a validated production.json
-    musicFile: null,       // an optional picked music file (File object)
+    musicFile: null,       // an optional picked music file (File object), one-off for this job only
+    audioLibrary: null,    // [{name, path, size}] fetched from audio-library/ in the repo, or null = not loaded yet
+    audioLibrarySelected: null, // path (string) of the library track chosen for this job, or null
+    audioLibraryBusy: false,    // true while adding/deleting/listing so double-clicks don't race
     busy: false,
     stageBDispatched: false,
     stageBRun: null,      // matched GitHub Actions Stage B run for this job
@@ -266,6 +269,7 @@
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
     'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'music-file-input', 'music-hint',
+    'audio-library-list', 'audio-library-empty', 'audio-library-add-input', 'audio-library-add-hint',
     'stage-b-controls', 'stage-b-controls-text', 'restart-stage-b', 'cancel-stage-b',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
@@ -568,8 +572,7 @@
     probeRepo();
     loadBranding();
     loadGeminiKeysMeta();
-    // Now that we have credentials, populate the Tasks list from the
-    // repo and keep it warm.
+    loadAudioLibrary();
     refreshTasksFromRepo({ silent: true });
     startTasksTimer();
     if (!state.jobId) offerResumeFromRepo();
@@ -3253,9 +3256,223 @@
     reader.readAsText(file);
   });
 
+  // -------------------------------------------------------------------
+  // Persistent audio library (audio-library/ at repo root).
+  //
+  // Tracks committed here survive forever, independent of any job, so a
+  // track only has to be uploaded once even across flaky connections.
+  // Selecting a library track for the CURRENT job sets
+  // state.audioLibrarySelected to its repo path; startStageB() passes
+  // that straight through as music_ref ('path:audio-library/<name>'),
+  // the exact same mechanism already used for a job-local upload — the
+  // workflow (.github/workflows/stage-b.yml) treats any `path:<repo
+  // path>` the same way regardless of which folder it's under, so no
+  // backend/workflow change was needed for this feature.
+  // -------------------------------------------------------------------
+
+  var AUDIO_LIBRARY_DIR = 'audio-library';
+
+  async function loadAudioLibrary() {
+    if (!isConfigured()) return;
+    try {
+      var res = await gh(
+        '/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + AUDIO_LIBRARY_DIR + '?ref=' + REF + '&_=' + Date.now()
+      );
+      var list = Array.isArray(res) ? res : [];
+      state.audioLibrary = list
+        .filter(function (f) { return f.type === 'file'; })
+        .map(function (f) { return { name: f.name, path: f.path, size: f.size, sha: f.sha }; })
+        .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    } catch (err) {
+      // 404 just means the folder doesn't exist yet (empty library) —
+      // that's a normal, not-yet-used state, not an error.
+      if (err && err.status === 404) {
+        state.audioLibrary = [];
+      } else {
+        state.audioLibrary = state.audioLibrary || [];
+        if (el['audio-library-empty']) {
+          el['audio-library-empty'].textContent = 'Could not load the audio library: ' + err.message;
+        }
+      }
+    }
+    renderAudioLibrary();
+  }
+
+  function formatBytes(n) {
+    if (!n && n !== 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function renderAudioLibrary() {
+    var node = el['audio-library-list'];
+    if (!node) return;
+    var lib = state.audioLibrary;
+
+    if (lib === null) {
+      node.innerHTML = '';
+      if (el['audio-library-empty']) el['audio-library-empty'].textContent = 'Loading library…';
+      return;
+    }
+    if (lib.length === 0) {
+      node.innerHTML = '';
+      if (el['audio-library-empty']) el['audio-library-empty'].textContent = 'No tracks in the library yet — add one below.';
+      return;
+    }
+    if (el['audio-library-empty']) el['audio-library-empty'].textContent = '';
+
+    node.innerHTML = '';
+    lib.forEach(function (track) {
+      var row = document.createElement('div');
+      row.className = 'audio-track-row' + (state.audioLibrarySelected === track.path ? ' is-selected' : '');
+
+      var name = document.createElement('span');
+      name.className = 'audio-track-name';
+      name.textContent = track.name;
+      row.appendChild(name);
+
+      var meta = document.createElement('span');
+      meta.className = 'audio-track-meta';
+      meta.textContent = formatBytes(track.size);
+      row.appendChild(meta);
+
+      var selectBtn = document.createElement('button');
+      selectBtn.type = 'button';
+      selectBtn.className = 'btn btn-secondary';
+      var isSelected = state.audioLibrarySelected === track.path;
+      selectBtn.textContent = isSelected ? 'Selected ✓' : 'Use for this job';
+      selectBtn.disabled = state.audioLibraryBusy;
+      selectBtn.addEventListener('click', function () {
+        if (isSelected) {
+          state.audioLibrarySelected = null;
+        } else {
+          state.audioLibrarySelected = track.path;
+          // A library selection and a one-off upload are mutually
+          // exclusive for a given job — clear any picked file so it's
+          // unambiguous which one startStageB() will use.
+          state.musicFile = null;
+          if (el['music-file-input']) el['music-file-input'].value = '';
+          if (el['music-hint']) el['music-hint'].textContent = '';
+        }
+        renderAudioLibrary();
+      });
+      row.appendChild(selectBtn);
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'btn btn-secondary';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.disabled = state.audioLibraryBusy;
+      deleteBtn.addEventListener('click', function () {
+        deleteAudioLibraryTrack(track);
+      });
+      row.appendChild(deleteBtn);
+
+      node.appendChild(row);
+    });
+  }
+
+  async function addAudioLibraryTracks(files) {
+    if (!files || !files.length) return;
+    if (!isConfigured()) {
+      if (el['audio-library-add-hint']) {
+        el['audio-library-add-hint'].textContent = 'Save your repo settings first.';
+      }
+      return;
+    }
+    state.audioLibraryBusy = true;
+    renderAudioLibrary();
+
+    var okCount = 0;
+    var failures = [];
+
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (el['audio-library-add-hint']) {
+        el['audio-library-add-hint'].textContent =
+          'Adding ' + file.name + ' (' + (i + 1) + '/' + files.length + ')…';
+      }
+      var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      var path = AUDIO_LIBRARY_DIR + '/' + safeName;
+      var contentsPath = '/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + path;
+
+      var sha = null;
+      try {
+        var existing = await gh(contentsPath + '?ref=' + REF + '&_=' + Date.now());
+        if (existing && existing.sha) sha = existing.sha;
+      } catch (err) {
+        if (err.status !== 404) { failures.push(file.name + ': ' + err.message); continue; }
+      }
+
+      try {
+        var body = {
+          message: 'clipforge: add ' + safeName + ' to audio library',
+          content: await b64encodeFile(file),
+          branch: REF
+        };
+        if (sha) body.sha = sha;
+        await gh(contentsPath, { method: 'PUT', body: body });
+        okCount++;
+      } catch (err) {
+        failures.push(file.name + ': ' + err.message);
+      }
+    }
+
+    state.audioLibraryBusy = false;
+    if (el['audio-library-add-hint']) {
+      var msg = okCount ? ('Added ' + okCount + ' track' + (okCount === 1 ? '' : 's') + '.') : '';
+      if (failures.length) msg += (msg ? ' ' : '') + 'Failed: ' + failures.join('; ');
+      el['audio-library-add-hint'].textContent = msg;
+    }
+    if (el['audio-library-add-input']) el['audio-library-add-input'].value = '';
+    await loadAudioLibrary();
+  }
+
+  async function deleteAudioLibraryTrack(track) {
+    if (state.audioLibraryBusy) return;
+    state.audioLibraryBusy = true;
+    renderAudioLibrary();
+
+    var contentsPath = '/repos/' + state.owner + '/' + state.repo +
+      '/contents/' + track.path;
+    try {
+      await gh(contentsPath, {
+        method: 'DELETE',
+        body: {
+          message: 'clipforge: remove ' + track.name + ' from audio library',
+          sha: track.sha,
+          branch: REF
+        }
+      });
+      if (state.audioLibrarySelected === track.path) state.audioLibrarySelected = null;
+    } catch (err) {
+      if (el['audio-library-add-hint']) {
+        el['audio-library-add-hint'].textContent = 'Delete failed: ' + err.message;
+      }
+    }
+    state.audioLibraryBusy = false;
+    await loadAudioLibrary();
+  }
+
+  if (el['audio-library-add-input']) {
+    el['audio-library-add-input'].addEventListener('change', function () {
+      var files = el['audio-library-add-input'].files;
+      addAudioLibraryTracks(files);
+    });
+  }
+
   el['music-file-input'].addEventListener('change', function () {
     var file = el['music-file-input'].files && el['music-file-input'].files[0];
     state.musicFile = file || null;
+    if (file) {
+      // A one-off upload and a library selection are mutually exclusive
+      // for a given job — picking a new file clears any library pick.
+      state.audioLibrarySelected = null;
+      renderAudioLibrary();
+    }
     if (el['music-hint']) {
       el['music-hint'].textContent = file
         ? 'Music: ' + file.name + ' — will be mixed under the voiceover at ~30% volume.'
@@ -3454,13 +3671,18 @@
       return;
     }
 
-    // Optional background music: when the user picked a file it is
-    // committed to jobs/<jobId>/music.mp3 (base64 via the contents API,
-    // same pattern as production.json) and passed to Stage B as
-    // music_ref. No file picked -> music_ref stays empty and the workflow
-    // skips music entirely.
+    // Background music: a selected library track is used directly by
+    // repo path (already committed permanently under audio-library/, so
+    // there is nothing to upload here — this is exactly the network
+    // failure this feature exists to avoid). A freshly picked one-off
+    // file is committed to jobs/<jobId>/music.mp3 same as before. No
+    // library pick and no file picked -> music_ref stays empty and the
+    // workflow skips music entirely.
     var musicRef = '';
-    if (state.musicFile) {
+    if (state.audioLibrarySelected) {
+      musicRef = 'path:' + state.audioLibrarySelected;
+      showValidation([path + ' committed. Using library track: ' + state.audioLibrarySelected + '…'], true);
+    } else if (state.musicFile) {
       var musicPath = 'jobs/' + state.jobId + '/music.mp3';
       showValidation([path + ' committed. Committing ' + musicPath + '…'], true);
       var musicContentsPath = '/repos/' + state.owner + '/' + state.repo +
@@ -3879,6 +4101,7 @@
     probeRepo();
     loadBranding();
     loadGeminiKeysMeta();
+    loadAudioLibrary();
 
     // Populate the Tasks list from the repo (source of truth) and then
     // keep it warm in the background. Every task is refreshed
