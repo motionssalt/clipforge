@@ -55,6 +55,16 @@ Cinematic mode (this file):
     words are rendered in a tone color (tense/negative -> hot red,
     warm/positive -> warm amber) instead of the default white, in both
     the main text and the glow layer.
+  * TITLE BANNER — a one-time intro element: a white full-width banner
+    carrying the video's title drops in from off-screen top at t=0,
+    holds 7 seconds, then drops back out the same way (up, off the top
+    of the frame) and is gone for the rest of the video. Banner graphic
+    and title text move as ONE unit: the title is rendered INTO the
+    banner image (Pillow) and libass animates the whole image with a
+    single \move, so text and banner can never drift apart. The title
+    typeface is Coolvetica, vendored at assets/fonts/Coolvetica.ttf —
+    it replaces the narrow title font of old template mode INSIDE
+    cinematic mode only; template mode itself is untouched here.
 
 ---------------------------------------------------------------------------
 AUTHORITATIVE TEXT vs. TRANSCRIPTION
@@ -90,6 +100,11 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import generate_subtitles as legacy  # noqa: E402
 
+# Pillow renders the title banner image (text composited into the white
+# banner graphic before ffmpeg ever sees it). Already a pipeline
+# dependency (brand_scene.py / brand_scenes.py).
+from PIL import Image, ImageDraw, ImageFont  # noqa: E402
+
 
 # ---------- Cinematic styling ----------
 # Full-width bold face — deliberately NOT the condensed Bebas Neue of
@@ -111,6 +126,31 @@ CIN_SHADOW_FRACTION = 0.0045
 CIN_GLOW_OUTLINE_FRACTION = 0.0085
 CIN_GLOW_COLOR = "&H64" + "00BFFF"   # AABBGGRR: alpha 0x64, gold #FFBF00
 CIN_GLOW_BLUR = 7
+
+# ---------- Title banner (Batch 2) ----------
+# One-time intro element: a white full-width banner drops in from the
+# top of the frame at t=0, holds, then drops back out the same way and
+# never returns. The banner graphic and its title text move as ONE unit
+# — the text is rendered into the banner PNG and libass moves the whole
+# image (DrawingModePictures dialogue), not a separate text event.
+#
+# Title face: Coolvetica, vendored next to the Batch 1 subtitle font.
+# It replaces the narrow title font of old template mode WITHIN the
+# cinematic banner only; template mode is untouched (its removal is a
+# later batch). If the vendored file is ever missing we fall back to
+# DejaVu Sans Bold with a warning rather than failing the render.
+CIN_BANNER_FONT_FILE = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "assets", "fonts", "Coolvetica.ttf"))
+CIN_BANNER_FONT_FALLBACK = "DejaVuSans-Bold.ttf"  # system fontconfig name
+CIN_BANNER_HEIGHT_FRACTION = 0.16      # banner height vs frame height
+CIN_BANNER_TOP_FRACTION = 0.08         # resting top edge vs frame height
+CIN_BANNER_TEXT_WIDTH_FRACTION = 0.90  # max title width vs frame width
+CIN_BANNER_IN_SECONDS = 0.6            # drop-in duration
+CIN_BANNER_HOLD_SECONDS = 7.0          # fully-visible hold
+CIN_BANNER_OUT_SECONDS = 0.6           # drop-out duration (same motion, reversed)
+CIN_BANNER_LAYER = 8                   # above the caption layer pairs (0-3)
+CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 
 # ---------- Animation timing ----------
 # Word-by-word fade-in: each word's alpha animates over this window
@@ -277,6 +317,91 @@ def _char_run(word: str, s_start: float, hold_ms: int,
     return "".join(parts), char_offset + len(word["word"])
 
 
+def load_banner_title(script_json: str) -> str:
+    """Read the video title (production.json's top-level "title").
+
+    Additive and forgiving: a missing/empty title yields "" and the
+    caller renders without a banner instead of failing — the banner is
+    decoration, the captions are the contract. The script file itself
+    was already validated by load_script_with_keywords().
+    """
+    try:
+        with open(script_json, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return ""
+    return str(payload.get("title") or "").strip()
+
+
+_banner_font_warned = False
+
+
+def _load_banner_font(size: int):
+    """Coolvetica (vendored) if present, else DejaVu Sans Bold."""
+    global _banner_font_warned
+    if os.path.isfile(CIN_BANNER_FONT_FILE):
+        return ImageFont.truetype(CIN_BANNER_FONT_FILE, size)
+    if not _banner_font_warned:
+        _banner_font_warned = True
+        print(
+            f"WARNING: vendored banner font missing at "
+            f"{CIN_BANNER_FONT_FILE} — falling back to "
+            f"{CIN_BANNER_FONT_FALLBACK}.",
+            file=sys.stderr, flush=True,
+        )
+    try:
+        return ImageFont.truetype(CIN_BANNER_FONT_FALLBACK, size)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def build_banner_png(title: str, width: int, height: int,
+                     out_png: str) -> int:
+    """
+    Render the title banner as a single PNG: a full-width white strip
+    with the title centred on it in Coolvetica. Returning the banner
+    height lets the caller place the ASS \\move anchors precisely.
+
+    Because the title is composited INTO the image here, the ffmpeg
+    side only ever animates one opaque rectangle — banner and text are
+    one unit by construction (they can never be animated separately).
+
+    The title auto-fits: it starts large (about half the banner height)
+    and shrinks until it sits inside CIN_BANNER_TEXT_WIDTH_FRACTION of
+    the frame width, with a floor at CIN_BANNER_MIN_FONT_PX. Long
+    titles are never truncated — they just set smaller.
+    """
+    banner_h = max(48, int(round(height * CIN_BANNER_HEIGHT_FRACTION)))
+    img = Image.new("RGB", (width, banner_h), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+
+    max_text_w = int(round(width * CIN_BANNER_TEXT_WIDTH_FRACTION))
+    size = max(CIN_BANNER_MIN_FONT_PX, int(round(banner_h * 0.52)))
+    font = _load_banner_font(size)
+    while size > CIN_BANNER_MIN_FONT_PX and \
+            draw.textlength(title, font=font) > max_text_w:
+        size -= 2
+        font = _load_banner_font(size)
+
+    bbox = draw.textbbox((0, 0), title, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    # Centre optically: shift by the bbox origin so ascender/descender
+    # metrics don't push the glyphs off-centre.
+    x = (width - text_w) // 2 - bbox[0]
+    y = (banner_h - text_h) // 2 - bbox[1]
+    draw.text((x, y), title, font=font, fill=(18, 18, 18))
+
+    img.save(out_png)
+    print(
+        f"Title banner rendered: {out_png} ({width}x{banner_h}, "
+        f"{os.path.basename(CIN_BANNER_FONT_FILE)} {size}px, "
+        f"title={title!r})",
+        flush=True,
+    )
+    return banner_h
+
+
 def write_cinematic_ass(sentences: list[dict], keyword_map: dict,
                         width: int, height: int, out_ass: str) -> None:
     """
@@ -376,22 +501,90 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     )
 
 
-def burn_subtitles(video: str, ass_path: str, dst: str) -> None:
+def _banner_y_expr(rest_top: int) -> str:
     """
-    Burn the cinematic ASS in with libass and re-encode video with the
-    SAME mobile-safe profile as cut_and_produce.py /
-    generate_subtitles.py. Audio is stream-copied untouched. The
-    cinematic face is a system font (DejaVu Sans Bold) resolved by
-    fontconfig, so no fontsdir is needed.
+    Y position of the banner's TOP edge at time t — the drop-in / hold /
+    drop-out schedule in one piecewise expression (ffmpeg if()).
+
+      drop-in : t in [0, in)          — the whole banner slides DOWN
+                from fully off-screen top (top edge -H, i.e. the banner
+                just above the frame) to its resting slot, LINEARLY;
+      hold    : t in [in, in+hold)    — parked at rest_top;
+      drop-out: t in [in+hold, out)   — the SAME move reversed (slides
+                back UP, top edge from rest_top to -H);
+      after   : top edge pinned at -H, so even a pathological filter
+                graph evaluation past out_end stays off-screen (the
+                enable= gate already stops overlay at out_end, this is
+                belt-and-braces).
+
+    'H' is the banner image's own height in the overlay filter — no
+    duplicated constant, so a future banner-height change can't
+    desynchronise the two.
+    """
+    t_in = CIN_BANNER_IN_SECONDS
+    t_hold = t_in + CIN_BANNER_HOLD_SECONDS
+    t_out = t_hold + CIN_BANNER_OUT_SECONDS
+    return (
+        f"if(lt(t,{t_in}),"
+        f"-H+({rest_top}+H)*t/{t_in},"
+        f"if(lt(t,{t_hold}),"
+        f"{rest_top},"
+        f"if(lt(t,{t_out}),"
+        f"{rest_top}-({rest_top}+H)*(t-{t_hold})/{CIN_BANNER_OUT_SECONDS},"
+        f"-H)))"
+    )
+
+
+def burn_subtitles(video: str, ass_path: str, dst: str,
+                   banner: dict | None = None,
+                   frame_height: int = 0) -> None:
+    """
+    Burn the cinematic ASS in with libass, overlay the title banner (if
+    given) on top, and re-encode video with the SAME mobile-safe
+    profile as cut_and_produce.py / generate_subtitles.py. Audio is
+    stream-copied untouched. The cinematic face is a system font
+    (DejaVu Sans Bold) resolved by fontconfig, so no fontsdir is
+    needed.
+
+    The banner is the pre-rendered PNG from build_banner_png() — white
+    strip with the title text already composited in, so graphic and
+    text move as ONE unit by construction. ffmpeg's overlay filter
+    animates that single image with the piecewise y expression from
+    _banner_y_expr(): drop-in from off-screen top, 7s hold, drop-out
+    the same way, then enable= switches the overlay off and the banner
+    is gone for the rest of the video (one-time intro element).
     """
     def _fescape(p: str) -> str:
         return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
+    inputs = ["-i", video]
+    filters = [f"[0:v]subtitles='{_fescape(ass_path)}'[v0]"]
+    out_label = "v0"
+    if banner is not None:
+        rest_top = int(round(frame_height * CIN_BANNER_TOP_FRACTION))
+        out_end = (CIN_BANNER_IN_SECONDS + CIN_BANNER_HOLD_SECONDS
+                   + CIN_BANNER_OUT_SECONDS)
+        # -loop 1 makes the single PNG a (theoretically infinite) video
+        # stream; trim it to the banner's on-screen span so the filter
+        # graph still terminates when the MAIN video ends instead of
+        # looping forever. enable= already gates visibility to out_end.
+        inputs += ["-loop", "1", "-i", banner["png"]]
+        y_expr = _banner_y_expr(rest_top)
+        filters.append(
+            f"[1:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]"
+        )
+        filters.append(
+            f"[v0][bimg]overlay=x=0:y='{y_expr}'"
+            f":enable='lt(t,{out_end})':eof_action=pass[v1]"
+        )
+        out_label = "v1"
+
+    filter_graph = ";".join(filters)
     cmd = [
         "ffmpeg", "-y",
-        "-i", video,
-        "-vf", f"subtitles='{_fescape(ass_path)}'",
-        "-map", "0:v:0", "-map", "0:a:0",
+        *inputs,
+        "-filter_complex", filter_graph,
+        "-map", f"[{out_label}]", "-map", "0:a:0",
         "-c:v", "libx264",
         "-profile:v", "high",
         "-level:v", "4.0",
@@ -434,6 +627,12 @@ def main() -> None:
     ap.add_argument("--work-dir", default=None,
                     help="scratch dir for transcript + ASS (default: "
                          "<out dir>/subtitle_work_cinematic)")
+    ap.add_argument("--title", default=None,
+                    help="video title for the cinematic intro banner. "
+                         "Default: production.json's top-level 'title' "
+                         "(--script-json). If neither is available the "
+                         "banner is skipped with a warning (captions "
+                         "still render).")
     args = ap.parse_args()
 
     for req in (args.merged_video_mp4, args.voiceover_wav):
@@ -480,12 +679,31 @@ def main() -> None:
         flush=True,
     )
 
+    # ---- Title banner (Batch 2): white drop-in intro banner ----
+    banner = None
+    title = (args.title or "").strip()
+    if not title and args.script_json:
+        title = load_banner_title(args.script_json)
+    if title:
+        banner_png = os.path.join(work_dir, "title_banner.png")
+        banner_h = build_banner_png(title, width, height, banner_png)
+        banner = {"png": banner_png, "height": banner_h}
+    else:
+        print(
+            "WARNING: no video title available (production.json['title'] "
+            "empty and no --title given) — rendering WITHOUT the title "
+            "banner; captions are unaffected.",
+            file=sys.stderr, flush=True,
+        )
+
     ass_path = os.path.join(work_dir, "subtitles_cinematic.ass")
     write_cinematic_ass(sentences, keyword_map, width, height, ass_path)
 
-    print(f"Burning cinematic subtitles into {args.out_video_mp4} ...",
-          flush=True)
-    burn_subtitles(args.merged_video_mp4, ass_path, args.out_video_mp4)
+    print(f"Burning cinematic subtitles"
+          f"{' + title banner' if banner else ''} into "
+          f"{args.out_video_mp4} ...", flush=True)
+    burn_subtitles(args.merged_video_mp4, ass_path, args.out_video_mp4,
+                   banner=banner, frame_height=height)
     print(f"Final cinematically-subtitled video written: "
           f"{args.out_video_mp4}", flush=True)
 

@@ -73,8 +73,45 @@ assert max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS) \
     == s1["start"] + 1.5
 print("PASS: sentence split on punctuation + 1.5s readability floor")
 
-# --- Generate the ASS
+# --- Title banner (Batch 2): PNG render + title loading
 W, H = 720, 1280
+assert cin.load_banner_title(prod_path) == prod["title"]
+banner_png = os.path.join(WORK, "title_banner.png")
+bh = cin.build_banner_png(prod["title"], W, H, banner_png)
+assert os.path.isfile(banner_png)
+assert bh == max(48, int(round(H * cin.CIN_BANNER_HEIGHT_FRACTION)))
+from PIL import Image as _Img
+_bw, _bh = _Img.open(banner_png).size
+assert (_bw, _bh) == (W, bh), (_bw, _bh)
+print(f"PASS: title banner PNG ({_bw}x{_bh}) + title loader")
+
+# --- Banner motion expression: drop-in 0.6s -> 7s hold -> drop-out 0.6s
+rest_top = int(round(H * cin.CIN_BANNER_TOP_FRACTION))
+y_expr = cin._banner_y_expr(rest_top)
+in_s = cin.CIN_BANNER_IN_SECONDS
+hold_s = in_s + cin.CIN_BANNER_HOLD_SECONDS
+out_s = hold_s + cin.CIN_BANNER_OUT_SECONDS
+assert y_expr == (
+    f"if(lt(t,{in_s}),-H+({rest_top}+H)*t/{in_s},"
+    f"if(lt(t,{hold_s}),{rest_top},"
+    f"if(lt(t,{out_s}),{rest_top}-({rest_top}+H)*(t-{hold_s})/"
+    f"{cin.CIN_BANNER_OUT_SECONDS},-H)))"
+), y_expr
+# Continuity at every boundary, evaluated with the real banner height:
+def _y(t, bh=bh):
+    if t < in_s:    return -bh + (rest_top + bh) * t / in_s
+    if t < hold_s:  return float(rest_top)
+    if t < out_s:   return rest_top - (rest_top + bh) * (t - hold_s) / cin.CIN_BANNER_OUT_SECONDS
+    return float(-bh)
+assert _y(0) == -bh, "t=0 not fully off-screen top"
+assert abs(_y(in_s - 1e-9) - rest_top) < 1e-6 and _y(in_s) == rest_top
+assert _y(hold_s) == rest_top
+assert abs(_y(out_s - 1e-9) - -bh) < 1e-6 and _y(out_s) == -bh
+assert _y(out_s + 1) == -bh, "banner not gone after drop-out"
+print(f"PASS: banner y-expression (off-screen -{bh} -> {rest_top} over "
+      f"{in_s}s, hold to {hold_s}s, back to -{bh} by {out_s}s, gone after)")
+
+# --- Generate the ASS
 ass_path = os.path.join(WORK, "cinematic.ass")
 cin.write_cinematic_ass(sentences, kw, W, H, ass_path)
 ass = open(ass_path, encoding="utf-8").read()
@@ -100,6 +137,8 @@ print(f"PASS: ASS structure (glow+text layers, centred, blur, alpha anim, "
       f"keyword colours, letter fade-out, overlap "
       f"{text_evs[0][2]-text_evs[1][1]:.2f}s)")
 
+
+
 # --- Burn into a generated test video and validate the MP4
 src = os.path.join(WORK, "src.mp4")
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
@@ -108,7 +147,8 @@ subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
                 "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", src], check=True)
 out = os.path.join(WORK, "out.mp4")
-cin.burn_subtitles(src, ass_path, out)
+cin.burn_subtitles(src, ass_path, out,
+                   banner={"png": banner_png, "height": bh}, frame_height=H)
 
 probe = subprocess.check_output(
     ["ffprobe", "-v", "error", "-show_entries",
@@ -121,7 +161,7 @@ print("PASS: burned MP4 valid (1 video + 1 audio stream)")
 # --- Extract frames: early fade-in of sentence 2 overlapping sentence 1's
 #     dissolve (~5.1s), sentence 2 fully on (~6.2s), letter fade-out of the
 #     last sentence (~8.6s).
-for t in (1.2, 5.05, 6.2, 8.6):
+for t in (0.3, 1.2, 3.0, 6.2, 7.9, 8.95):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", str(t),
                     "-i", out, "-frames:v", "1",
                     os.path.join(WORK, f"frame_{t}.png")], check=True)
