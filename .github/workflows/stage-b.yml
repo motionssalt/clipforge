@@ -31,6 +31,11 @@ on:
         required: false
         type: string
         default: "true"
+      subtitle_mode:
+        description: "Caption renderer for this job. 'word' = legacy template mode (one word at a time, condensed font, lower third). 'cinematic' = new cinematic mode (per-sentence captions: word-by-word fade-in, letter-by-letter fade-out, overlapping layered transitions, glow + drop shadow, centred frame, sentiment keyword colours from production.json). Default word until the cinematic mode is fully validated; a later batch retires template mode entirely."
+        required: false
+        type: string
+        default: "word"
       code_ref:
         description: "Optional branch/tag/SHA to check out and run THIS Stage B execution from. The site's 'Restart Stage B' resolves the default branch to its current tip SHA at click time and passes it here so the restart ALWAYS runs the newest code, never the old run's commit. Empty = check out whatever ref the dispatch targeted (normal Stage B / direct-dispatch behavior)."
         required: false
@@ -501,6 +506,8 @@ jobs:
       # -------------------------------------------------------------------
       - name: Burn word-by-word subtitles into the video (before branding)
         shell: bash
+        env:
+          SUBTITLE_MODE: ${{ github.event.inputs.subtitle_mode }}
         run: |
           set -euo pipefail
           # Burn into a new file, then atomically swap over final.mp4 so
@@ -510,7 +517,21 @@ jobs:
           # voiceover_text per cut — the exact text the TTS spoke) is the
           # authoritative subtitle wording. The transcription of the merged
           # voiceover is used for word TIMING only, never for display text.
-          python scripts/generate_subtitles.py \
+          #
+          # subtitle_mode selects the renderer (both burn BEFORE branding):
+          #   word      — legacy template mode (generate_subtitles.py):
+          #               one word at a time, condensed font, lower third.
+          #   cinematic — cinematic mode (generate_subtitles_cinematic.py):
+          #               per-sentence captions with word-by-word fade-in,
+          #               letter-by-letter fade-out, overlapping layered
+          #               transitions, glow + drop shadow, centred frame,
+          #               sentiment keyword colouring from production.json.
+          case "${SUBTITLE_MODE:-word}" in
+            cinematic) SUB_SCRIPT=scripts/generate_subtitles_cinematic.py ;;
+            *)         SUB_SCRIPT=scripts/generate_subtitles.py ;;
+          esac
+          echo "Subtitle mode: ${SUBTITLE_MODE:-word} -> $SUB_SCRIPT"
+          python "$SUB_SCRIPT" \
             work/out/final.mp4 \
             work/out/voiceover.wav \
             work/out/final_subtitled.mp4 \

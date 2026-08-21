@@ -52,6 +52,22 @@ personal access token.
    The finished `final.mp4` plus a zip containing it are attached to
    the Release — there are no per-scene files and no manual voiceover
    or subtitle work left to do.
+
+   **Caption modes.** Stage B's `subtitle_mode` input selects the caption
+   renderer. `word` (default) is the legacy template mode above.
+   `cinematic` is the new cinematic mode (`generate_subtitles_cinematic.py`):
+   text is grouped and timed **per sentence** (synced to the same
+   word-level voiceover timestamps), each sentence **fades in word by
+   word** and **fades out letter by letter**, the incoming sentence
+   overlaps the outgoing one's dissolve on stacked layers, sentences
+   hold for roughly 1.5s minimum, and the style is glowing text with a
+   drop shadow **centred in the frame**. production.json may also mark
+   sentiment keywords per cut — an optional `"keywords"` list of
+   `{"word": ..., "tone": ...}` (or a `{"word": "tone"}` map) — and the
+   cinematic renderer colours those words: tense/negative tones in hot
+   red, warm/positive tones in warm amber. Cinematic mode currently
+   runs alongside template mode for testing; a later batch replaces
+   template mode entirely.
 6. A **cleanup** workflow runs hourly and deletes every job, release
    and job folder older than 12 hours. Nothing lingers.
 
@@ -70,6 +86,7 @@ personal access token.
 │   ├── generate_voiceover.py    # Gemini TTS per cut (multi-key failover)
 │   ├── cut_and_produce.py       # reconcile/cut/mute/mix/merge -> final.mp4
 │   ├── generate_subtitles.py    # word timing + script-worded ASS burn-in
+│   ├── generate_subtitles_cinematic.py # cinematic per-sentence captions
 │   ├── write_status.py
 │   ├── cleanup.py
 │   └── requirements.txt
