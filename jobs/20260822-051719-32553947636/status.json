@@ -1,7 +1,7 @@
 {
   "job_id": "20260822-051719-32553947636",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-20260822-051719-32553947636",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260822-051719-32553947636",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/clipforge-20260822-051719-32553947636-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/final.mp4"
   },
   "created_at_epoch": 1787375934,
-  "updated_at_epoch": 1787380675,
+  "updated_at_epoch": 1787381379,
   "expires_at_epoch": 1787419134,
   "extra": {
     "workflow_run_id": "32557426841",
@@ -24,6 +26,8 @@
     "shot_count": "359",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "music_ref": "path:audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a"
+    "music_ref": "path:audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a",
+    "title": "Illumi Breaks Killua Before the Hunter Exam Does",
+    "branding_applied": false
   }
 }
