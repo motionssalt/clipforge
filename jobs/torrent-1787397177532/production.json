@@ -1,0 +1,74 @@
+{
+  "video_duration_seconds": 1323,
+  "title": "Rick Turns Morty's Genius Moment Into a Brutal Secret",
+  "hashtags": [
+    "#RickAndMorty",
+    "#Morty",
+    "#AnimatedComedy",
+    "#SciFiComedy",
+    "#PlotTwist",
+    "#CartoonClips"
+  ],
+  "youtube_tags": [
+    "Rick and Morty",
+    "Rick and Morty highlights",
+    "Morty genius moment",
+    "Rick secret reveal",
+    "Mega seeds",
+    "Rick and Morty garage scene",
+    "Rick and Morty funny moments",
+    "animated comedy",
+    "science fiction comedy",
+    "Morty intelligence",
+    "Rick and Morty plot twist",
+    "adult animation"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 1106,
+      "end_seconds": 1147,
+      "voiceover_text": "In Rick's garage, Jerry tells Morty he is not as smart as the other kids. Morty is hurt. Rick immediately puts him on the spot and demands the square root of pi. Morty answers perfectly, then recites the first law of thermodynamics. His parents are stunned. Rick calls Morty gifted and says school cannot teach a mind like his.",
+      "keywords": [
+        {
+          "word": "perfectly",
+          "color": "#FFD166"
+        },
+        {
+          "word": "gifted",
+          "color": "#66D9A6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1147,
+      "end_seconds": 1177,
+      "voiceover_text": "Rick doubles down. He calls Morty his little helper and insists he is too gifted for school. Jerry and Beth exchange a look, then soften. Beth says she does not want this to stop. The parents leave the garage convinced Rick has transformed their son.",
+      "keywords": [
+        {
+          "word": "convinced",
+          "color": "#8EC5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1203,
+      "end_seconds": 1259,
+      "voiceover_text": "But the victory is a lie. Alone in the garage, Morty excitedly thanks Rick for making him smarter. Rick finally tells him the truth. The mega seeds only gave Morty temporary intelligence, and the effect now starts shutting down his motor skills and brain function. Morty panics as he loses control. Rick admits he used the genius act to stop the parents from taking him away. While Morty collapses, Rick promises even more adventures for just the two of them.",
+      "keywords": [
+        {
+          "word": "lie",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "temporary",
+          "color": "#FF9F43"
+        },
+        {
+          "word": "panics",
+          "color": "#FF5C5C"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
