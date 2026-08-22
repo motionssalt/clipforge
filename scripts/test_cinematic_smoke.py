@@ -3,7 +3,8 @@
 Local smoke test for the cinematic subtitle renderer — no Whisper, no
 TTS. Builds synthetic aligned word events + a synthetic production.json
 with sentiment keywords, generates the cinematic ASS, burns it into a
-generated test video with ffmpeg, extracts frames at key moments
+generated test video with ffmpeg, then executes the actual cinematic CLI
+production path with synthetic transcription timing and extracts frames at key moments
 (fade-in overlap window, mid-hold, letter fade-out), and validates the
 output MP4 with ffprobe.
 
@@ -228,4 +229,44 @@ full_banner = _Img.open(os.path.join(WORK, "frame_1.2.png")).convert("RGB")
 r, g, b = full_banner.getpixel((8, 0))
 assert min(r, g, b) >= 235, (r, g, b)
 print("PASS: rendered frame has compact banner flush at y=0 ->", WORK)
+
+# --- Execute the ACTUAL cinematic CLI production path. The only substituted
+# component is Whisper timing; Stage B's real renderer, title banner, scene
+# crop planner, and final compositor all run against the realistic ffmpeg
+# source. This validates the route that Stage B selects for subtitle_mode.
+voice_wav = os.path.join(WORK, "voiceover.wav")
+subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi",
+                "-i", "anullsrc=r=24000:cl=mono", "-t", "9", "-c:a",
+                "pcm_s16le", voice_wav], check=True)
+cli_out = os.path.join(WORK, "cli_cinematic.mp4")
+cli_work = os.path.join(WORK, "cli_work")
+orig_transcribe = cin.legacy.transcribe_words
+orig_align = cin.legacy.align_words_to_script
+orig_argv = sys.argv[:]
+try:
+    cin.legacy.transcribe_words = lambda *_args, **_kwargs: events
+    cin.legacy.align_words_to_script = lambda *_args, **_kwargs: events
+    sys.argv = ["generate_subtitles_cinematic.py", src, voice_wav, cli_out,
+                "--script-json", prod_path, "--work-dir", cli_work]
+    cin.main()
+finally:
+    cin.legacy.transcribe_words = orig_transcribe
+    cin.legacy.align_words_to_script = orig_align
+    sys.argv = orig_argv
+assert os.path.isfile(cli_out)
+cli_probe = json.loads(subprocess.check_output(
+    ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height",
+     "-of", "json", cli_out], text=True))["streams"]
+cli_video = next(s for s in cli_probe if s["codec_type"] == "video")
+assert (cli_video["width"], cli_video["height"]) == (W, H), cli_video
+crop_plan = json.load(open(os.path.join(cli_work, "cinematic_crop_plan.json"), encoding="utf-8"))
+assert crop_plan["scene_detector"] == "scene_index.detect_shots", crop_plan
+assert crop_plan["scene_count"] >= 1, crop_plan
+assert len(crop_plan["scenes"]) == crop_plan["scene_count"], crop_plan
+cli_frame = os.path.join(WORK, "cli_frame_1.2.png")
+subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", "1.2", "-i", cli_out,
+                "-frames:v", "1", cli_frame], check=True)
+cli_banner = _Img.open(cli_frame).convert("RGB")
+assert min(cli_banner.getpixel((8, 0))) >= 235
+print("PASS: actual cinematic CLI path renders captioned 1080x1200 frame, title banner, and scene crop plan ->", cli_frame)
 print("ALL CINEMATIC TESTS PASSED")
