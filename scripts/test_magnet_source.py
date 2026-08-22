@@ -88,11 +88,11 @@ assert "scripts/torrent_source.py infohash" in workflow
 assert "--seed-time=0" in workflow
 assert "--enable-dht=true" in workflow
 assert "--enable-peer-exchange=true" in workflow
-assert "--enable-lpd=true" in workflow
+assert "--bt-enable-lpd=true" in workflow
 assert "--bt-max-peers=100" in workflow
 assert "--bt-tracker=\"udp://tracker.opentrackr.org:1337/announce" in workflow
 assert "--bt-enable-peer-exchange" not in workflow
-assert "--bt-enable-lpd" not in workflow
+assert "--enable-lpd=true" not in workflow
 assert "source_ref=\"path:$expected_path\"" in workflow
 assert 'git add "$torrent_path" "$selection_path"' in workflow
 assert 'SOURCE_REF: ${{ github.event.inputs.video_url }}' in workflow

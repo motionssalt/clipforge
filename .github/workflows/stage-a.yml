@@ -436,7 +436,7 @@ jobs:
               --file-allocation=none --continue=true --auto-file-renaming=false \
               --seed-time=0 --max-tries=10 \
               --enable-dht=true --enable-peer-exchange=true \
-              --enable-lpd=true --bt-max-peers=100 \
+              --bt-enable-lpd=true --bt-max-peers=100 \
               --bt-request-peer-speed-limit=50K \
               --bt-tracker-connect-timeout=10 --bt-tracker-timeout=10 \
               --bt-tracker-interval=30 \
