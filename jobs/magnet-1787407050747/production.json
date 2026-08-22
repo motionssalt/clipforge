@@ -1,0 +1,62 @@
+{
+  "video_duration_seconds": 1399,
+  "title": "Morty Enters the Fear Hole Alone and It Knows Why",
+  "hashtags": [
+    "#RickAndMorty",
+    "#Morty",
+    "#FearHole",
+    "#AdultAnimation",
+    "#AnimatedStory",
+    "#PsychologicalHorror",
+    "#SciFiAnimation"
+  ],
+  "youtube_tags": [
+    "rick and morty",
+    "morty fear hole",
+    "fear hole episode",
+    "morty and rick",
+    "rick and morty fear hole",
+    "morty psychological fear",
+    "rick and morty recap",
+    "adult animation",
+    "animated sci fi",
+    "psychological horror",
+    "morty character analysis",
+    "rick and morty clips",
+    "fear of rejection",
+    "fear of dependence"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 120,
+      "end_seconds": 174,
+      "voiceover_text": "At a Denny's restroom, Morty finds a pit covered in black tendrils. Its ancient training video gives him one rule. Jump in, face your deepest fear, and climb out fearless. Rick watches the sales pitch without blinking."
+    },
+    {
+      "start_seconds": 186,
+      "end_seconds": 210,
+      "voiceover_text": "Rick refuses to trust a gross hole with his fear. He walks away. Morty turns back, runs for the stall, and dives in alone. The floor disappears beneath him."
+    },
+    {
+      "start_seconds": 264,
+      "end_seconds": 322,
+      "voiceover_text": "The hole throws Morty into a fake family life. It curdles into grief. Then it puts him beside Rick and time-travel gear, where Rick names the wound. Morty is terrified Rick will get Diane back, become happy, and stop needing him. Morty denies it. His face says otherwise."
+    },
+    {
+      "start_seconds": 702,
+      "end_seconds": 764,
+      "voiceover_text": "The hole keeps pressing the same fear. A smug stranger tells Morty that happiness always ends. Morty tries to brush it off. Then the warning turns personal. Rick will die before he ever accepts happiness. Morty goes silent."
+    },
+    {
+      "start_seconds": 1044,
+      "end_seconds": 1080,
+      "voiceover_text": "Another escape turns out to be fake. Morty finally snaps. He says they will never leave until they face their real fears. Rick still refuses to admit his. The bathroom drops away beneath them again."
+    },
+    {
+      "start_seconds": 1224,
+      "end_seconds": 1290,
+      "voiceover_text": "At last, a Rick-shaped rescue promises not to leave Morty behind. Morty sees through it. Rick never jumped in. Morty was alone in the hole all along. His real fear was relying on Rick. Morty climbs out by himself, and the real Rick has been waiting above."
+    }
+  ],
+  "target_total_duration_seconds": 300
+}
