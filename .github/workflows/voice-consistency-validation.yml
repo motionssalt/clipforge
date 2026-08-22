@@ -37,15 +37,19 @@ jobs:
             ]
           }
           JSON
-          python scripts/generate_voiceover.py /tmp/voice-consistency-production.json voice-consistency-output
+          python scripts/generate_voiceover.py /tmp/voice-consistency-production.json voice-consistency-output/new-profile
+          git fetch origin main --depth=1
+          git show origin/main:scripts/generate_voiceover.py > /tmp/pre-change-generate_voiceover.py
+          python /tmp/pre-change-generate_voiceover.py /tmp/voice-consistency-production.json voice-consistency-output/pre-change-profile
           python - <<'PY'
           import json
           from pathlib import Path
-          manifest = json.loads(Path("voice-consistency-output/voiceover_manifest.json").read_text())
-          assert len(manifest["cuts"]) == 3
-          assert {cut["voice"] for cut in manifest["cuts"]} == {"Charon"}
-          assert {cut["model"] for cut in manifest["cuts"]} == {"gemini-2.5-flash-preview-tts"}
-          print("Validated three generated Charon/Flash narration cuts.")
+          for profile in ("new-profile", "pre-change-profile"):
+              manifest = json.loads(Path(f"voice-consistency-output/{profile}/voiceover_manifest.json").read_text())
+              assert len(manifest["cuts"]) == 3
+              assert {cut["voice"] for cut in manifest["cuts"]} == {"Charon"}
+              assert {cut["model"] for cut in manifest["cuts"]} == {"gemini-2.5-flash-preview-tts"}
+          print("Validated paired three-cut Charon/Flash narration samples.")
           PY
 
       - uses: actions/upload-artifact@v4
