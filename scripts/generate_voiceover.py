@@ -14,13 +14,15 @@ can pick the files up without having to probe them itself.
 ENGINE: Gemini API TTS (replaces the previous Chatterbox implementation).
   - Endpoint: POST https://generativelanguage.googleapis.com/v1beta/
               models/{model}:generateContent
-  - Primary model  : gemini-2.5-pro-preview-tts (best prosody for
-                     controllable narration).
-  - Fallback model : gemini-2.5-flash-preview-tts (cheaper / lower latency
-                     when the pro tier is refused for any reason).
-  - Voice          : `Charon` — Gemini's informative narrator voice.
-                     `Algenib` remains a fallback if `Charon` is rejected
-                     on a given key.
+  - Default model  : gemini-2.5-flash-preview-tts (the reachable,
+                     lower-latency commentary default).
+  - Optional model : gemini-2.5-pro-preview-tts is tried first only when
+                     GEMINI_TTS_TRY_PRO explicitly enables it.
+  - Voice          : `Iapetus` — Gemini's clear narrator voice, selected
+                     after a controlled equal-script audition for crisp,
+                     matter-of-fact commentary. `Charon` remains the
+                     informative fallback if `Iapetus` is rejected on a
+                     given key.
   - Style prompt   : the raw `voiceover_text` from production.json is
                      prefixed with the rapid-neutral commentary direction:
                      fast but articulated, even in tempo and energy, and
@@ -103,11 +105,14 @@ KEY_COOLDOWN_S = 10 * 60
 _key_cooldown_until: dict[int, float] = {}
 _key_model_blocked: set[tuple[int, str]] = set()
 
-# Voice preference order. `Charon`'s informative narrator character is the
-# most natural starting point for controlled commentary. `Algenib` remains
-# only a compatibility fallback when a key rejects the preferred voice.
-TTS_VOICES = ("Charon", "Algenib")
-TTS_PRESET_NAME = "commentary_rapid_neutral"
+# Voice preference order. A controlled same-script Gemini audition compared
+# Charon (Informative), Iapetus (Clear), and Orus (Firm). Iapetus preserved
+# full intelligibility while yielding the clearest moderate-presence profile,
+# so it is the primary voice for crisp, matter-of-fact commentary. Charon
+# remains the conservative informative fallback if the preferred voice is
+# rejected by a key or model.
+TTS_VOICES = ("Iapetus", "Charon")
+TTS_PRESET_NAME = "commentary_clear_neutral"
 
 # Gemini TTS exposes style, pace, and tone through the natural-language
 # prompt; it has no documented seed control. Google Cloud's Gemini-TTS
