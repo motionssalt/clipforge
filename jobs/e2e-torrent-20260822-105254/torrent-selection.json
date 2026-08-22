@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "job_id": "e2e-torrent-20260822-105254",
+  "torrent_name": "e2e-multi-torrent",
+  "video_candidates": [
+    {
+      "index": 2,
+      "path": "selected-video.mp4",
+      "length": 809768
+    },
+    {
+      "index": 3,
+      "path": "unselected-video.mp4",
+      "length": 112704
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "tiny",
+    "language": "en",
+    "target_duration_seconds": "30",
+    "focus": "synthetic end-to-end torrent validation"
+  }
+}
