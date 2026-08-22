@@ -6,11 +6,11 @@
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787395994,
-  "updated_at_epoch": 1787396182,
+  "updated_at_epoch": 1787396820,
   "expires_at_epoch": 1787439194,
   "extra": {
     "torrent_selection_path": "jobs/e2e-torrent-20260822-105254/torrent-selection.json",
-    "workflow_run_id": "32568851021",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32568851021"
+    "workflow_run_id": "32569332750",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32569332750"
   }
 }
