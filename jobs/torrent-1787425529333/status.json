@@ -1,12 +1,12 @@
 {
   "job_id": "torrent-1787425529333",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "error",
+  "message": "Stage A failed. See workflow run for logs.",
   "release_tag": "clipforge-torrent-1787425529333",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787425529,
-  "updated_at_epoch": 1787425673,
+  "updated_at_epoch": 1787425676,
   "expires_at_epoch": 1787468729,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787425529333/torrent-selection.json",
