@@ -53,8 +53,7 @@ assert kw.get("forever") == "#8A5CFF" and kw.get("saved") == "#28C76F", kw
 assert "KEYWORD_COLORS" not in open(cin.__file__, encoding="utf-8").read()
 print("PASS: keyword loader (list + dict shapes, author-selected literal colors)")
 
-# --- Synthetic timed words: sentence 1 spoken fast (<1.5s) to exercise the
-#     1.5s floor; sentence 2 normal. Timing stands in for whisper output.
+# --- Synthetic timed words. Timing stands in for aligned transcription.
 def mk(words, t0, per=0.22):
     out, t = [], t0
     for w in words:
@@ -69,55 +68,21 @@ for cut_text, t0 in zip(texts, (1.0, 5.0)):
 sentences = cin.split_sentences(events)
 assert len(sentences) == 4, [s["words"][0]["word"] for s in sentences]
 assert [s["words"][0]["word"] for s in sentences] == ["She", "No", "The", "He"]
-# 1.5s floor: fast sentence 1's hold must extend past its spoken span
+# --- Static card timing: each complete sentence is present from its first
+# aligned word through its final aligned word, with no readability padding or
+# animation envelope of any kind.
 s1 = sentences[0]
-assert s1["speak_end"] - s1["start"] < 1.5
-assert max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS) \
-    == s1["start"] + 1.5
-print("PASS: sentence split on punctuation + 1.5s readability floor")
-
-# --- Sentence fade-out: a full left-to-right character dissolve must span
-# one fixed second after the voice/readability hold, regardless of speech pace.
-hold_end = max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS)
-fade_end = hold_end + cin.CIN_LETTER_FADE_OUT_MS / 1000.0
-assert cin.CIN_LETTER_FADE_OUT_MS == 1000
-assert abs(fade_end - hold_end - 1.0) < 1e-9
-probe_chars = sum(len(word["word"].upper()) for word in s1["words"])
-probe_step_ms = cin.CIN_LETTER_FADE_OUT_MS / probe_chars
-assert abs(probe_chars * probe_step_ms - cin.CIN_LETTER_FADE_OUT_MS) < 1e-9
-print("PASS: full sentence letter fade-out is fixed at 1.0s")
-
-# --- Letter-spacing expansion: native-size glyphs are re-laid out every
-# frame. Tracking starts widening with the first word fade, holds steady, and
-# widens again during the one-second letter dissolve; there is no bitmap scale.
-enter_start_tracking = cin._sentence_tracking(s1, s1["start"] + 0.01)
-enter_mid_tracking = cin._sentence_tracking(s1, s1["start"] + 0.40)
-enter_late_tracking = cin._sentence_tracking(s1, s1["start"] + 0.84)
-settled_tracking = cin._sentence_tracking(s1, s1["start"] + 1.10)
-exit_tracking = cin._sentence_tracking(s1, s1["start"] + 1.72)
-assert cin.CIN_TRACKING_BEZIER == (0.20, 1.00, 1.00, 1.00)
-assert enter_start_tracking < enter_mid_tracking < enter_late_tracking <= \
-    cin.CIN_TRACKING_HOLD_PX, (
-        enter_start_tracking, enter_mid_tracking, enter_late_tracking)
-assert abs(enter_start_tracking - cin.CIN_TRACKING_START_PX) < 0.25
-assert settled_tracking == cin.CIN_TRACKING_HOLD_PX, settled_tracking
-assert exit_tracking > cin.CIN_TRACKING_HOLD_PX and \
-    exit_tracking <= cin.CIN_TRACKING_EXIT_PX + 1e-6
-from PIL import Image as _Img, ImageDraw as _ImgDraw
-tracking_font = cin._caption_font(max(
+assert s1["speak_end"] > s1["start"]
+assert not hasattr(cin, "CIN_WORD_FADE_IN_MS")
+assert not hasattr(cin, "CIN_LETTER_FADE_OUT_MS")
+assert not hasattr(cin, "_sentence_tracking")
+assert not hasattr(cin, "_tracked_text_width")
+static_font = cin._caption_font(max(
     24, int(round(cin.CIN_FRAME_HEIGHT * cin.CIN_FONT_FRACTION_OF_HEIGHT))))
-plain_width = cin._tracked_text_width("SHE", tracking_font, 0.0)
-tracked_width = cin._tracked_text_width("SHE", tracking_font, cin.CIN_TRACKING_HOLD_PX)
-assert abs(tracked_width - plain_width - 2 * cin.CIN_TRACKING_HOLD_PX) < 1e-6
-tracked_runs = cin._caption_layout(
-    s1, tracking_font, cin.CIN_FRAME_WIDTH, cin.CIN_FRAME_HEIGHT,
-    cin.CIN_TRACKING_HOLD_PX)
-first_run = tracked_runs[0]
-glyph_width = _ImgDraw.Draw(_Img.new("L", (1, 1))).textlength("S", font=tracking_font)
-assert abs(first_run["char_x"][1] - first_run["char_x"][0] - glyph_width -
-           cin.CIN_TRACKING_HOLD_PX) < 1e-6
-assert not hasattr(cin, "_scale_mask_about_center")
-print("PASS: native-size glyphs use tracking expansion through fade-in and letter fade-out")
+static_runs = cin._caption_layout(
+    s1, static_font, cin.CIN_FRAME_WIDTH, cin.CIN_FRAME_HEIGHT)
+assert static_runs and all("x" in run and "y" in run for run in static_runs)
+print("PASS: complete static sentence cards use direct voice-aligned timing")
 
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
@@ -194,13 +159,9 @@ assert cin.CIN_RASTER_SHADOW_RGB == (38, 38, 38)
 assert cin.CIN_RASTER_SHADOW_ALPHA == 0.72
 assert (cin.CIN_RASTER_SHADOW_X, cin.CIN_RASTER_SHADOW_Y,
         cin.CIN_RASTER_SHADOW_BLUR_RADIUS) == (3, 5, 4)
-assert "\\alpha&HFF&" in ass, "fade tags missing"
+assert "\\alpha" not in ass and "\\t(" not in ass, "caption animation tags remain"
 assert "\\c&H5C5CFF&" in ass, "tense keyword fill colour missing"
 assert "\\c&H5AC8FF&" in ass, "author-selected #FFC85A fill color missing"
-# Letter-by-letter: a mid-sentence char must carry its own fade-out \t
-assert ass.count("\\t(") > sum(len(s["words"]) for s in sentences), \
-    "per-character fade-out tags missing"
-# Overlap: sentence 1's event must end AFTER sentence 2's event starts
 evs = _re.findall(r"Dialogue: (\d+),(\d+:\d+:\d+\.\d+),(\d+:\d+:\d+\.\d+),(Cin\w+)", ass)
 def ts(t):
     h, m, rest = t.split(":"); return int(h)*3600 + int(m)*60 + float(rest)
@@ -210,13 +171,11 @@ events_by_style = {
 }
 assert all(len(style_events) == len(sentences) for style_events in events_by_style.values())
 text_evs = events_by_style["CinText"]
-assert text_evs[0][2] > text_evs[1][1], "no overlap between sentences 1 and 2"
-assert text_evs[0][0] != text_evs[1][0], "two-layer stacks not alternating"
+assert text_evs[0][2] <= text_evs[1][1], "static caption cards overlap"
+assert all(event[0] == "1" for event in text_evs), "animated layer stacks remain"
 for shadow_ev, text_ev in zip(events_by_style["CinShadow"], text_evs):
     assert (shadow_ev[1], shadow_ev[2]) == (text_ev[1], text_ev[2])
-print(f"PASS: ASS structure + compact soft-gray raster shadow (no separate glow, "
-      f"centred, alpha anim, keyword colours, letter fade-out, overlap "
-      f"{text_evs[0][2]-text_evs[1][1]:.2f}s)")
+print("PASS: static ASS cards + compact soft-gray raster shadow (no caption animation)")
 
 
 
@@ -255,9 +214,7 @@ video_stream = next(s for s in streams if s["codec_type"] == "video")
 assert (video_stream["width"], video_stream["height"]) == (W, H), video_stream
 print("PASS: burned MP4 valid (1 video + 1 audio stream, bare 1080x1200 frame)")
 
-# --- Extract frames: early fade-in of sentence 2 overlapping sentence 1's
-#     dissolve (~5.1s), sentence 2 fully on (~6.2s), letter fade-out of the
-#     last sentence (~8.6s).
+# --- Extract representative static-card and banner frames.
 for t in (0.3, 1.2, 3.0, 6.2, 7.9, 8.95):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", str(t),
                     "-i", out, "-frames:v", "1",

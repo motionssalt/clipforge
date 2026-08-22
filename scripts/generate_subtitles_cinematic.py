@@ -14,35 +14,13 @@ that frame. The Stage B workflow never runs brand_scenes.py for this
 mode, so cinematic output cannot acquire legacy channel chrome.
 
 ---------------------------------------------------------------------------
-HOW IT DIFFERS FROM TEMPLATE MODE
+CINEMATIC CAPTION BEHAVIOR
 ---------------------------------------------------------------------------
-Template mode: one word on screen at a time, condensed Bebas Neue,
-lower-third anchor, pop-in animation.
-
-Cinematic mode (this file):
-
-  * GRANULARITY — text is grouped and timed PER SENTENCE, not per
-    word. The whole sentence is on screen while it is narrated.
-  * FADE-IN — each sentence fades in WORD BY WORD: every word carries
-    its own staggered alpha animation keyed to that word's voiceover
-    timestamp, so the sentence materialises in reading order as it is
-    spoken.
-  * FADE-OUT — each sentence fades out LETTER BY LETTER: after a short
-    hold, every character gets its own staggered alpha animation, left
-    to right, so the sentence dissolves character by character.
-  * OVERLAP — the incoming sentence does NOT wait for the previous one
-    to finish fading out. Its event starts at its own first-word
-    timestamp even while the previous sentence's letter-by-letter
-    dissolve is still running. Alternating ASS layer pairs keep the
-    incoming sentence composited on top of the outgoing one, so the
-    caption transition reads as intentional layering, not a glitch.
-  * TIMING — sentence timing is derived from the same word-level
-    timestamps from faster-whisper transcription of the merged voiceover,
-    aligned back onto the ORIGINAL script via the shared monotone alignment
-    helpers in subtitle_common.py. Each
-    sentence is held on screen for at least ~1.5s (a readability floor,
-    not a hard lock — actual voice timing wins when the spoken span is
-    longer).
+  * GRANULARITY — text is grouped and timed as complete sentence cards.
+  * TIMING — each card appears fully at its first aligned word and remains
+    fully visible through its final aligned word. Consecutive cards swap
+    directly; there is no fade, overlap, scale, tracking, or character-level
+    animation.
   * STYLE — compact, all-caps Coolvetica text with a soft gray-black
     drop shadow immediately down and right of the glyphs, centred in the
     frame both horizontally and vertically (Alignment=5). The narrow
@@ -137,15 +115,6 @@ CIN_RASTER_SHADOW_ALPHA = 0.72
 CIN_RASTER_SHADOW_X = 3
 CIN_RASTER_SHADOW_Y = 5
 CIN_RASTER_SHADOW_BLUR_RADIUS = 4
-# True tracking expansion: glyph masks always render at their native font
-# size. Only the horizontal gap between characters grows through sentence
-# entrance and exit. The held caption keeps the entrance's final tracking so
-# there is no visual snap at the fade-in boundary.
-CIN_TRACKING_START_PX = 0.5
-CIN_TRACKING_HOLD_PX = 3.0
-CIN_TRACKING_EXIT_PX = 6.0
-CIN_TRACKING_BEZIER = (0.20, 1.00, 1.00, 1.00)
-
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
 # canvas with a centred crop; no template, header, lower title block, or CTA
@@ -176,19 +145,9 @@ CIN_BANNER_OUT_SECONDS = 0.7           # eased drop-out duration (same motion, r
 CIN_BANNER_LAYER = 8                   # above the caption stacks (0-7)
 CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 
-# ---------- Animation timing ----------
-# Word-by-word fade-in: each word's alpha animates over this window
-# starting at the word's own voiceover timestamp (relative to the
-# sentence event start).
-CIN_WORD_FADE_IN_MS = 170
-# Letter-by-letter fade-out: after the hold (see below), every sentence
-# dissolves left-to-right over this fixed total window, independent of speech
-# timing and character count.
-CIN_LETTER_FADE_OUT_MS = 1000
-# Readability floor: a sentence stays fully on screen at least this
-# long even if it was spoken faster. Not a hard lock — when the spoken
-# span is longer, voice timing wins and the hold simply ends later.
-CIN_SENTENCE_MIN_SECONDS = 1.5
+# Caption cards are intentionally static: the full sentence appears at its
+# first aligned word and remains visible through the aligned end of that
+# sentence. There is no fade, scale, tracking, or character-level animation.
 
 # ---------- Author-controlled keyword colors ----------
 # production.json optionally carries literal #RRGGBB values chosen by its
@@ -331,40 +290,6 @@ def load_script_with_keywords(script_json: str) -> tuple[list[str], dict]:
     return texts, keyword_map
 
 
-def _char_run(word: str, s_start: float, hold_ms: int,
-              fade_out_ms: int, char_offset: int, n_chars: int,
-              color_tags: str) -> tuple[str, int]:
-    """
-    Build the ASS text for ONE word with per-character animation tags:
-
-      * the word fades IN as a unit starting at the word's voiceover
-        timestamp (the word-by-word entrance);
-      * each character additionally fades OUT on its own staggered
-        schedule (the letter-by-letter dissolve).
-
-    `char_offset`/`n_chars` are this word's span inside the sentence's
-    overall character sequence so the letter dissolve sweeps the whole
-    sentence left-to-right regardless of word boundaries. Returns
-    (ass_text, next_char_offset).
-    """
-    t_in = max(0, int(round((word["start"] - s_start) * 1000)))
-    step = fade_out_ms / max(n_chars, 1)
-    parts: list[str] = []
-    for j, ch in enumerate(word["word"]):
-        idx = char_offset + j
-        g0 = hold_ms + int(round(idx * step))
-        # The final character ends exactly at hold_ms + fade_out_ms, so the
-        # complete sentence dissolve occupies the requested fixed duration.
-        g1 = hold_ms + int(round((idx + 1) * step))
-        tags = (
-            f"{{\\alpha&HFF&{color_tags}"
-            f"\\t({t_in},{t_in + CIN_WORD_FADE_IN_MS},\\alpha&H00&)"
-            f"\\t({g0},{g1},\\alpha&HFF&)}}"
-        )
-        parts.append(tags + subtitle_common._ass_escape(ch))
-    return "".join(parts), char_offset + len(word["word"])
-
-
 def load_banner_title(script_json: str) -> str:
     """Read the video title (production.json's top-level "title").
 
@@ -456,20 +381,10 @@ def build_banner_png(title: str, width: int, height: int,
 def write_cinematic_ass(sentences: list[dict], keyword_map: dict,
                         width: int, height: int, out_ass: str) -> None:
     """
-    One sentence = TWO Dialogue events sharing the same timespan:
-      * a close, low-opacity dark-shadow approximation for timing diagnostics;
-      * crisp readable foreground TEXT.
-
-    Consecutive sentences alternate between two-layer stacks (0-1 and 2-3)
-    so an incoming sentence always composites ON TOP of the previous
-    one while the previous one is still in its letter-by-letter
-    fade-out — the deliberate overlap that makes the transition look
-    layered rather than glitchy.
-
-    The production compositor uses Pillow to add the true soft Gaussian
-    drop-shadow edge. Both timing-sidecar events are centred in the frame
-    (Alignment=5) and carry identical per-word fade-in / per-character
-    fade-out inline tags so the diagnostic shadow tracks the text.
+    One sentence = TWO static Dialogue events sharing the same voice-aligned
+    timespan: a close, low-opacity diagnostic shadow and crisp foreground
+    text. The production compositor uses Pillow to add the true soft Gaussian
+    drop shadow; these centred (Alignment=5) events are a timing sidecar only.
     """
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
     shadow_x = max(1, int(round(width * CIN_ASS_SHADOW_OFFSET_X_FRACTION)))
@@ -492,50 +407,29 @@ Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H0000000
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     lines = [header]
-    for i, sent in enumerate(sentences):
+    for sent in sentences:
         words = sent["words"]
-        s_start = sent["start"]
-        # Hold: voice timing wins when longer; the 1.5s floor only pads
-        # fast-spoken sentences. The letter dissolve begins at hold_end.
-        hold_end = max(sent["speak_end"], s_start + CIN_SENTENCE_MIN_SECONDS)
-        hold_ms = int(round((hold_end - s_start) * 1000))
-        n_chars = sum(len(w["word"].upper()) for w in words)
-        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0
-
-        stack_layer = 2 * (i % 2)
-        shadow_layer = stack_layer
-        text_layer = stack_layer + 1
-
+        start_ts = subtitle_common._ass_time(sent["start"])
+        end_ts = subtitle_common._ass_time(sent["speak_end"])
         shadow_parts: list[str] = []
         text_parts: list[str] = []
-        offset = 0
-        for w in words:
+        for word in words:
             # Source wording remains authoritative for timing and keyword
-            # lookup, while the rendered display glyphs are always uppercase.
-            display_word = w["word"].upper()
-            color = keyword_map.get(subtitle_common._norm_token(w["word"]))
-            text_tags = f"\\c{_hex_ass(color)}&" if color else ""
-            s_run, offset = _char_run(
-                {**w, "word": display_word}, s_start, hold_ms,
-                CIN_LETTER_FADE_OUT_MS, offset, n_chars, "\\c&H000000&")
-            t_run, _ = _char_run(
-                {**w, "word": display_word}, s_start, hold_ms,
-                CIN_LETTER_FADE_OUT_MS,
-                offset - len(display_word), n_chars, text_tags)
-            shadow_parts.append(s_run)
-            text_parts.append(t_run)
+            # lookup. Caption casing is handled by the production rasterizer.
+            display_word = word["word"].upper()
+            color = keyword_map.get(subtitle_common._norm_token(word["word"]))
+            shadow_parts.append("{\\c&H000000&}" + subtitle_common._ass_escape(display_word))
+            text_tags = f"{{\\c{_hex_ass(color)}&}}" if color else ""
+            text_parts.append(text_tags + subtitle_common._ass_escape(display_word))
 
-        start_ts = subtitle_common._ass_time(s_start)
-        end_ts = subtitle_common._ass_time(event_end)
         shadow_text = " ".join(shadow_parts)
         main_text = " ".join(text_parts)
         lines.append(
-            f"Dialogue: {shadow_layer},{start_ts},{end_ts},CinShadow,,0,0,0,,"
+            f"Dialogue: 0,{start_ts},{end_ts},CinShadow,,0,0,0,,"
             f"{{\\pos({width // 2 + shadow_x},{height // 2 + shadow_y})}}{shadow_text}\n"
         )
         lines.append(
-            f"Dialogue: {text_layer},{start_ts},{end_ts},CinText,,0,0,0,,"
-            f"{main_text}\n"
+            f"Dialogue: 1,{start_ts},{end_ts},CinText,,0,0,0,,{main_text}\n"
         )
 
     with open(out_ass, "w", encoding="utf-8") as f:
@@ -545,11 +439,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Regular "
         f"{font_size}px, crisp white foreground + compact soft-gray shadow "
         f"diagnostic offset {shadow_x}px right / {shadow_y}px down — CENTRED in "
-        f"the {width}x{height} video frame; word-by-word fade-in "
-        f"{CIN_WORD_FADE_IN_MS}ms/word, letter-by-letter fade-out "
-        f"{CIN_LETTER_FADE_OUT_MS}ms/sentence, >= "
-        f"{CIN_SENTENCE_MIN_SECONDS}s hold, overlapping layered "
-        f"transitions; rendered into the bare 1080x1200 cinematic frame "
+        f"the {width}x{height} video frame; static complete-sentence "
+        f"events aligned to the voiceover, no caption animation; rendered "
+        f"into the bare 1080x1200 cinematic frame "
         f"with no downstream branded compositor)",
         flush=True,
     )
@@ -619,24 +511,17 @@ def _caption_color(color: str | None) -> tuple[int, int, int]:
     return _hex_rgb(color)
 
 
-def _tracked_text_width(text: str, font, tracking_px: float) -> float:
-    """Measure native-size glyphs plus explicit tracking between characters."""
-    metrics = ImageDraw.Draw(Image.new("L", (1, 1)))
-    return sum(metrics.textlength(char, font=font) for char in text) + \
-        max(0, len(text) - 1) * tracking_px
-
-
-def _caption_layout(sentence: dict, font, width: int, height: int,
-                    tracking_px: float) -> list[dict]:
-    """Lay out native-size sentence glyphs with per-frame letter tracking."""
+def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]:
+    """Lay out a complete static sentence as centred, word-addressable runs."""
     max_width = int(round(width * CIN_RASTER_MAX_WIDTH_FRACTION))
+    metrics = ImageDraw.Draw(Image.new("L", (1, 1)))
     lines: list[list[dict]] = []
     current: list[dict] = []
     for word in sentence["words"]:
         item = {"source": word, "display": word["word"].upper()}
         trial = current + [item]
         trial_text = " ".join(x["display"] for x in trial)
-        if current and _tracked_text_width(trial_text, font, tracking_px) > max_width:
+        if current and metrics.textlength(trial_text, font=font) > max_width:
             lines.append(current)
             current = [item]
         else:
@@ -644,72 +529,19 @@ def _caption_layout(sentence: dict, font, width: int, height: int,
     if current:
         lines.append(current)
 
-    metrics = ImageDraw.Draw(Image.new("L", (1, 1)))
     line_height = int(round(font.size * 1.12))
     top = int(round(height * CIN_RASTER_Y_FRACTION - line_height * len(lines) / 2))
     runs: list[dict] = []
     for line_index, line in enumerate(lines):
         line_text = " ".join(item["display"] for item in line)
-        x = (width - _tracked_text_width(line_text, font, tracking_px)) / 2.0
+        x = (width - metrics.textlength(line_text, font=font)) / 2.0
         y = top + line_index * line_height
-        for word_index, item in enumerate(line):
-            char_x: list[float] = []
-            for char_index, char in enumerate(item["display"]):
-                char_x.append(x)
-                x += metrics.textlength(char, font=font)
-                if char_index < len(item["display"]) - 1:
-                    x += tracking_px
-            item["char_x"] = char_x
+        for item in line:
+            item["x"] = x
             item["y"] = y
             runs.append(item)
-            if word_index < len(line) - 1:
-                # The inter-word space has the same tracking on either side
-                # as an ordinary glyph boundary in letter-spaced text.
-                x += tracking_px + metrics.textlength(" ", font=font) + tracking_px
+            x += metrics.textlength(item["display"] + " ", font=font)
     return runs
-
-
-def _cubic_bezier_ease(progress: float) -> float:
-    """Evaluate CSS-style cubic-bezier(0.20, 1.00, 1.00, 1.00) at x=progress."""
-    progress = max(0.0, min(1.0, progress))
-    x1, y1, x2, y2 = CIN_TRACKING_BEZIER
-    lo, hi = 0.0, 1.0
-    for _ in range(18):
-        t = (lo + hi) / 2.0
-        x = (3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) * t ** 2 * x2 + t ** 3)
-        if x < progress:
-            lo = t
-        else:
-            hi = t
-    t = (lo + hi) / 2.0
-    return 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) * t ** 2 * y2 + t ** 3
-
-
-def _sentence_tracking(sentence: dict, time_s: float) -> float:
-    """Return tracking tied directly to the fade-in and fade-out windows."""
-    start = float(sentence["start"])
-    hold_end = max(float(sentence["speak_end"]), start + CIN_SENTENCE_MIN_SECONDS)
-    fade_in_end = min(
-        hold_end,
-        max(float(word["start"]) for word in sentence["words"]) +
-        CIN_WORD_FADE_IN_MS / 1000.0,
-    )
-    event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0
-    if time_s < fade_in_end:
-        # Tracking begins widening with the first word's alpha fade and
-        # reaches the settled value when the last word completes its fade.
-        progress = (time_s - start) / max(fade_in_end - start, 0.001)
-        return CIN_TRACKING_START_PX + \
-            (CIN_TRACKING_HOLD_PX - CIN_TRACKING_START_PX) * \
-            _cubic_bezier_ease(progress)
-    if time_s > hold_end:
-        # During the fixed one-second letter dissolve, spacing widens again
-        # while glyph size stays unchanged.
-        progress = (time_s - hold_end) / max(event_end - hold_end, 0.001)
-        return CIN_TRACKING_HOLD_PX + \
-            (CIN_TRACKING_EXIT_PX - CIN_TRACKING_HOLD_PX) * \
-            _cubic_bezier_ease(progress)
-    return CIN_TRACKING_HOLD_PX
 
 
 def _apply_mask(canvas: Image.Image, mask: Image.Image,
@@ -735,39 +567,22 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
     """Return compact caption glyphs over a soft gray-black drop shadow."""
     foreground = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     for sentence in sentences:
-        start = sentence["start"]
-        hold_end = max(sentence["speak_end"], start + CIN_SENTENCE_MIN_SECONDS)
-        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0
-        if time_s < start or time_s > event_end:
+        # Each card is fully present from its first aligned word until the
+        # final aligned word ends. Consecutive cards swap directly; no fade,
+        # scale, tracking, or character-level transition is applied.
+        if time_s < sentence["start"] or time_s >= sentence["speak_end"]:
             continue
         masks: dict[tuple[int, int, int], Image.Image] = {}
         union = Image.new("L", (width, height), 0)
         draw_by_color: dict[tuple[int, int, int], ImageDraw.ImageDraw] = {}
-        char_count = sum(len(word["word"].upper()) for word in sentence["words"])
-        char_index = 0
-        tracking_px = _sentence_tracking(sentence, time_s)
-        for run in _caption_layout(sentence, font, width, height, tracking_px):
+        for run in _caption_layout(sentence, font, width, height):
             word = run["source"]
-            display = run["display"]
             color = _caption_color(keyword_map.get(subtitle_common._norm_token(word["word"])))
             if color not in masks:
                 masks[color] = Image.new("L", (width, height), 0)
                 draw_by_color[color] = ImageDraw.Draw(masks[color])
-            for local_index, char in enumerate(display):
-                fade_in = max(0.0, min(1.0, (time_s - word["start"]) /
-                                      (CIN_WORD_FADE_IN_MS / 1000.0)))
-                fade_step = (CIN_LETTER_FADE_OUT_MS / 1000.0) / \
-                    max(char_count, 1)
-                fade_start = hold_end + char_index * fade_step
-                fade_end = hold_end + (char_index + 1) * fade_step
-                fade_out = 1.0 if time_s <= fade_start else max(
-                    0.0, min(1.0, 1.0 - (time_s - fade_start) /
-                    max(fade_end - fade_start, 0.001)))
-                alpha = int(round(255 * fade_in * fade_out))
-                if alpha:
-                    draw_by_color[color].text((run["char_x"][local_index], run["y"]), char,
-                                              font=font, fill=alpha)
-                char_index += 1
+            draw_by_color[color].text((run["x"], run["y"]), run["display"],
+                                      font=font, fill=255)
         for mask in masks.values():
             union = ImageChops.lighter(union, mask)
         if not union.getbbox():
