@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/final.mp4"
   },
   "created_at_epoch": 1787428930,
-  "updated_at_epoch": 1787435031,
+  "updated_at_epoch": 1787436065,
   "expires_at_epoch": 1787472130,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787428930305/torrent-selection.json",
@@ -40,7 +40,7 @@
     "scheduled_for": null,
     "timezone": "UTC",
     "idempotency_key": "clipforge-torrent-1787428930305-mt4wneaf",
-    "updated_at_epoch": 1787435031,
+    "updated_at_epoch": 1787436065,
     "media": {
       "filename": "final.mp4",
       "size_bytes": 70466554,
