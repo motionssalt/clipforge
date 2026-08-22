@@ -6,14 +6,14 @@ Runs AFTER cut_and_produce.py (and after enhance_scenes.py when that
 step is enabled) and BEFORE the ffprobe validation step in
 stage-b.yml. It accepts either the current single merged final.mp4 or
 the legacy per-scene scene_*.mp4 layout in the scenes directory. For
-each input MP4 it composites the video into the branded 1080x1920
+each input MP4 it composites the video into the branded 1080x1200 (10:9)
 template via brand_scene.py and rewrites the original file in place,
 using the exact atomic-swap pattern established by enhance_scenes.py:
 
     <name>.mp4  --brand-->  <name>.branded.mp4  --validate-->  os.replace()
 
 The swap only happens once the branded file exists AND has passed
-brand_scene.py's own mobile-safe validation (1080x1920, H.264 High@L4.0,
+brand_scene.py's own mobile-safe validation (1080x1200, H.264 High@L4.0,
 yuv420p, has_b_frames=0, start_time ~0, exactly 1 video + 1 audio
 stream, valid ftyp). A failed scene therefore leaves the original
 untouched and fails the whole run — a half-branded output set can never
@@ -44,7 +44,7 @@ Three behavior paths (all intentional, all exit 0):
 
   3. Branding ENABLED + username configured
      --------------------------------------
-     Full compositor run: each scene_*.mp4 is rendered into the 9:16
+     Full compositor run: each scene_*.mp4 is rendered into the 10:9
      branded canvas with the persistent channel identity (username /
      display name / profile picture) and the per-job title, then
      atomically swapped in place.
@@ -194,7 +194,7 @@ def resolve_branding(args) -> Branding | None:
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=(
-            "Composite each cut scene MP4 into the branded 9:16 template "
+            "Composite each cut scene MP4 into the branded 10:9 template "
             "in place (atomic .branded.mp4 swap per scene), using the "
             "persistent channel branding from branding/branding.json."
         )
@@ -264,7 +264,7 @@ def main() -> None:
 
     # ---- Path 3: full compositor run ----------------------------------------
     print(
-        f"Branding {len(scenes)} scene(s) into the 1080x1920 template:\n"
+        f"Branding {len(scenes)} scene(s) into the 1080x1200 (10:9) template:\n"
         f"  channel  = {branding.display_name!r} (@{branding.username})\n"
         f"  avatar   = {branding.profile_picture or 'placeholder disc'}\n"
         f"  title    = {args.title!r}\n"

@@ -27,7 +27,7 @@ on:
         type: string
         default: "true"
       brand:
-        description: "Composite the merged video into the branded 1080x1920 template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. Default true; set to false to ship unbranded. When no username is configured yet the job ships unbranded either way."
+        description: "Composite the merged video into the branded 1080x1200 (10:9) template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. Default true; set to false to ship unbranded. When no username is configured yet the job ships unbranded either way."
         required: false
         type: string
         default: "true"
@@ -495,7 +495,7 @@ jobs:
       # burning them into the still-native-aspect merged final.mp4 at
       # this stage, they become a permanent part of the video image.
       # When brand_scenes.py subsequently scales-and-letterboxes that
-      # video into the 1080x1920 branded slot, the captions ride inside
+      # video into the 1080x1200 (10:9) branded slot, the captions ride inside
       # the slot along with the rest of the picture; they cannot escape
       # upward into the title/header chrome or downward past the CTA,
       # because they are structurally part of the video pixels and are
@@ -540,7 +540,7 @@ jobs:
           ls -lh work/out/
 
       # -------------------------------------------------------------------
-      # Branded 9:16 compositor (optional), applied to the ONE merged
+      # Branded 10:9 compositor (optional), applied to the ONE merged
       # final.mp4 (brand_scenes.py picks up final.mp4 in the directory it
       # is given). By the time we get here final.mp4 already carries the
       # burned-in word-by-word subtitles from the step above, so the
@@ -550,9 +550,9 @@ jobs:
       # aspect ratio. Same three behavior paths as before: toggle off
       # (no-op), toggle on but no username saved yet (no-op), toggle on
       # + username configured (final.mp4 composited into the branded
-      # 1080x1920 template and atomically swapped in place).
+      # 1080x1200 (10:9) template and atomically swapped in place).
       # -------------------------------------------------------------------
-      - name: Brand final video (composite into the branded 9:16 template)
+      - name: Brand final video (composite into the branded 10:9 template)
         shell: bash
         env:
           BRAND_FLAG: ${{ github.event.inputs.brand }}

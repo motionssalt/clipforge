@@ -167,7 +167,7 @@ picture next to it), written directly by the site via the contents
 API. It deliberately lives OUTSIDE `jobs/`: the hourly cleanup only
 deletes `jobs/<id>/` folders and `clipforge-*` releases, so branding
 survives the 12-hour job TTL forever. Stage B composites the merged
-video into the branded 1080x1920 template (channel avatar + name, job
+video into the branded 1080x1200 (10:9) template (channel avatar + name, job
 title, follow CTA) via `scripts/brand_scenes.py` when a username is
 configured, and records which branding a run used in that job's
 `status.json` `extra`.

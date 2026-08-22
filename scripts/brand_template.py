@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Branded 9:16 template renderer (compositor Part 2 of the branding stack).
+Branded 10:9 template renderer (compositor Part 2 of the branding stack).
 
 This module renders the STATIC chrome around a scene clip — the tinted
 vertical canvas, the ringed profile picture, the username / display name
 row, the category badge, the auto-fitted title block, the follow button,
 and the like/comment/share engagement prompt — as a single transparent
-RGBA PNG that matches the final output canvas pixel-for-pixel (1080×1920).
+RGBA PNG that matches the final output canvas pixel-for-pixel (1080×1200).
 
 It also computes the exact rectangle (`slot`) inside that canvas where the
 source scene video must be pasted, in native aspect ratio, letterboxed —
@@ -70,11 +70,13 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 # =============================================================================
 # CANVAS / LAYOUT CONSTANTS
 # =============================================================================
-# 9:16 at 1080p vertical is the short-form platform default (TikTok, Reels,
-# Shorts) and matches the mobile-safe H.264 High@L4.0 profile the rest of the
-# pipeline encodes to. Height 1920 is well inside L4.0's 2,097,152-pixel cap.
+# 10:9 near-square vertical (taller than wide, but not the 9:16 full-vertical
+# of old template mode): cinematic mode's output aspect ratio. Width 1080 keeps
+# the 1080p encoding base; 1080 / 10 * 9 = 972 is even, so no odd-dimension
+# rounding anywhere, and 1080x1200 stays well inside the mobile-safe H.264
+# High@L4.0 macroblock budget the rest of the pipeline encodes to.
 CANVAS_W = 1080
-CANVAS_H = 1920
+CANVAS_H = 1200
 
 # Video slot geometry (max box the source clip is letterboxed into).
 # * Width 1080 -> full-bleed left/right so the clip is the visual anchor.
@@ -83,11 +85,12 @@ CANVAS_H = 1920
 #   sources leave black letterboxes above/below inside the slot. In every
 #   case the source aspect ratio is preserved — never stretched, never
 #   cropped.
-# * Y=520 sits the video high in the frame so the chrome rows above it
-#   (avatar / name / badge) and the title/CTA block below it both have
-#   generous vertical room without crowding either side of the clip.
+# * Y=268 centres the slot in the chrome-free band of the shorter 10:9
+#   canvas: the header row (avatar / name / badge) ends around y=208 and
+#   the title block starts at TITLE_TOP, so the clip keeps generous
+#   vertical room on both sides without crowding either chrome block.
 SLOT_X = 0
-SLOT_Y = 520
+SLOT_Y = 268
 SLOT_W = 1080
 SLOT_H = 608
 
@@ -120,7 +123,7 @@ FONT_CANDIDATES_REGULAR = [
 ]
 
 # Header row geometry (top of frame — avatar + name + handle + badge).
-HEADER_Y = 90
+HEADER_Y = 72
 AVATAR_D = 128                       # diameter in px
 AVATAR_X = 60
 AVATAR_RING_W = 6                    # accent ring thickness
@@ -129,17 +132,19 @@ AVATAR_SEP_W = 2                     # thin dark separator between ring & disc
 # Category badge shown to the right of the name row.
 BADGE_TEXT_DEFAULT = "COMMENTARY"
 
-# Title block sits between the video slot and the CTA row.
-TITLE_TOP = SLOT_Y + SLOT_H + 46     # 46 px of breathing room below clip
-TITLE_BOTTOM = 1620                  # hard bottom before the CTA row
+# Title block sits between the video slot and the CTA row. The 10:9 canvas
+# is 720 px shorter than the old 9:16 one, so the block is compressed
+# accordingly (the auto-fit shrink logic absorbs the reduced height).
+TITLE_TOP = SLOT_Y + SLOT_H + 36     # breathing room below clip
+TITLE_BOTTOM = 1046                  # hard bottom before the CTA row
 TITLE_PAD_X = 60                     # left/right inset for wrapping
 
 # CTA row anchors at the bottom of the frame.
-CTA_BTN_Y = 1680
-CTA_BTN_H = 116
-CTA_BTN_W = 500
-CTA_BTN_RADIUS = 58
-ENGAGEMENT_Y = 1830                  # centered text under the button
+CTA_BTN_Y = 1058
+CTA_BTN_H = 92
+CTA_BTN_W = 460
+CTA_BTN_RADIUS = 46
+ENGAGEMENT_Y = 1158                  # centered text under the button
 
 
 # =============================================================================
@@ -161,7 +166,7 @@ class Branding:
 @dataclass
 class SlotGeometry:
     """
-    Where inside the 1080×1920 branded canvas the source clip must land,
+    Where inside the 1080×1200 branded canvas the source clip must land,
     letterboxed at native aspect ratio. `brand_scene.py` consumes this to
     build the ffmpeg filter graph (scale + pad + overlay). Kept as a
     small dataclass so the (compositor <-> caller) contract is explicit.
@@ -753,7 +758,7 @@ def build_template(
     badge_text: str = BADGE_TEXT_DEFAULT,
 ) -> tuple[Image.Image, SlotGeometry]:
     """
-    Render the full 1080×1920 branded chrome as an RGBA image and return
+    Render the full 1080×1200 branded chrome as an RGBA image and return
     (image, slot_geometry). The image has the video slot region CUT OUT
     (fully transparent inside the slot rectangle) so the compositor can
     letterbox the source clip UNDER the overlay and have it show through.
@@ -865,7 +870,7 @@ def _cli() -> None:
     `build_template()` directly.
 
     Args:
-        --out              Output PNG path (1080×1920, RGBA).
+        --out              Output PNG path (1080×1200, RGBA).
         --title            Job title string.
         --username         Channel @username (part 1 data).
         --display-name     Channel display name (part 1 data).

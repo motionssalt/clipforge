@@ -5,13 +5,13 @@ Branded 9:16 compositor (Part 2 of the branding stack).
 Given ONE scene MP4 (a legacy per-scene scene_XX.mp4, or the merged
 final.mp4 produced by cut_and_produce.py — optionally enhanced by
 enhance_scenes.py), a branding record, and a job title, this
-script composites the scene into a professional-looking branded 9:16
+script composites the scene into a professional-looking branded 10:9
 vertical template and writes the result back as a mobile-safe MP4.
 
 Design contract (mirrors the same "phone/WhatsApp/TikTok has to accept
 this file" bar the cut/enhance stages already satisfy):
 
-  * Canvas: 1080×1920 RGBA (9:16), full-bleed.
+  * Canvas: 1080×1200 RGBA (10:9 near-square vertical), full-bleed.
   * Source clip: kept at its NATIVE aspect ratio. It is letterboxed /
     pillarboxed into a fixed 1080×608 slot inside the canvas — never
     stretched, never cropped. A 16:9 clip fills the slot exactly; a
@@ -82,8 +82,9 @@ X264_CRF = "23"
 X264_MAXRATE = "8M"
 X264_BUFSIZE = "16M"
 
+# 10:9 near-square vertical canvas — see brand_template.py for the rationale.
 CANVAS_W = 1080
-CANVAS_H = 1920
+CANVAS_H = 1200
 
 
 def sh(cmd: list[str]) -> None:
@@ -138,7 +139,7 @@ def composite(
          `scale=slot_w:slot_h:force_original_aspect_ratio=decrease`;
       2) pads it to exactly slot_w×slot_h with black bars so the slot is
          always fully covered;
-      3) pads that scaled+padded clip up to the full 1080×1920 canvas
+      3) pads that scaled+padded clip up to the full 1080×1200 canvas
          with the slot positioned at (slot_x, slot_y);
       4) overlays the pre-rendered branded chrome PNG on top.
 
@@ -312,7 +313,7 @@ def validate(path: str) -> None:
     if int(vs.get("width") or 0) != CANVAS_W or int(vs.get("height") or 0) != CANVAS_H:
         print(
             f"ERROR: branded video is {vs.get('width')}x{vs.get('height')}, "
-            f"expected {CANVAS_W}x{CANVAS_H} (9:16 vertical canvas)",
+            f"expected {CANVAS_W}x{CANVAS_H} (10:9 near-square vertical canvas)",
             file=sys.stderr,
         )
         sys.exit(3)
@@ -329,7 +330,7 @@ def validate(path: str) -> None:
     except (TypeError, ValueError):
         pass
 
-    print(f"  OK: {path} is a mobile-safe 9:16 branded MP4.", flush=True)
+    print(f"  OK: {path} is a mobile-safe 10:9 branded MP4.", flush=True)
 
 
 def brand_scene(

@@ -122,7 +122,7 @@
     'Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4':      'Cutting, mixing, merging video',
     'Quality enhancement (denoise + color grade + sharpen)':                'Enhancing video quality',
     'Burn word-by-word subtitles into the video (before branding)':         'Burning in subtitles',
-    'Brand final video (composite into the branded 9:16 template)':         'Applying channel branding',
+    'Brand final video (composite into the branded 10:9 template)':         'Applying channel branding',
     'Validate the merged final MP4 with ffprobe':                           'Validating final MP4',
     'Write social-media metadata.txt from production.json':                 'Writing posting-package metadata',
     'Zip final artifact (finished video + metadata.txt)':                   'Zipping final artifact',
