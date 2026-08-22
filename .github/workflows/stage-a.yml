@@ -426,9 +426,22 @@ jobs:
             mkdir -p work/torrent
             # aria2 retrieves only the selected media entry and immediately
             # stops seeding. It never downloads unrelated .nfo/text extras.
+            # Hosted runners often see only a handful of peers when the
+            # manifest's original trackers are stale. Keep the selected-file
+            # safety invariant, but make discovery and recovery more
+            # aggressive. These options do not cap download speed; they let
+            # aria2 use DHT, PEX, LPD, more peer slots, and short tracker
+            # retry intervals to find healthy peers sooner.
             aria2c --dir=work/torrent --select-file="$selected_index" \
-              --file-allocation=none --seed-time=0 --max-tries=5 \
-              --connect-timeout=60 --timeout=60 "$torrent_path"
+              --file-allocation=none --continue=true --auto-file-renaming=false \
+              --seed-time=0 --max-tries=10 \
+              --enable-dht=true --enable-peer-exchange=true \
+              --enable-lpd=true --bt-max-peers=100 \
+              --bt-request-peer-speed-limit=50K \
+              --bt-tracker-connect-timeout=10 --bt-tracker-timeout=10 \
+              --bt-tracker-interval=30 \
+              --bt-tracker="udp://tracker.opentrackr.org:1337/announce,udp://open.stealth.si:80/announce,udp://exodus.desync.com:6969/announce,udp://tracker.torrent.eu.org:451/announce" \
+              --connect-timeout=30 --timeout=30 "$torrent_path"
             source_file="$(python scripts/torrent_source.py select-video work/torrent "$selected_path")"
             echo "Selected torrent video: $source_file"
           else
