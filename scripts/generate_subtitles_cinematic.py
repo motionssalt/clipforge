@@ -108,11 +108,14 @@ from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
 
 # ---------- Cinematic styling ----------
-# Full-width bold face — deliberately NOT the condensed Bebas Neue of
-# template mode. DejaVu Sans is bundled with every ubuntu runner base
-# image, so fontconfig always resolves it without a vendored file.
-CIN_FONT = "DejaVu Sans"
-CIN_FONT_FALLBACKS = ["Liberation Sans", "Nimbus Sans", "sans-serif"]
+# Caption and banner typography share the vendored Coolvetica family.
+# The explicit font file is also passed to libass through its fontsdir option
+# below, so CI does not depend on a system-wide font installation.
+CIN_FONT_FILE = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "assets", "fonts", "Coolvetica.ttf"))
+CIN_FONT = "Coolvetica Rg"
+CIN_FONT_FALLBACKS = ["DejaVu Sans", "Liberation Sans", "sans-serif"]
 # Font size as a fraction of frame height. Slightly smaller than
 # template mode's per-word size because whole SENTENCES (which wrap to
 # 2-3 lines) must fit: keeps a comfortable side margin at PlayRes.
@@ -156,9 +159,7 @@ CIN_FRAME_HEIGHT = 1200
 # cinematic banner only; template mode is untouched (its removal is a
 # later batch). If the vendored file is ever missing we fall back to
 # DejaVu Sans Bold with a warning rather than failing the render.
-CIN_BANNER_FONT_FILE = os.path.normpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "..", "assets", "fonts", "Coolvetica.ttf"))
+CIN_BANNER_FONT_FILE = CIN_FONT_FILE
 CIN_BANNER_FONT_FALLBACK = "DejaVuSans-Bold.ttf"  # system fontconfig name
 CIN_BANNER_HEIGHT_FRACTION = 0.11      # compact banner height vs frame height
 CIN_BANNER_TOP_FRACTION = 0.0          # resting top edge: flush with y=0
@@ -460,10 +461,10 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: CinShadow,{CIN_FONT},{font_size},&HFFFFFFFF,&HFFFFFFFF,{CIN_SHADOW_COLOR},{CIN_SHADOW_COLOR},1,0,0,0,100,100,0,0,1,{shadow_outline},0,5,{margin},{margin},0,1
-Style: CinGlowFar,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_FAR_COLOR},{CIN_GLOW_FAR_COLOR},1,0,0,0,100,100,0,0,1,{far_glow_outline},0,5,{margin},{margin},0,1
-Style: CinGlowNear,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_NEAR_COLOR},{CIN_GLOW_NEAR_COLOR},1,0,0,0,100,100,0,0,1,{near_glow_outline},0,5,{margin},{margin},0,1
-Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H8C000000,1,0,0,0,100,100,0,0,1,{outline},{shadow},5,{margin},{margin},0,1
+Style: CinShadow,{CIN_FONT},{font_size},&HFFFFFFFF,&HFFFFFFFF,{CIN_SHADOW_COLOR},{CIN_SHADOW_COLOR},0,0,0,0,100,100,0,0,1,{shadow_outline},0,5,{margin},{margin},0,1
+Style: CinGlowFar,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_FAR_COLOR},{CIN_GLOW_FAR_COLOR},0,0,0,0,100,100,0,0,1,{far_glow_outline},0,5,{margin},{margin},0,1
+Style: CinGlowNear,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_NEAR_COLOR},{CIN_GLOW_NEAR_COLOR},0,0,0,0,100,100,0,0,1,{near_glow_outline},0,5,{margin},{margin},0,1
+Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H8C000000,0,0,0,0,100,100,0,0,1,{outline},{shadow},5,{margin},{margin},0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -476,7 +477,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         # fast-spoken sentences. The letter dissolve begins at hold_end.
         hold_end = max(sent["speak_end"], s_start + CIN_SENTENCE_MIN_SECONDS)
         hold_ms = int(round((hold_end - s_start) * 1000))
-        n_chars = sum(len(w["word"]) for w in words)
+        n_chars = sum(len(w["word"].upper()) for w in words)
         event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
 
         stack_layer = 4 * (i % 2)
@@ -489,16 +490,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         text_parts: list[str] = []
         offset = 0
         for w in words:
+            # Source wording remains authoritative for timing and keyword
+            # lookup, while the rendered display glyphs are always uppercase.
+            display_word = w["word"].upper()
             tone = keyword_map.get(legacy._norm_token(w["word"]))
             colors = KEYWORD_COLORS.get(tone) if tone else None
             text_tags = f"\\c{colors['fill']}&" if colors else ""
             glow_tags = f"\\3c{colors['glow']}&" if colors else ""
-            g_run, offset = _char_run(w, s_start, hold_ms,
-                                      CIN_LETTER_FADE_OUT_MS, offset,
-                                      n_chars, glow_tags)
-            t_run, _ = _char_run(w, s_start, hold_ms,
-                                 CIN_LETTER_FADE_OUT_MS,
-                                 offset - len(w["word"]), n_chars, text_tags)
+            g_run, offset = _char_run(
+                {**w, "word": display_word}, s_start, hold_ms,
+                CIN_LETTER_FADE_OUT_MS, offset, n_chars, glow_tags)
+            t_run, _ = _char_run(
+                {**w, "word": display_word}, s_start, hold_ms,
+                CIN_LETTER_FADE_OUT_MS,
+                offset - len(display_word), n_chars, text_tags)
             glow_parts.append(g_run)
             text_parts.append(t_run)
 
@@ -527,7 +532,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f.writelines(lines)
     print(
         f"ASS cinematic subtitle file written: {out_ass} "
-        f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Bold "
+        f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Regular "
         f"{font_size}px, outline {outline}px, foreground shadow {shadow}px, "
         f"deep glow far {far_glow_outline}px/blur {CIN_GLOW_FAR_BLUR} + "
         f"near {near_glow_outline}px/blur {CIN_GLOW_NEAR_BLUR} + "
@@ -580,11 +585,12 @@ def burn_subtitles(video: str, ass_path: str, dst: str,
                    banner: dict | None = None) -> None:
     """
     Burn the cinematic ASS in with libass, overlay the title banner (if
-    given) on top, and re-encode video with the SAME mobile-safe
-    profile as cut_and_produce.py / generate_subtitles.py. Audio is
-    stream-copied untouched. The cinematic face is a system font
-    (DejaVu Sans Bold) resolved by fontconfig, so no fontsdir is
-    needed.
+    given) on top, and re-encode video with the same mobile-safe profile as
+    cut_and_produce.py / generate_subtitles.py. Audio is stream-copied
+    untouched. The cinematic face is the vendored Coolvetica font, supplied to
+    libass through the renderer's fontsdir option for deterministic output.
+
+
 
     The banner is the pre-rendered PNG from build_banner_png() — white
     strip with the title text already composited in, so graphic and
@@ -605,7 +611,8 @@ def burn_subtitles(video: str, ass_path: str, dst: str,
         f"[0:v]scale={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT}:"
         f"force_original_aspect_ratio=increase,"
         f"crop={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT},setsar=1[base]",
-        f"[base]subtitles='{_fescape(ass_path)}'[v0]",
+        f"[base]subtitles='{_fescape(ass_path)}':"
+        f"fontsdir='{_fescape(os.path.dirname(CIN_FONT_FILE))}'[v0]",
     ]
     out_label = "v0"
     if banner is not None:

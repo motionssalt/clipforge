@@ -126,6 +126,16 @@ print(f"PASS: banner y-expression (off-screen -{bh} -> {rest_top} over "
 ass_path = os.path.join(WORK, "cinematic.ass")
 cin.write_cinematic_ass(sentences, kw, W, H, ass_path)
 ass = open(ass_path, encoding="utf-8").read()
+assert cin.CIN_FONT == "Coolvetica Rg" and os.path.isfile(cin.CIN_FONT_FILE)
+assert all(f"Style: {style},{cin.CIN_FONT}," in ass for style in (
+    "CinShadow", "CinGlowFar", "CinGlowNear", "CinText"))
+import re as _re
+caption_payloads = _re.findall(
+    r"Dialogue: [^\n]*,CinText,,0,0,0,,([^\n]*)", ass)
+caption_visible = "".join(_re.sub(r"\{[^}]*\}", "", text)
+                          for text in caption_payloads)
+assert caption_visible and caption_visible == caption_visible.upper(), caption_visible
+assert "SHE" in caption_visible and "She" not in caption_visible
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
 assert all(style in ass for style in ("CinShadow", "CinGlowFar", "CinGlowNear", "CinText"))
 assert f"\\blur{cin.CIN_GLOW_FAR_BLUR}" in ass, "wide outer glow blur missing"
@@ -140,7 +150,6 @@ assert "\\3c&H6400A0E0&" in ass, "warm keyword glow colour missing"
 assert ass.count("\\t(") > sum(len(s["words"]) for s in sentences), \
     "per-character fade-out tags missing"
 # Overlap: sentence 1's event must end AFTER sentence 2's event starts
-import re as _re
 evs = _re.findall(r"Dialogue: (\d+),(\d+:\d+:\d+\.\d+),(\d+:\d+:\d+\.\d+),(Cin\w+)", ass)
 def ts(t):
     h, m, rest = t.split(":"); return int(h)*3600 + int(m)*60 + float(rest)
