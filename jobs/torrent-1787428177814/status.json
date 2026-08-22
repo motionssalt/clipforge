@@ -1,16 +1,18 @@
 {
   "job_id": "torrent-1787428177814",
-  "stage": "awaiting_torrent_selection",
-  "message": "Choose a video from this torrent to begin Stage A.",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
   "release_tag": "clipforge-torrent-1787428177814",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787428177,
-  "updated_at_epoch": 1787428177,
+  "updated_at_epoch": 1787428332,
   "expires_at_epoch": 1787471377,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787428177814/torrent-selection.json",
     "torrent_name": "big-buck-bunny.torrent",
-    "torrent_candidate_count": 1
+    "torrent_candidate_count": 1,
+    "workflow_run_id": "32594892761",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32594892761"
   }
 }
