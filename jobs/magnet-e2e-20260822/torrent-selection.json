@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "job_id": "magnet-e2e-20260822",
+  "torrent_name": "Blender_Foundation_-_Big_Buck_Bunny_720p",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Content/big_buck_bunny_720p_surround.avi",
+      "length": 332243668
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "tiny",
+    "language": "en",
+    "target_duration_seconds": "30",
+    "focus": ""
+  }
+}

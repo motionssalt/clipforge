@@ -1,0 +1,14 @@
+{
+  "job_id": "magnet-e2e-20260822",
+  "stage": "awaiting_torrent_selection",
+  "message": "Choose a video from this torrent to begin Stage A.",
+  "release_tag": "clipforge-magnet-e2e-20260822",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787405243,
+  "updated_at_epoch": 1787405243,
+  "expires_at_epoch": 1787448443,
+  "extra": {
+    "torrent_selection_path": "jobs/magnet-e2e-20260822/torrent-selection.json"
+  }
+}
