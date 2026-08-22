@@ -9,6 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 PUBLISH = ROOT / ".github" / "workflows" / "zernio-publish.yml"
 STAGE_B = ROOT / ".github" / "workflows" / "stage-b.yml"
+APP = ROOT / "app.js"
 
 
 def load(path: Path):
@@ -32,6 +33,28 @@ def test_publish_workflow_contract() -> None:
     assert "stage') != 'complete'" in rendered
     assert "status['publishing']" in rendered
     assert "branding/zernio_queue.json" in rendered
+    assert "ref: ${{ github.event.repository.default_branch }}" in rendered
+    assert "read_json_object_safely" in rendered
+    assert "publishing_error_state, read_json_object_safely" in rendered
+    assert "publishing = publishing_error_state(prior)" in rendered
+
+
+def test_recovery_uses_latest_code_but_original_job_data() -> None:
+    rendered = PUBLISH.read_text(encoding="utf-8")
+    # State B code is checked out from the default branch. State A job data is
+    # addressed only by the preserved workflow input and release tag pattern.
+    assert "Checkout latest publishing implementation" in rendered
+    assert "ref: ${{ github.event.repository.default_branch }}" in rendered
+    assert 'status_path = Path(\'jobs\') / jid / \'status.json\'' in rendered
+    assert '"jobs/$JOB_ID/production.json"' in rendered
+    assert 'gh release download "clipforge-${{ inputs.job_id }}"' in rendered
+    stage_b = STAGE_B.read_text(encoding="utf-8")
+    assert '--ref "${{ github.event.repository.default_branch }}"' in stage_b
+    app = APP.read_text(encoding="utf-8")
+    assert "var REF = 'main';" in app
+    assert "function zernioRequestIdForCurrentJob()" in app
+    assert "request_id: zernioRequestIdForCurrentJob()" in app
+    assert "publishing.idempotency_key" in app
 
 
 def test_stage_b_dispatch_is_best_effort_after_completion() -> None:
@@ -46,6 +69,17 @@ def test_stage_b_dispatch_is_best_effort_after_completion() -> None:
     auto_section = rendered[auto_at:failure_at]
     assert "if: success()" in auto_section
     assert "|| echo \"WARN: automatic Zernio dispatch failed" in auto_section
+    assert "zernio_targets.py automatic-fields" in auto_section
+    assert "zernio_targets.py decode" in auto_section
+    assert "TARGETS_JSON_B64" in auto_section
+    assert "source work/zernio_auto.env" not in auto_section
+    assert "--ref \"${{ github.event.repository.default_branch }}\"" in auto_section
+
+
+def test_frontend_does_not_disable_publish_on_an_opaque_secret_probe() -> None:
+    rendered = APP.read_text(encoding="utf-8")
+    assert "el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length;" in rendered
+    assert "The Zernio key could not be confirmed from this browser." in rendered
 
 
 if __name__ == "__main__":

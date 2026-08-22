@@ -69,9 +69,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout
+      - name: Checkout latest publishing implementation
         uses: actions/checkout@v4
         with:
+          # JOB_ID still addresses the completed job's committed metadata and
+          # release artifact. The code always comes from current main so a
+          # recovery dispatch never reuses a known-buggy workflow revision.
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -306,6 +310,7 @@ jobs:
           import json, os, time
           from pathlib import Path
           from scripts.zernio_state import default_queue, remove_queue_item, upsert_queue_item
+          from scripts.zernio_workflow_state import publishing_error_state, read_json_object_safely
 
           jid = os.environ['JOB_ID']
           action = os.environ['ACTION']
@@ -313,8 +318,10 @@ jobs:
           status = json.loads(status_path.read_text(encoding='utf-8'))
           prior = status.get('publishing') if isinstance(status.get('publishing'), dict) else {}
           result_path = Path('work/zernio/result.json')
-          result = json.loads(result_path.read_text(encoding='utf-8')) if result_path.exists() else None
-          failures = {name for name in ('PUBLISH_OUTCOME', 'RETRY_OUTCOME', 'UPDATE_OUTCOME', 'CANCEL_OUTCOME') if os.environ.get(name) == 'failure'}
+          # A failed publisher can leave the redirected file absent, blank, or
+          # malformed. Never allow this cleanup/status step to obscure its
+          # original error with a second JSONDecodeError.
+          result = read_json_object_safely(result_path)
 
           if action == 'publish' and isinstance(result, dict):
               publishing = result
@@ -349,9 +356,7 @@ jobs:
                   publishing['timezone'] = result.get('timezone') or os.environ['TIMEZONE'] or None
               publishing['updated_at_epoch'] = int(time.time())
           else:
-              publishing = dict(prior)
-              publishing.update({'provider': 'zernio', 'status': 'error', 'updated_at_epoch': int(time.time()),
-                  'error': 'Zernio publishing workflow failed; inspect the workflow run for sanitized details.'})
+              publishing = publishing_error_state(prior)
 
           status['publishing'] = publishing
           status['updated_at_epoch'] = int(time.time())

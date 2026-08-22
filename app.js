@@ -1527,13 +1527,30 @@
       ? 'Targets: ' + targets.map(function (target) { return target.platform + ' (' + target.account_ids.length + ')'; }).join(', ') + '.'
       : 'No active TikTok or YouTube accounts are selected in Zernio settings.');
     var active = publishing && ['publishing', 'requested'].indexOf(String(publishing.status || '').toLowerCase()) !== -1;
-    el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length || !state.zernioSecretConfigured;
+    // GitHub does not return Actions-secret values and some otherwise-valid
+    // fine-grained tokens cannot inspect secret metadata. Never disable a
+    // legitimate publish solely because that opaque probe is unavailable.
+    // The workflow remains the definitive, server-side ZERNIO_API_KEY check.
+    el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length;
     var summary = publishing
       ? 'Provider state: ' + String(publishing.status || 'unknown') + (publishing.scheduled_for ? ' · ' + publishing.scheduled_for : '')
-      : (state.zernioSecretConfigured ? 'Choose a mode and submit a native Zernio publishing request.' : 'Save the Zernio API key in Repository settings before submitting.');
+      : (state.zernioSecretConfigured
+        ? 'Choose a mode and submit a native Zernio publishing request.'
+        : 'The Zernio key could not be confirmed from this browser. Submit to perform the secure server-side check; save the key in Repository settings if the workflow reports it missing.');
     text(el['zernio-publish-summary'], summary);
     renderZernioPosts(publishing);
     toggleHidden(el['zernio-job-schedule-field'], el['zernio-job-mode-select'].value !== 'manual_schedule');
+  }
+
+  function zernioRequestIdForCurrentJob() {
+    var publishing = state.status && state.status.publishing;
+    var prior = publishing && String(publishing.status || '').toLowerCase() === 'error'
+      ? String(publishing.idempotency_key || '') : '';
+    // Reusing the persisted key is the safe recovery path after a failed run:
+    // current main code can retry the original job/artifact without creating a
+    // second provider post. New publishing requests receive a new key.
+    if (/^[A-Za-z0-9._:-]{8,200}$/.test(prior)) return prior;
+    return 'clipforge-' + state.jobId + '-' + Date.now().toString(36);
   }
 
   async function dispatchZernioPublish() {
@@ -1550,7 +1567,7 @@
         method: 'POST', body: { ref: REF, inputs: {
           action: 'publish', job_id: state.jobId, mode: mode, scheduled_for: scheduled,
           timezone: settings.smart_schedule.timezone, targets_json: JSON.stringify(targets),
-          request_id: 'clipforge-' + state.jobId + '-' + Date.now().toString(36)
+          request_id: zernioRequestIdForCurrentJob()
         }}
       });
       setMsg(el['zernio-publish-msg'], 'Publishing request dispatched. Stage B remains complete while Zernio processes it.', 'ok');
