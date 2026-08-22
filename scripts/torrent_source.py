@@ -156,40 +156,50 @@ def inspect_torrent(torrent_path: Path) -> dict[str, Any]:
         "total_bytes": sum(max(0, item["length"]) for item in files),
         "files": files,
     }
-    selected = select_torrent_video(metadata)
-    metadata["selected_video"] = selected
+    metadata["video_candidates"] = torrent_video_candidates(metadata)
     return metadata
 
 
-def select_torrent_video(metadata: dict[str, Any]) -> dict[str, Any]:
-    """Return the largest supported video manifest entry with safe size bounds."""
+def torrent_video_candidates(metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return all supported manifest video entries in original torrent order."""
     candidates = [
         item for item in metadata["files"]
         if Path(item["path"]).suffix.lower() in VIDEO_EXTENSIONS and item["length"] > 0
     ]
+    for item in candidates:
+        if item["length"] > MAX_VIDEO_BYTES:
+            raise BencodeError(
+                f"video candidate {item['index']} exceeds {MAX_VIDEO_BYTES} byte Stage A safety limit"
+            )
     if not candidates:
         wanted = ", ".join(sorted(VIDEO_EXTENSIONS))
         raise BencodeError(f"torrent has no supported video file ({wanted})")
-    selected = max(candidates, key=lambda item: (item["length"], item["path"]))
-    if selected["length"] > MAX_VIDEO_BYTES:
-        raise BencodeError(
-            f"selected video exceeds {MAX_VIDEO_BYTES} byte Stage A safety limit"
-        )
-    return selected
+    return candidates
 
 
-def select_video(root: Path) -> Path:
-    """Choose the largest regular video file under a completed download root."""
-    candidates = []
+def select_torrent_video(metadata: dict[str, Any], selected_index: int) -> dict[str, Any]:
+    """Validate and return the exact user-selected manifest video entry."""
+    for item in torrent_video_candidates(metadata):
+        if item["index"] == selected_index:
+            return item
+    raise BencodeError("selected torrent file is not an eligible video candidate")
+
+
+def select_video(root: Path, expected_relative_path: str) -> Path:
+    """Return only the downloaded file matching the user-selected manifest path."""
+    expected = expected_relative_path.replace("\\", "/").lstrip("/")
+    matches = []
     for path in root.rglob("*"):
         if not path.is_file() or path.suffix.lower() not in VIDEO_EXTENSIONS:
             continue
-        candidates.append((path.stat().st_size, path))
-    if not candidates:
-        wanted = ", ".join(sorted(VIDEO_EXTENSIONS))
-        raise FileNotFoundError(f"torrent completed without a supported video file ({wanted})")
-    candidates.sort(key=lambda item: (item[0], str(item[1])), reverse=True)
-    return candidates[0][1]
+        relative = path.relative_to(root).as_posix()
+        if relative == expected or relative.endswith("/" + expected):
+            matches.append(path)
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise FileNotFoundError("torrent completed without the selected video payload")
+    raise FileNotFoundError("torrent produced more than one path matching the selected video payload")
 
 
 def main() -> None:
@@ -197,10 +207,15 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     inspect_parser = sub.add_parser("inspect", help="print safe torrent metadata as JSON")
     inspect_parser.add_argument("torrent", type=Path)
-    select_parser = sub.add_parser("select-video", help="print the largest downloaded video path")
+    select_parser = sub.add_parser("select-video", help="print the user-selected downloaded video path")
     select_parser.add_argument("directory", type=Path)
-    index_parser = sub.add_parser("select-index", help="print selected manifest file index")
+    select_parser.add_argument("selected_relative_path")
+    index_parser = sub.add_parser("select-index", help="validate and print a selected manifest file index")
     index_parser.add_argument("torrent", type=Path)
+    index_parser.add_argument("selected_index", type=int)
+    path_parser = sub.add_parser("select-path", help="validate and print a selected manifest video path")
+    path_parser.add_argument("torrent", type=Path)
+    path_parser.add_argument("selected_index", type=int)
     args = parser.parse_args()
 
     try:
@@ -208,9 +223,12 @@ def main() -> None:
             print(json.dumps(inspect_torrent(args.torrent), ensure_ascii=False, indent=2))
         elif args.command == "select-index":
             metadata = inspect_torrent(args.torrent)
-            print(metadata["selected_video"]["index"])
+            print(select_torrent_video(metadata, args.selected_index)["index"])
+        elif args.command == "select-path":
+            metadata = inspect_torrent(args.torrent)
+            print(select_torrent_video(metadata, args.selected_index)["path"])
         else:
-            print(select_video(args.directory))
+            print(select_video(args.directory, args.selected_relative_path))
     except (BencodeError, FileNotFoundError, OSError) as exc:
         print(f"torrent source error: {exc}", file=sys.stderr)
         raise SystemExit(2)

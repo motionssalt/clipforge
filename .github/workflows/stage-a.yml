@@ -12,6 +12,11 @@ on:
         description: "Public video URL, Google Drive share link, or path:jobs/<JOB_ID>/source.torrent uploaded by the site"
         required: true
         type: string
+      torrent_file_index:
+        description: "Required only for site-uploaded torrents: the explicit 1-based video entry index selected in the UI."
+        required: false
+        type: string
+        default: ""
       job_id:
         description: "Job id (short slug). Leave blank to auto-generate."
         required: false
@@ -255,14 +260,23 @@ jobs:
             # This parses metadata only: no tracker/peer activity occurs until
             # after path and selected-video validation have succeeded.
             python scripts/torrent_source.py inspect "$torrent_path"
-            selected_index="$(python scripts/torrent_source.py select-index "$torrent_path")"
+            selected_index="${{ github.event.inputs.torrent_file_index }}"
+            if ! [[ "$selected_index" =~ ^[1-9][0-9]*$ ]]; then
+              echo "A valid selected torrent video index is required" >&2
+              exit 1
+            fi
+            # Validate the exact UI choice against this manifest before
+            # initiating any tracker/peer connection, then retain the path for
+            # a post-download identity check.
+            selected_index="$(python scripts/torrent_source.py select-index "$torrent_path" "$selected_index")"
+            selected_path="$(python scripts/torrent_source.py select-path "$torrent_path" "$selected_index")"
             mkdir -p work/torrent
             # aria2 retrieves only the selected media entry and immediately
             # stops seeding. It never downloads unrelated .nfo/text extras.
             aria2c --dir=work/torrent --select-file="$selected_index" \
               --file-allocation=none --seed-time=0 --max-tries=5 \
               --connect-timeout=60 --timeout=60 "$torrent_path"
-            source_file="$(python scripts/torrent_source.py select-video work/torrent)"
+            source_file="$(python scripts/torrent_source.py select-video work/torrent "$selected_path")"
             echo "Selected torrent video: $source_file"
           else
             python scripts/download_drive.py "$source_ref" work/source_input.bin

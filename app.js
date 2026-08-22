@@ -168,6 +168,8 @@
     countdownTimer: null,
     validatedCuts: null,   // string contents of a validated production.json
     torrentFile: null,     // an optional Stage A .torrent manifest (File object), one-off for this job only
+    torrentVideoCandidates: [], // manifest video entries available for the current torrent
+    torrentVideoIndex: null, // explicitly selected 1-based torrent-file index, or null
     musicFile: null,       // an optional picked music file (File object), one-off for this job only
     audioLibrary: null,    // [{name, path, size}] fetched from audio-library/ in the repo, or null = not loaded yet
     audioLibrarySelected: null, // path (string) of the library track chosen for this job, or null
@@ -257,7 +259,7 @@
     'repo-indicator', 'banner-stack',
     'settings-section', 'settings-toggle', 'settings-body', 'settings-state', 'settings-form',
     'owner-input', 'repo-input', 'token-input', 'token-reveal', 'settings-save', 'settings-clear', 'settings-msg',
-    'stage-a-section', 'stage-a-form', 'video-url-input', 'torrent-file-input', 'job-slug-input', 'whisper-model-select',
+    'stage-a-section', 'stage-a-form', 'video-url-input', 'torrent-file-input', 'torrent-video-field', 'torrent-video-select', 'torrent-video-hint', 'job-slug-input', 'whisper-model-select',
     'language-input', 'target-duration-select', 'focus-input', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
@@ -1224,20 +1226,81 @@
 
   var MAX_TORRENT_BYTES = 1024 * 1024;
 
+  function torrentSizeLabel(bytes) {
+    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function resetTorrentChoice() {
+    state.torrentFile = null;
+    state.torrentVideoCandidates = [];
+    state.torrentVideoIndex = null;
+    if (el['torrent-video-select']) {
+      el['torrent-video-select'].innerHTML = '<option value="">Choose a video from the torrent…</option>';
+      el['torrent-video-select'].disabled = true;
+    }
+    text(el['torrent-video-hint'], '');
+    hide(el['torrent-video-field']);
+  }
+
+  function renderTorrentCandidates(metadata) {
+    var candidates = metadata.video_candidates || [];
+    state.torrentVideoCandidates = candidates;
+    state.torrentVideoIndex = candidates.length === 1 ? candidates[0].index : null;
+    var select = el['torrent-video-select'];
+    select.innerHTML = '<option value="">Choose a video from the torrent…</option>';
+    candidates.forEach(function (candidate) {
+      var option = document.createElement('option');
+      option.value = String(candidate.index);
+      option.textContent = candidate.path + ' — ' + torrentSizeLabel(candidate.length);
+      select.appendChild(option);
+    });
+    select.disabled = false;
+    if (state.torrentVideoIndex !== null) select.value = String(state.torrentVideoIndex);
+    text(el['torrent-video-hint'], candidates.length === 1
+      ? 'One supported video found; it has been selected automatically.'
+      : candidates.length + ' video files found. Choose the exact episode, clip, or feature to analyze.');
+    show(el['torrent-video-field']);
+  }
+
   if (el['torrent-file-input']) {
-    el['torrent-file-input'].addEventListener('change', function () {
+    el['torrent-file-input'].addEventListener('change', async function () {
       var file = el['torrent-file-input'].files && el['torrent-file-input'].files[0];
-      state.torrentFile = file || null;
+      resetTorrentChoice();
       if (!file) return;
       if (!/\.torrent$/i.test(file.name) || file.size <= 0 || file.size > MAX_TORRENT_BYTES) {
-        state.torrentFile = null;
         el['torrent-file-input'].value = '';
         setMsg(el['stage-a-msg'], 'Choose a non-empty .torrent file no larger than 1 MB.', 'bad');
         return;
       }
-      // A torrent is an alternative source, never an attachment to a URL job.
-      if (el['video-url-input']) el['video-url-input'].value = '';
-      setMsg(el['stage-a-msg'], 'Torrent selected: ' + file.name + '. It will be uploaded with this task.', 'ok');
+      if (!window.ClipForgeTorrent) {
+        el['torrent-file-input'].value = '';
+        setMsg(el['stage-a-msg'], 'Torrent metadata support did not load. Refresh and try again.', 'bad');
+        return;
+      }
+      state.torrentFile = file;
+      try {
+        var metadata = window.ClipForgeTorrent.inspect(new Uint8Array(await file.arrayBuffer()));
+        if (state.torrentFile !== file) return; // a newer selection won the race
+        renderTorrentCandidates(metadata);
+        // A torrent is an alternative source, never an attachment to a URL job.
+        if (el['video-url-input']) el['video-url-input'].value = '';
+        setMsg(el['stage-a-msg'], 'Torrent ready: ' + metadata.name + '.', 'ok');
+      } catch (torrentErr) {
+        if (state.torrentFile !== file) return;
+        resetTorrentChoice();
+        el['torrent-file-input'].value = '';
+        setMsg(el['stage-a-msg'], torrentErr.message, 'bad');
+      }
+    });
+  }
+
+  if (el['torrent-video-select']) {
+    el['torrent-video-select'].addEventListener('change', function () {
+      var index = Number(el['torrent-video-select'].value);
+      var found = state.torrentVideoCandidates.some(function (candidate) { return candidate.index === index; });
+      state.torrentVideoIndex = found ? index : null;
+      if (found) setMsg(el['stage-a-msg'], 'Torrent video selected. It will be the only payload retrieved.', 'ok');
     });
   }
 
@@ -1257,6 +1320,11 @@
     }
     if (videoUrl && torrentFile) {
       setMsg(el['stage-a-msg'], 'Use either a video URL or a torrent file, not both.', 'bad');
+      return;
+    }
+    if (torrentFile && !state.torrentVideoIndex) {
+      setMsg(el['stage-a-msg'], 'Choose the exact video payload from this torrent before starting Stage A.', 'bad');
+      show(el['torrent-video-field']);
       return;
     }
 
@@ -1281,7 +1349,8 @@
       whisper_model: el['whisper-model-select'].value,
       language: el['language-input'].value.trim() || 'auto',
       target_duration_seconds: String(targetDurInt),
-      focus: focus
+      focus: focus,
+      torrent_file_index: torrentFile ? String(state.torrentVideoIndex) : ''
     };
 
     state.busy = true;
