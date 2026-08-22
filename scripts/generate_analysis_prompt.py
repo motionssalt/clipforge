@@ -858,7 +858,7 @@ CONSTRAINTS
     noteworthy to a viewer, then assign each one a literal `#RRGGBB` color
     that fits its emotional weight. You make both editorial decisions: which
     words deserve emphasis and which exact color they receive. Use
-    `[{"word": "exact script word", "color": "#RRGGBB"}]` (or omit the
+    `[{{"word": "exact script word", "color": "#RRGGBB"}}]` (or omit the
     field). Never emit a `tone`, sentiment label, color family, or other
     abstract classification; ClipForge applies literal colors and performs no
     tone-to-color interpretation.
