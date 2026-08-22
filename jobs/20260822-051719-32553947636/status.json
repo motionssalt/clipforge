@@ -1,7 +1,7 @@
 {
   "job_id": "20260822-051719-32553947636",
-  "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-20260822-051719-32553947636",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-20260822-051719-32553947636",
   "assets": {
@@ -13,16 +13,17 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-20260822-051719-32553947636/transcript.json"
   },
   "created_at_epoch": 1787375934,
-  "updated_at_epoch": 1787379222,
+  "updated_at_epoch": 1787380675,
   "expires_at_epoch": 1787419134,
   "extra": {
-    "workflow_run_id": "32556030807",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32556030807",
+    "workflow_run_id": "32557426841",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32557426841",
     "duration_seconds": "1416",
     "screenshot_count": "236",
     "event_frame_count": "57",
     "shot_count": "359",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "music_ref": "path:audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a"
   }
 }
