@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/final.mp4"
   },
   "created_at_epoch": 1787428930,
-  "updated_at_epoch": 1787433952,
+  "updated_at_epoch": 1787435031,
   "expires_at_epoch": 1787472130,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787428930305/torrent-selection.json",
@@ -32,5 +32,105 @@
     "music_ref": "",
     "title": "Rick's Car Battery Is Powered by an Entire Universe",
     "branding_applied": false
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "partial",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-torrent-1787428930305-mt4wneaf",
+    "updated_at_epoch": 1787435031,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 70466554,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "Rick's Car Battery Is Powered by an Entire Universe",
+      "caption": "Rick's Car Battery Is Powered by an Entire Universe",
+      "hashtags": [
+        "#rickandmorty",
+        "#microverse",
+        "#sciencefiction",
+        "#animation",
+        "#multiverse",
+        "#morty",
+        "#scifi"
+      ],
+      "tags": [
+        "rick and morty",
+        "rick's microverse",
+        "microverse battery",
+        "rick and morty microverse",
+        "zeep xanthor",
+        "miniverse",
+        "teenyverse",
+        "slavery with extra steps",
+        "rick and morty explained",
+        "animated science fiction",
+        "multiverse comedy",
+        "rick car battery",
+        "morty reaction",
+        "adult swim animation"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8a180e610fca16c8d1a362",
+        "status": "failed",
+        "scheduled_for": "2026-08-22T21:43:39.732Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://media.zernio.com/media/tiktok-avatars/1787416794295_nvku2esq_tiktok-avatar--0003IL_UGLWZzU4NFh1PSU2Ex1YvKPeuBhq.jpg",
+              "username": ".chimeravfx"
+            },
+            "status": "failed"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-torrent-1787428930305-mt4wneaf-tiktok"
+      },
+      {
+        "post_id": "6a8a1812610fca16c8d1a4f5",
+        "status": "published",
+        "scheduled_for": "2026-08-22T21:43:43.580Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "PdJzcsW4ATw",
+            "platformPostUrl": "https://www.youtube.com/watch?v=PdJzcsW4ATw"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-torrent-1787428930305-mt4wneaf-youtube"
+      }
+    ],
+    "metadata_source": "jobs/torrent-1787428930305/production.json"
   }
 }
