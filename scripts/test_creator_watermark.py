@@ -30,12 +30,19 @@ def test_layers_are_condensed_centered_and_safe() -> None:
         shadow_box = alpha.getbbox()
         text_box = mask.getbbox()
         assert shadow_box and text_box
-        assert alpha.getextrema()[1] == 255, "shadow must remain completely opaque"
+        assert 0 < alpha.getextrema()[1] < 255, "shadow must be visibly present but not fully opaque"
         assert 120 < text_box[2] - text_box[0] < 600, "name should be visibly condensed, not full-width"
         center = (text_box[0] + text_box[2]) / 2
         assert abs(center - 540) <= 2, "name should be bottom-centered"
         assert text_box[3] <= 1200 - round(1200 * watermark.BOTTOM_SAFE_FRACTION) + 2
         assert mask.getextrema()[1] < 255, "foreground must stay non-opaque for blended treatment"
+
+
+def test_shadow_uses_soft_letter_shaped_drop_shadow_not_dilation() -> None:
+    assert "ImageFilter.GaussianBlur" in COMPOSITOR
+    assert "ImageFilter.MaxFilter" not in COMPOSITOR
+    assert "SHADOW_OPACITY = 0.74" in COMPOSITOR
+    assert "hard, opaque word-sized rectangle" in COMPOSITOR
 
 
 def test_compositor_uses_light_screen_blend_for_foreground() -> None:

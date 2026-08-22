@@ -3,7 +3,8 @@
 
 The compositor deliberately creates two transparent full-frame overlays:
 
-* an **opaque, expanded black shadow** behind the letterforms; and
+* a **soft, semi-transparent black drop shadow** that follows the
+  individual letterforms; and
 * a partially transparent letter mask whose pixels are sampled from an
   FFmpeg ``screen`` blend of the current frame and white, producing the
   intended light overlay treatment on both dark and bright footage.
@@ -29,7 +30,8 @@ FONT_HEIGHT_FRACTION = 0.055
 MIN_FONT_SIZE = 38
 MAX_FONT_SIZE = 76
 BOTTOM_SAFE_FRACTION = 0.062
-SHADOW_EXPAND_PX = 9
+SHADOW_BLUR_RADIUS_PX = 2.0
+SHADOW_OPACITY = 0.74
 SHADOW_OFFSET_Y_PX = 5
 TEXT_MASK_OPACITY = 0.63
 
@@ -60,7 +62,9 @@ def fit_text_mask(name: str, width: int, height: int) -> tuple[Image.Image, tupl
     left, top, right, bottom = draw.textbbox((0, 0), name, font=font, stroke_width=0)
     natural_width = max(1, right - left)
     natural_height = max(1, bottom - top)
-    pad = SHADOW_EXPAND_PX + SHADOW_OFFSET_Y_PX + 4
+    # Reserve blur falloff and the offset so no part of the letter-shaped
+    # shadow can be clipped at the safe-area boundary.
+    pad = int(SHADOW_BLUR_RADIUS_PX * 3) + SHADOW_OFFSET_Y_PX + 4
     glyph = Image.new("L", (natural_width + pad * 2, natural_height + pad * 2), 0)
     glyph_draw = ImageDraw.Draw(glyph)
     glyph_draw.text((pad - left, pad - top), name, font=font, fill=255)
@@ -85,11 +89,13 @@ def build_layers(name: str, width: int, height: int, directory: Path) -> tuple[P
     # arrives from FFmpeg's Screen blend rather than an opaque caption color.
     text_mask = text_mask.point(lambda value: round(value * TEXT_MASK_OPACITY))
 
-    # MaxFilter grows every glyph edge into a dense opaque silhouette. Unlike a
-    # normal thin/drop shadow it remains readable on bright detailed footage.
+    # A Gaussian drop shadow keeps the silhouette of each letter. The former
+    # wide MaxFilter acted as morphological dilation: neighboring glyphs merged
+    # into a hard, opaque word-sized rectangle before the text was composited.
     shadow_source = Image.new("L", (width, height), 0)
     shadow_source.paste(glyph, (x, y + SHADOW_OFFSET_Y_PX))
-    shadow_alpha = shadow_source.filter(ImageFilter.MaxFilter(SHADOW_EXPAND_PX * 2 + 1))
+    shadow_alpha = shadow_source.filter(ImageFilter.GaussianBlur(SHADOW_BLUR_RADIUS_PX))
+    shadow_alpha = shadow_alpha.point(lambda value: round(value * SHADOW_OPACITY))
     shadow_rgba = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     shadow_rgba.putalpha(shadow_alpha)
 
@@ -131,7 +137,7 @@ def apply_watermark(source: Path, destination: Path, name: str) -> None:
             "-movflags", "+faststart", "-map_metadata", "-1", "-map_chapters", "-1",
             "-shortest", str(destination),
         ]
-        print("Applying creator watermark: screen-blended condensed text + opaque expanded shadow")
+        print("Applying creator watermark: screen-blended condensed text + soft letter-shaped shadow")
         print("$ " + " ".join(command), flush=True)
         subprocess.run(command, check=True)
 
