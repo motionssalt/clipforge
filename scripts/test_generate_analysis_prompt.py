@@ -46,6 +46,12 @@ for required_phrase in (
     "short declarative sentences, concrete source-backed details",
     "Do not hedge, recap the same",
     "declarative commentary style: concrete source-backed facts",
+    "WORD CHOICE & PERSONALITY — change the phrasing, NOT the voice delivery",
+    "casual turns of phrase, playful understatement, teasing, blunt reactions",
+    "Mild profanity is allowed very occasionally",
+    "Tease a visible choice, plan, or consequence",
+    "LANGUAGE-ONLY instruction",
+    "Do not change narration pace, delivery, or audio direction",
 ):
     assert required_phrase in rendered, f"missing narration-style guidance: {required_phrase}"
-print("PASS: analysis prompt renders literal keyword JSON and declarative narration guidance")
+print("PASS: analysis prompt renders literal keyword JSON plus lively, source-grounded wording guidance without changing delivery")
