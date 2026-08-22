@@ -17,10 +17,10 @@ mode, so cinematic output cannot acquire legacy channel chrome.
 CINEMATIC CAPTION BEHAVIOR
 ---------------------------------------------------------------------------
   * GRANULARITY — text is grouped and timed as complete sentence cards.
-  * TIMING — each card appears fully at its first aligned word and remains
-    fully visible through its final aligned word. Consecutive cards swap
-    directly; there is no fade, overlap, scale, tracking, or character-level
-    animation.
+  * TIMING — each card appears fully at its first aligned word. Consecutive
+    close-together cards swap directly with no fade, overlap, scale, tracking,
+    or character-level animation. Only a long otherwise-empty gap causes the
+    completed card to fade away before the next card arrives.
   * STYLE — compact Coolvetica text in the source script's casing, with a soft gray-black
     drop shadow immediately down and right of the glyphs, centred in the
     frame both horizontally and vertically (Alignment=5). The narrow
@@ -144,9 +144,11 @@ CIN_BANNER_OUT_SECONDS = 0.7           # eased drop-out duration (same motion, r
 CIN_BANNER_LAYER = 8                   # above the caption stacks (0-7)
 CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 
-# Caption cards are intentionally static: the full sentence appears at its
-# first aligned word and remains visible through the aligned end of that
-# sentence. There is no fade, scale, tracking, or character-level animation.
+# Caption cards remain static for ordinary close-together dialogue. When the
+# next card is at least this far away, the completed card fades only within the
+# otherwise-empty gap rather than lingering awkwardly or cutting abruptly.
+CIN_CAPTION_LONG_GAP_SECONDS = 3.0
+CIN_CAPTION_GAP_FADE_SECONDS = 1.0
 
 # ---------- Author-controlled keyword colors ----------
 # production.json optionally carries literal #RRGGBB values chosen by its
@@ -561,6 +563,36 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     return runs
 
 
+def _caption_card_opacity(sentences: list[dict], index: int, time_s: float) -> float:
+    """Return a static card's gap-aware opacity without permitting overlap."""
+    sentence = sentences[index]
+    start = float(sentence["start"])
+    spoken_end = float(sentence["speak_end"])
+    next_start = (float(sentences[index + 1]["start"])
+                  if index + 1 < len(sentences) else spoken_end)
+
+    if time_s < start or time_s >= next_start:
+        return 0.0
+    # The next card is not yet ready. Short pauses retain the completed card
+    # at full opacity and swap directly when the next card starts.
+    gap = next_start - spoken_end
+    if gap < CIN_CAPTION_LONG_GAP_SECONDS or time_s < spoken_end:
+        return 1.0
+
+    # In a long otherwise-empty pause, wait up to the threshold then use a
+    # one-second fade. If the gap is only barely long enough, pull the fade
+    # earlier so it can finish cleanly before the incoming card cuts in.
+    fade_start = min(spoken_end + CIN_CAPTION_LONG_GAP_SECONDS,
+                     next_start - CIN_CAPTION_GAP_FADE_SECONDS)
+    fade_end = min(fade_start + CIN_CAPTION_GAP_FADE_SECONDS, next_start)
+    if time_s < fade_start:
+        return 1.0
+    if time_s >= fade_end:
+        return 0.0
+    return max(0.0, min(1.0, (fade_end - time_s) /
+                        max(fade_end - fade_start, 0.001)))
+
+
 def _apply_mask(canvas: Image.Image, mask: Image.Image,
                 rgb: tuple[int, int, int], opacity: float = 1.0,
                 offset: tuple[int, int] = (0, 0)) -> None:
@@ -583,11 +615,12 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                            font) -> Image.Image:
     """Return compact caption glyphs over a soft gray-black drop shadow."""
     foreground = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    for sentence in sentences:
-        # Each card is fully present from its first aligned word until the
-        # final aligned word ends. Consecutive cards swap directly; no fade,
-        # scale, tracking, or character-level transition is applied.
-        if time_s < sentence["start"] or time_s >= sentence["speak_end"]:
+    for sentence_index, sentence in enumerate(sentences):
+        # Cards are static for close dialogue. A completed card may only fade
+        # during a long otherwise-empty gap and is always cut at the incoming
+        # card's exact start, so the renderer never produces an overlap.
+        card_opacity = _caption_card_opacity(sentences, sentence_index, time_s)
+        if card_opacity <= 0.0:
             continue
         masks: dict[tuple[int, int, int], Image.Image] = {}
         union = Image.new("L", (width, height), 0)
@@ -607,10 +640,10 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
         soft_shadow = union.filter(
             ImageFilter.GaussianBlur(radius=CIN_RASTER_SHADOW_BLUR_RADIUS))
         _apply_mask(foreground, soft_shadow, CIN_RASTER_SHADOW_RGB,
-                    CIN_RASTER_SHADOW_ALPHA,
+                    CIN_RASTER_SHADOW_ALPHA * card_opacity,
                     (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
         for color, mask in masks.items():
-            _apply_mask(foreground, mask, color)
+            _apply_mask(foreground, mask, color, card_opacity)
     return foreground
 
 

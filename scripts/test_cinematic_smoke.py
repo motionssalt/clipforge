@@ -62,7 +62,7 @@ def mk(words, t0, per=0.22):
     return out
 
 events = []
-for cut_text, t0 in zip(texts, (1.0, 5.0)):
+for cut_text, t0 in zip(texts, (1.0, 6.5)):
     events += mk(cut_text.split(), t0)
 
 sentences = cin.split_sentences(events)
@@ -86,7 +86,30 @@ static_font = cin._caption_font(max(
 static_runs = cin._caption_layout(
     s1, static_font, cin.CIN_FRAME_WIDTH, cin.CIN_FRAME_HEIGHT)
 assert static_runs and all("x" in run and "y" in run for run in static_runs)
-print("PASS: static <=6-word caption cards use direct voice-aligned timing")
+
+# Short pauses hold the completed card at full opacity until the incoming card
+# cuts in. Long pauses reserve an empty tail by fading the completed card out.
+short_gap_cards = [
+    {"start": 0.0, "speak_end": 1.0, "words": []},
+    {"start": 2.5, "speak_end": 3.0, "words": []},
+]
+assert cin._caption_card_opacity(short_gap_cards, 0, 1.1) == 1.0
+assert cin._caption_card_opacity(short_gap_cards, 0, 2.499) == 1.0
+assert cin._caption_card_opacity(short_gap_cards, 0, 2.5) == 0.0
+assert cin._caption_card_opacity(short_gap_cards, 1, 2.5) == 1.0
+
+long_gap_cards = [
+    {"start": 0.0, "speak_end": 1.0, "words": []},
+    {"start": 5.0, "speak_end": 5.5, "words": []},
+]
+assert cin._caption_card_opacity(long_gap_cards, 0, 3.9) == 1.0
+mid_fade = cin._caption_card_opacity(long_gap_cards, 0, 4.5)
+assert 0.0 < mid_fade < 1.0, mid_fade
+assert cin._caption_card_opacity(long_gap_cards, 0, 5.0) == 0.0
+assert cin._caption_card_opacity(long_gap_cards, 1, 5.0) == 1.0
+assert cin.CIN_CAPTION_LONG_GAP_SECONDS == 3.0
+assert cin.CIN_CAPTION_GAP_FADE_SECONDS == 1.0
+print("PASS: short-gap hold, long-gap fade, and no-overlap cutover")
 
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
