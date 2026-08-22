@@ -18,16 +18,15 @@ ENGINE: Gemini API TTS (replaces the previous Chatterbox implementation).
                      controllable narration).
   - Fallback model : gemini-2.5-flash-preview-tts (cheaper / lower latency
                      when the pro tier is refused for any reason).
-  - Voice          : `Charon` — Gemini's deep, informative narrator voice.
-                     `Algenib` (gravelly) is used as the secondary voice
-                     if `Charon` is rejected on a given key.
+  - Voice          : `Charon` — Gemini's informative narrator voice.
+                     `Algenib` remains a fallback if `Charon` is rejected
+                     on a given key.
   - Style prompt   : the raw `voiceover_text` from production.json is
-                     prefixed with a directorial instruction that shapes
-                     the delivery toward the JJK / HxH narrator style
-                     (solemn, deep, gravelly, measured, dramatic yet
-                     restrained). The voiceover_text itself is NOT
-                     modified — only the natural-language instruction
-                     that tells Gemini HOW to read it.
+                     prefixed with the rapid-neutral commentary direction:
+                     fast but articulated, even in tempo and energy, and
+                     deliberately near-emotionless. The voiceover_text
+                     itself is NOT modified — only the natural-language
+                     instruction that tells Gemini HOW to read it.
 
 API KEYS: read from the `GEMINI_API_KEYS` environment variable populated
 by stage-b.yml from a GitHub Actions repository secret managed by the
@@ -104,38 +103,29 @@ KEY_COOLDOWN_S = 10 * 60
 _key_cooldown_until: dict[int, float] = {}
 _key_model_blocked: set[tuple[int, str]] = set()
 
-# Voice preference order. `Charon` is Gemini's deep, informative narrator
-# voice — the closest match to the requested JJK / HxH narrator character
-# out of the prebuilt voice roster. `Algenib` is a gravelly baritone kept
-# as a secondary in case `Charon` is ever rejected for a given key.
+# Voice preference order. `Charon`'s informative narrator character is the
+# most natural starting point for controlled commentary. `Algenib` remains
+# only a compatibility fallback when a key rejects the preferred voice.
 TTS_VOICES = ("Charon", "Algenib")
+TTS_PRESET_NAME = "commentary_rapid_neutral"
 
-# Directorial instruction prepended to every line before it is sent to
-# Gemini. Gemini's TTS models take natural-language style guidance in
-# the input text itself; this is the only lever the API exposes for
-# shaping delivery (there is no numeric speed/rate parameter in the
-# generateContent speechConfig — pace is steered entirely through this
-# prompt). This is what actually pushes the reading toward the Jujutsu
-# Kaisen / Hunter x Hunter narrator character AND controls how fast it
-# talks. The previous wording ("measured pacing... Do not rush...
-# clear pauses between clauses") was directly telling the model to
-# speak slowly, which was the real cause of the sluggish narration —
-# not a missing speed setting. Keep the same voice/tone description
-# (deep, gravelly, dramatic anime-narrator baritone) but replace the
-# pacing instruction with an explicit fast/rapid-fire one aimed at
-# short-form content. Do not shorten this casually.
+# Gemini's TTS API accepts natural-language direction in the text prompt;
+# it exposes no separate numeric speed/rate control. This instruction is the
+# active commentary preset. Its constraints deliberately work together:
+# rapid delivery for short-form retention, explicit evenness for consistency,
+# and neutral/flat phrasing without dramatic performance. The intelligibility
+# clause prevents the model from treating "rapid" as permission to slur words.
 STYLE_PROMPT = (
-    "Read the following line as a deep-voiced, gravelly anime narrator "
-    "in the style of the Jujutsu Kaisen and Hunter x Hunter series "
-    "narrators, but deliver it FAST: rapid-fire, energetic, hype, "
-    "high-momentum pacing suited to a fast-cut TikTok or YouTube Shorts "
-    "video. Speak noticeably quicker than a normal audiobook or "
-    "documentary narrator — push the tempo hard and keep it driving "
-    "forward with minimal space between words and clauses, while still "
-    "keeping the same weighty, dramatic, gravelly baritone character "
-    "and staying clearly intelligible. Do not sound slow, deliberate, "
-    "or heavily paused. Do not add filler words or sound effects. "
-    "Speak only the line below, nothing else:\n\n"
+    "Read the following line as concise commentary for a short-form video. "
+    "Use a rapid, brisk pace—about one and a quarter times normal "
+    "conversational speech—but articulate every word distinctly. Keep the "
+    "tempo, pitch, loudness, and energy steady from beginning to end. Use a "
+    "neutral, near-emotionless, matter-of-fact delivery: flat and controlled, "
+    "not dramatic, hype, suspenseful, theatrical, gravelly, or expressive. "
+    "Do not rush words together; keep only tiny natural pauses at punctuation "
+    "so every phrase remains fully intelligible. Do not add filler words, "
+    "sound effects, or any words beyond the line. Speak only the line below, "
+    "nothing else:\n\n"
 )
 
 # HTTP behavior.
@@ -619,6 +609,7 @@ def main() -> None:
     manifest = {
         "version": 1,
         "engine": "gemini-tts",
+        "voice_preset": TTS_PRESET_NAME,
         "sample_rate_hz": SAMPLE_RATE_HZ,
         "channels": CHANNELS,
         "sample_width_bytes": SAMPLE_WIDTH_BYTES,
