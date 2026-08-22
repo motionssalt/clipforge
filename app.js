@@ -3799,6 +3799,19 @@
    * video release asset) are looked up by the unchanged job_id, so the
    * restart reuses existing project state and Stage A is NOT re-run.
    */
+  function persistedMusicRef(status) {
+    // `null` means this is an older job without persisted music metadata, so
+    // callers may use the historic uploaded-file fallback. An explicit empty
+    // string is meaningful: the original job intentionally had no music.
+    if (!status || !status.extra ||
+        !Object.prototype.hasOwnProperty.call(status.extra, 'music_ref')) {
+      return null;
+    }
+    return typeof status.extra.music_ref === 'string'
+      ? status.extra.music_ref.trim()
+      : '';
+  }
+
   async function restartStageB() {
     if (state.busy || !state.jobId || isActiveStageBRun()) return;
     state.busy = true;
@@ -3806,12 +3819,28 @@
     try {
       var base = '/repos/' + state.owner + '/' + state.repo + '/contents/jobs/' + encodeURIComponent(state.jobId);
       await gh(base + '/production.json?ref=' + REF + '&_=' + Date.now());
-      var musicRef = '';
+
+      // Stage B records its original `music_ref` in status.json as soon as
+      // the run begins. Prefer that exact value: it preserves an audio-library
+      // selection and also preserves an explicit no-music choice. Older jobs
+      // without this metadata retain the established job-local upload fallback.
+      var savedMusicRef = null;
       try {
-        await gh(base + '/music.mp3?ref=' + REF + '&_=' + Date.now());
-        musicRef = 'path:jobs/' + state.jobId + '/music.mp3';
-      } catch (musicErr) {
-        if (musicErr.status !== 404) throw musicErr;
+        var statusFile = await gh(base + '/status.json?ref=' + REF + '&_=' + Date.now());
+        savedMusicRef = persistedMusicRef(JSON.parse(b64decodeUtf8(statusFile.content)));
+      } catch (statusErr) {
+        if (statusErr.status !== 404) throw statusErr;
+      }
+
+      var musicRef = savedMusicRef;
+      if (musicRef === null) {
+        musicRef = '';
+        try {
+          await gh(base + '/music.mp3?ref=' + REF + '&_=' + Date.now());
+          musicRef = 'path:jobs/' + state.jobId + '/music.mp3';
+        } catch (musicErr) {
+          if (musicErr.status !== 404) throw musicErr;
+        }
       }
 
       // Resolve the branch to its CURRENT tip SHA at click time. Cache-bust

@@ -184,6 +184,7 @@ jobs:
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_b_running" \
             --message "Stage B started: producing final video (voiceover, music, subtitles)" \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --extra "music_ref=${{ github.event.inputs.music_ref }}" \
             --extra "workflow_run_id=${{ github.run_id }}" \
             --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           git config user.name  "github-actions[bot]"
