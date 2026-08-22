@@ -27,10 +27,10 @@ on:
         type: string
         default: "true"
       brand:
-        description: "Composite the merged video into the branded 1080x1200 (10:9) template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. Default true; set to false to ship unbranded. When no username is configured yet the job ships unbranded either way."
+        description: "Composite the merged video into the branded 1080x1200 (10:9) template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. DEFAULT FALSE: cinematic mode ships the bare video frame — only the video content plus the burned-in cinematic captions and the one-time intro title banner, with no persistent chrome (no header bar, no lower title/CTA block, no avatar overlay). Set to true only to deliberately opt a single run back into the legacy branded chrome. When no username is configured the job ships unbranded either way."
         required: false
         type: string
-        default: "true"
+        default: "false"
       subtitle_mode:
         description: "Caption renderer for this job. 'word' = legacy template mode (one word at a time, condensed font, lower third). 'cinematic' = new cinematic mode (per-sentence captions: word-by-word fade-in, letter-by-letter fade-out, overlapping layered transitions, glow + drop shadow, centred frame, sentiment keyword colours from production.json). Default word until the cinematic mode is fully validated; a later batch retires template mode entirely."
         required: false
