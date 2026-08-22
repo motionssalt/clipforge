@@ -662,6 +662,82 @@ STEP 3 (assemble cuts).
           ENGAGING, NOT JUST ACCURATE" above. Do not default to one long
           clause-stacked sentence per beat.
 
+        OPENING HOOK — FIRST-CUT WRITING:
+
+        The first 1–2 sentences of the FIRST cut have a higher standard than
+        ordinary beat narration. They are the viewer's reason to continue,
+        not merely the chronological start of a summary. Before drafting that
+        cut, identify the strongest fact genuinely supported by the selected
+        story and screenshots: the most curiosity-inducing, surprising,
+        dangerous, absurd, emotional, ironic, or high-stakes truth.
+
+        Do NOT begin by mechanically summarizing the first chronological event
+        when a later consequence, reversal, impossible situation, visible
+        mistake, unanswered question, or contrast creates a better honest way
+        into the story. You may tease that source-supported consequence first,
+        then give the minimum context needed to make the following beats clear.
+        Tease; do not falsely reveal or spoil the whole payoff unless the
+        revealed outcome itself is clearly the strongest truthful hook.
+
+        Choose the hook mechanism that fits THIS footage, not a reusable
+        formula: curiosity, consequence, stakes, irony, mystery, shock,
+        character mistake, impossible situation, emotional tension,
+        absurdity, or contradiction. Vary the mechanism naturally across
+        stories. Do not force drama into a quiet scene and do not make every
+        story sound like the same kind of viral clip.
+
+        Write several candidate opening lines internally, then select the
+        most compact, natural one that satisfies at least two of these when
+        the source supports them: curiosity, stakes, an implied consequence,
+        an unanswered question, a surprising fact, tension, or irony. The
+        chosen line must be immediately understandable when spoken, leave a
+        meaningful question unanswered, and flow naturally into the next line.
+        Aim for roughly 7–14 words in the first sentence; do not exceed about
+        16 words unless a source-backed name or fact genuinely needs the room.
+        Reject a candidate that merely begins with a generic person doing the
+        first action (for example, "a man picks up...", "he walks in...",
+        "a teenager steps into...", or "she goes to confront...") when the
+        real hook can instead front-load the pressure point, unusual object,
+        consequence, or reversal. This is a quality guard, not a mechanical
+        ban: use a person-first line only when it is truly the most compelling
+        source-backed entry point. If a later source-backed disruption makes an
+        ordinary entrance dangerous, awkward, absurd, or consequential, frame
+        that disruption before explaining who walked where.
+
+        For a mystery or reveal, default to withholding the hidden answer in
+        the opening. Do not resolve the mystery by naming the contained item,
+        culprit, final identity, or last beat when a truthful unanswered
+        question can carry the hook. Let the viewer discover the payoff through
+        the footage and following narration. Reveal it early only when the
+        outcome itself is plainly the strongest honest reason to continue —
+        not merely because it is available in the source notes.
+
+        Use HOOK → minimal context → escalation → payoff where the footage
+        supports that arc. Give each sentence forward pull: an event should
+        imply the next consequence or question, not become a flat list of
+        actions. Avoid spending the opening on generic framing such as a bare
+        chronological setup, "in this scene," "basically," or "after that"
+        unless it is genuinely the strongest source-backed wording.
+
+        OPENING QUALITY GATE — before returning production.json, internally
+        test the first 1–2 sentences. Would a viewer who knows nothing about
+        the source want the next sentence? Is this stronger than merely
+        describing the first event? Does it create genuine curiosity, tension,
+        stakes, surprise, irony, or an unanswered question? Is every claim
+        supported by the source? Does it sound natural in the existing spoken
+        commentary voice? Does it avoid forced slang, generic viral phrasing,
+        and an unnecessary payoff spoiler? Does it pull naturally into the
+        next sentence? If the answer to any applicable question is no, rewrite
+        the opening internally before producing the final JSON.
+
+        HIGHER CURIOSITY WITHOUT LOWERING ACCURACY: do not invent events,
+        motivations, dialogue, reactions, relationships, or consequences.
+        Do not manufacture suspense unsupported by the screenshots,
+        transcript, indexes, or selected cuts. Do not force slang, fake
+        excitement, or generic viral phrasing. The language itself, not the
+        TTS, must make the opening stronger; preserve the existing natural,
+        confident commentary personality and all existing delivery behavior.
+
         CHARACTER LABELS IN voiceover_text:
         - Identify each recurring character yourself from the
           screenshots and transcript, and refer to them by the SAME
@@ -755,8 +831,11 @@ STEP 3 (assemble cuts).
             paragraph of recap.
 
           - The first cut's voiceover_text opens the story. It does
-            not need a connective lead-in, but it SHOULD orient the
-            viewer on who / what / where in its first sentence.
+            not need a connective lead-in. Apply the OPENING HOOK rule:
+            lead with the strongest compact, source-supported reason to
+            keep watching rather than automatically orienting who / what /
+            where in the first sentence. Supply that essential context in
+            the next short sentence or as soon as the story needs it.
 
           - The last cut's voiceover_text ends the story. Land on the
             final beat from the source; do not add a wrap-up.
