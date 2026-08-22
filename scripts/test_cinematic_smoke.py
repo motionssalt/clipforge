@@ -127,8 +127,11 @@ ass_path = os.path.join(WORK, "cinematic.ass")
 cin.write_cinematic_ass(sentences, kw, W, H, ass_path)
 ass = open(ass_path, encoding="utf-8").read()
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
-assert "CinGlow" in ass and "CinText" in ass
-assert "\\blur" in ass, "glow blur missing"
+assert all(style in ass for style in ("CinShadow", "CinGlowFar", "CinGlowNear", "CinText"))
+assert f"\\blur{cin.CIN_GLOW_FAR_BLUR}" in ass, "wide outer glow blur missing"
+assert f"\\blur{cin.CIN_GLOW_NEAR_BLUR}" in ass, "inner glow blur missing"
+assert f"\\blur{cin.CIN_SHADOW_BLUR}" in ass, "soft shadow blur missing"
+assert f"\\pos({W // 2 + int(round(W * cin.CIN_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_SHADOW_OFFSET_Y_FRACTION))})" in ass, "offset shadow position missing"
 assert "\\alpha&HFF&" in ass, "fade tags missing"
 assert "\\c&H5C5CFF&" in ass, "tense keyword fill colour missing"
 assert "\\c&H5AC8FF&" in ass, "warm keyword fill colour missing"
@@ -141,11 +144,21 @@ import re as _re
 evs = _re.findall(r"Dialogue: (\d+),(\d+:\d+:\d+\.\d+),(\d+:\d+:\d+\.\d+),(Cin\w+)", ass)
 def ts(t):
     h, m, rest = t.split(":"); return int(h)*3600 + int(m)*60 + float(rest)
-text_evs = [(l, ts(s), ts(e)) for l, s, e, sty in evs if sty == "CinText"]
+events_by_style = {
+    style: [(l, ts(s), ts(e)) for l, s, e, got_style in evs if got_style == style]
+    for style in ("CinShadow", "CinGlowFar", "CinGlowNear", "CinText")
+}
+assert all(len(style_events) == len(sentences) for style_events in events_by_style.values())
+text_evs = events_by_style["CinText"]
 assert text_evs[0][2] > text_evs[1][1], "no overlap between sentences 1 and 2"
-assert text_evs[0][0] != text_evs[1][0], "layer pairs not alternating"
-print(f"PASS: ASS structure (glow+text layers, centred, blur, alpha anim, "
-      f"keyword colours, letter fade-out, overlap "
+assert text_evs[0][0] != text_evs[1][0], "four-layer stacks not alternating"
+for shadow_ev, far_ev, near_ev, text_ev in zip(
+        events_by_style["CinShadow"], events_by_style["CinGlowFar"],
+        events_by_style["CinGlowNear"], text_evs):
+    assert (shadow_ev[1], shadow_ev[2]) == (far_ev[1], far_ev[2]) == \
+        (near_ev[1], near_ev[2]) == (text_ev[1], text_ev[2])
+print(f"PASS: ASS structure (deep shadow + far/near glow + text stack, "
+      f"centred, blur, alpha anim, keyword colours, letter fade-out, overlap "
       f"{text_evs[0][2]-text_evs[1][1]:.2f}s)")
 
 

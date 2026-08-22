@@ -121,12 +121,21 @@ CIN_FONT_FRACTION_OF_HEIGHT = 0.052
 # treatment. Both scale with frame height like the legacy constants.
 CIN_OUTLINE_FRACTION = 0.0030
 CIN_SHADOW_FRACTION = 0.0045
-# Glow layer: a blurred, generously-outlined copy of the same text
-# composited UNDER the main text. Outline colour is a soft gold with
-# ~40% transparency; the blur blooms it past the glyph edges.
-CIN_GLOW_OUTLINE_FRACTION = 0.0085
-CIN_GLOW_COLOR = "&H64" + "00BFFF"   # AABBGGRR: alpha 0x64, gold #FFBF00
-CIN_GLOW_BLUR = 7
+# Deep cinematic glow: three independent layers sit beneath the readable
+# text. A wide, low-opacity bloom creates the soft outer halo; a denser
+# mid-radius bloom gives it depth; a dark offset shadow anchors the type over
+# active footage. This deliberately avoids the thin single-outline look.
+CIN_GLOW_FAR_OUTLINE_FRACTION = 0.022
+CIN_GLOW_FAR_COLOR = "&HB0" + "FFFFFF"    # broad neutral-white outer halo
+CIN_GLOW_FAR_BLUR = 18
+CIN_GLOW_NEAR_OUTLINE_FRACTION = 0.014
+CIN_GLOW_NEAR_COLOR = "&H48" + "FFFFFF"   # dense neutral-white inner halo
+CIN_GLOW_NEAR_BLUR = 9
+CIN_SHADOW_OUTLINE_FRACTION = 0.008
+CIN_SHADOW_COLOR = "&H90" + "000000"      # diffuse shadow under glow
+CIN_SHADOW_BLUR = 7
+CIN_SHADOW_OFFSET_X_FRACTION = 0.003
+CIN_SHADOW_OFFSET_Y_FRACTION = 0.008
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
@@ -157,7 +166,7 @@ CIN_BANNER_TEXT_WIDTH_FRACTION = 0.90  # max title width vs frame width
 CIN_BANNER_IN_SECONDS = 0.6            # drop-in duration
 CIN_BANNER_HOLD_SECONDS = 7.0          # fully-visible hold
 CIN_BANNER_OUT_SECONDS = 0.6           # drop-out duration (same motion, reversed)
-CIN_BANNER_LAYER = 8                   # above the caption layer pairs (0-3)
+CIN_BANNER_LAYER = 8                   # above the caption stacks (0-7)
 CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 
 # ---------- Animation timing ----------
@@ -416,24 +425,30 @@ def build_banner_png(title: str, width: int, height: int,
 def write_cinematic_ass(sentences: list[dict], keyword_map: dict,
                         width: int, height: int, out_ass: str) -> None:
     """
-    One sentence = TWO Dialogue events sharing the same timespan:
-      * a GLOW event (even layer) — blurred gold outline copy, and
-      * a TEXT event (odd layer)  — the readable fill + drop shadow.
+    One sentence = FOUR Dialogue events sharing the same timespan:
+      * a soft, offset SHADOW pass;
+      * a wide, low-opacity FAR GLOW;
+      * a denser NEAR GLOW; and
+      * readable foreground TEXT.
 
-    Consecutive sentences alternate between layer pairs (0/1 and 2/3)
+    Consecutive sentences alternate between four-layer stacks (0-3 and 4-7)
     so an incoming sentence always composites ON TOP of the previous
     one while the previous one is still in its letter-by-letter
     fade-out — the deliberate overlap that makes the transition look
     layered rather than glitchy.
 
-    Both events are centred in the frame (Alignment=5) and carry
+    All four events are centred in the frame (Alignment=5) and carry
     identical per-word fade-in / per-character fade-out inline tags so
     the glow blooms and dissolves in lockstep with the text.
     """
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
     outline = max(1, int(round(height * CIN_OUTLINE_FRACTION)))
     shadow = max(1, int(round(height * CIN_SHADOW_FRACTION)))
-    glow_outline = max(2, int(round(height * CIN_GLOW_OUTLINE_FRACTION)))
+    far_glow_outline = max(4, int(round(height * CIN_GLOW_FAR_OUTLINE_FRACTION)))
+    near_glow_outline = max(3, int(round(height * CIN_GLOW_NEAR_OUTLINE_FRACTION)))
+    shadow_outline = max(2, int(round(height * CIN_SHADOW_OUTLINE_FRACTION)))
+    shadow_x = max(1, int(round(width * CIN_SHADOW_OFFSET_X_FRACTION)))
+    shadow_y = max(2, int(round(height * CIN_SHADOW_OFFSET_Y_FRACTION)))
     margin = int(round(width * 0.06))  # side clearance for wrapped lines
 
     header = f"""[Script Info]
@@ -445,7 +460,9 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: CinGlow,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_COLOR},{CIN_GLOW_COLOR},1,0,0,0,100,100,0,0,1,{glow_outline},0,5,{margin},{margin},0,1
+Style: CinShadow,{CIN_FONT},{font_size},&HFFFFFFFF,&HFFFFFFFF,{CIN_SHADOW_COLOR},{CIN_SHADOW_COLOR},1,0,0,0,100,100,0,0,1,{shadow_outline},0,5,{margin},{margin},0,1
+Style: CinGlowFar,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_FAR_COLOR},{CIN_GLOW_FAR_COLOR},1,0,0,0,100,100,0,0,1,{far_glow_outline},0,5,{margin},{margin},0,1
+Style: CinGlowNear,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_NEAR_COLOR},{CIN_GLOW_NEAR_COLOR},1,0,0,0,100,100,0,0,1,{near_glow_outline},0,5,{margin},{margin},0,1
 Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H8C000000,1,0,0,0,100,100,0,0,1,{outline},{shadow},5,{margin},{margin},0,1
 
 [Events]
@@ -462,8 +479,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         n_chars = sum(len(w["word"]) for w in words)
         event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
 
-        glow_layer = 2 * (i % 2)
-        text_layer = glow_layer + 1
+        stack_layer = 4 * (i % 2)
+        shadow_layer = stack_layer
+        far_glow_layer = stack_layer + 1
+        near_glow_layer = stack_layer + 2
+        text_layer = stack_layer + 3
 
         glow_parts: list[str] = []
         text_parts: list[str] = []
@@ -484,11 +504,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         start_ts = legacy._ass_time(s_start)
         end_ts = legacy._ass_time(event_end)
-        glow_text = f"{{\\blur{CIN_GLOW_BLUR}}}" + " ".join(glow_parts)
+        glow_text = " ".join(glow_parts)
         main_text = " ".join(text_parts)
         lines.append(
-            f"Dialogue: {glow_layer},{start_ts},{end_ts},CinGlow,,0,0,0,,"
-            f"{glow_text}\n"
+            f"Dialogue: {shadow_layer},{start_ts},{end_ts},CinShadow,,0,0,0,,"
+            f"{{\\blur{CIN_SHADOW_BLUR}\\pos({width // 2 + shadow_x},{height // 2 + shadow_y})}}{glow_text}\n"
+        )
+        lines.append(
+            f"Dialogue: {far_glow_layer},{start_ts},{end_ts},CinGlowFar,,0,0,0,,"
+            f"{{\\blur{CIN_GLOW_FAR_BLUR}}}{glow_text}\n"
+        )
+        lines.append(
+            f"Dialogue: {near_glow_layer},{start_ts},{end_ts},CinGlowNear,,0,0,0,,"
+            f"{{\\blur{CIN_GLOW_NEAR_BLUR}}}{glow_text}\n"
         )
         lines.append(
             f"Dialogue: {text_layer},{start_ts},{end_ts},CinText,,0,0,0,,"
@@ -499,9 +527,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f.writelines(lines)
     print(
         f"ASS cinematic subtitle file written: {out_ass} "
-        f"({len(sentences)} sentence event pair(s), font {CIN_FONT} Bold "
-        f"{font_size}px, outline {outline}px, shadow {shadow}px, glow "
-        f"outline {glow_outline}px + blur {CIN_GLOW_BLUR} — CENTRED in "
+        f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Bold "
+        f"{font_size}px, outline {outline}px, foreground shadow {shadow}px, "
+        f"deep glow far {far_glow_outline}px/blur {CIN_GLOW_FAR_BLUR} + "
+        f"near {near_glow_outline}px/blur {CIN_GLOW_NEAR_BLUR} + "
+        f"offset shadow {shadow_outline}px/blur {CIN_SHADOW_BLUR} — CENTRED in "
         f"the {width}x{height} video frame; word-by-word fade-in "
         f"{CIN_WORD_FADE_IN_MS}ms/word, letter-by-letter fade-out "
         f"{CIN_LETTER_FADE_OUT_MS}ms/sentence, >= "
