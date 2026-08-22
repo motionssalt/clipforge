@@ -21,7 +21,7 @@ CINEMATIC CAPTION BEHAVIOR
     fully visible through its final aligned word. Consecutive cards swap
     directly; there is no fade, overlap, scale, tracking, or character-level
     animation.
-  * STYLE — compact, all-caps Coolvetica text with a soft gray-black
+  * STYLE — compact Coolvetica text in the source script's casing, with a soft gray-black
     drop shadow immediately down and right of the glyphs, centred in the
     frame both horizontally and vertically (Alignment=5). The narrow
     condensed caption font and bottom-of-frame placement of template mode
@@ -93,10 +93,9 @@ CIN_FONT_FILE = os.path.normpath(os.path.join(
     "..", "assets", "fonts", "Coolvetica.ttf"))
 CIN_FONT = "Coolvetica Rg"
 CIN_FONT_FALLBACKS = ["DejaVu Sans", "Liberation Sans", "sans-serif"]
-# Compact sentence captions: reduced from 5.2% to 4.2% of frame height
-# so they occupy less of the live footage while retaining Coolvetica's strong
-# all-caps readability.
-CIN_FONT_FRACTION_OF_HEIGHT = 0.042
+# Static caption cards use a deliberately small 3.2%-of-frame type scale so
+# they read cleanly without dominating the live footage.
+CIN_FONT_FRACTION_OF_HEIGHT = 0.032
 # The timing/debug ASS sidecar approximates the production drop shadow with a
 # subtle, close offset. The rendered video is authored by the Pillow raster
 # compositor below, which supplies the actual Gaussian-softened edge.
@@ -172,27 +171,48 @@ def _hex_ass(color: str) -> str:
     red, green, blue = _hex_rgb(color)
     return f"&H{blue:02X}{green:02X}{red:02X}"
 
-_SENT_END_RE = re.compile(r'[.!?…]["\'”’)\]]*$')
+_SENT_END_RE = re.compile(r"[.!?…][\"')\]]*$")
+_CLAUSE_BREAK_RE = re.compile(r"[,;:—–][\"')\]]*$")
+MAX_CAPTION_WORDS = 6
+_MIN_TRAILING_CAPTION_WORDS = 2
+
+
+def _caption_card_chunks(words: list[dict]) -> list[list[dict]]:
+    """Split one sentence into short cards, preferring nearby clause breaks."""
+    cards: list[list[dict]] = []
+    remaining = list(words)
+    while len(remaining) > MAX_CAPTION_WORDS:
+        # Leave at least two words for the next card when possible. Among the
+        # final few legal positions, prefer the latest natural clause break;
+        # otherwise use the longest comfortable card.
+        upper = min(MAX_CAPTION_WORDS, len(remaining) - _MIN_TRAILING_CAPTION_WORDS)
+        lower = max(3, upper - 2)
+        clause_positions = [
+            pos for pos in range(lower, upper + 1)
+            if _CLAUSE_BREAK_RE.search(remaining[pos - 1]["word"])
+        ]
+        split_at = clause_positions[-1] if clause_positions else upper
+        cards.append(remaining[:split_at])
+        remaining = remaining[split_at:]
+    if remaining:
+        cards.append(remaining)
+    return cards
 
 
 def split_sentences(events: list[dict]) -> list[dict]:
-    """
-    Group the flat per-word display events (script wording + aligned
-    timing, in timeline order) into sentences.
+    """Return static voice-aligned caption cards from timed script words.
 
-    A sentence boundary is taken wherever a script word ends in
-    sentence-final punctuation (. ! ? … with optional trailing quote /
-    bracket). Fragments of fewer than two words are merged into the
-    previous sentence so a stray "No." never flashes alone. Returns a
-    list of {"words": [...], "start": float, "speak_end": float} in
-    order; speak_end is the aligned end of the sentence's last word
-    (before the readability floor is applied).
+    Sentence-final punctuation defines the initial grouping. Long sentences
+    are then divided into cards of at most six words, preferring a nearby
+    comma, semicolon, colon, or dash; each card keeps the exact start/end
+    timing of its own words. A one-word trailing fragment is avoided when a
+    shorter preceding card can leave a readable two-word final card.
     """
-    sentences: list[dict] = []
+    sentences: list[list[dict]] = []
     current: list[dict] = []
-    for ev in events:
-        current.append(ev)
-        if _SENT_END_RE.search(ev["word"]):
+    for event in events:
+        current.append(event)
+        if _SENT_END_RE.search(event["word"]):
             sentences.append(current)
             current = []
     if current:
@@ -201,20 +221,17 @@ def split_sentences(events: list[dict]) -> list[dict]:
         else:
             sentences.append(current)
 
-    merged: list[dict] = []
-    for words in sentences:
-        if merged and len(words) < 2:
-            merged[-1]["words"].extend(words)
-            merged[-1]["speak_end"] = words[-1]["end"]
-            continue
-        merged.append({
-            "words": words,
-            "start": words[0]["start"],
-            "speak_end": words[-1]["end"],
-        })
-    print(f"Grouped {len(events)} words into {len(merged)} sentence(s).",
-          flush=True)
-    return merged
+    cards: list[dict] = []
+    for sentence_words in sentences:
+        for card_words in _caption_card_chunks(sentence_words):
+            cards.append({
+                "words": card_words,
+                "start": card_words[0]["start"],
+                "speak_end": card_words[-1]["end"],
+            })
+    print(f"Grouped {len(events)} words into {len(cards)} caption card(s) "
+          f"(max {MAX_CAPTION_WORDS} words each).", flush=True)
+    return cards
 
 
 def load_script_with_keywords(script_json: str) -> tuple[list[str], dict]:
@@ -414,9 +431,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         shadow_parts: list[str] = []
         text_parts: list[str] = []
         for word in words:
-            # Source wording remains authoritative for timing and keyword
-            # lookup. Caption casing is handled by the production rasterizer.
-            display_word = word["word"].upper()
+            # Source wording and casing remain authoritative for timing,
+            # keyword lookup, and the diagnostic text sidecar.
+            display_word = word["word"]
             color = keyword_map.get(subtitle_common._norm_token(word["word"]))
             shadow_parts.append("{\\c&H000000&}" + subtitle_common._ass_escape(display_word))
             text_tags = f"{{\\c{_hex_ass(color)}&}}" if color else ""
@@ -518,7 +535,7 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     lines: list[list[dict]] = []
     current: list[dict] = []
     for word in sentence["words"]:
-        item = {"source": word, "display": word["word"].upper()}
+        item = {"source": word, "display": word["word"]}
         trial = current + [item]
         trial_text = " ".join(x["display"] for x in trial)
         if current and metrics.textlength(trial_text, font=font) > max_width:

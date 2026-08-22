@@ -66,8 +66,12 @@ for cut_text, t0 in zip(texts, (1.0, 5.0)):
     events += mk(cut_text.split(), t0)
 
 sentences = cin.split_sentences(events)
-assert len(sentences) == 4, [s["words"][0]["word"] for s in sentences]
-assert [s["words"][0]["word"] for s in sentences] == ["She", "No", "The", "He"]
+assert len(sentences) == 5, [s["words"][0]["word"] for s in sentences]
+assert [s["words"][0]["word"] for s in sentences] == ["She", "No", "The", "the", "He"]
+assert all(len(card["words"]) <= cin.MAX_CAPTION_WORDS for card in sentences)
+long_cards = sentences[2:4]
+assert [len(card["words"]) for card in long_cards] == [5, 2]
+assert long_cards[0]["speak_end"] <= long_cards[1]["start"]
 # --- Static card timing: each complete sentence is present from its first
 # aligned word through its final aligned word, with no readability padding or
 # animation envelope of any kind.
@@ -82,7 +86,7 @@ static_font = cin._caption_font(max(
 static_runs = cin._caption_layout(
     s1, static_font, cin.CIN_FRAME_WIDTH, cin.CIN_FRAME_HEIGHT)
 assert static_runs and all("x" in run and "y" in run for run in static_runs)
-print("PASS: complete static sentence cards use direct voice-aligned timing")
+print("PASS: static <=6-word caption cards use direct voice-aligned timing")
 
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
@@ -149,12 +153,13 @@ caption_payloads = _re.findall(
     r"Dialogue: [^\n]*,CinText,,0,0,0,,([^\n]*)", ass)
 caption_visible = "".join(_re.sub(r"\{[^}]*\}", "", text)
                           for text in caption_payloads)
-assert caption_visible and caption_visible == caption_visible.upper(), caption_visible
-assert "SHE" in caption_visible and "She" not in caption_visible
+assert caption_visible and "She" in caption_visible, caption_visible
+assert "SHE" not in caption_visible, caption_visible
+assert "The son-in-law nobody liked became" in caption_visible, caption_visible
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
 assert all(style in ass for style in ("CinShadow", "CinText"))
 assert f"\\pos({W // 2 + int(round(W * cin.CIN_ASS_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_ASS_SHADOW_OFFSET_Y_FRACTION))})" in ass, "compact diagnostic shadow position missing"
-assert cin.CIN_FONT_FRACTION_OF_HEIGHT == 0.042
+assert cin.CIN_FONT_FRACTION_OF_HEIGHT == 0.032
 assert cin.CIN_RASTER_SHADOW_RGB == (38, 38, 38)
 assert cin.CIN_RASTER_SHADOW_ALPHA == 0.72
 assert (cin.CIN_RASTER_SHADOW_X, cin.CIN_RASTER_SHADOW_Y,
