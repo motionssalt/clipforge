@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "job_id": "torrent-1787428177814",
+  "torrent_name": "big-buck-bunny.torrent",
+  "video_candidates": [
+    {
+      "index": 2,
+      "path": "Big Buck Bunny.mp4",
+      "length": 276134947
+    }
+  ],
+  "selected_index": 2,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "120",
+    "focus": ""
+  }
+}
