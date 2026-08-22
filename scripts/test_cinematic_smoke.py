@@ -182,19 +182,27 @@ subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
                 "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
                 "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", src], check=True)
-overlay_mov = os.path.join(WORK, "cinematic_caption_light.mov")
-cin.render_cinematic_overlay(sentences, kw, W, H, 9.0, overlay_mov)
-assert os.path.isfile(overlay_mov)
-overlay_probe = json.loads(subprocess.check_output(
-    ["ffprobe", "-v", "error", "-show_entries",
-     "stream=codec_name,width,height,pix_fmt", "-of", "json", overlay_mov],
-    text=True))["streams"]
-assert len(overlay_probe) == 1 and overlay_probe[0]["codec_name"] == "qtrle", overlay_probe
-assert (overlay_probe[0]["width"], overlay_probe[0]["height"]) == (W, H)
-print("PASS: rasterized RGBA caption light overlay is valid")
+light_mov = os.path.join(WORK, "cinematic_caption_screen_light.mov")
+foreground_mov = os.path.join(WORK, "cinematic_caption_foreground.mov")
+cin.render_cinematic_overlays(sentences, kw, W, H, 9.0, light_mov, foreground_mov)
+assert os.path.isfile(light_mov) and os.path.isfile(foreground_mov)
+def probe_overlay(path):
+    return json.loads(subprocess.check_output(
+        ["ffprobe", "-v", "error", "-show_entries",
+         "stream=codec_name,width,height,pix_fmt", "-of", "json", path],
+        text=True))["streams"]
+light_probe = probe_overlay(light_mov)
+foreground_probe = probe_overlay(foreground_mov)
+assert len(light_probe) == 1 and light_probe[0]["codec_name"] == "qtrle", light_probe
+assert len(foreground_probe) == 1 and foreground_probe[0]["codec_name"] == "qtrle", foreground_probe
+assert (light_probe[0]["width"], light_probe[0]["height"]) == (W, H)
+assert (foreground_probe[0]["width"], foreground_probe[0]["height"]) == (W, H)
+assert light_probe[0]["pix_fmt"] == "rgb24", light_probe
+assert foreground_probe[0]["pix_fmt"] == "argb", foreground_probe
+print("PASS: screen-light and RGBA foreground caption streams are valid")
 
 out = os.path.join(WORK, "out.mp4")
-cin.burn_subtitles(src, overlay_mov, out,
+cin.burn_subtitles(src, light_mov, foreground_mov, out,
                    banner={"png": banner_png, "height": bh})
 
 probe = subprocess.check_output(

@@ -149,14 +149,16 @@ CIN_SHADOW_OFFSET_Y_FRACTION = 0.005
 CIN_RASTER_FPS = 24
 CIN_RASTER_MAX_WIDTH_FRACTION = 0.86
 CIN_RASTER_Y_FRACTION = 0.55
-CIN_RASTER_OUTER_GLOW_RADIUS = 16
-CIN_RASTER_OUTER_GLOW_ALPHA = 0.64
-CIN_RASTER_INNER_GLOW_RADIUS = 6
-CIN_RASTER_INNER_GLOW_ALPHA = 0.92
-CIN_RASTER_SHADOW_RADIUS = 9
-CIN_RASTER_SHADOW_ALPHA = 0.82
-CIN_RASTER_SHADOW_X = 3
-CIN_RASTER_SHADOW_Y = 10
+CIN_RASTER_OUTER_GLOW_RADIUS = 28
+CIN_RASTER_OUTER_GLOW_ALPHA = 0.90
+CIN_RASTER_MID_GLOW_RADIUS = 12
+CIN_RASTER_MID_GLOW_ALPHA = 0.95
+CIN_RASTER_INNER_GLOW_RADIUS = 4
+CIN_RASTER_INNER_GLOW_ALPHA = 1.00
+CIN_RASTER_SHADOW_RADIUS = 12
+CIN_RASTER_SHADOW_ALPHA = 0.85
+CIN_RASTER_SHADOW_X = 4
+CIN_RASTER_SHADOW_Y = 12
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
@@ -678,11 +680,20 @@ def _apply_mask(canvas: Image.Image, mask: Image.Image,
     canvas.alpha_composite(layer)
 
 
-def _raster_caption_frame(sentences: list[dict], keyword_map: dict,
-                          width: int, height: int, time_s: float,
-                          font) -> Image.Image:
-    """Render all captions visible at one instant into a transparent frame."""
-    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+def _scale_mask(mask: Image.Image, factor: float) -> Image.Image:
+    return mask.point(lambda value: int(round(value * factor)))
+
+
+def _mask_as_rgb(mask: Image.Image) -> Image.Image:
+    return Image.merge("RGB", (mask, mask, mask))
+
+
+def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
+                           width: int, height: int, time_s: float,
+                           font) -> tuple[Image.Image, Image.Image]:
+    """Return a screen-light buffer and a normal-composite foreground buffer."""
+    light = Image.new("RGB", (width, height), (0, 0, 0))
+    foreground = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     for sentence in sentences:
         start = sentence["start"]
         hold_end = max(sentence["speak_end"], start + CIN_SENTENCE_MIN_SECONDS)
@@ -694,11 +705,11 @@ def _raster_caption_frame(sentences: list[dict], keyword_map: dict,
         draw_by_color: dict[tuple[int, int, int], ImageDraw.ImageDraw] = {}
         char_count = sum(len(word["word"].upper()) for word in sentence["words"])
         char_index = 0
+        measure = ImageDraw.Draw(Image.new("L", (1, 1)))
         for run in _caption_layout(sentence, font, width, height):
             word = run["source"]
             display = run["display"]
-            tone = keyword_map.get(legacy._norm_token(word["word"]))
-            color = _caption_color(tone)
+            color = _caption_color(keyword_map.get(legacy._norm_token(word["word"])))
             if color not in masks:
                 masks[color] = Image.new("L", (width, height), 0)
                 draw_by_color[color] = ImageDraw.Draw(masks[color])
@@ -715,11 +726,9 @@ def _raster_caption_frame(sentences: list[dict], keyword_map: dict,
                     max(fade_end - fade_start, 0.001)))
                 alpha = int(round(255 * fade_in * fade_out))
                 if alpha:
-                    x = run["x"] + ImageDraw.Draw(Image.new("L", (1, 1))).textlength(
-                        prefix, font=font)
+                    x = run["x"] + measure.textlength(prefix, font=font)
                     draw_by_color[color].text((x, run["y"]), char,
-                                              font=font, fill=alpha,
-                                              stroke_width=0)
+                                              font=font, fill=alpha)
                 prefix += char
                 char_index += 1
         for mask in masks.values():
@@ -727,59 +736,71 @@ def _raster_caption_frame(sentences: list[dict], keyword_map: dict,
         if not union.getbbox():
             continue
         shadow = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_SHADOW_RADIUS))
-        _apply_mask(canvas, shadow, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
+        _apply_mask(foreground, shadow, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
                     (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
-        outer = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_OUTER_GLOW_RADIUS))
-        _apply_mask(canvas, outer, (255, 255, 255), CIN_RASTER_OUTER_GLOW_ALPHA)
-        inner = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_INNER_GLOW_RADIUS))
-        _apply_mask(canvas, inner, (255, 255, 255), CIN_RASTER_INNER_GLOW_ALPHA)
+        # Light is accumulated in screen space, preserving bright diffusion
+        # over both dark and colourful footage instead of normal-alpha dimming.
+        for radius, alpha in (
+                (CIN_RASTER_OUTER_GLOW_RADIUS, CIN_RASTER_OUTER_GLOW_ALPHA),
+                (CIN_RASTER_MID_GLOW_RADIUS, CIN_RASTER_MID_GLOW_ALPHA),
+                (CIN_RASTER_INNER_GLOW_RADIUS, CIN_RASTER_INNER_GLOW_ALPHA)):
+            band = _scale_mask(union.filter(ImageFilter.GaussianBlur(radius)), alpha)
+            light = ImageChops.screen(light, _mask_as_rgb(band))
         for color, mask in masks.items():
-            _apply_mask(canvas, mask, color)
-    return canvas
+            _apply_mask(foreground, mask, color)
+    return light, foreground
 
 
-def render_cinematic_overlay(sentences: list[dict], keyword_map: dict,
-                             width: int, height: int, duration: float,
-                             out_mov: str) -> None:
-    """Encode the physically layered caption light treatment with alpha."""
+def render_cinematic_overlays(sentences: list[dict], keyword_map: dict,
+                              width: int, height: int, duration: float,
+                              out_light_mov: str, out_foreground_mov: str) -> None:
+    """Encode synchronized screen-light and foreground caption streams."""
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
     font = _caption_font(font_size)
     frame_count = max(1, int(math.ceil(duration * CIN_RASTER_FPS)))
-    cmd = [
-        "ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgba",
-        "-s", f"{width}x{height}", "-r", str(CIN_RASTER_FPS), "-i", "-",
-        "-an", "-c:v", "qtrle", "-pix_fmt", "argb", out_mov,
-    ]
-    print(f"Rendering {frame_count} high-fidelity cinematic caption frame(s) "
-          f"at {CIN_RASTER_FPS}fps -> {out_mov}", flush=True)
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    def _raw_cmd(input_pix_fmt: str, output_pix_fmt: str, output: str) -> list[str]:
+        return [
+            "ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", input_pix_fmt,
+            "-s", f"{width}x{height}", "-r", str(CIN_RASTER_FPS), "-i", "-",
+            "-an", "-c:v", "qtrle", "-pix_fmt", output_pix_fmt, output,
+        ]
+    light_proc = subprocess.Popen(
+        _raw_cmd("rgb24", "rgb24", out_light_mov), stdin=subprocess.PIPE)
+    foreground_proc = subprocess.Popen(
+        _raw_cmd("rgba", "argb", out_foreground_mov), stdin=subprocess.PIPE)
+    print(f"Rendering {frame_count} deep-glow caption frame(s) at "
+          f"{CIN_RASTER_FPS}fps -> {out_light_mov}, {out_foreground_mov}",
+          flush=True)
     try:
         for frame_index in range(frame_count):
-            frame = _raster_caption_frame(
+            light, foreground = _raster_caption_layers(
                 sentences, keyword_map, width, height,
                 frame_index / CIN_RASTER_FPS, font)
-            assert proc.stdin is not None
-            proc.stdin.write(frame.tobytes())
+            assert light_proc.stdin is not None and foreground_proc.stdin is not None
+            light_proc.stdin.write(light.tobytes())
+            foreground_proc.stdin.write(foreground.tobytes())
     finally:
-        if proc.stdin is not None:
-            proc.stdin.close()
-    if proc.wait() != 0:
-        raise RuntimeError("ffmpeg failed while encoding the cinematic caption overlay")
+        if light_proc.stdin is not None:
+            light_proc.stdin.close()
+        if foreground_proc.stdin is not None:
+            foreground_proc.stdin.close()
+    if light_proc.wait() != 0 or foreground_proc.wait() != 0:
+        raise RuntimeError("ffmpeg failed while encoding deep-glow caption streams")
 
 
-def burn_subtitles(video: str, caption_overlay_mov: str, dst: str,
+def burn_subtitles(video: str, caption_light_mov: str,
+                   caption_foreground_mov: str, dst: str,
                    banner: dict | None = None) -> None:
-    """Composite the rasterized caption light treatment and title banner."""
-    def _fescape(p: str) -> str:
-        return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
-
-    inputs = ["-i", video, "-i", caption_overlay_mov]
+    """Screen-composite deep glow, then source-over shadow/glyph foreground."""
+    inputs = ["-i", video, "-i", caption_light_mov, "-i", caption_foreground_mov]
     filters = [
         f"[0:v]scale={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT}:"
         f"force_original_aspect_ratio=increase,"
-        f"crop={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT},setsar=1[base]",
-        "[1:v]setpts=PTS-STARTPTS[captions]",
-        "[base][captions]overlay=eof_action=pass:repeatlast=0[v0]",
+        f"crop={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT},setsar=1,format=gbrp[base]",
+        "[1:v]setpts=PTS-STARTPTS,format=gbrp[light]",
+        "[2:v]setpts=PTS-STARTPTS,format=rgba[foreground]",
+        "[base][light]blend=all_mode=screen:shortest=1[lit]",
+        "[lit][foreground]overlay=eof_action=pass:repeatlast=0[v0]",
     ]
     out_label = "v0"
     if banner is not None:
@@ -788,15 +809,11 @@ def burn_subtitles(video: str, caption_overlay_mov: str, dst: str,
                    + CIN_BANNER_OUT_SECONDS)
         inputs += ["-loop", "1", "-i", banner["png"]]
         y_expr = _banner_y_expr(rest_top)
-        filters.append(
-            f"[2:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]"
-        )
+        filters.append(f"[3:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]")
         filters.append(
             f"[v0][bimg]overlay=x=0:y='{y_expr}'"
-            f":enable='lt(t,{out_end})':eof_action=pass[v1]"
-        )
+            f":enable='lt(t,{out_end})':eof_action=pass[v1]")
         out_label = "v1"
-
     cmd = [
         "ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters),
         "-map", f"[{out_label}]", "-map", "0:a:0", "-c:v", "libx264",
@@ -903,16 +920,17 @@ def main() -> None:
     # production image uses the Pillow-rendered multi-radius light treatment.
     ass_path = os.path.join(work_dir, "subtitles_cinematic.ass")
     write_cinematic_ass(sentences, keyword_map, width, height, ass_path)
-    overlay_mov = os.path.join(work_dir, "cinematic_caption_light.mov")
-    render_cinematic_overlay(
+    light_mov = os.path.join(work_dir, "cinematic_caption_screen_light.mov")
+    foreground_mov = os.path.join(work_dir, "cinematic_caption_foreground.mov")
+    render_cinematic_overlays(
         sentences, keyword_map, width, height,
-        _probe_video_duration(args.merged_video_mp4), overlay_mov)
+        _probe_video_duration(args.merged_video_mp4), light_mov, foreground_mov)
 
-    print(f"Compositing high-fidelity cinematic captions"
+    print(f"Compositing deep-glow cinematic captions"
           f"{' + title banner' if banner else ''} into "
           f"{args.out_video_mp4} ...", flush=True)
-    burn_subtitles(args.merged_video_mp4, overlay_mov, args.out_video_mp4,
-                   banner=banner)
+    burn_subtitles(args.merged_video_mp4, light_mov, foreground_mov,
+                   args.out_video_mp4, banner=banner)
     print(f"Final cinematically-subtitled video written: "
           f"{args.out_video_mp4}", flush=True)
 
