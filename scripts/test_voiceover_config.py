@@ -17,11 +17,19 @@ spec.loader.exec_module(voice)
 assert voice.TTS_PRESET_NAME == "commentary_rapid_neutral"
 assert voice.TTS_VOICES[0] == "Charon"
 for required_phrase in (
-    "rapid, brisk pace",
-    "articulate every word distinctly",
+    "# AUDIO PROFILE",
+    "same continuous recording session",
+    "same neutral vocal identity, pitch range, timbre, loudness, and energy",
+    "# DIRECTOR'S NOTES",
+    "about 170 words per minute—about 1.1 times normal conversational speed",
+    "brisk but calm, with tight forward momentum",
+    "neutral General American (U.S.) accent",
+    "Do not draw out syllables or leave long pauses",
+    "Articulate every word distinctly",
     "tempo, pitch, loudness, and energy steady",
     "neutral, near-emotionless, matter-of-fact",
     "not dramatic, hype, suspenseful, theatrical, gravelly, or expressive",
+    "Do not change the delivery to match a line's emotion or scene",
     "fully intelligible",
 ):
     assert required_phrase in voice.STYLE_PROMPT, required_phrase
@@ -54,4 +62,9 @@ text = payload["contents"][0]["parts"][0]["text"]
 assert text == voice.STYLE_PROMPT + "The facts move quickly, but every word stays clear."
 assert payload["generationConfig"]["responseModalities"] == ["AUDIO"]
 assert payload["generationConfig"]["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Charon"
-print("PASS: rapid-neutral commentary TTS preset and Gemini payload")
+# Official Gemini-TTS documentation states that temperature/top-k/top-p are
+# ignored and does not document a seed control, so the payload must not imply
+# that a determinism parameter is active.
+assert "temperature" not in payload["generationConfig"]
+assert "seed" not in payload["generationConfig"]
+print("PASS: invariant calmer commentary TTS profile and documented Gemini payload contract")
