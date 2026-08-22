@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "enabled": false,
+  "auto_publish": false,
+  "automatic_mode": "smart_schedule",
+  "target_accounts": {
+    "tiktok": [],
+    "youtube": []
+  },
+  "smart_schedule": {
+    "timezone": "UTC",
+    "interval_days": 1,
+    "preferred_time": "19:30",
+    "queue_depth": 4,
+    "start_mode": "next_available",
+    "custom_start": ""
+  },
+  "updated_at_epoch": 1787429239
+}
