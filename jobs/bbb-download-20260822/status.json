@@ -1,0 +1,15 @@
+{
+  "job_id": "bbb-download-20260822",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-bbb-download-20260822",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787426686,
+  "updated_at_epoch": 1787426686,
+  "expires_at_epoch": 1787469886,
+  "extra": {
+    "workflow_run_id": "32593531288",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32593531288"
+  }
+}
