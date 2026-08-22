@@ -80,6 +80,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Re-attach dispatch branch for status persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -B "$GITHUB_REF_NAME" "origin/$GITHUB_REF_NAME"
+
       - name: Validate torrent choice or persist selection substage
         id: preflight
         shell: bash

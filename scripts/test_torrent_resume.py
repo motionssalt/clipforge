@@ -57,6 +57,8 @@ assert "torrent_selection:" in workflow
 assert "stage_a_ready" in workflow
 assert "awaiting_torrent_selection" in workflow
 assert "write_torrent_selection.py" in workflow
+assert "Re-attach dispatch branch for status persistence" in workflow
+assert 'git checkout -B "$GITHUB_REF_NAME" "origin/$GITHUB_REF_NAME"' in workflow
 assert "needs.torrent_selection.outputs.stage_a_ready == 'true'" in workflow
 assert "selected_index=\"${{ github.event.inputs.torrent_file_index }}\"" in workflow
 assert "createPendingTorrentSelection" in app
