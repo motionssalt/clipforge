@@ -109,23 +109,26 @@ _key_model_blocked: set[tuple[int, str]] = set()
 TTS_VOICES = ("Charon", "Algenib")
 TTS_PRESET_NAME = "commentary_rapid_neutral"
 
-# Gemini's TTS API accepts natural-language direction in the text prompt;
-# it exposes no separate numeric speed/rate control. This instruction is the
-# active commentary preset. Its constraints deliberately work together:
-# rapid delivery for short-form retention, explicit evenness for consistency,
-# and neutral/flat phrasing without dramatic performance. The intelligibility
-# clause prevents the model from treating "rapid" as permission to slur words.
+# Gemini TTS exposes style, pace, and tone through the natural-language
+# prompt; it has no documented seed control. Google Cloud's Gemini-TTS
+# documentation also states that `temperature`, `top_k`, and `top_p` are
+# ignored, so adding those fields would create a false consistency guarantee.
+# Keep the audio profile short and invariant across every independent cut so
+# the model receives the same character and direction each time.
 STYLE_PROMPT = (
-    "Read the following line as concise commentary for a short-form video. "
-    "Use a rapid, brisk pace—about one and a quarter times normal "
-    "conversational speech—but articulate every word distinctly. Keep the "
-    "tempo, pitch, loudness, and energy steady from beginning to end. Use a "
-    "neutral, near-emotionless, matter-of-fact delivery: flat and controlled, "
-    "not dramatic, hype, suspenseful, theatrical, gravelly, or expressive. "
-    "Do not rush words together; keep only tiny natural pauses at punctuation "
-    "so every phrase remains fully intelligible. Do not add filler words, "
-    "sound effects, or any words beyond the line. Speak only the line below, "
-    "nothing else:\n\n"
+    "# AUDIO PROFILE\n"
+    "One consistent short-form commentary narrator. Treat every line as part "
+    "of the same continuous recording session: retain the same neutral vocal "
+    "identity, pitch range, timbre, loudness, and energy on every line.\n\n"
+    "# DIRECTOR'S NOTES\n"
+    "Deliver concise commentary at about 1.1 times normal conversational speed: "
+    "brisk but calm. Articulate every word distinctly. Keep tempo, pitch, "
+    "loudness, and energy steady. Use a neutral, near-emotionless, matter-of-fact "
+    "delivery: flat and controlled, not dramatic, hype, suspenseful, theatrical, "
+    "gravelly, or expressive. Do not change the delivery to match a line's "
+    "emotion or scene. Keep only tiny natural pauses at punctuation so every "
+    "phrase remains fully intelligible. Do not add filler words, sound effects, "
+    "or any words beyond the line. Speak only the line below, nothing else:\n\n"
 )
 
 # HTTP behavior.
