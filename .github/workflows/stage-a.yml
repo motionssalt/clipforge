@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: "Public video URL — Google Drive share link or any direct video file URL (mkv/mp4)"
+        description: "Public video URL, Google Drive share link, or path:jobs/<JOB_ID>/source.torrent uploaded by the site"
         required: true
         type: string
       job_id:
@@ -96,7 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -q
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg aria2
 
       - name: Verify ffmpeg installation
         shell: bash
@@ -234,22 +234,50 @@ jobs:
             echo "WARN: initial status push failed after 3 attempts; the final status commit will carry it." >&2
           fi
 
-      - name: Download source video (Google Drive link or any direct URL)
+      - name: Download source video (URL, Drive, or uploaded torrent)
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p work
-          python scripts/download_drive.py "${{ github.event.inputs.video_url }}" work/source_input.bin
+          source_ref="${{ github.event.inputs.video_url }}"
+
+          if [[ "$source_ref" == path:* ]]; then
+            torrent_path="${source_ref#path:}"
+            # The site only uploads manifests to this job-local path. Reject
+            # any other repository path rather than treating path: as a
+            # generic local-file escape hatch.
+            expected_path="jobs/${{ steps.jid.outputs.job_id }}/source.torrent"
+            if [[ "$torrent_path" != "$expected_path" ]] || [[ ! -f "$torrent_path" ]]; then
+              echo "Invalid or missing job-local torrent manifest" >&2
+              exit 1
+            fi
+
+            # This parses metadata only: no tracker/peer activity occurs until
+            # after path and selected-video validation have succeeded.
+            python scripts/torrent_source.py inspect "$torrent_path"
+            selected_index="$(python scripts/torrent_source.py select-index "$torrent_path")"
+            mkdir -p work/torrent
+            # aria2 retrieves only the selected media entry and immediately
+            # stops seeding. It never downloads unrelated .nfo/text extras.
+            aria2c --dir=work/torrent --select-file="$selected_index" \
+              --file-allocation=none --seed-time=0 --max-tries=5 \
+              --connect-timeout=60 --timeout=60 "$torrent_path"
+            source_file="$(python scripts/torrent_source.py select-video work/torrent)"
+            echo "Selected torrent video: $source_file"
+          else
+            python scripts/download_drive.py "$source_ref" work/source_input.bin
+            source_file="work/source_input.bin"
+          fi
 
           # Detect real container from bytes (the host may lie about extension).
-          mime="$(file -b --mime-type work/source_input.bin || true)"
+          mime="$(file -b --mime-type "$source_file" || true)"
           echo "Detected mime: $mime"
           case "$mime" in
             video/x-matroska|application/x-matroska) ext="mkv" ;;
             video/mp4|application/mp4)               ext="mp4" ;;
             *)
               # Fall back to ffprobe: if it opens, keep as mkv (most permissive).
-              if ffprobe -v error work/source_input.bin >/dev/null 2>&1; then
+              if ffprobe -v error "$source_file" >/dev/null 2>&1; then
                 ext="mkv"
               else
                 echo "Downloaded file is not a recognized video container" >&2
@@ -257,7 +285,7 @@ jobs:
               fi
               ;;
           esac
-          mv work/source_input.bin "work/original.${ext}"
+          cp "$source_file" "work/original.${ext}"
           echo "ORIGINAL_PATH=work/original.${ext}" >> "$GITHUB_ENV"
           ls -lh work/
 

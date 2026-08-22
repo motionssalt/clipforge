@@ -167,6 +167,7 @@
     releaseAssetsTag: null,
     countdownTimer: null,
     validatedCuts: null,   // string contents of a validated production.json
+    torrentFile: null,     // an optional Stage A .torrent manifest (File object), one-off for this job only
     musicFile: null,       // an optional picked music file (File object), one-off for this job only
     audioLibrary: null,    // [{name, path, size}] fetched from audio-library/ in the repo, or null = not loaded yet
     audioLibrarySelected: null, // path (string) of the library track chosen for this job, or null
@@ -256,7 +257,7 @@
     'repo-indicator', 'banner-stack',
     'settings-section', 'settings-toggle', 'settings-body', 'settings-state', 'settings-form',
     'owner-input', 'repo-input', 'token-input', 'token-reveal', 'settings-save', 'settings-clear', 'settings-msg',
-    'stage-a-section', 'stage-a-form', 'video-url-input', 'job-slug-input', 'whisper-model-select',
+    'stage-a-section', 'stage-a-form', 'video-url-input', 'torrent-file-input', 'job-slug-input', 'whisper-model-select',
     'language-input', 'target-duration-select', 'focus-input', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
@@ -1221,6 +1222,25 @@
     startStageA();
   });
 
+  var MAX_TORRENT_BYTES = 1024 * 1024;
+
+  if (el['torrent-file-input']) {
+    el['torrent-file-input'].addEventListener('change', function () {
+      var file = el['torrent-file-input'].files && el['torrent-file-input'].files[0];
+      state.torrentFile = file || null;
+      if (!file) return;
+      if (!/\.torrent$/i.test(file.name) || file.size <= 0 || file.size > MAX_TORRENT_BYTES) {
+        state.torrentFile = null;
+        el['torrent-file-input'].value = '';
+        setMsg(el['stage-a-msg'], 'Choose a non-empty .torrent file no larger than 1 MB.', 'bad');
+        return;
+      }
+      // A torrent is an alternative source, never an attachment to a URL job.
+      if (el['video-url-input']) el['video-url-input'].value = '';
+      setMsg(el['stage-a-msg'], 'Torrent selected: ' + file.name + '. It will be uploaded with this task.', 'ok');
+    });
+  }
+
   async function startStageA() {
     if (state.busy) return;
     if (!isConfigured()) {
@@ -1230,12 +1250,21 @@
     }
 
     var videoUrl = el['video-url-input'].value.trim();
-    if (!videoUrl) {
-      setMsg(el['stage-a-msg'], 'A video URL is required.', 'bad');
+    var torrentFile = state.torrentFile;
+    if (!videoUrl && !torrentFile) {
+      setMsg(el['stage-a-msg'], 'Provide a video URL or choose a .torrent file.', 'bad');
+      return;
+    }
+    if (videoUrl && torrentFile) {
+      setMsg(el['stage-a-msg'], 'Use either a video URL or a torrent file, not both.', 'bad');
       return;
     }
 
     var slug = el['job-slug-input'].value.trim();
+    if (torrentFile && !slug) {
+      slug = 'torrent-' + Date.now();
+      el['job-slug-input'].value = slug;
+    }
     var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
     var targetDurInt = parseInt(targetDurRaw, 10);
     if (!isFinite(targetDurInt) || targetDurInt <= 0) targetDurInt = 120;
@@ -1260,6 +1289,38 @@
     setMsg(el['stage-a-msg'], 'Dispatching stage-a.yml…', null);
     dismissBanner('dispatch');
     dismissBanner('generic');
+
+    // A user-provided torrent is committed under this task before dispatch.
+    // The workflow receives an immutable repository path and uses it exactly
+    // like any other Stage A source input.
+    if (torrentFile) {
+      var torrentPath = 'jobs/' + slug + '/source.torrent';
+      var torrentContentsPath = '/repos/' + state.owner + '/' + state.repo +
+        '/contents/jobs/' + encodeURIComponent(slug) + '/source.torrent';
+      setMsg(el['stage-a-msg'], 'Uploading torrent manifest…', null);
+      try {
+        var existingTorrent = null;
+        try {
+          existingTorrent = await gh(torrentContentsPath + '?ref=' + REF + '&_=' + Date.now());
+        } catch (lookupErr) {
+          if (lookupErr.status !== 404) throw lookupErr;
+        }
+        var torrentBody = {
+          message: 'clipforge: upload source.torrent for job ' + slug,
+          content: await b64encodeFile(torrentFile),
+          branch: REF
+        };
+        if (existingTorrent && existingTorrent.sha) torrentBody.sha = existingTorrent.sha;
+        await gh(torrentContentsPath, { method: 'PUT', body: torrentBody });
+        inputs.video_url = 'path:' + torrentPath;
+      } catch (torrentErr) {
+        state.busy = false;
+        el['start-stage-a'].disabled = false;
+        setMsg(el['stage-a-msg'], 'Torrent upload failed: ' + torrentErr.message, 'bad');
+        handleGlobalError(torrentErr, 'upload');
+        return;
+      }
+    }
 
     // Snapshot existing job folders so we can diff for the new one.
     var before = [];
