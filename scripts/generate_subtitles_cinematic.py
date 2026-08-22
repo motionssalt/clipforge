@@ -45,12 +45,11 @@ Cinematic mode (this file):
     sentence is held on screen for at least ~1.5s (a readability floor,
     not a hard lock — actual voice timing wins when the spoken span is
     longer).
-  * STYLE — glowing text with a drop shadow, centred in the frame both
-    horizontally and vertically (Alignment=5). The narrow condensed
-    caption font and bottom-of-frame placement of template mode are
-    deliberately NOT carried over: this mode uses a bold full-width
-    face (DejaVu Sans Bold, present on every runner) with a soft gold
-    glow layer composited underneath the main text layer.
+  * STYLE — crisp, all-caps Coolvetica text with a hard black 3D shadow
+    offset down and right, centred in the frame both horizontally and
+    vertically (Alignment=5). The narrow condensed caption font and
+    bottom-of-frame placement of template mode are deliberately NOT
+    carried over; this mode has no outline, halo, glow, or blur.
   * KEYWORD COLORING — production.json may mark emotionally charged
     keywords with a tone (see load_script_with_keywords); matching
     words are rendered in a tone color (tense/negative -> hot red,
@@ -107,7 +106,7 @@ import cinematic_reframe  # noqa: E402
 # Pillow renders the title banner image (text composited into the white
 # banner graphic before ffmpeg ever sees it). Already a pipeline
 # dependency (brand_scene.py / brand_scenes.py).
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont  # noqa: E402
+from PIL import Image, ImageChops, ImageDraw, ImageFont  # noqa: E402
 
 
 # ---------- Cinematic styling ----------
@@ -123,43 +122,22 @@ CIN_FONT_FALLBACKS = ["DejaVu Sans", "Liberation Sans", "sans-serif"]
 # template mode's per-word size because whole SENTENCES (which wrap to
 # 2-3 lines) must fit: keeps a comfortable side margin at PlayRes.
 CIN_FONT_FRACTION_OF_HEIGHT = 0.052
-# Dark outline under the glyphs + offset drop shadow for the cinematic
-# treatment. Both scale with frame height like the legacy constants.
-CIN_OUTLINE_FRACTION = 0.0008
-CIN_SHADOW_FRACTION = 0.0020
-# Compact cinematic glow: a restrained neutral-white outer halo, a
-# concentrated inner halo, and a soft offset shadow sit beneath the readable
-# text. The stack provides depth without creating the oversized bloom of a
-# title-card effect.
-CIN_GLOW_FAR_OUTLINE_FRACTION = 0.012
-CIN_GLOW_FAR_COLOR = "&HBA" + "FFFFFF"    # restrained neutral-white halo
-CIN_GLOW_FAR_BLUR = 8
-CIN_GLOW_NEAR_OUTLINE_FRACTION = 0.006
-CIN_GLOW_NEAR_COLOR = "&H68" + "FFFFFF"   # concentrated inner white halo
-CIN_GLOW_NEAR_BLUR = 4
-CIN_SHADOW_OUTLINE_FRACTION = 0.004
-CIN_SHADOW_COLOR = "&HA8" + "000000"      # soft, recessive shadow
-CIN_SHADOW_BLUR = 4
-CIN_SHADOW_OFFSET_X_FRACTION = 0.002
-CIN_SHADOW_OFFSET_Y_FRACTION = 0.005
+# Cinematic captions intentionally use no outline, halo, glow, or blur.
+# Their depth is the reference-matched 3D treatment: a hard black duplicate
+# offset down and right beneath crisp white Coolvetica glyphs.
+CIN_SHADOW_COLOR = "&H00000000"
+CIN_SHADOW_OFFSET_X_FRACTION = 0.0075
+CIN_SHADOW_OFFSET_Y_FRACTION = 0.0090
 
-# High-fidelity raster compositing is used for the final cinematic captions.
-# Rendering the actual glyph masks in Pillow allows genuine multi-radius light
-# diffusion and a separate soft shadow, rather than relying on libass outline
-# approximations. These values are in output pixels at 1080x1200.
+# Production captions are rasterized with Pillow so their hard 3D shadow has
+# exact glyph contours at every output size. There is no separate light/glow
+# stream in this treatment.
 CIN_RASTER_FPS = 24
 CIN_RASTER_MAX_WIDTH_FRACTION = 0.86
 CIN_RASTER_Y_FRACTION = 0.55
-CIN_RASTER_OUTER_GLOW_RADIUS = 28
-CIN_RASTER_OUTER_GLOW_ALPHA = 0.90
-CIN_RASTER_MID_GLOW_RADIUS = 12
-CIN_RASTER_MID_GLOW_ALPHA = 0.95
-CIN_RASTER_INNER_GLOW_RADIUS = 4
-CIN_RASTER_INNER_GLOW_ALPHA = 1.00
-CIN_RASTER_SHADOW_RADIUS = 12
-CIN_RASTER_SHADOW_ALPHA = 0.85
-CIN_RASTER_SHADOW_X = 4
-CIN_RASTER_SHADOW_Y = 12
+CIN_RASTER_SHADOW_ALPHA = 1.00
+CIN_RASTER_SHADOW_X = 8
+CIN_RASTER_SHADOW_Y = 10
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
@@ -447,28 +425,21 @@ def build_banner_png(title: str, width: int, height: int,
 def write_cinematic_ass(sentences: list[dict], keyword_map: dict,
                         width: int, height: int, out_ass: str) -> None:
     """
-    One sentence = FOUR Dialogue events sharing the same timespan:
-      * a soft, offset SHADOW pass;
-      * a wide, low-opacity FAR GLOW;
-      * a denser NEAR GLOW; and
-      * readable foreground TEXT.
+    One sentence = TWO Dialogue events sharing the same timespan:
+      * a hard black, down-right 3D SHADOW pass; and
+      * crisp readable foreground TEXT.
 
-    Consecutive sentences alternate between four-layer stacks (0-3 and 4-7)
+    Consecutive sentences alternate between two-layer stacks (0-1 and 2-3)
     so an incoming sentence always composites ON TOP of the previous
     one while the previous one is still in its letter-by-letter
     fade-out — the deliberate overlap that makes the transition look
     layered rather than glitchy.
 
-    All four events are centred in the frame (Alignment=5) and carry
-    identical per-word fade-in / per-character fade-out inline tags so
-    the glow blooms and dissolves in lockstep with the text.
+    Both events are centred in the frame (Alignment=5) and carry identical
+    per-word fade-in / per-character fade-out inline tags so the hard shadow
+    appears and dissolves in lockstep with the text.
     """
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
-    outline = max(1, int(round(height * CIN_OUTLINE_FRACTION)))
-    shadow = max(1, int(round(height * CIN_SHADOW_FRACTION)))
-    far_glow_outline = max(4, int(round(height * CIN_GLOW_FAR_OUTLINE_FRACTION)))
-    near_glow_outline = max(3, int(round(height * CIN_GLOW_NEAR_OUTLINE_FRACTION)))
-    shadow_outline = max(2, int(round(height * CIN_SHADOW_OUTLINE_FRACTION)))
     shadow_x = max(1, int(round(width * CIN_SHADOW_OFFSET_X_FRACTION)))
     shadow_y = max(2, int(round(height * CIN_SHADOW_OFFSET_Y_FRACTION)))
     margin = int(round(width * 0.06))  # side clearance for wrapped lines
@@ -482,10 +453,8 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: CinShadow,{CIN_FONT},{font_size},&HFFFFFFFF,&HFFFFFFFF,{CIN_SHADOW_COLOR},{CIN_SHADOW_COLOR},0,0,0,0,100,100,0,0,1,{shadow_outline},0,5,{margin},{margin},0,1
-Style: CinGlowFar,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_FAR_COLOR},{CIN_GLOW_FAR_COLOR},0,0,0,0,100,100,0,0,1,{far_glow_outline},0,5,{margin},{margin},0,1
-Style: CinGlowNear,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_GLOW_NEAR_COLOR},{CIN_GLOW_NEAR_COLOR},0,0,0,0,100,100,0,0,1,{near_glow_outline},0,5,{margin},{margin},0,1
-Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H8C000000,0,0,0,0,100,100,0,0,1,{outline},{shadow},5,{margin},{margin},0,1
+Style: CinShadow,{CIN_FONT},{font_size},&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
+Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -501,13 +470,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         n_chars = sum(len(w["word"].upper()) for w in words)
         event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
 
-        stack_layer = 4 * (i % 2)
+        stack_layer = 2 * (i % 2)
         shadow_layer = stack_layer
-        far_glow_layer = stack_layer + 1
-        near_glow_layer = stack_layer + 2
-        text_layer = stack_layer + 3
+        text_layer = stack_layer + 1
 
-        glow_parts: list[str] = []
+        shadow_parts: list[str] = []
         text_parts: list[str] = []
         offset = 0
         for w in words:
@@ -517,32 +484,23 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             tone = keyword_map.get(legacy._norm_token(w["word"]))
             colors = KEYWORD_COLORS.get(tone) if tone else None
             text_tags = f"\\c{colors['fill']}&" if colors else ""
-            glow_tags = f"\\3c{colors['glow']}&" if colors else ""
-            g_run, offset = _char_run(
+            s_run, offset = _char_run(
                 {**w, "word": display_word}, s_start, hold_ms,
-                CIN_LETTER_FADE_OUT_MS, offset, n_chars, glow_tags)
+                CIN_LETTER_FADE_OUT_MS, offset, n_chars, "\\c&H000000&")
             t_run, _ = _char_run(
                 {**w, "word": display_word}, s_start, hold_ms,
                 CIN_LETTER_FADE_OUT_MS,
                 offset - len(display_word), n_chars, text_tags)
-            glow_parts.append(g_run)
+            shadow_parts.append(s_run)
             text_parts.append(t_run)
 
         start_ts = legacy._ass_time(s_start)
         end_ts = legacy._ass_time(event_end)
-        glow_text = " ".join(glow_parts)
+        shadow_text = " ".join(shadow_parts)
         main_text = " ".join(text_parts)
         lines.append(
             f"Dialogue: {shadow_layer},{start_ts},{end_ts},CinShadow,,0,0,0,,"
-            f"{{\\blur{CIN_SHADOW_BLUR}\\pos({width // 2 + shadow_x},{height // 2 + shadow_y})}}{glow_text}\n"
-        )
-        lines.append(
-            f"Dialogue: {far_glow_layer},{start_ts},{end_ts},CinGlowFar,,0,0,0,,"
-            f"{{\\blur{CIN_GLOW_FAR_BLUR}}}{glow_text}\n"
-        )
-        lines.append(
-            f"Dialogue: {near_glow_layer},{start_ts},{end_ts},CinGlowNear,,0,0,0,,"
-            f"{{\\blur{CIN_GLOW_NEAR_BLUR}}}{glow_text}\n"
+            f"{{\\pos({width // 2 + shadow_x},{height // 2 + shadow_y})}}{shadow_text}\n"
         )
         lines.append(
             f"Dialogue: {text_layer},{start_ts},{end_ts},CinText,,0,0,0,,"
@@ -554,10 +512,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     print(
         f"ASS cinematic subtitle file written: {out_ass} "
         f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Regular "
-        f"{font_size}px, outline {outline}px, foreground shadow {shadow}px, "
-        f"deep glow far {far_glow_outline}px/blur {CIN_GLOW_FAR_BLUR} + "
-        f"near {near_glow_outline}px/blur {CIN_GLOW_NEAR_BLUR} + "
-        f"offset shadow {shadow_outline}px/blur {CIN_SHADOW_BLUR} — CENTRED in "
+        f"{font_size}px, crisp white foreground + hard black 3D shadow "
+        f"offset {shadow_x}px right / {shadow_y}px down — CENTRED in "
         f"the {width}x{height} video frame; word-by-word fade-in "
         f"{CIN_WORD_FADE_IN_MS}ms/word, letter-by-letter fade-out "
         f"{CIN_LETTER_FADE_OUT_MS}ms/sentence, >= "
@@ -681,19 +637,10 @@ def _apply_mask(canvas: Image.Image, mask: Image.Image,
     canvas.alpha_composite(layer)
 
 
-def _scale_mask(mask: Image.Image, factor: float) -> Image.Image:
-    return mask.point(lambda value: int(round(value * factor)))
-
-
-def _mask_as_rgb(mask: Image.Image) -> Image.Image:
-    return Image.merge("RGB", (mask, mask, mask))
-
-
 def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                            width: int, height: int, time_s: float,
-                           font) -> tuple[Image.Image, Image.Image]:
-    """Return a screen-light buffer and a normal-composite foreground buffer."""
-    light = Image.new("RGB", (width, height), (0, 0, 0))
+                           font) -> Image.Image:
+    """Return crisp caption glyphs over a hard down-right 3D shadow."""
     foreground = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     for sentence in sentences:
         start = sentence["start"]
@@ -736,65 +683,47 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
             union = ImageChops.lighter(union, mask)
         if not union.getbbox():
             continue
-        shadow = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_SHADOW_RADIUS))
-        _apply_mask(foreground, shadow, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
+        _apply_mask(foreground, union, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
                     (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
-        # Light is accumulated in screen space, preserving bright diffusion
-        # over both dark and colourful footage instead of normal-alpha dimming.
-        for radius, alpha in (
-                (CIN_RASTER_OUTER_GLOW_RADIUS, CIN_RASTER_OUTER_GLOW_ALPHA),
-                (CIN_RASTER_MID_GLOW_RADIUS, CIN_RASTER_MID_GLOW_ALPHA),
-                (CIN_RASTER_INNER_GLOW_RADIUS, CIN_RASTER_INNER_GLOW_ALPHA)):
-            band = _scale_mask(union.filter(ImageFilter.GaussianBlur(radius)), alpha)
-            light = ImageChops.screen(light, _mask_as_rgb(band))
         for color, mask in masks.items():
             _apply_mask(foreground, mask, color)
-    return light, foreground
+    return foreground
 
 
 def render_cinematic_overlays(sentences: list[dict], keyword_map: dict,
                               width: int, height: int, duration: float,
-                              out_light_mov: str, out_foreground_mov: str) -> None:
-    """Encode synchronized screen-light and foreground caption streams."""
+                              out_foreground_mov: str) -> None:
+    """Encode the single flat-shadow caption overlay stream."""
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
     font = _caption_font(font_size)
     frame_count = max(1, int(math.ceil(duration * CIN_RASTER_FPS)))
-    def _raw_cmd(input_pix_fmt: str, output_pix_fmt: str, output: str) -> list[str]:
-        return [
-            "ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", input_pix_fmt,
-            "-s", f"{width}x{height}", "-r", str(CIN_RASTER_FPS), "-i", "-",
-            "-an", "-c:v", "qtrle", "-pix_fmt", output_pix_fmt, output,
-        ]
-    light_proc = subprocess.Popen(
-        _raw_cmd("rgb24", "rgb24", out_light_mov), stdin=subprocess.PIPE)
-    foreground_proc = subprocess.Popen(
-        _raw_cmd("rgba", "argb", out_foreground_mov), stdin=subprocess.PIPE)
-    print(f"Rendering {frame_count} deep-glow caption frame(s) at "
-          f"{CIN_RASTER_FPS}fps -> {out_light_mov}, {out_foreground_mov}",
-          flush=True)
+    cmd = [
+        "ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgba",
+        "-s", f"{width}x{height}", "-r", str(CIN_RASTER_FPS), "-i", "-",
+        "-an", "-c:v", "qtrle", "-pix_fmt", "argb", out_foreground_mov,
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    print(f"Rendering {frame_count} flat-3D-shadow caption frame(s) at "
+          f"{CIN_RASTER_FPS}fps -> {out_foreground_mov}", flush=True)
     try:
         for frame_index in range(frame_count):
-            light, foreground = _raster_caption_layers(
+            foreground = _raster_caption_layers(
                 sentences, keyword_map, width, height,
                 frame_index / CIN_RASTER_FPS, font)
-            assert light_proc.stdin is not None and foreground_proc.stdin is not None
-            light_proc.stdin.write(light.tobytes())
-            foreground_proc.stdin.write(foreground.tobytes())
+            assert proc.stdin is not None
+            proc.stdin.write(foreground.tobytes())
     finally:
-        if light_proc.stdin is not None:
-            light_proc.stdin.close()
-        if foreground_proc.stdin is not None:
-            foreground_proc.stdin.close()
-    if light_proc.wait() != 0 or foreground_proc.wait() != 0:
-        raise RuntimeError("ffmpeg failed while encoding deep-glow caption streams")
+        if proc.stdin is not None:
+            proc.stdin.close()
+    if proc.wait() != 0:
+        raise RuntimeError("ffmpeg failed while encoding flat-shadow caption stream")
 
 
-def burn_subtitles(video: str, caption_light_mov: str,
-                   caption_foreground_mov: str, dst: str,
+def burn_subtitles(video: str, caption_foreground_mov: str, dst: str,
                    banner: dict | None = None,
                    crop_plan: dict | None = None) -> None:
-    """Apply scene-static crops, then composite deep glow and title banner."""
-    inputs = ["-i", video, "-i", caption_light_mov, "-i", caption_foreground_mov]
+    """Apply scene-static crops, then composite flat 3D-shadow captions and banner."""
+    inputs = ["-i", video, "-i", caption_foreground_mov]
     if crop_plan is None:
         # Defensive default for direct callers: a single centre crop preserves
         # pre-Batch-D behavior while the normal CLI always supplies a plan.
@@ -808,10 +737,8 @@ def burn_subtitles(video: str, caption_light_mov: str,
     filters = [
         *crop_filters,
         f"[{crop_label}]format=gbrp[base]",
-        "[1:v]setpts=PTS-STARTPTS,format=gbrp[light]",
-        "[2:v]setpts=PTS-STARTPTS,format=rgba[foreground]",
-        "[base][light]blend=all_mode=screen:shortest=1[lit]",
-        "[lit][foreground]overlay=eof_action=pass:repeatlast=0[v0]",
+        "[1:v]setpts=PTS-STARTPTS,format=rgba[foreground]",
+        "[base][foreground]overlay=eof_action=pass:repeatlast=0[v0]",
     ]
     out_label = "v0"
     if banner is not None:
@@ -820,7 +747,7 @@ def burn_subtitles(video: str, caption_light_mov: str,
                    + CIN_BANNER_OUT_SECONDS)
         inputs += ["-loop", "1", "-i", banner["png"]]
         y_expr = _banner_y_expr(rest_top)
-        filters.append(f"[3:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]")
+        filters.append(f"[2:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]")
         filters.append(
             f"[v0][bimg]overlay=x=0:y='{y_expr}'"
             f":enable='lt(t,{out_end})':eof_action=pass[v1]")
@@ -936,19 +863,18 @@ def main() -> None:
         )
 
     # Retain the ASS as a human-readable timing/debug artefact, while the
-    # production image uses the Pillow-rendered multi-radius light treatment.
+    # production image uses the Pillow-rendered hard 3D-shadow treatment.
     ass_path = os.path.join(work_dir, "subtitles_cinematic.ass")
     write_cinematic_ass(sentences, keyword_map, width, height, ass_path)
-    light_mov = os.path.join(work_dir, "cinematic_caption_screen_light.mov")
-    foreground_mov = os.path.join(work_dir, "cinematic_caption_foreground.mov")
+    foreground_mov = os.path.join(work_dir, "cinematic_caption_flat_shadow.mov")
     render_cinematic_overlays(
         sentences, keyword_map, width, height,
-        _probe_video_duration(args.merged_video_mp4), light_mov, foreground_mov)
+        _probe_video_duration(args.merged_video_mp4), foreground_mov)
 
-    print(f"Compositing deep-glow cinematic captions"
+    print(f"Compositing flat-3D-shadow cinematic captions"
           f"{' + title banner' if banner else ''} into "
           f"{args.out_video_mp4} ...", flush=True)
-    burn_subtitles(args.merged_video_mp4, light_mov, foreground_mov,
+    burn_subtitles(args.merged_video_mp4, foreground_mov,
                    args.out_video_mp4, banner=banner, crop_plan=crop_plan)
     print(f"Final cinematically-subtitled video written: "
           f"{args.out_video_mp4}", flush=True)

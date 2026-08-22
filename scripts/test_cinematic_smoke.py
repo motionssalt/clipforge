@@ -129,7 +129,8 @@ cin.write_cinematic_ass(sentences, kw, W, H, ass_path)
 ass = open(ass_path, encoding="utf-8").read()
 assert cin.CIN_FONT == "Coolvetica Rg" and os.path.isfile(cin.CIN_FONT_FILE)
 assert all(f"Style: {style},{cin.CIN_FONT}," in ass for style in (
-    "CinShadow", "CinGlowFar", "CinGlowNear", "CinText"))
+    "CinShadow", "CinText"))
+assert "CinGlow" not in ass and "\\blur" not in ass, ass
 import re as _re
 caption_payloads = _re.findall(
     r"Dialogue: [^\n]*,CinText,,0,0,0,,([^\n]*)", ass)
@@ -138,18 +139,11 @@ caption_visible = "".join(_re.sub(r"\{[^}]*\}", "", text)
 assert caption_visible and caption_visible == caption_visible.upper(), caption_visible
 assert "SHE" in caption_visible and "She" not in caption_visible
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
-assert all(style in ass for style in ("CinShadow", "CinGlowFar", "CinGlowNear", "CinText"))
-assert cin.CIN_GLOW_FAR_BLUR <= 8 and cin.CIN_GLOW_NEAR_BLUR <= 4
-assert cin.CIN_GLOW_FAR_OUTLINE_FRACTION <= 0.012
-assert cin.CIN_SHADOW_BLUR <= 4 and cin.CIN_SHADOW_OFFSET_Y_FRACTION <= 0.005
-assert f"\\blur{cin.CIN_GLOW_FAR_BLUR}" in ass, "outer halo blur missing"
-assert f"\\blur{cin.CIN_GLOW_NEAR_BLUR}" in ass, "inner glow blur missing"
-assert f"\\blur{cin.CIN_SHADOW_BLUR}" in ass, "soft shadow blur missing"
-assert f"\\pos({W // 2 + int(round(W * cin.CIN_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_SHADOW_OFFSET_Y_FRACTION))})" in ass, "offset shadow position missing"
+assert all(style in ass for style in ("CinShadow", "CinText"))
+assert f"\\pos({W // 2 + int(round(W * cin.CIN_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_SHADOW_OFFSET_Y_FRACTION))})" in ass, "hard down-right shadow position missing"
 assert "\\alpha&HFF&" in ass, "fade tags missing"
 assert "\\c&H5C5CFF&" in ass, "tense keyword fill colour missing"
 assert "\\c&H5AC8FF&" in ass, "warm keyword fill colour missing"
-assert "\\3c&H6400A0E0&" in ass, "warm keyword glow colour missing"
 # Letter-by-letter: a mid-sentence char must carry its own fade-out \t
 assert ass.count("\\t(") > sum(len(s["words"]) for s in sentences), \
     "per-character fade-out tags missing"
@@ -159,19 +153,16 @@ def ts(t):
     h, m, rest = t.split(":"); return int(h)*3600 + int(m)*60 + float(rest)
 events_by_style = {
     style: [(l, ts(s), ts(e)) for l, s, e, got_style in evs if got_style == style]
-    for style in ("CinShadow", "CinGlowFar", "CinGlowNear", "CinText")
+    for style in ("CinShadow", "CinText")
 }
 assert all(len(style_events) == len(sentences) for style_events in events_by_style.values())
 text_evs = events_by_style["CinText"]
 assert text_evs[0][2] > text_evs[1][1], "no overlap between sentences 1 and 2"
-assert text_evs[0][0] != text_evs[1][0], "four-layer stacks not alternating"
-for shadow_ev, far_ev, near_ev, text_ev in zip(
-        events_by_style["CinShadow"], events_by_style["CinGlowFar"],
-        events_by_style["CinGlowNear"], text_evs):
-    assert (shadow_ev[1], shadow_ev[2]) == (far_ev[1], far_ev[2]) == \
-        (near_ev[1], near_ev[2]) == (text_ev[1], text_ev[2])
-print(f"PASS: ASS structure (deep shadow + far/near glow + text stack, "
-      f"centred, blur, alpha anim, keyword colours, letter fade-out, overlap "
+assert text_evs[0][0] != text_evs[1][0], "two-layer stacks not alternating"
+for shadow_ev, text_ev in zip(events_by_style["CinShadow"], text_evs):
+    assert (shadow_ev[1], shadow_ev[2]) == (text_ev[1], text_ev[2])
+print(f"PASS: ASS structure (crisp text + hard 3D shadow, no glow/blur, "
+      f"centred, alpha anim, keyword colours, letter fade-out, overlap "
       f"{text_evs[0][2]-text_evs[1][1]:.2f}s)")
 
 
@@ -183,27 +174,22 @@ subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
                 "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
                 "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", src], check=True)
-light_mov = os.path.join(WORK, "cinematic_caption_screen_light.mov")
-foreground_mov = os.path.join(WORK, "cinematic_caption_foreground.mov")
-cin.render_cinematic_overlays(sentences, kw, W, H, 9.0, light_mov, foreground_mov)
-assert os.path.isfile(light_mov) and os.path.isfile(foreground_mov)
+foreground_mov = os.path.join(WORK, "cinematic_caption_flat_shadow.mov")
+cin.render_cinematic_overlays(sentences, kw, W, H, 9.0, foreground_mov)
+assert os.path.isfile(foreground_mov)
 def probe_overlay(path):
     return json.loads(subprocess.check_output(
         ["ffprobe", "-v", "error", "-show_entries",
          "stream=codec_name,width,height,pix_fmt", "-of", "json", path],
         text=True))["streams"]
-light_probe = probe_overlay(light_mov)
 foreground_probe = probe_overlay(foreground_mov)
-assert len(light_probe) == 1 and light_probe[0]["codec_name"] == "qtrle", light_probe
 assert len(foreground_probe) == 1 and foreground_probe[0]["codec_name"] == "qtrle", foreground_probe
-assert (light_probe[0]["width"], light_probe[0]["height"]) == (W, H)
 assert (foreground_probe[0]["width"], foreground_probe[0]["height"]) == (W, H)
-assert light_probe[0]["pix_fmt"] == "rgb24", light_probe
 assert foreground_probe[0]["pix_fmt"] == "argb", foreground_probe
-print("PASS: screen-light and RGBA foreground caption streams are valid")
+print("PASS: single RGBA flat-3D-shadow caption stream is valid")
 
 out = os.path.join(WORK, "out.mp4")
-cin.burn_subtitles(src, light_mov, foreground_mov, out,
+cin.burn_subtitles(src, foreground_mov, out,
                    banner={"png": banner_png, "height": bh})
 
 probe = subprocess.check_output(
