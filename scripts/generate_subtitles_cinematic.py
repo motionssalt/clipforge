@@ -137,13 +137,14 @@ CIN_RASTER_SHADOW_ALPHA = 0.72
 CIN_RASTER_SHADOW_X = 3
 CIN_RASTER_SHADOW_Y = 5
 CIN_RASTER_SHADOW_BLUR_RADIUS = 4
-# During its complete word-by-word entrance, the entire sentence grows
-# smoothly from a visibly smaller scale to its normal held size. The outgoing
-# letter dissolve expands from that normal size. Both envelopes use the
-# requested cubic-bezier(0.20, 1.00, 1.00, 1.00) feel.
-CIN_ENTRANCE_START_SCALE = 0.82
-CIN_EXIT_EXPAND_SCALE = 1.18
-CIN_EXPAND_BEZIER = (0.20, 1.00, 1.00, 1.00)
+# True tracking expansion: glyph masks always render at their native font
+# size. Only the horizontal gap between characters grows through sentence
+# entrance and exit. The held caption keeps the entrance's final tracking so
+# there is no visual snap at the fade-in boundary.
+CIN_TRACKING_START_PX = 0.5
+CIN_TRACKING_HOLD_PX = 3.0
+CIN_TRACKING_EXIT_PX = 6.0
+CIN_TRACKING_BEZIER = (0.20, 1.00, 1.00, 1.00)
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
@@ -618,8 +619,16 @@ def _caption_color(color: str | None) -> tuple[int, int, int]:
     return _hex_rgb(color)
 
 
-def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]:
-    """Lay out a sentence as centred, word-addressable glyph runs."""
+def _tracked_text_width(text: str, font, tracking_px: float) -> float:
+    """Measure native-size glyphs plus explicit tracking between characters."""
+    metrics = ImageDraw.Draw(Image.new("L", (1, 1)))
+    return sum(metrics.textlength(char, font=font) for char in text) + \
+        max(0, len(text) - 1) * tracking_px
+
+
+def _caption_layout(sentence: dict, font, width: int, height: int,
+                    tracking_px: float) -> list[dict]:
+    """Lay out native-size sentence glyphs with per-frame letter tracking."""
     max_width = int(round(width * CIN_RASTER_MAX_WIDTH_FRACTION))
     lines: list[list[dict]] = []
     current: list[dict] = []
@@ -627,8 +636,7 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
         item = {"source": word, "display": word["word"].upper()}
         trial = current + [item]
         trial_text = " ".join(x["display"] for x in trial)
-        if current and ImageDraw.Draw(Image.new("L", (1, 1))).textlength(
-                trial_text, font=font) > max_width:
+        if current and _tracked_text_width(trial_text, font, tracking_px) > max_width:
             lines.append(current)
             current = [item]
         else:
@@ -642,21 +650,29 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     runs: list[dict] = []
     for line_index, line in enumerate(lines):
         line_text = " ".join(item["display"] for item in line)
-        line_width = metrics.textlength(line_text, font=font)
-        x = (width - line_width) / 2.0
+        x = (width - _tracked_text_width(line_text, font, tracking_px)) / 2.0
         y = top + line_index * line_height
-        for item in line:
-            item["x"] = x
+        for word_index, item in enumerate(line):
+            char_x: list[float] = []
+            for char_index, char in enumerate(item["display"]):
+                char_x.append(x)
+                x += metrics.textlength(char, font=font)
+                if char_index < len(item["display"]) - 1:
+                    x += tracking_px
+            item["char_x"] = char_x
             item["y"] = y
             runs.append(item)
-            x += metrics.textlength(item["display"] + " ", font=font)
+            if word_index < len(line) - 1:
+                # The inter-word space has the same tracking on either side
+                # as an ordinary glyph boundary in letter-spaced text.
+                x += tracking_px + metrics.textlength(" ", font=font) + tracking_px
     return runs
 
 
 def _cubic_bezier_ease(progress: float) -> float:
     """Evaluate CSS-style cubic-bezier(0.20, 1.00, 1.00, 1.00) at x=progress."""
     progress = max(0.0, min(1.0, progress))
-    x1, y1, x2, y2 = CIN_EXPAND_BEZIER
+    x1, y1, x2, y2 = CIN_TRACKING_BEZIER
     lo, hi = 0.0, 1.0
     for _ in range(18):
         t = (lo + hi) / 2.0
@@ -669,8 +685,8 @@ def _cubic_bezier_ease(progress: float) -> float:
     return 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) * t ** 2 * y2 + t ** 3
 
 
-def _sentence_transition_scale(sentence: dict, time_s: float) -> float:
-    """Return the sentence-scale envelope tied to the existing fade timings."""
+def _sentence_tracking(sentence: dict, time_s: float) -> float:
+    """Return tracking tied directly to the fade-in and fade-out windows."""
     start = float(sentence["start"])
     hold_end = max(float(sentence["speak_end"]), start + CIN_SENTENCE_MIN_SECONDS)
     fade_in_end = min(
@@ -678,40 +694,22 @@ def _sentence_transition_scale(sentence: dict, time_s: float) -> float:
         max(float(word["start"]) for word in sentence["words"]) +
         CIN_WORD_FADE_IN_MS / 1000.0,
     )
-    event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
+    event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0
     if time_s < fade_in_end:
-        # From the instant the first word begins to fade in, the complete
-        # sentence grows from small to its normal held scale. This remains
-        # active through the final word's fade-in window, not just at the
-        # first few frames of the caption.
+        # Tracking begins widening with the first word's alpha fade and
+        # reaches the settled value when the last word completes its fade.
         progress = (time_s - start) / max(fade_in_end - start, 0.001)
-        return CIN_ENTRANCE_START_SCALE + (1.0 - CIN_ENTRANCE_START_SCALE) * \
+        return CIN_TRACKING_START_PX + \
+            (CIN_TRACKING_HOLD_PX - CIN_TRACKING_START_PX) * \
             _cubic_bezier_ease(progress)
     if time_s > hold_end:
-        # Letter fade-out expands from the settled scale using the same
-        # cubic-bezier feel and ends at the requested exit scale.
+        # During the fixed one-second letter dissolve, spacing widens again
+        # while glyph size stays unchanged.
         progress = (time_s - hold_end) / max(event_end - hold_end, 0.001)
-        return 1.0 + (CIN_EXIT_EXPAND_SCALE - 1.0) * _cubic_bezier_ease(progress)
-    return 1.0
-
-
-def _scale_mask_about_center(mask: Image.Image, scale: float,
-                             reference_bbox: tuple[int, int, int, int] | None = None) -> Image.Image:
-    """Scale a mask above or below normal around a shared sentence centre."""
-    bbox = reference_bbox or mask.getbbox()
-    if abs(scale - 1.0) <= 0.0001 or not bbox:
-        return mask
-    left, top, right, bottom = bbox
-    crop = mask.crop((left, top, right, bottom))
-    new_w = max(1, int(round(crop.width * scale)))
-    new_h = max(1, int(round(crop.height * scale)))
-    enlarged = crop.resize((new_w, new_h), Image.Resampling.LANCZOS)
-    out = Image.new("L", mask.size, 0)
-    center_x = (left + right) / 2.0
-    center_y = (top + bottom) / 2.0
-    out.paste(enlarged, (int(round(center_x - new_w / 2.0)),
-                         int(round(center_y - new_h / 2.0))))
-    return out
+        return CIN_TRACKING_HOLD_PX + \
+            (CIN_TRACKING_EXIT_PX - CIN_TRACKING_HOLD_PX) * \
+            _cubic_bezier_ease(progress)
+    return CIN_TRACKING_HOLD_PX
 
 
 def _apply_mask(canvas: Image.Image, mask: Image.Image,
@@ -747,16 +745,15 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
         draw_by_color: dict[tuple[int, int, int], ImageDraw.ImageDraw] = {}
         char_count = sum(len(word["word"].upper()) for word in sentence["words"])
         char_index = 0
-        measure = ImageDraw.Draw(Image.new("L", (1, 1)))
-        for run in _caption_layout(sentence, font, width, height):
+        tracking_px = _sentence_tracking(sentence, time_s)
+        for run in _caption_layout(sentence, font, width, height, tracking_px):
             word = run["source"]
             display = run["display"]
             color = _caption_color(keyword_map.get(subtitle_common._norm_token(word["word"])))
             if color not in masks:
                 masks[color] = Image.new("L", (width, height), 0)
                 draw_by_color[color] = ImageDraw.Draw(masks[color])
-            prefix = ""
-            for char in display:
+            for local_index, char in enumerate(display):
                 fade_in = max(0.0, min(1.0, (time_s - word["start"]) /
                                       (CIN_WORD_FADE_IN_MS / 1000.0)))
                 fade_step = (CIN_LETTER_FADE_OUT_MS / 1000.0) / \
@@ -768,23 +765,13 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                     max(fade_end - fade_start, 0.001)))
                 alpha = int(round(255 * fade_in * fade_out))
                 if alpha:
-                    x = run["x"] + measure.textlength(prefix, font=font)
-                    draw_by_color[color].text((x, run["y"]), char,
+                    draw_by_color[color].text((run["char_x"][local_index], run["y"]), char,
                                               font=font, fill=alpha)
-                prefix += char
                 char_index += 1
         for mask in masks.values():
             union = ImageChops.lighter(union, mask)
-        sentence_bbox = union.getbbox()
-        if not sentence_bbox:
+        if not union.getbbox():
             continue
-        scale = _sentence_transition_scale(sentence, time_s)
-        if scale > 1.0001:
-            masks = {
-                color: _scale_mask_about_center(mask, scale, sentence_bbox)
-                for color, mask in masks.items()
-            }
-            union = _scale_mask_about_center(union, scale, sentence_bbox)
         soft_shadow = union.filter(
             ImageFilter.GaussianBlur(radius=CIN_RASTER_SHADOW_BLUR_RADIUS))
         _apply_mask(foreground, soft_shadow, CIN_RASTER_SHADOW_RGB,

@@ -87,27 +87,37 @@ probe_step_ms = cin.CIN_LETTER_FADE_OUT_MS / probe_chars
 assert abs(probe_chars * probe_step_ms - cin.CIN_LETTER_FADE_OUT_MS) < 1e-9
 print("PASS: full sentence letter fade-out is fixed at 1.0s")
 
-# --- Sentence-scale transition: while its complete word-by-word fade-in is
-# active, every sentence grows smoothly from small to normal. The exit uses
-# the same easing in the opposite visual direction (normal to enlarged).
-enter_start_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.01)
-enter_mid_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.40)
-enter_late_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.84)
-settled_scale = cin._sentence_transition_scale(s1, s1["start"] + 1.10)
-exit_scale = cin._sentence_transition_scale(s1, s1["start"] + 1.72)
-assert cin.CIN_EXPAND_BEZIER == (0.20, 1.00, 1.00, 1.00)
-assert enter_start_scale < enter_mid_scale < enter_late_scale <= 1.0, (
-    enter_start_scale, enter_mid_scale, enter_late_scale)
-assert abs(enter_start_scale - cin.CIN_ENTRANCE_START_SCALE) < 0.02
-assert settled_scale == 1.0, settled_scale
-assert exit_scale > 1.05 and exit_scale <= cin.CIN_EXIT_EXPAND_SCALE + 1e-6
+# --- Letter-spacing expansion: native-size glyphs are re-laid out every
+# frame. Tracking starts widening with the first word fade, holds steady, and
+# widens again during the one-second letter dissolve; there is no bitmap scale.
+enter_start_tracking = cin._sentence_tracking(s1, s1["start"] + 0.01)
+enter_mid_tracking = cin._sentence_tracking(s1, s1["start"] + 0.40)
+enter_late_tracking = cin._sentence_tracking(s1, s1["start"] + 0.84)
+settled_tracking = cin._sentence_tracking(s1, s1["start"] + 1.10)
+exit_tracking = cin._sentence_tracking(s1, s1["start"] + 1.72)
+assert cin.CIN_TRACKING_BEZIER == (0.20, 1.00, 1.00, 1.00)
+assert enter_start_tracking < enter_mid_tracking < enter_late_tracking <= \
+    cin.CIN_TRACKING_HOLD_PX, (
+        enter_start_tracking, enter_mid_tracking, enter_late_tracking)
+assert abs(enter_start_tracking - cin.CIN_TRACKING_START_PX) < 0.25
+assert settled_tracking == cin.CIN_TRACKING_HOLD_PX, settled_tracking
+assert exit_tracking > cin.CIN_TRACKING_HOLD_PX and \
+    exit_tracking <= cin.CIN_TRACKING_EXIT_PX + 1e-6
 from PIL import Image as _Img, ImageDraw as _ImgDraw
-scale_probe = _Img.new("L", (100, 100), 0)
-_ImgDraw.Draw(scale_probe).rectangle((30, 35, 69, 64), fill=255)
-small_probe = cin._scale_mask_about_center(scale_probe, cin.CIN_ENTRANCE_START_SCALE)
-assert small_probe.getbbox()[2] - small_probe.getbbox()[0] < \
-    scale_probe.getbbox()[2] - scale_probe.getbbox()[0]
-print("PASS: complete sentence grows smoothly through the full fade-in, then expands on letter fade-out")
+tracking_font = cin._caption_font(max(
+    24, int(round(cin.CIN_FRAME_HEIGHT * cin.CIN_FONT_FRACTION_OF_HEIGHT))))
+plain_width = cin._tracked_text_width("SHE", tracking_font, 0.0)
+tracked_width = cin._tracked_text_width("SHE", tracking_font, cin.CIN_TRACKING_HOLD_PX)
+assert abs(tracked_width - plain_width - 2 * cin.CIN_TRACKING_HOLD_PX) < 1e-6
+tracked_runs = cin._caption_layout(
+    s1, tracking_font, cin.CIN_FRAME_WIDTH, cin.CIN_FRAME_HEIGHT,
+    cin.CIN_TRACKING_HOLD_PX)
+first_run = tracked_runs[0]
+glyph_width = _ImgDraw.Draw(_Img.new("L", (1, 1))).textlength("S", font=tracking_font)
+assert abs(first_run["char_x"][1] - first_run["char_x"][0] - glyph_width -
+           cin.CIN_TRACKING_HOLD_PX) < 1e-6
+assert not hasattr(cin, "_scale_mask_about_center")
+print("PASS: native-size glyphs use tracking expansion through fade-in and letter fade-out")
 
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
