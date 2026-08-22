@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/final.mp4"
   },
   "created_at_epoch": 1787428930,
-  "updated_at_epoch": 1787436065,
+  "updated_at_epoch": 1787437368,
   "expires_at_epoch": 1787472130,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787428930305/torrent-selection.json",
@@ -40,7 +40,7 @@
     "scheduled_for": null,
     "timezone": "UTC",
     "idempotency_key": "clipforge-torrent-1787428930305-mt4wneaf",
-    "updated_at_epoch": 1787436065,
+    "updated_at_epoch": 1787437368,
     "media": {
       "filename": "final.mp4",
       "size_bytes": 70466554,
@@ -96,7 +96,7 @@
               "platform": "tiktok",
               "displayName": "CHIMERAVFX",
               "isActive": true,
-              "profilePicture": "https://media.zernio.com/media/tiktok-avatars/1787416794295_nvku2esq_tiktok-avatar--0003IL_UGLWZzU4NFh1PSU2Ex1YvKPeuBhq.jpg",
+              "profilePicture": "https://media.zernio.com/media/tiktok-avatars/1787437168879_2m2nup2d_tiktok-avatar--0003IL_UGLWZzU4NFh1PSU2Ex1YvKPeuBhq.jpg",
               "username": ".chimeravfx"
             },
             "status": "failed"
