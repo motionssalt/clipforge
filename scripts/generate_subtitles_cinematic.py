@@ -102,6 +102,7 @@ import sys
 # shared between the two modes by construction.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import generate_subtitles as legacy  # noqa: E402
+import cinematic_reframe  # noqa: E402
 
 # Pillow renders the title banner image (text composited into the white
 # banner graphic before ffmpeg ever sees it). Already a pipeline
@@ -790,13 +791,23 @@ def render_cinematic_overlays(sentences: list[dict], keyword_map: dict,
 
 def burn_subtitles(video: str, caption_light_mov: str,
                    caption_foreground_mov: str, dst: str,
-                   banner: dict | None = None) -> None:
-    """Screen-composite deep glow, then source-over shadow/glyph foreground."""
+                   banner: dict | None = None,
+                   crop_plan: dict | None = None) -> None:
+    """Apply scene-static crops, then composite deep glow and title banner."""
     inputs = ["-i", video, "-i", caption_light_mov, "-i", caption_foreground_mov]
+    if crop_plan is None:
+        # Defensive default for direct callers: a single centre crop preserves
+        # pre-Batch-D behavior while the normal CLI always supplies a plan.
+        crop_plan = {
+            "target_width": CIN_FRAME_WIDTH,
+            "target_height": CIN_FRAME_HEIGHT,
+            "scenes": [{"start_seconds": 0.0, "end_seconds": _probe_video_duration(video),
+                        "crop_center_x": 0.5, "crop_center_y": 0.5}],
+        }
+    crop_filters, crop_label = cinematic_reframe.scene_crop_filter(crop_plan, "0:v")
     filters = [
-        f"[0:v]scale={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT}:"
-        f"force_original_aspect_ratio=increase,"
-        f"crop={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT},setsar=1,format=gbrp[base]",
+        *crop_filters,
+        f"[{crop_label}]format=gbrp[base]",
         "[1:v]setpts=PTS-STARTPTS,format=gbrp[light]",
         "[2:v]setpts=PTS-STARTPTS,format=rgba[foreground]",
         "[base][light]blend=all_mode=screen:shortest=1[lit]",
@@ -846,6 +857,9 @@ def main() -> None:
     ap.add_argument("--work-dir", default=None,
                     help="scratch dir for transcript, ASS debug data, and raster caption overlay (default: "
                          "<out dir>/subtitle_work_cinematic)")
+    ap.add_argument("--scene-threshold", type=float,
+                    default=cinematic_reframe.DEFAULT_SCENE_THRESHOLD,
+                    help="ffmpeg scene-score threshold used for static cinematic crop planning (default: 0.35)")
     ap.add_argument("--title", default=None,
                     help="video title for the cinematic intro banner. "
                          "Default: production.json's top-level 'title' "
@@ -892,10 +906,15 @@ def main() -> None:
 
     source_width, source_height = legacy.probe_video_size(args.merged_video_mp4)
     width, height = CIN_FRAME_WIDTH, CIN_FRAME_HEIGHT
+    crop_plan = cinematic_reframe.build_scene_crop_plan(
+        args.merged_video_mp4, threshold=args.scene_threshold)
+    crop_plan_path = os.path.join(work_dir, "cinematic_crop_plan.json")
+    cinematic_reframe.write_crop_plan(crop_plan, crop_plan_path)
     print(
         f"Source video resolution: {source_width}x{source_height}; "
-        f"cinematic output is centre-cropped to the bare {width}x{height} "
-        f"(10:9) frame, with captions centred in that full frame.",
+        f"cinematic output uses {crop_plan['scene_count']} static scene crop(s) "
+        f"in the bare {width}x{height} (10:9) frame. Initial positions are "
+        f"safe centre fallbacks; character centres are selected in the next stage.",
         flush=True,
     )
 
@@ -930,7 +949,7 @@ def main() -> None:
           f"{' + title banner' if banner else ''} into "
           f"{args.out_video_mp4} ...", flush=True)
     burn_subtitles(args.merged_video_mp4, light_mov, foreground_mov,
-                   args.out_video_mp4, banner=banner)
+                   args.out_video_mp4, banner=banner, crop_plan=crop_plan)
     print(f"Final cinematically-subtitled video written: "
           f"{args.out_video_mp4}", flush=True)
 
