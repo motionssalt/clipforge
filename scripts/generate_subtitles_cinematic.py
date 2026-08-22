@@ -45,11 +45,12 @@ Cinematic mode (this file):
     sentence is held on screen for at least ~1.5s (a readability floor,
     not a hard lock — actual voice timing wins when the spoken span is
     longer).
-  * STYLE — crisp, all-caps Coolvetica text with a hard black 3D shadow
-    offset down and right, centred in the frame both horizontally and
-    vertically (Alignment=5). The narrow condensed caption font and
-    bottom-of-frame placement of template mode are deliberately NOT
-    carried over; this mode has no outline, halo, glow, or blur.
+  * STYLE — compact, all-caps Coolvetica text with a soft gray-black
+    drop shadow immediately down and right of the glyphs, centred in the
+    frame both horizontally and vertically (Alignment=5). The narrow
+    condensed caption font and bottom-of-frame placement of template mode
+    are deliberately NOT carried over; this mode has no outline, halo, or
+    separate glow layer.
   * KEYWORD COLORING — production.json may mark noteworthy words with an
     author-selected literal hex color (see load_script_with_keywords).
     The renderer applies that exact color and does not classify tone,
@@ -105,7 +106,7 @@ import cinematic_reframe  # noqa: E402
 # Pillow renders the title banner image (text composited into the white
 # banner graphic before ffmpeg ever sees it). Already a pipeline
 # dependency (brand_scene.py / brand_scenes.py).
-from PIL import Image, ImageChops, ImageDraw, ImageFont  # noqa: E402
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont  # noqa: E402
 
 
 # ---------- Cinematic styling ----------
@@ -117,30 +118,34 @@ CIN_FONT_FILE = os.path.normpath(os.path.join(
     "..", "assets", "fonts", "Coolvetica.ttf"))
 CIN_FONT = "Coolvetica Rg"
 CIN_FONT_FALLBACKS = ["DejaVu Sans", "Liberation Sans", "sans-serif"]
-# Font size as a fraction of frame height. Slightly smaller than
-# template mode's per-word size because whole SENTENCES (which wrap to
-# 2-3 lines) must fit: keeps a comfortable side margin at PlayRes.
-CIN_FONT_FRACTION_OF_HEIGHT = 0.052
-# Cinematic captions intentionally use no outline, halo, glow, or blur.
-# Their depth is the reference-matched 3D treatment: a hard black duplicate
-# offset down and right beneath crisp white Coolvetica glyphs.
-CIN_SHADOW_COLOR = "&H00000000"
-CIN_SHADOW_OFFSET_X_FRACTION = 0.0075
-CIN_SHADOW_OFFSET_Y_FRACTION = 0.0090
+# Compact sentence captions: reduced from 5.2% to 4.2% of frame height
+# so they occupy less of the live footage while retaining Coolvetica's strong
+# all-caps readability.
+CIN_FONT_FRACTION_OF_HEIGHT = 0.042
+# The timing/debug ASS sidecar approximates the production drop shadow with a
+# subtle, close offset. The rendered video is authored by the Pillow raster
+# compositor below, which supplies the actual Gaussian-softened edge.
+CIN_ASS_SHADOW_COLOR = "&H60000000"
+CIN_ASS_SHADOW_OFFSET_X_FRACTION = 0.0020
+CIN_ASS_SHADOW_OFFSET_Y_FRACTION = 0.0035
 
-# Production captions are rasterized with Pillow so their hard 3D shadow has
-# exact glyph contours at every output size. There is no separate light/glow
-# stream in this treatment.
+# Production captions are rasterized with Pillow for a compact soft drop
+# shadow: dark gray-black, close to the glyphs, and lightly Gaussian softened.
+# This is a shadow layer only—not an outline or a separate glow treatment.
 CIN_RASTER_FPS = 24
 CIN_RASTER_MAX_WIDTH_FRACTION = 0.86
 CIN_RASTER_Y_FRACTION = 0.55
-CIN_RASTER_SHADOW_ALPHA = 1.00
-CIN_RASTER_SHADOW_X = 8
-CIN_RASTER_SHADOW_Y = 10
-# Captions hold at their normal size. While entering or leaving, the whole
-# sentence expands up to this multiplier in sync with the existing alpha
-# transitions. The envelope follows cubic-bezier(0.20, 1.00, 1.00, 1.00).
-CIN_TRANSITION_EXPAND_SCALE = 1.18
+CIN_RASTER_SHADOW_RGB = (38, 38, 38)
+CIN_RASTER_SHADOW_ALPHA = 0.72
+CIN_RASTER_SHADOW_X = 3
+CIN_RASTER_SHADOW_Y = 5
+CIN_RASTER_SHADOW_BLUR_RADIUS = 4
+# During its complete word-by-word entrance, the entire sentence grows
+# smoothly from a visibly smaller scale to its normal held size. The outgoing
+# letter dissolve expands from that normal size. Both envelopes use the
+# requested cubic-bezier(0.20, 1.00, 1.00, 1.00) feel.
+CIN_ENTRANCE_START_SCALE = 0.82
+CIN_EXIT_EXPAND_SCALE = 1.18
 CIN_EXPAND_BEZIER = (0.20, 1.00, 1.00, 1.00)
 
 # ---------- Cinematic output frame ----------
@@ -167,9 +172,9 @@ CIN_BANNER_FONT_FALLBACK = "DejaVuSans-Bold.ttf"  # system fontconfig name
 CIN_BANNER_HEIGHT_FRACTION = 0.11      # compact banner height vs frame height
 CIN_BANNER_TOP_FRACTION = 0.0          # resting top edge: flush with y=0
 CIN_BANNER_TEXT_WIDTH_FRACTION = 0.90  # max title width vs frame width
-CIN_BANNER_IN_SECONDS = 0.6            # drop-in duration
+CIN_BANNER_IN_SECONDS = 0.7            # eased drop-in duration
 CIN_BANNER_HOLD_SECONDS = 7.0          # fully-visible hold
-CIN_BANNER_OUT_SECONDS = 0.6           # drop-out duration (same motion, reversed)
+CIN_BANNER_OUT_SECONDS = 0.7           # eased drop-out duration (same motion, reversed)
 CIN_BANNER_LAYER = 8                   # above the caption stacks (0-7)
 CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 
@@ -451,7 +456,7 @@ def write_cinematic_ass(sentences: list[dict], keyword_map: dict,
                         width: int, height: int, out_ass: str) -> None:
     """
     One sentence = TWO Dialogue events sharing the same timespan:
-      * a hard black, down-right 3D SHADOW pass; and
+      * a close, low-opacity dark-shadow approximation for timing diagnostics;
       * crisp readable foreground TEXT.
 
     Consecutive sentences alternate between two-layer stacks (0-1 and 2-3)
@@ -460,13 +465,14 @@ def write_cinematic_ass(sentences: list[dict], keyword_map: dict,
     fade-out — the deliberate overlap that makes the transition look
     layered rather than glitchy.
 
-    Both events are centred in the frame (Alignment=5) and carry identical
-    per-word fade-in / per-character fade-out inline tags so the hard shadow
-    appears and dissolves in lockstep with the text.
+    The production compositor uses Pillow to add the true soft Gaussian
+    drop-shadow edge. Both timing-sidecar events are centred in the frame
+    (Alignment=5) and carry identical per-word fade-in / per-character
+    fade-out inline tags so the diagnostic shadow tracks the text.
     """
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
-    shadow_x = max(1, int(round(width * CIN_SHADOW_OFFSET_X_FRACTION)))
-    shadow_y = max(2, int(round(height * CIN_SHADOW_OFFSET_Y_FRACTION)))
+    shadow_x = max(1, int(round(width * CIN_ASS_SHADOW_OFFSET_X_FRACTION)))
+    shadow_y = max(2, int(round(height * CIN_ASS_SHADOW_OFFSET_Y_FRACTION)))
     margin = int(round(width * 0.06))  # side clearance for wrapped lines
 
     header = f"""[Script Info]
@@ -478,7 +484,7 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: CinShadow,{CIN_FONT},{font_size},&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
+Style: CinShadow,{CIN_FONT},{font_size},{CIN_ASS_SHADOW_COLOR},{CIN_ASS_SHADOW_COLOR},{CIN_ASS_SHADOW_COLOR},{CIN_ASS_SHADOW_COLOR},0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
 Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
 
 [Events]
@@ -536,8 +542,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     print(
         f"ASS cinematic subtitle file written: {out_ass} "
         f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Regular "
-        f"{font_size}px, crisp white foreground + hard black 3D shadow "
-        f"offset {shadow_x}px right / {shadow_y}px down — CENTRED in "
+        f"{font_size}px, crisp white foreground + compact soft-gray shadow "
+        f"diagnostic offset {shadow_x}px right / {shadow_y}px down — CENTRED in "
         f"the {width}x{height} video frame; word-by-word fade-in "
         f"{CIN_WORD_FADE_IN_MS}ms/word, letter-by-letter fade-out "
         f"{CIN_LETTER_FADE_OUT_MS}ms/sentence, >= "
@@ -555,7 +561,7 @@ def _banner_y_expr(rest_top: int) -> str:
 
       drop-in : t in [0, in)          — the whole banner slides DOWN
                 from fully off-screen top (top edge -H, i.e. the banner
-                just above the frame) to its resting slot, LINEARLY;
+                just above the frame) to its resting slot with cubic easing;
       hold    : t in [in, in+hold)    — parked at rest_top;
       drop-out: t in [in+hold, out)   — the SAME move reversed (slides
                 back UP, top edge from rest_top to -H);
@@ -571,13 +577,20 @@ def _banner_y_expr(rest_top: int) -> str:
     t_in = CIN_BANNER_IN_SECONDS
     t_hold = t_in + CIN_BANNER_HOLD_SECONDS
     t_out = t_hold + CIN_BANNER_OUT_SECONDS
+    # cubic ease-out: fast initial travel with a smooth settle at the
+    # visible slot. Use the mirrored curve for the exit so both moves feel
+    # designed rather than mechanically linear.
+    in_progress = f"t/{t_in}"
+    out_progress = f"(t-{t_hold})/{CIN_BANNER_OUT_SECONDS}"
+    in_ease = f"(1-pow(1-({in_progress}),3))"
+    out_ease = f"(1-pow(1-({out_progress}),3))"
     return (
         f"if(lt(t,{t_in}),"
-        f"-H+({rest_top}+H)*t/{t_in},"
+        f"-H+({rest_top}+H)*{in_ease},"
         f"if(lt(t,{t_hold}),"
         f"{rest_top},"
         f"if(lt(t,{t_out}),"
-        f"{rest_top}-({rest_top}+H)*(t-{t_hold})/{CIN_BANNER_OUT_SECONDS},"
+        f"{rest_top}-({rest_top}+H)*{out_ease},"
         f"-H)))"
     )
 
@@ -667,25 +680,26 @@ def _sentence_transition_scale(sentence: dict, time_s: float) -> float:
     )
     event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
     if time_s < fade_in_end:
-        # Enter visibly expanded, then settle rapidly as the final word fades
-        # in. This gives the requested fast-in, settle feel without a separate
-        # timer beyond the word alpha animation.
+        # From the instant the first word begins to fade in, the complete
+        # sentence grows from small to its normal held scale. This remains
+        # active through the final word's fade-in window, not just at the
+        # first few frames of the caption.
         progress = (time_s - start) / max(fade_in_end - start, 0.001)
-        return 1.0 + (CIN_TRANSITION_EXPAND_SCALE - 1.0) * \
-            (1.0 - _cubic_bezier_ease(progress))
+        return CIN_ENTRANCE_START_SCALE + (1.0 - CIN_ENTRANCE_START_SCALE) * \
+            _cubic_bezier_ease(progress)
     if time_s > hold_end:
         # Letter fade-out expands from the settled scale using the same
-        # cubic-bezier feel and ends at the transition scale.
+        # cubic-bezier feel and ends at the requested exit scale.
         progress = (time_s - hold_end) / max(event_end - hold_end, 0.001)
-        return 1.0 + (CIN_TRANSITION_EXPAND_SCALE - 1.0) * _cubic_bezier_ease(progress)
+        return 1.0 + (CIN_EXIT_EXPAND_SCALE - 1.0) * _cubic_bezier_ease(progress)
     return 1.0
 
 
 def _scale_mask_about_center(mask: Image.Image, scale: float,
                              reference_bbox: tuple[int, int, int, int] | None = None) -> Image.Image:
-    """Scale a mask around a shared sentence centre while preserving its canvas."""
+    """Scale a mask above or below normal around a shared sentence centre."""
     bbox = reference_bbox or mask.getbbox()
-    if scale <= 1.0001 or not bbox:
+    if abs(scale - 1.0) <= 0.0001 or not bbox:
         return mask
     left, top, right, bottom = bbox
     crop = mask.crop((left, top, right, bottom))
@@ -720,7 +734,7 @@ def _apply_mask(canvas: Image.Image, mask: Image.Image,
 def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                            width: int, height: int, time_s: float,
                            font) -> Image.Image:
-    """Return crisp caption glyphs over a hard down-right 3D shadow."""
+    """Return compact caption glyphs over a soft gray-black drop shadow."""
     foreground = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     for sentence in sentences:
         start = sentence["start"]
@@ -771,7 +785,10 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                 for color, mask in masks.items()
             }
             union = _scale_mask_about_center(union, scale, sentence_bbox)
-        _apply_mask(foreground, union, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
+        soft_shadow = union.filter(
+            ImageFilter.GaussianBlur(radius=CIN_RASTER_SHADOW_BLUR_RADIUS))
+        _apply_mask(foreground, soft_shadow, CIN_RASTER_SHADOW_RGB,
+                    CIN_RASTER_SHADOW_ALPHA,
                     (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
         for color, mask in masks.items():
             _apply_mask(foreground, mask, color)
@@ -781,7 +798,7 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
 def render_cinematic_overlays(sentences: list[dict], keyword_map: dict,
                               width: int, height: int, duration: float,
                               out_foreground_mov: str) -> None:
-    """Encode the single flat-shadow caption overlay stream."""
+    """Encode the single soft-drop-shadow caption overlay stream."""
     font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
     font = _caption_font(font_size)
     frame_count = max(1, int(math.ceil(duration * CIN_RASTER_FPS)))
@@ -791,7 +808,7 @@ def render_cinematic_overlays(sentences: list[dict], keyword_map: dict,
         "-an", "-c:v", "qtrle", "-pix_fmt", "argb", out_foreground_mov,
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    print(f"Rendering {frame_count} flat-3D-shadow caption frame(s) at "
+    print(f"Rendering {frame_count} soft-drop-shadow caption frame(s) at "
           f"{CIN_RASTER_FPS}fps -> {out_foreground_mov}", flush=True)
     try:
         for frame_index in range(frame_count):
@@ -951,7 +968,7 @@ def main() -> None:
         )
 
     # Retain the ASS as a human-readable timing/debug artefact, while the
-    # production image uses the Pillow-rendered hard 3D-shadow treatment.
+    # production image uses the Pillow-rendered compact soft-drop-shadow treatment.
     ass_path = os.path.join(work_dir, "subtitles_cinematic.ass")
     write_cinematic_ass(sentences, keyword_map, width, height, ass_path)
     foreground_mov = os.path.join(work_dir, "cinematic_caption_flat_shadow.mov")

@@ -76,18 +76,27 @@ assert max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS) \
     == s1["start"] + 1.5
 print("PASS: sentence split on punctuation + 1.5s readability floor")
 
-# --- Sentence-scale transition: the exact cubic-bezier reference drives the
-# existing alpha windows. Captions are enlarged during entry/exit and settle
-# to normal scale during the hold, with no independent timer.
-enter_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.02)
+# --- Sentence-scale transition: while its complete word-by-word fade-in is
+# active, every sentence grows smoothly from small to normal. The exit uses
+# the same easing in the opposite visual direction (normal to enlarged).
+enter_start_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.01)
+enter_mid_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.40)
+enter_late_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.84)
 settled_scale = cin._sentence_transition_scale(s1, s1["start"] + 1.10)
 exit_scale = cin._sentence_transition_scale(s1, s1["start"] + 1.72)
 assert cin.CIN_EXPAND_BEZIER == (0.20, 1.00, 1.00, 1.00)
-assert enter_scale > 1.10 and exit_scale > 1.05, (enter_scale, exit_scale)
+assert enter_start_scale < enter_mid_scale < enter_late_scale <= 1.0, (
+    enter_start_scale, enter_mid_scale, enter_late_scale)
+assert abs(enter_start_scale - cin.CIN_ENTRANCE_START_SCALE) < 0.02
 assert settled_scale == 1.0, settled_scale
-assert enter_scale <= cin.CIN_TRANSITION_EXPAND_SCALE + 1e-6
-assert exit_scale <= cin.CIN_TRANSITION_EXPAND_SCALE + 1e-6
-print("PASS: sentence expand is synchronized to fade-in and letter fade-out windows")
+assert exit_scale > 1.05 and exit_scale <= cin.CIN_EXIT_EXPAND_SCALE + 1e-6
+from PIL import Image as _Img, ImageDraw as _ImgDraw
+scale_probe = _Img.new("L", (100, 100), 0)
+_ImgDraw.Draw(scale_probe).rectangle((30, 35, 69, 64), fill=255)
+small_probe = cin._scale_mask_about_center(scale_probe, cin.CIN_ENTRANCE_START_SCALE)
+assert small_probe.getbbox()[2] - small_probe.getbbox()[0] < \
+    scale_probe.getbbox()[2] - scale_probe.getbbox()[0]
+print("PASS: complete sentence grows smoothly through the full fade-in, then expands on letter fade-out")
 
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
@@ -111,31 +120,34 @@ cin.build_banner_png(prod["title"].upper(), W, H, upper_banner_png)
 assert open(banner_png, "rb").read() == open(upper_banner_png, "rb").read()
 print(f"PASS: 10:9 cinematic canvas + compact all-caps title banner ({_bw}x{_bh})")
 
-# --- Banner motion expression: drop-in 0.6s -> 7s hold -> drop-out 0.6s
+# --- Banner motion expression: cubic-eased 0.7s drop-in -> 7s hold ->
+# cubic-eased 0.7s drop-out.
 rest_top = int(round(H * cin.CIN_BANNER_TOP_FRACTION))
 assert rest_top == 0, "banner must rest flush at the frame top"
 y_expr = cin._banner_y_expr(rest_top)
 in_s = cin.CIN_BANNER_IN_SECONDS
 hold_s = in_s + cin.CIN_BANNER_HOLD_SECONDS
 out_s = hold_s + cin.CIN_BANNER_OUT_SECONDS
-assert y_expr == (
-    f"if(lt(t,{in_s}),-H+({rest_top}+H)*t/{in_s},"
-    f"if(lt(t,{hold_s}),{rest_top},"
-    f"if(lt(t,{out_s}),{rest_top}-({rest_top}+H)*(t-{hold_s})/"
-    f"{cin.CIN_BANNER_OUT_SECONDS},-H)))"
-), y_expr
+assert in_s == cin.CIN_BANNER_OUT_SECONDS == 0.7
+assert "pow" in y_expr and f"t/{in_s}" in y_expr and \
+    f"(t-{hold_s})/{cin.CIN_BANNER_OUT_SECONDS}" in y_expr, y_expr
 # Continuity at every boundary, evaluated with the real banner height:
+def _ease_out_cubic(progress):
+    progress = max(0.0, min(1.0, progress))
+    return 1.0 - (1.0 - progress) ** 3
+
 def _y(t, bh=bh):
-    if t < in_s:    return -bh + (rest_top + bh) * t / in_s
+    if t < in_s:    return -bh + (rest_top + bh) * _ease_out_cubic(t / in_s)
     if t < hold_s:  return float(rest_top)
-    if t < out_s:   return rest_top - (rest_top + bh) * (t - hold_s) / cin.CIN_BANNER_OUT_SECONDS
+    if t < out_s:   return rest_top - (rest_top + bh) * _ease_out_cubic(
+        (t - hold_s) / cin.CIN_BANNER_OUT_SECONDS)
     return float(-bh)
 assert _y(0) == -bh, "t=0 not fully off-screen top"
 assert abs(_y(in_s - 1e-9) - rest_top) < 1e-6 and _y(in_s) == rest_top
 assert _y(hold_s) == rest_top
 assert abs(_y(out_s - 1e-9) - -bh) < 1e-6 and _y(out_s) == -bh
 assert _y(out_s + 1) == -bh, "banner not gone after drop-out"
-print(f"PASS: banner y-expression (off-screen -{bh} -> {rest_top} over "
+print(f"PASS: cubic-eased banner motion (off-screen -{bh} -> {rest_top} over "
       f"{in_s}s, hold to {hold_s}s, back to -{bh} by {out_s}s, gone after)")
 
 # --- Generate the ASS
@@ -155,7 +167,12 @@ assert caption_visible and caption_visible == caption_visible.upper(), caption_v
 assert "SHE" in caption_visible and "She" not in caption_visible
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
 assert all(style in ass for style in ("CinShadow", "CinText"))
-assert f"\\pos({W // 2 + int(round(W * cin.CIN_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_SHADOW_OFFSET_Y_FRACTION))})" in ass, "hard down-right shadow position missing"
+assert f"\\pos({W // 2 + int(round(W * cin.CIN_ASS_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_ASS_SHADOW_OFFSET_Y_FRACTION))})" in ass, "compact diagnostic shadow position missing"
+assert cin.CIN_FONT_FRACTION_OF_HEIGHT == 0.042
+assert cin.CIN_RASTER_SHADOW_RGB == (38, 38, 38)
+assert cin.CIN_RASTER_SHADOW_ALPHA == 0.72
+assert (cin.CIN_RASTER_SHADOW_X, cin.CIN_RASTER_SHADOW_Y,
+        cin.CIN_RASTER_SHADOW_BLUR_RADIUS) == (3, 5, 4)
 assert "\\alpha&HFF&" in ass, "fade tags missing"
 assert "\\c&H5C5CFF&" in ass, "tense keyword fill colour missing"
 assert "\\c&H5AC8FF&" in ass, "author-selected #FFC85A fill color missing"
@@ -176,7 +193,7 @@ assert text_evs[0][2] > text_evs[1][1], "no overlap between sentences 1 and 2"
 assert text_evs[0][0] != text_evs[1][0], "two-layer stacks not alternating"
 for shadow_ev, text_ev in zip(events_by_style["CinShadow"], text_evs):
     assert (shadow_ev[1], shadow_ev[2]) == (text_ev[1], text_ev[2])
-print(f"PASS: ASS structure (crisp text + hard 3D shadow, no glow/blur, "
+print(f"PASS: ASS structure + compact soft-gray raster shadow (no separate glow, "
       f"centred, alpha anim, keyword colours, letter fade-out, overlap "
       f"{text_evs[0][2]-text_evs[1][1]:.2f}s)")
 
@@ -201,7 +218,7 @@ foreground_probe = probe_overlay(foreground_mov)
 assert len(foreground_probe) == 1 and foreground_probe[0]["codec_name"] == "qtrle", foreground_probe
 assert (foreground_probe[0]["width"], foreground_probe[0]["height"]) == (W, H)
 assert foreground_probe[0]["pix_fmt"] == "argb", foreground_probe
-print("PASS: single RGBA flat-3D-shadow caption stream is valid")
+print("PASS: single RGBA soft-drop-shadow caption stream is valid")
 
 out = os.path.join(WORK, "out.mp4")
 cin.burn_subtitles(src, foreground_mov, out,
