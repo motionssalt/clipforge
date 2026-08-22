@@ -1,0 +1,253 @@
+name: Zernio publishing
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Operation: discover, publish, or retry"
+        required: true
+        type: choice
+        options:
+          - discover
+          - publish
+          - retry
+        default: publish
+      job_id:
+        description: "ClipForge job id (required for publish/retry)"
+        required: false
+        type: string
+      mode:
+        description: "Publish mode for a new post"
+        required: false
+        type: choice
+        options:
+          - publish_now
+          - manual_schedule
+          - smart_queue
+        default: publish_now
+      scheduled_for:
+        description: "UTC ISO-8601 timestamp for manual_schedule"
+        required: false
+        type: string
+      timezone:
+        description: "IANA timezone used only with a naive scheduled_for value"
+        required: false
+        type: string
+        default: UTC
+      profile_id:
+        description: "Zernio profile id for account discovery or smart_queue"
+        required: false
+        type: string
+      queue_id:
+        description: "Optional Zernio queue id for smart_queue"
+        required: false
+        type: string
+      targets_json:
+        description: "JSON array of {platform, account_ids, profile_id?, queue_id?} for publish"
+        required: false
+        type: string
+        default: "[]"
+      post_id:
+        description: "Existing Zernio post id for retry"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clipforge-zernio-${{ inputs.job_id || inputs.profile_id || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  ZERNIO_API_KEY: ${{ secrets.ZERNIO_API_KEY }}
+  ZERNIO_API_BASE: https://zernio.com/api/v1
+
+jobs:
+  zernio:
+    name: Zernio ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate request and secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ZERNIO_API_KEY:-}" || { echo "ZERNIO_API_KEY is not configured in repository Actions secrets." >&2; exit 1; }
+          action='${{ inputs.action }}'
+          if [[ "$action" != discover && -z '${{ inputs.job_id }}' ]]; then
+            echo "job_id is required for $action" >&2
+            exit 1
+          fi
+
+      - name: Discover accounts
+        if: inputs.action == 'discover'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/zernio_publish.py discover \
+            --profile-id '${{ inputs.profile_id }}' > /tmp/zernio_accounts.json
+          mkdir -p branding
+          python - <<'PY'
+          import json, time
+          from pathlib import Path
+          data = json.loads(Path('/tmp/zernio_accounts.json').read_text())
+          accounts = []
+          for a in data.get('accounts', []):
+              if a.get('platform') in {'tiktok', 'youtube'}:
+                  accounts.append(a)
+          Path('branding/zernio_accounts.json').write_text(json.dumps({
+              'version': 1,
+              'provider': 'zernio',
+              'updated_at_epoch': int(time.time()),
+              'accounts': accounts,
+          }, indent=2, ensure_ascii=False) + '\n')
+          PY
+
+      - name: Commit discovered accounts
+        if: inputs.action == 'discover'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add branding/zernio_accounts.json
+          git commit -m 'clipforge: refresh Zernio account snapshot' || echo 'No account changes.'
+          git pull --rebase --autostash || true
+          git push
+
+      - name: Load and validate completed job
+        if: inputs.action == 'publish' || inputs.action == 'retry'
+        shell: bash
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          jid = os.environ['JOB_ID']
+          status_path = Path('jobs') / jid / 'status.json'
+          if not status_path.exists():
+              raise SystemExit(f'Missing {status_path}')
+          status = json.loads(status_path.read_text())
+          if status.get('stage') != 'complete':
+              raise SystemExit('Zernio publishing requires Stage B status=complete; Stage B remains independent.')
+          if not (Path('jobs') / jid / 'production.json').exists():
+              raise SystemExit('Missing the job production.json used to create this output.')
+          if not status.get('release_tag'):
+              raise SystemExit('Completed job has no release_tag.')
+          PY
+          mkdir -p work/zernio
+          gh release download "clipforge-${{ inputs.job_id }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'final.mp4' \
+            --dir work/zernio \
+            --clobber
+          test -s work/zernio/final.mp4
+
+      - name: Mark publishing as started
+        if: inputs.action == 'publish'
+        shell: bash
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          set -euo pipefail
+          python scripts/zernio_publish.py state "jobs/$JOB_ID/status.json" \
+            '{"provider":"zernio","status":"publishing","mode":"${{ inputs.mode }}","started_at_epoch":'"$(date +%s)"'}'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+users.noreply.github.com'
+          git add "jobs/$JOB_ID/status.json"
+          git commit -m "clipforge: job $JOB_ID Zernio publishing started" || true
+          git pull --rebase --autostash || true
+          git push || true
+
+      - name: Create Zernio post(s) from the job production.json
+        if: inputs.action == 'publish'
+        id: publish
+        shell: bash
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          TARGETS_JSON: ${{ inputs.targets_json }}
+        run: |
+          set -euo pipefail
+          targets="$TARGETS_JSON"
+          if [[ "$targets" == '[]' || -z "$targets" ]]; then
+            echo 'targets_json must include at least one selected TikTok or YouTube account.' >&2
+            exit 1
+          fi
+          python scripts/zernio_publish.py publish \
+            "jobs/$JOB_ID/production.json" \
+            work/zernio/final.mp4 \
+            "$targets" \
+            --mode '${{ inputs.mode }}' \
+            --scheduled-for '${{ inputs.scheduled_for }}' \
+            --timezone '${{ inputs.timezone }}' > work/zernio/result.json
+          python -m json.tool work/zernio/result.json >/dev/null
+
+      - name: Retry an existing Zernio post
+        if: inputs.action == 'retry'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n '${{ inputs.post_id }}' || { echo 'post_id is required for retry' >&2; exit 1; }
+          python scripts/zernio_publish.py retry '${{ inputs.post_id }}' > work/zernio/retry.json
+          python -m json.tool work/zernio/retry.json >/dev/null
+
+      - name: Persist publishing result without changing Stage B state
+        if: always() && (inputs.action == 'publish' || inputs.action == 'retry')
+        shell: bash
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, time
+          from pathlib import Path
+          jid = os.environ['JOB_ID']
+          status_path = Path('jobs') / jid / 'status.json'
+          status = json.loads(status_path.read_text())
+          prior = status.get('publishing') if isinstance(status.get('publishing'), dict) else {}
+          result_path = Path('work/zernio/result.json')
+          retry_path = Path('work/zernio/retry.json')
+          if result_path.exists():
+              outcome = json.loads(result_path.read_text())
+              outcome['updated_at_epoch'] = int(time.time())
+              outcome['metadata_source'] = 'jobs/' + jid + '/production.json'
+              status['publishing'] = outcome
+          elif retry_path.exists():
+              retry = json.loads(retry_path.read_text())
+              prior['retry_result'] = retry
+              prior['status'] = retry.get('status', prior.get('status', 'unknown'))
+              prior['updated_at_epoch'] = int(time.time())
+              status['publishing'] = prior
+          elif os.environ.get('PUBLISH_OUTCOME') == 'failure':
+              prior['status'] = 'error'
+              prior['error'] = 'Zernio publishing failed; inspect the workflow run for sanitized provider details.'
+              prior['updated_at_epoch'] = int(time.time())
+              status['publishing'] = prior
+          status['updated_at_epoch'] = int(time.time())
+          status_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + '\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "jobs/$JOB_ID/status.json"
+          git commit -m "clipforge: job $JOB_ID Zernio publishing status" || true
+          git pull --rebase --autostash || true
+          git push || true
+
+      - name: Fail publish after state persistence
+        if: inputs.action == 'publish' && steps.publish.outcome == 'failure'
+        shell: bash
+        run: exit 1
