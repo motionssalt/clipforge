@@ -547,6 +547,21 @@ jobs:
             exit 1
           fi
 
+      # -------------------------------------------------------------------
+      # Terminal delivery transform: the fully composited MP4 is encoded once
+      # more with quality-based CRF control. This happens after every visual
+      # and audio operation and before validation, packaging, and upload.
+      # -------------------------------------------------------------------
+      - name: Compress final video for delivery
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/compress_final_video.py \
+            work/out/final.mp4 \
+            work/out/final_delivery.mp4
+          mv -f work/out/final_delivery.mp4 work/out/final.mp4
+          ls -lh work/out/final.mp4
+
       - name: Validate the merged final MP4 with ffprobe
         shell: bash
         run: |
