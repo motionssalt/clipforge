@@ -10,6 +10,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "scripts" / "apply_creator_watermark.py"
+COMPOSITOR = MODULE_PATH.read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "stage-b.yml").read_text(encoding="utf-8")
 APP = (ROOT / "app.js").read_text(encoding="utf-8")
 HTML = (ROOT / "index.html").read_text(encoding="utf-8")
@@ -34,7 +35,13 @@ def test_layers_are_condensed_centered_and_safe() -> None:
         center = (text_box[0] + text_box[2]) / 2
         assert abs(center - 540) <= 2, "name should be bottom-centered"
         assert text_box[3] <= 1200 - round(1200 * watermark.BOTTOM_SAFE_FRACTION) + 2
-        assert mask.getextrema()[1] < 255, "foreground must stay non-opaque for overlay treatment"
+        assert mask.getextrema()[1] < 255, "foreground must stay non-opaque for blended treatment"
+
+
+def test_compositor_uses_light_screen_blend_for_foreground() -> None:
+    assert "blend=all_mode=screen" in COMPOSITOR
+    assert "blend=all_mode=overlay" not in COMPOSITOR
+    assert "screen-blended condensed text" in COMPOSITOR
 
 
 def test_empty_name_is_an_explicit_no_watermark_copy() -> None:

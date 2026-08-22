@@ -5,8 +5,8 @@ The compositor deliberately creates two transparent full-frame overlays:
 
 * an **opaque, expanded black shadow** behind the letterforms; and
 * a partially transparent letter mask whose pixels are sampled from an
-  FFmpeg ``overlay`` blend of the current frame and white, then lightly
-  lifted so Overlay's black-on-black edge case cannot erase the text.
+  FFmpeg ``screen`` blend of the current frame and white, producing the
+  intended light overlay treatment on both dark and bright footage.
 
 The result is a real frame-level watermark, not metadata or a sidecar. It is
 run after cinematic captions and before the terminal delivery compression.
@@ -82,7 +82,7 @@ def build_layers(name: str, width: int, height: int, directory: Path) -> tuple[P
     text_mask = Image.new("L", (width, height), 0)
     text_mask.paste(glyph, (x, y))
     # The foreground alpha intentionally remains below 1.0: its actual RGB
-    # arrives from FFmpeg's overlay blend rather than an opaque caption color.
+    # arrives from FFmpeg's Screen blend rather than an opaque caption color.
     text_mask = text_mask.point(lambda value: round(value * TEXT_MASK_OPACITY))
 
     # MaxFilter grows every glyph edge into a dense opaque silhouette. Unlike a
@@ -115,9 +115,9 @@ def apply_watermark(source: Path, destination: Path, name: str) -> None:
             "[base][shadow]overlay=shortest=1:format=auto[shadowed];"
             "[shadowed]split[composite_base][blend_base];"
             f"color=c=white:s={width}x{height}:r=30,format=rgb24[white];"
-            "[blend_base][white]blend=all_mode=overlay:shortest=1,eq=brightness=0.22:contrast=1.0[overlay_text];"
+            "[blend_base][white]blend=all_mode=screen:shortest=1[screen_text];"
             "[2:v]setpts=PTS-STARTPTS,format=gray[text_mask];"
-            "[overlay_text][text_mask]alphamerge[watermark_text];"
+            "[screen_text][text_mask]alphamerge[watermark_text];"
             "[composite_base][watermark_text]overlay=shortest=1:format=auto[watermarked]"
         )
         command = [
@@ -131,7 +131,7 @@ def apply_watermark(source: Path, destination: Path, name: str) -> None:
             "-movflags", "+faststart", "-map_metadata", "-1", "-map_chapters", "-1",
             "-shortest", str(destination),
         ]
-        print("Applying creator watermark: overlay-blended condensed text + opaque expanded shadow")
+        print("Applying creator watermark: screen-blended condensed text + opaque expanded shadow")
         print("$ " + " ".join(command), flush=True)
         subprocess.run(command, check=True)
 
