@@ -33,14 +33,10 @@
     jobsCache: 'clipforge_jobs_v1'
   };
 
-  /* Persistent channel branding. Follows the same "repo is the database"
-   * pattern as job state (status.json / production.json) but lives OUTSIDE jobs/ —
-   * the hourly cleanup only touches jobs/<id>/ folders and clipforge-*
-   * releases, so branding/branding.json + branding/profile_picture.<ext>
-   * on the default branch survive forever and apply to every future job. */
-  var BRANDING_JSON_PATH = 'branding/branding.json';
-  var BRANDING_AVATAR_STEM = 'branding/profile_picture.';   // + png|jpg|webp
-  var BRANDING_AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+  /* Persistent creator watermark. It follows the same repository-backed
+   * settings pattern as job state but lives outside jobs/, so cleanup never
+   * deletes the name used by future Stage B renders. */
+  var WATERMARK_JSON_PATH = 'branding/creator_watermark.json';
 
   /* Gemini TTS keys.
    *
@@ -126,12 +122,12 @@
     'Download original video from release':                                 'Downloading original video',
     'Resolve production.json':                                              'Resolving production.json',
     'Resolve optional background music':                                    'Resolving background music',
-    'Load persistent channel branding (branding/branding.json)':            'Loading channel branding',
+    'Load creator watermark (branding/creator_watermark.json)':             'Loading creator watermark',
     'Generate voiceover (Chatterbox TTS, one clip per cut)':                'Generating voiceover',
     'Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4':      'Cutting, mixing, merging video',
     'Quality enhancement (denoise + color grade + sharpen)':                'Enhancing video quality',
-    'Burn word-by-word subtitles into the video (before branding)':         'Burning in subtitles',
-    'Brand final video (composite into the branded 10:9 template)':         'Applying channel branding',
+    'Burn cinematic subtitles into the final video':                         'Burning in subtitles',
+    'Burn creator watermark into final video':                              'Burning in creator watermark',
     'Validate the merged final MP4 with ffprobe':                           'Validating final MP4',
     'Write social-media metadata.txt from production.json':                 'Writing posting-package metadata',
     'Zip final artifact (finished video + metadata.txt)':                   'Zipping final artifact',
@@ -197,10 +193,8 @@
     tasksTimer: null,      // background refresh timer for the Tasks list
     tasksRefreshing: false,
     taskDeleting: {},      // id -> true while a delete is in flight
-    branding: null,        // parsed branding.json, or null when none is saved
-    brandingSha: null,     // blob sha of branding.json (needed to update it)
-    brandingAvatarUrl: '', // raw.githubusercontent.com URL of the saved picture
-    brandingAvatarExt: '', // ext of the saved picture ('' = none saved)
+    watermark: null,       // parsed creator_watermark.json, or null when none is saved
+    watermarkSha: null,    // blob sha of creator_watermark.json (needed to update it)
 
     /* Gemini TTS keys. `geminiKeys` holds the plaintext keys IN MEMORY ONLY
      * for the current browser session so that adding a second key does not
@@ -223,8 +217,6 @@
     zernioQueueSha: null,
     zernioSecretConfigured: false,
     zernioBusy: false,
-    avatarFile: null,      // a newly picked picture, not yet committed
-    removeAvatar: false,   // true when the user asked to delete the picture
 
     /* -------------------------------------------------------------
      * Per-task workflow-run matching.
@@ -299,8 +291,7 @@
     'audio-library-list', 'audio-library-empty', 'audio-library-add-input', 'audio-library-add-hint',
     'stage-b-controls', 'stage-b-controls-text', 'restart-stage-b', 'cancel-stage-b',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
-    'branding-form', 'branding-username-input', 'branding-display-name-input', 'branding-avatar-input',
-    'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
+    'watermark-form', 'watermark-name-input', 'watermark-save', 'watermark-msg', 'watermark-current',
     'gemini-keys-disclosure', 'gemini-key-form', 'gemini-key-input', 'gemini-key-reveal',
     'gemini-key-add', 'gemini-key-msg', 'gemini-keys-list', 'gemini-keys-empty',
     'zernio-settings-disclosure', 'zernio-settings-state', 'zernio-key-form', 'zernio-key-input', 'zernio-key-reveal', 'zernio-key-save', 'zernio-key-clear', 'zernio-key-msg',
@@ -600,7 +591,7 @@
     setMsg(el['settings-msg'], 'Saved to localStorage.', 'ok');
     openSettings(false);
     probeRepo();
-    loadBranding();
+    loadWatermark();
     loadGeminiKeysMeta();
     loadZernioSettings();
     loadAudioLibrary();
@@ -618,269 +609,108 @@
     location.reload();
   });
 
-  /* ---------------------------------------------------- channel branding */
+  /* -------------------------------------------------- creator watermark */
 
-  // Branding is validated live on every keystroke / file pick (same pattern
-  // as the production.json validator below) and committed to branding/ on the
-  // default branch via the contents API — the exact flow startStageB() uses
-  // for production.json.
+  function normalizeWatermarkName(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
 
-  function brandingErrors(username, displayName) {
+  function watermarkErrors(name) {
     var errors = [];
-    if (!username) {
-      errors.push('Username is required.');
-    } else if (!/^[a-z0-9_-]{1,64}$/.test(username)) {
-      errors.push('Username must be 1–64 chars of a–z, 0–9, _ or - (no @).');
-    }
-    if (displayName.length > 64) errors.push('Display name must be 64 characters or fewer.');
-    if (state.avatarFile) {
-      var okType = ['image/png', 'image/jpeg', 'image/webp'].indexOf(state.avatarFile.type) !== -1;
-      if (!okType) errors.push('Profile picture must be a PNG, JPEG, or WebP.');
-      else if (state.avatarFile.size > BRANDING_AVATAR_MAX_BYTES) {
-        errors.push('Profile picture must be 5 MB or smaller (got ' + fmtBytes(state.avatarFile.size) + ').');
-      }
-    }
+    if (name.length > 64) errors.push('Name must be 64 characters or fewer.');
     return errors;
   }
 
-  function refreshBrandingValidity() {
-    if (!el['branding-save']) return;
-    var username = el['branding-username-input'].value.trim().toLowerCase();
-    var displayName = el['branding-display-name-input'].value.trim();
-    el['branding-save'].disabled = brandingErrors(username, displayName).length > 0;
+  function refreshWatermarkValidity() {
+    if (!el['watermark-save']) return;
+    var name = normalizeWatermarkName(el['watermark-name-input'].value);
+    el['watermark-save'].disabled = watermarkErrors(name).length > 0;
   }
 
-  el['branding-username-input'].addEventListener('input', refreshBrandingValidity);
-  el['branding-display-name-input'].addEventListener('input', refreshBrandingValidity);
+  el['watermark-name-input'].addEventListener('input', refreshWatermarkValidity);
 
-  el['branding-avatar-input'].addEventListener('change', function () {
-    var file = el['branding-avatar-input'].files && el['branding-avatar-input'].files[0];
-    state.avatarFile = file || null;
-    state.removeAvatar = false;
-    if (file) {
-      var okType = ['image/png', 'image/jpeg', 'image/webp'].indexOf(file.type) !== -1;
-      if (okType && file.size <= BRANDING_AVATAR_MAX_BYTES) {
-        el['branding-preview'].src = URL.createObjectURL(file);
-        show(el['branding-preview']);
-        setMsg(el['branding-msg'], 'New picture selected — not saved yet.', null);
-      }
-    }
-    refreshBrandingValidity();
-  });
-
-  el['branding-clear-avatar'].addEventListener('click', function () {
-    state.avatarFile = null;
-    el['branding-avatar-input'].value = '';
-    state.removeAvatar = true;
-    setMsg(el['branding-msg'], 'Saved picture will be removed on Save.', null);
-    renderBranding();
-    refreshBrandingValidity();
-  });
-
-  function readFileAsBytes(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onerror = function () { reject(new Error('Could not read the selected file.')); };
-      reader.onload = function () { resolve(new Uint8Array(reader.result)); };
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  function bytesToB64(bytes) {
-    var bin = '';
-    var CHUNK = 0x8000;
-    for (var i = 0; i < bytes.length; i += CHUNK) {
-      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-    }
-    return btoa(bin);
-  }
-
-  function avatarExtForType(mime) {
-    return mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
-  }
-
-  /** Fetch (or re-fetch) branding.json from the repo. Missing file = never saved. */
-  async function loadBranding() {
+  /** Fetch creator_watermark.json. A missing file means no watermark. */
+  async function loadWatermark() {
     if (!isConfigured()) return;
-    state.branding = null;
-    state.brandingSha = null;
-    state.brandingAvatarUrl = '';
-    state.brandingAvatarExt = '';
+    state.watermark = null;
+    state.watermarkSha = null;
     try {
       var file = await gh('/repos/' + state.owner + '/' + state.repo +
-        '/contents/' + BRANDING_JSON_PATH + '?ref=' + REF + '&_=' + Date.now());
+        '/contents/' + WATERMARK_JSON_PATH + '?ref=' + REF + '&_=' + Date.now());
       var parsed;
       try {
         parsed = JSON.parse(b64decodeUtf8(file.content));
       } catch (parseErr) {
-        setMsg(el['branding-msg'], 'branding/branding.json is not valid JSON — save again to repair it.', 'bad');
-        renderBranding();
-        refreshBrandingValidity();
+        setMsg(el['watermark-msg'], 'Creator watermark settings are not valid JSON — save again to repair them.', 'bad');
+        renderWatermark();
         return;
       }
-      state.brandingSha = file.sha || null;
-      state.branding = {
-        username: String(parsed.username || ''),
-        display_name: String(parsed.display_name || ''),
-        profile_picture: String(parsed.profile_picture || '')
-      };
-      var pic = state.branding.profile_picture;
-      var m = /^branding\/profile_picture\.(png|jpg|jpeg|webp)$/.exec(pic);
-      if (m) {
-        state.brandingAvatarExt = m[1] === 'jpeg' ? 'jpg' : m[1];
-        state.brandingAvatarUrl =
-          'https://raw.githubusercontent.com/' + state.owner + '/' + state.repo +
-          '/' + REF + '/' + pic;
-      }
+      state.watermarkSha = file.sha || null;
+      state.watermark = { creator_name: normalizeWatermarkName(parsed.creator_name) };
     } catch (err) {
       if (err.status === 404) {
-        // Never saved yet — the empty form is the correct state.
+        // Never saved: rendering no watermark is the correct default.
       } else if (err.name === 'AuthError' || err.name === 'RateLimitError') {
         handleGlobalError(err);
         return;
       } else {
-        setMsg(el['branding-msg'], 'Could not load branding: ' + err.message, 'bad');
+        setMsg(el['watermark-msg'], 'Could not load creator watermark: ' + err.message, 'bad');
       }
     }
-    renderBranding();
-    refreshBrandingValidity();
+    renderWatermark();
+    refreshWatermarkValidity();
   }
 
-  function renderBranding() {
-    if (!el['branding-form']) return;
-    var b = state.branding;
-
-    if (!state.avatarFile && b && b.username) el['branding-username-input'].value = b.username;
-    if (!state.avatarFile && b) el['branding-display-name-input'].value = b.display_name;
-
-    if (!state.avatarFile && !state.removeAvatar && state.brandingAvatarUrl) {
-      el['branding-preview'].src = state.brandingAvatarUrl;
-      show(el['branding-preview']);
-    } else if (!state.avatarFile) {
-      el['branding-preview'].removeAttribute('src');
-      hide(el['branding-preview']);
-    }
-
-    var bits = [];
-    if (b && b.username) {
-      bits.push('Saved: @' + b.username +
-        (b.display_name ? ' — ' + b.display_name : ''));
-      if (state.brandingAvatarUrl && !state.removeAvatar) bits.push('with profile picture');
-    }
-    if (state.removeAvatar) bits.push('saved picture will be removed');
-    text(el['branding-current'], bits.length ? bits.join(' ') : 'No branding saved yet.');
-
-    var hasSavedPic = !!(b && b.profile_picture);
-    toggleHidden(el['branding-clear-avatar'],
-      !(hasSavedPic && !state.removeAvatar && !state.avatarFile));
+  function renderWatermark() {
+    if (!el['watermark-form']) return;
+    var name = state.watermark && state.watermark.creator_name;
+    if (name) el['watermark-name-input'].value = name;
+    text(el['watermark-current'], name
+      ? 'Saved name: ' + name + ' — it will be burned into the next Stage B video.'
+      : 'No creator watermark configured. Future Stage B videos will have no watermark.');
   }
 
-  /** Create/update a file on the default branch via the contents API. */
-  async function putRepoFile(path, contentB64, message) {
-    var contentsPath = '/repos/' + state.owner + '/' + state.repo + '/contents/' + path;
-    var sha = null;
-    try {
-      var existing = await gh(contentsPath + '?ref=' + REF + '&_=' + Date.now());
-      if (existing && existing.sha) sha = existing.sha;
-    } catch (err) {
-      if (err.status !== 404) throw err;
-    }
-    var body = { message: message, content: contentB64, branch: REF };
-    if (sha) body.sha = sha;
-    await gh(contentsPath, { method: 'PUT', body: body });
-  }
-
-  /** Delete a file from the default branch (no-op when it does not exist). */
-  async function deleteRepoFile(path, message) {
-    var contentsPath = '/repos/' + state.owner + '/' + state.repo + '/contents/' + path;
-    var existing;
-    try {
-      existing = await gh(contentsPath + '?ref=' + REF + '&_=' + Date.now());
-    } catch (err) {
-      if (err.status === 404) return;
-      throw err;
-    }
-    if (!existing || !existing.sha) return;
-    await gh(contentsPath, { method: 'DELETE', body: { message: message, sha: existing.sha, branch: REF } });
-  }
-
-  el['branding-form'].addEventListener('submit', function (e) {
+  el['watermark-form'].addEventListener('submit', function (e) {
     e.preventDefault();
-    saveBranding();
+    saveWatermark();
   });
 
-  async function saveBranding() {
+  async function saveWatermark() {
     if (state.busy) return;
     if (!isConfigured()) {
-      setMsg(el['branding-msg'], 'Save your GitHub settings above first.', 'bad');
+      setMsg(el['watermark-msg'], 'Save your GitHub settings above first.', 'bad');
       return;
     }
-
-    var username = el['branding-username-input'].value.trim().toLowerCase();
-    var displayName = el['branding-display-name-input'].value.trim();
-    var errors = brandingErrors(username, displayName);
+    var creatorName = normalizeWatermarkName(el['watermark-name-input'].value);
+    var errors = watermarkErrors(creatorName);
     if (errors.length) {
-      setMsg(el['branding-msg'], errors.join(' '), 'bad');
+      setMsg(el['watermark-msg'], errors.join(' '), 'bad');
       return;
     }
 
     state.busy = true;
-    el['branding-save'].disabled = true;
-    setMsg(el['branding-msg'], 'Saving to ' + BRANDING_JSON_PATH + '…', null);
-
+    el['watermark-save'].disabled = true;
+    setMsg(el['watermark-msg'], 'Saving to ' + WATERMARK_JSON_PATH + '…', null);
     try {
-      // 1) New picture picked -> commit it as branding/profile_picture.<ext>.
-      var picPath = (state.branding && state.branding.profile_picture) || '';
-      if (state.avatarFile) {
-        var ext = avatarExtForType(state.avatarFile.type);
-        var newPath = BRANDING_AVATAR_STEM + ext;
-        var bytes = await readFileAsBytes(state.avatarFile);
-        await putRepoFile(newPath, bytesToB64(bytes),
-          'clipforge: update channel branding profile picture');
-        // If the ext changed (e.g. png -> webp), remove the stale file.
-        if (picPath && picPath !== newPath) {
-          await deleteRepoFile(picPath, 'clipforge: remove superseded branding profile picture');
-        }
-        picPath = newPath;
-      } else if (state.removeAvatar) {
-        if (picPath) {
-          await deleteRepoFile(picPath, 'clipforge: remove channel branding profile picture');
-        }
-        picPath = '';
-      }
-
-      // 2) Commit branding.json itself.
       var doc = {
         version: 1,
-        username: username,
-        display_name: displayName,
-        profile_picture: picPath,
+        creator_name: creatorName,
         updated_at_epoch: Math.floor(Date.now() / 1000)
       };
-      await putRepoFile(BRANDING_JSON_PATH,
+      await putRepoFile(WATERMARK_JSON_PATH,
         b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
-        'clipforge: update channel branding');
-
-      // 3) Reflect locally.
-      state.branding = { username: username, display_name: displayName, profile_picture: picPath };
-      state.brandingAvatarExt = picPath ? picPath.split('.').pop() : '';
-      state.brandingAvatarUrl = picPath
-        ? 'https://raw.githubusercontent.com/' + state.owner + '/' + state.repo + '/' + REF + '/' + picPath
-        : '';
-      state.removeAvatar = false;
-      if (state.avatarFile) {
-        el['branding-avatar-input'].value = '';
-        state.avatarFile = null;
-      }
-      renderBranding();
-      setMsg(el['branding-msg'], 'Branding saved. It now applies to every future job.', 'ok');
+        'clipforge: update creator watermark');
+      state.watermark = { creator_name: creatorName };
+      renderWatermark();
+      setMsg(el['watermark-msg'], creatorName
+        ? 'Creator watermark saved. It applies to every future Stage B video.'
+        : 'Creator watermark cleared. Future Stage B videos will render no watermark.', 'ok');
     } catch (err) {
-      setMsg(el['branding-msg'], 'Save failed: ' + err.message, 'bad');
-      handleGlobalError(err, 'branding');
+      setMsg(el['watermark-msg'], 'Save failed: ' + err.message, 'bad');
+      handleGlobalError(err, 'watermark');
     }
-
     state.busy = false;
-    refreshBrandingValidity();
+    refreshWatermarkValidity();
   }
 
   /* -------------------------------------------------------- Gemini TTS keys */
@@ -4942,7 +4772,7 @@
     if (!isConfigured()) return;
 
     probeRepo();
-    loadBranding();
+    loadWatermark();
     loadGeminiKeysMeta();
     loadZernioSettings();
     loadAudioLibrary();

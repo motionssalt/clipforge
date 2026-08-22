@@ -26,11 +26,6 @@ on:
         required: false
         type: string
         default: "true"
-      brand:
-        description: "Composite the merged video into the branded 1080x1200 (10:9) template (channel avatar + name, job title, follow CTA) using the persistent branding from branding/branding.json. DEFAULT FALSE: cinematic mode ships the bare video frame — only the video content plus the burned-in cinematic captions and the one-time intro title banner, with no persistent chrome (no header bar, no lower title/CTA block, no avatar overlay). Set to true only to deliberately opt a single run back into the legacy branded chrome. When no username is configured the job ships unbranded either way."
-        required: false
-        type: string
-        default: "false"
       code_ref:
         description: "Optional current default-branch SHA to check out and run THIS Stage B execution from. ClipForge resolves and passes the current tip for every new or recovery dispatch so a failed job never reuses the old workflow commit. Empty = resolve the repository's current default branch at execution time."
         required: false
@@ -367,45 +362,35 @@ jobs:
           echo "MUSIC_PATH=work/music.mp3" >> "$GITHUB_ENV"
 
       # -------------------------------------------------------------------
-      # Persistent channel branding (branding/branding.json on the default
-      # branch, written by the site's Settings panel via the contents API).
-      # It lives OUTSIDE jobs/ so the 12-hour cleanup never deletes it.
-      # This step only RECORDS which branding (and which job title) this
-      # run used in status.json's `extra` — actually rendering the title /
-      # branding onto the video frames happens in the "Brand final video"
-      # step below via scripts/brand_scenes.py.
+      # Persistent creator watermark. The profile UI writes only a display
+      # name to branding/creator_watermark.json; it lives outside jobs/ so
+      # cleanup never removes it. The name is normalized into a local work
+      # file, avoiding unsafe interpolation into the workflow environment.
       # -------------------------------------------------------------------
-      - name: Load persistent channel branding (branding/branding.json)
+      - name: Load creator watermark (branding/creator_watermark.json)
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY' >> "$GITHUB_ENV"
-          import json, os
+          python - <<'PY'
+          import json
+          from pathlib import Path
 
-          doc = {}
+          name = ""
+          path = Path("branding/creator_watermark.json")
           try:
-              with open("branding/branding.json", encoding="utf-8") as f:
-                  doc = json.load(f)
+              doc = json.loads(path.read_text(encoding="utf-8"))
+              raw = doc.get("creator_name", "")
+              if isinstance(raw, str):
+                  name = " ".join(raw.split())[:64]
+              else:
+                  print("creator_watermark.json creator_name is not a string — rendering no watermark")
           except FileNotFoundError:
-              print("branding/branding.json not found — no branding saved yet")
-          except Exception as e:
-              print(f"branding/branding.json unreadable ({e}) — continuing without branding")
-
-          username = (doc.get("username") or "").strip()
-          display_name = (doc.get("display_name") or "").strip() or username
-          picture = (doc.get("profile_picture") or "").strip()
-          pic_present = bool(picture) and os.path.isfile(picture)
-          if picture and not pic_present:
-              print(f"branding picture listed but missing on disk: {picture} — ignoring")
-              picture = ""
-
-          if username:
-              print(f"branding_username={username}")
-              print(f"branding_display_name={display_name}")
-              if picture:
-                  print(f"branding_profile_picture={picture}")
-          else:
-              print("No branding configured (empty username) — job runs unbranded.")
+              print("creator_watermark.json not found — rendering no watermark")
+          except Exception as error:
+              print(f"creator_watermark.json unreadable ({error}) — rendering no watermark")
+          Path("work").mkdir(exist_ok=True)
+          Path("work/creator_watermark_name.txt").write_text(name, encoding="utf-8")
+          print("Creator watermark configured:" if name else "No creator watermark configured.", name)
           PY
 
       # -------------------------------------------------------------------
@@ -508,48 +493,26 @@ jobs:
           ls -lh work/out/
 
       # -------------------------------------------------------------------
-      # Legacy branded 10:9 compositor (optional). This step is gated at
-      # the workflow level, rather than relying on a caller to supply the
-      # correct `brand` flag: subtitle_mode=cinematic skips it entirely.
-      # Therefore a cinematic output is structurally limited to its cropped
-      # video pixels, cinematic captions, and one-time title banner; no
-      # avatar, channel/category badge, title block, or CTA chrome can be
-      # composited. Legacy word-caption renders retain the three historical
-      # paths: toggle off (no-op), toggle on without a username (no-op), or
-      # toggle on with a username (branded 1080x1200 template).
+      # The creator watermark is the final visual operation after captions.
+      # It is burned into final.mp4 itself, then survives the existing terminal
+      # delivery compression that follows. An empty profile name is an explicit
+      # no-op; it never attempts to render empty text.
       # -------------------------------------------------------------------
-      - name: Brand final video (legacy word-caption output only)
-        if: ${{ github.event.inputs.brand == 'true' }}
+      - name: Burn creator watermark into final video
         shell: bash
-        env:
-          BRAND_FLAG: ${{ github.event.inputs.brand }}
         run: |
           set -euo pipefail
-          flag="${BRAND_FLAG:-true}"
-          case "$flag" in
-            true|1|yes|on|True|TRUE)  enable_arg="--enabled" ;;
-            false|0|no|off|False|FALSE) enable_arg="--no-enabled" ;;
-            *)
-              echo "Unrecognised brand flag: '$flag' — defaulting to enabled." >&2
-              enable_arg="--enabled"
-              ;;
-          esac
-          echo "Branding flag: $flag -> $enable_arg"
-
-          python scripts/brand_scenes.py work/out "$enable_arg" \
-            --title "${JOB_TITLE:-}"
-          applied=false
-          if [ "$enable_arg" = "--enabled" ] && [ -n "${BRANDING_USERNAME:-}" ]; then
-            applied=true
+          name="$(cat work/creator_watermark_name.txt 2>/dev/null || true)"
+          if [ -z "$name" ]; then
+            echo "Creator watermark skipped: no configured name."
+            echo "CREATOR_WATERMARK_APPLIED=false" >> "$GITHUB_ENV"
+            exit 0
           fi
-          echo "branding_applied=$applied"
-          echo "BRANDING_APPLIED=$applied" >> "$GITHUB_ENV"
-          shopt -s nullglob
-          leftovers=(work/out/*.branded.mp4)
-          if [ ${#leftovers[@]} -ne 0 ]; then
-            echo "Leftover temp files after branding: ${leftovers[*]}" >&2
-            exit 1
-          fi
+          python scripts/apply_creator_watermark.py \
+            work/out/final.mp4 work/out/final_watermarked.mp4 --name "$name"
+          mv -f work/out/final_watermarked.mp4 work/out/final.mp4
+          echo "CREATOR_WATERMARK_APPLIED=true" >> "$GITHUB_ENV"
+          echo "Creator watermark burned into final video."
 
       # -------------------------------------------------------------------
       # Terminal delivery transform: the fully composited MP4 is encoded once
@@ -770,9 +733,9 @@ jobs:
             --asset "final_zip=${{ steps.finalasset.outputs.final_url }}" \
             --asset "final_mp4=${{ steps.finalasset.outputs.final_mp4_url }}"
 
-          # Merge the job title + the branding this run used into status.json
+          # Merge the job title + creator watermark state into status.json
           # (same inline-merge pattern Stage A uses for the asset URLs).
-          python - <<'PY'
+          JID="${{ steps.jid.outputs.job_id }}" python - <<'PY'
           import json, os
           from pathlib import Path
           p = Path("jobs") / os.environ["JID"] / "status.json"
@@ -781,19 +744,13 @@ jobs:
           title = (os.environ.get("JOB_TITLE") or "").strip()
           if title:
               extra["title"] = title
-          # branding_applied is true ONLY when the brand toggle was on
-          # AND a username was configured for this run (exported by the
-          # "Brand final video" step). Always written — a definitive false
-          # is more useful to the site than an absent field.
-          extra["branding_applied"] = (
-              os.environ.get("BRANDING_APPLIED", "false").lower() == "true"
+          name_path = Path("work/creator_watermark_name.txt")
+          creator_name = name_path.read_text(encoding="utf-8").strip() if name_path.exists() else ""
+          extra["creator_watermark_applied"] = (
+              os.environ.get("CREATOR_WATERMARK_APPLIED", "false").lower() == "true"
           )
-          username = (os.environ.get("BRANDING_USERNAME") or "").strip()
-          if username:
-              extra["branding_username"] = username
-              extra["branding_display_name"] = (os.environ.get("BRANDING_DISPLAY_NAME") or "").strip() or username
-              if (os.environ.get("BRANDING_PROFILE_PICTURE") or "").strip():
-                  extra["branding_profile_picture"] = os.environ["BRANDING_PROFILE_PICTURE"].strip()
+          if creator_name:
+              extra["creator_watermark_name"] = creator_name
           p.write_text(json.dumps(data, indent=2, ensure_ascii=False))
           PY
 
@@ -824,12 +781,7 @@ jobs:
             exit 1
           fi
         env:
-          JID: ${{ steps.jid.outputs.job_id }}
           JOB_TITLE: ${{ env.JOB_TITLE }}
-          BRANDING_APPLIED: ${{ env.BRANDING_APPLIED }}
-          BRANDING_USERNAME: ${{ env.BRANDING_USERNAME }}
-          BRANDING_DISPLAY_NAME: ${{ env.BRANDING_DISPLAY_NAME }}
-          BRANDING_PROFILE_PICTURE: ${{ env.BRANDING_PROFILE_PICTURE }}
 
       # -------------------------------------------------------------------
       # OPTIONAL DISTRIBUTION — Stage B has already produced, validated,

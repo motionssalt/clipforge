@@ -245,45 +245,27 @@
           </div>
         </details>
 
-        <!-- Channel branding -->
+        <!-- Creator watermark -->
         <details class="fold">
           <summary>
             <span class="fold-label">
               <span class="fold-eyebrow">Reusable profile</span>
-              <strong>Channel branding</strong>
+              <strong>Creator watermark</strong>
             </span>
             <span class="fold-cue">Configure</span>
           </summary>
           <div class="fold-body">
-            <p class="hint">Saved at <code>branding/branding.json</code> and applied to every future job.</p>
-            <form id="branding-form" autocomplete="off">
-              <div class="brand-identity">
-                <img id="branding-preview" class="branding-preview is-hidden" alt="" aria-hidden="true">
-                <div>
-                  <span class="fold-eyebrow">Current identity</span>
-                  <div id="branding-current" class="hint">No branding saved yet.</div>
-                </div>
-              </div>
-              <div class="grid-2">
-                <div class="field">
-                  <label for="branding-username-input">Username <span class="req">required</span></label>
-                  <input type="text" id="branding-username-input" name="username" placeholder="motionssalt" spellcheck="false" autocapitalize="off" maxlength="64">
-                  <p class="hint">Without <code>@</code>; lowercase letters, numbers, <code>_</code> and <code>-</code>.</p>
-                </div>
-                <div class="field">
-                  <label for="branding-display-name-input">Display name <span class="opt">optional</span></label>
-                  <input type="text" id="branding-display-name-input" name="display_name" placeholder="MOTIONSALT" spellcheck="false" maxlength="64">
-                </div>
-              </div>
+            <p class="hint">Your name is burned into the bottom center of every future Stage B video.</p>
+            <form id="watermark-form" autocomplete="off">
               <div class="field">
-                <label for="branding-avatar-input">Profile picture <span class="opt">optional</span></label>
-                <input type="file" id="branding-avatar-input" accept="image/png,image/jpeg,image/webp">
-                <p class="hint">PNG, JPEG, or WebP up to 5 MB. Leave empty to keep the current image.</p>
+                <label for="watermark-name-input">Name <span class="opt">optional</span></label>
+                <input type="text" id="watermark-name-input" name="creator_name" placeholder="Fubara" spellcheck="false" maxlength="64">
+                <p class="hint">Leave empty to render no watermark. A saved name is applied to the next processed video.</p>
               </div>
+              <div id="watermark-current" class="hint">No creator watermark configured.</div>
               <div class="row-actions">
-                <button type="submit" id="branding-save" class="btn btn-secondary" disabled>Save branding</button>
-                <button type="button" id="branding-clear-avatar" class="btn btn-plain btn-sm is-hidden">Remove picture</button>
-                <span id="branding-msg" class="inline-msg" aria-live="polite"></span>
+                <button type="submit" id="watermark-save" class="btn btn-secondary">Save watermark</button>
+                <span id="watermark-msg" class="inline-msg" aria-live="polite"></span>
               </div>
             </form>
           </div>
