@@ -180,9 +180,10 @@ CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 # starting at the word's own voiceover timestamp (relative to the
 # sentence event start).
 CIN_WORD_FADE_IN_MS = 170
-# Letter-by-letter fade-out: after the hold (see below), characters
-# dissolve left-to-right across this total window.
-CIN_LETTER_FADE_OUT_MS = 500
+# Letter-by-letter fade-out: after the hold (see below), every sentence
+# dissolves left-to-right over this fixed total window, independent of speech
+# timing and character count.
+CIN_LETTER_FADE_OUT_MS = 1000
 # Readability floor: a sentence stays fully on screen at least this
 # long even if it was spoken faster. Not a hard lock — when the spoken
 # span is longer, voice timing wins and the hold simply ends later.
@@ -351,7 +352,9 @@ def _char_run(word: str, s_start: float, hold_ms: int,
     for j, ch in enumerate(word["word"]):
         idx = char_offset + j
         g0 = hold_ms + int(round(idx * step))
-        g1 = g0 + max(1, int(round(step * 1.2)))
+        # The final character ends exactly at hold_ms + fade_out_ms, so the
+        # complete sentence dissolve occupies the requested fixed duration.
+        g1 = hold_ms + int(round((idx + 1) * step))
         tags = (
             f"{{\\alpha&HFF&{color_tags}"
             f"\\t({t_in},{t_in + CIN_WORD_FADE_IN_MS},\\alpha&H00&)"
@@ -496,7 +499,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         hold_end = max(sent["speak_end"], s_start + CIN_SENTENCE_MIN_SECONDS)
         hold_ms = int(round((hold_end - s_start) * 1000))
         n_chars = sum(len(w["word"].upper()) for w in words)
-        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
+        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0
 
         stack_layer = 2 * (i % 2)
         shadow_layer = stack_layer
@@ -736,7 +739,7 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
     for sentence in sentences:
         start = sentence["start"]
         hold_end = max(sentence["speak_end"], start + CIN_SENTENCE_MIN_SECONDS)
-        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
+        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0
         if time_s < start or time_s > event_end:
             continue
         masks: dict[tuple[int, int, int], Image.Image] = {}
@@ -756,10 +759,10 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
             for char in display:
                 fade_in = max(0.0, min(1.0, (time_s - word["start"]) /
                                       (CIN_WORD_FADE_IN_MS / 1000.0)))
-                fade_start = hold_end + (char_index / max(char_count, 1)) * \
-                    (CIN_LETTER_FADE_OUT_MS / 1000.0)
-                fade_end = fade_start + max(0.025, (CIN_LETTER_FADE_OUT_MS / 1000.0) /
-                                             max(char_count, 1) * 1.2)
+                fade_step = (CIN_LETTER_FADE_OUT_MS / 1000.0) / \
+                    max(char_count, 1)
+                fade_start = hold_end + char_index * fade_step
+                fade_end = hold_end + (char_index + 1) * fade_step
                 fade_out = 1.0 if time_s <= fade_start else max(
                     0.0, min(1.0, 1.0 - (time_s - fade_start) /
                     max(fade_end - fade_start, 0.001)))

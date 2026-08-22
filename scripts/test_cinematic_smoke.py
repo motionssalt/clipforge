@@ -76,6 +76,17 @@ assert max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS) \
     == s1["start"] + 1.5
 print("PASS: sentence split on punctuation + 1.5s readability floor")
 
+# --- Sentence fade-out: a full left-to-right character dissolve must span
+# one fixed second after the voice/readability hold, regardless of speech pace.
+hold_end = max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS)
+fade_end = hold_end + cin.CIN_LETTER_FADE_OUT_MS / 1000.0
+assert cin.CIN_LETTER_FADE_OUT_MS == 1000
+assert abs(fade_end - hold_end - 1.0) < 1e-9
+probe_chars = sum(len(word["word"].upper()) for word in s1["words"])
+probe_step_ms = cin.CIN_LETTER_FADE_OUT_MS / probe_chars
+assert abs(probe_chars * probe_step_ms - cin.CIN_LETTER_FADE_OUT_MS) < 1e-9
+print("PASS: full sentence letter fade-out is fixed at 1.0s")
+
 # --- Sentence-scale transition: while its complete word-by-word fade-in is
 # active, every sentence grows smoothly from small to normal. The exit uses
 # the same easing in the opposite visual direction (normal to enlarged).
