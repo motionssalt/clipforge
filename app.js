@@ -4414,6 +4414,17 @@
     startStageB();
   });
 
+  async function resolveCurrentStageBCodeRef() {
+    // A fresh dispatch must run the default branch as it exists NOW, not a
+    // stale workflow SHA or browser-cached branch object. The workflow logs
+    // this exact value and checks it out before any build dependency runs.
+    var branch = await gh('/repos/' + state.owner + '/' + state.repo +
+      '/branches/' + encodeURIComponent(REF) + '?_=' + Date.now());
+    var codeRef = branch && branch.commit && branch.commit.sha;
+    if (!codeRef) throw new Error('Could not resolve the latest commit of ' + REF + '.');
+    return codeRef;
+  }
+
   async function startStageB() {
     if (state.busy) return;
     if (!state.jobId) {
@@ -4520,6 +4531,10 @@
 
     var dispatchedAt = new Date();
     try {
+      // Pin every fresh Stage B dispatch to the current default-branch SHA.
+      // This gives normal starts and recovery starts identical current-code
+      // behavior and prevents a fixed pipeline from replaying stale code.
+      var codeRef = await resolveCurrentStageBCodeRef();
       await gh('/repos/' + state.owner + '/' + state.repo +
         '/actions/workflows/stage-b.yml/dispatches', {
         method: 'POST',
@@ -4528,7 +4543,8 @@
           inputs: {
             job_id: state.jobId,
             production_ref: 'path:jobs/' + state.jobId + '/production.json',
-            music_ref: musicRef
+            music_ref: musicRef,
+            code_ref: codeRef
           }
         }
       });
@@ -4646,10 +4662,7 @@
 
       // Resolve the branch to its CURRENT tip SHA at click time. Cache-bust
       // so a proxy never hands us a stale branch object.
-      var branch = await gh('/repos/' + state.owner + '/' + state.repo +
-        '/branches/' + encodeURIComponent(REF) + '?_=' + Date.now());
-      var codeRef = branch && branch.commit && branch.commit.sha;
-      if (!codeRef) throw new Error('Could not resolve the latest commit of ' + REF + '.');
+      var codeRef = await resolveCurrentStageBCodeRef();
 
       var dispatchedAt = new Date();
       await gh('/repos/' + state.owner + '/' + state.repo + '/actions/workflows/stage-b.yml/dispatches', {

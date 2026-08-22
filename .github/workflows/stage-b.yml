@@ -32,7 +32,7 @@ on:
         type: string
         default: "false"
       code_ref:
-        description: "Optional branch/tag/SHA to check out and run THIS Stage B execution from. The site's 'Restart Stage B' resolves the default branch to its current tip SHA at click time and passes it here so the restart ALWAYS runs the newest code, never the old run's commit. Empty = check out whatever ref the dispatch targeted (normal Stage B / direct-dispatch behavior)."
+        description: "Optional current default-branch SHA to check out and run THIS Stage B execution from. ClipForge resolves and passes the current tip for every new or recovery dispatch so a failed job never reuses the old workflow commit. Empty = resolve the repository's current default branch at execution time."
         required: false
         type: string
         default: ""
@@ -64,15 +64,16 @@ jobs:
       # executes the newest pushed code even if the branch-named dispatch
       # ref raced the push.
       #
-      # For a NORMAL Stage B dispatch (the site does not send `code_ref`,
-      # so it defaults to empty) we check out the dispatch target exactly as
-      # before — behavior unchanged.
+      # Every ClipForge start and recovery dispatch now sends a freshly
+      # resolved `code_ref`. A direct workflow_dispatch without that input
+      # falls back to the repository's CURRENT default branch rather than the
+      # dispatch event's historical workflow SHA.
       # ---------------------------------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.code_ref != '' && github.event.inputs.code_ref || github.ref }}
+          ref: ${{ github.event.inputs.code_ref != '' && github.event.inputs.code_ref || github.event.repository.default_branch }}
 
       - name: Log the exact code revision this run is executing
         shell: bash
@@ -80,7 +81,8 @@ jobs:
           set -euo pipefail
           echo "dispatch ref (github.ref)     : ${{ github.ref }}"
           echo "dispatch sha (github.sha)     : ${{ github.sha }}"
-          echo "code_ref input (restart pin)  : ${{ github.event.inputs.code_ref }}"
+          echo "code_ref input (current pin)  : ${{ github.event.inputs.code_ref }}"
+          echo "default branch fallback        : ${{ github.event.repository.default_branch }}"
           echo "checked-out commit (HEAD)     : $(git rev-parse HEAD)"
           echo "checked-out commit subject    : $(git log -1 --pretty=%s)"
 
@@ -106,23 +108,23 @@ jobs:
       # carries this commit onto the new tip; the code this run EXECUTES
       # is unaffected (the tree is already checked out).
       #
-      # Normal (non-restart) dispatches check out the branch ref directly
-      # and are already on a branch — this step is a no-op for them.
+      # A branch-based checkout is already attached; a SHA-pinned current-code
+      # checkout is safely re-attached here solely for later status commits.
       # ---------------------------------------------------------------------
       - name: Re-attach HEAD to the dispatch branch when the checkout pinned a SHA
         shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if git symbolic-ref -q HEAD > /dev/null; then
             echo "HEAD is on branch '$(git symbolic-ref --short HEAD)' — nothing to do."
             exit 0
           fi
-          branch="${GITHUB_REF#refs/heads/}"
-          if [ "$branch" = "$GITHUB_REF" ] || [ -z "$branch" ]; then
-            # GITHUB_REF is not a branch ref (e.g. a tag dispatch). The
-            # application only ever dispatches on its default branch.
-            branch="main"
-          fi
+          # This run deliberately executed current default-branch code, so
+          # attach status commits to that same branch rather than a historical
+          # event ref or an assumed literal branch name.
+          branch="${DEFAULT_BRANCH:?repository default branch is required}"
           echo "HEAD is detached at $(git rev-parse HEAD) (code_ref-pinned restart checkout)."
           echo "Re-attaching branch '$branch' at this exact commit so status commits can be pushed."
           # Fetch the branch's remote-tracking ref explicitly: a SHA-pinned
@@ -640,8 +642,7 @@ jobs:
           hashtags = clean_str_list(doc.get("hashtags"))
           youtube_tags = clean_str_list(doc.get("youtube_tags"))
 
-          # Hashtags: space-separated on one line — the exact form a poster
-          # pastes into a TikTok / Reels / Shorts caption.
+          # Hashtags: space-separated on one line for a social-platform caption.
           hashtag_line = " ".join(hashtags)
           # YouTube tags: comma-separated on one line — the exact form the
           # YouTube upload flow accepts in its "Tags" field.

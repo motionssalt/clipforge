@@ -33,10 +33,11 @@ Rationale for each stage:
   the exact "plastered / blurry / over-smooth / artificial" look this pass
   is meant to avoid. ``hqdn3d`` is both dramatically faster and the right
   tool for anime linework.
-* The supplied 64³ color-cube asset carries the requested grade (the
-  cool/teal LUT shown in the provided grid reference). It is the only color
-  transform in this stage; no contrast curve is stacked after it. This
-  grade is confirmed good and is left untouched.
+* The supplied 64³ color-cube asset is deterministically converted from
+  ``assets/anime_reference_lut_grid.png`` into FFmpeg's Hald level-8 layout.
+  It is the only color transform in this stage; no contrast curve is stacked
+  after it. The tiled source grid is retained for reproducibility and the
+  generated Hald image is the actual filter input.
 * ``cas`` (contrast-adaptive sharpen) restores the texture and edge
   definition the source needs, in a locally content-aware way that does
   not ring on flat areas. It is run at a strong-but-controlled strength so
@@ -77,9 +78,10 @@ DENOISE = "hqdn3d=0.8:0.6:3.0:2.0"
 LUT_FILTER = "haldclut=shortest=1"
 
 # The supplied level-8 color cube is a 512×512 PNG encoding a 64×64×64
-# mapping. It is rebuilt from the user-provided 8×8 tile-grid LUT reference
-# (64 tiles, B per tile, R on tile-x, G on tile-y) and must not be
-# procedurally overwritten.
+# mapping. It is rebuilt from assets/anime_reference_lut_grid.png, the
+# user-provided 8×8 tile-grid LUT (64 blue slices; red tile-x, green tile-y),
+# via scripts/convert_lut_grid_to_hald.py. Never procedurally overwrite it.
+LUT_GRID_SOURCE = Path(__file__).resolve().parents[1] / "assets" / "anime_reference_lut_grid.png"
 LUT_ASSET = Path(__file__).resolve().parents[1] / "assets" / "anime_reference_color_cube_l8.png"
 
 # Contrast-adaptive sharpen: restores texture and edge definition across
@@ -240,6 +242,8 @@ def main() -> None:
     if not args.enabled:
         print("Quality enhancement DISABLED via --no-enabled — scene files left untouched.", flush=True)
         return
+    if not LUT_GRID_SOURCE.is_file():
+        raise SystemExit(f"ERROR: supplied LUT grid source missing: {LUT_GRID_SOURCE}")
     if not LUT_ASSET.is_file():
         raise SystemExit(f"ERROR: bundled color-cube asset missing: {LUT_ASSET}")
 
