@@ -1,16 +1,29 @@
 {
   "job_id": "e2e-torrent-20260822-105254",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "awaiting_json_upload",
+  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
   "release_tag": "clipforge-e2e-torrent-20260822-105254",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-e2e-torrent-20260822-105254",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e-torrent-20260822-105254/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e-torrent-20260822-105254/key_moments.json",
+    "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e-torrent-20260822-105254/original.mp4",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e-torrent-20260822-105254/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e-torrent-20260822-105254/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e-torrent-20260822-105254/transcript.json"
+  },
   "created_at_epoch": 1787395994,
-  "updated_at_epoch": 1787396820,
+  "updated_at_epoch": 1787396833,
   "expires_at_epoch": 1787439194,
   "extra": {
     "torrent_selection_path": "jobs/e2e-torrent-20260822-105254/torrent-selection.json",
     "workflow_run_id": "32569332750",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32569332750"
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32569332750",
+    "duration_seconds": "12",
+    "screenshot_count": "2",
+    "event_frame_count": "2",
+    "shot_count": "1",
+    "key_moment_count": "1",
+    "original_asset_name": "original.mp4"
   }
 }
