@@ -38,4 +38,14 @@ with tempfile.TemporaryDirectory(prefix="clipforge_prompt_test_") as temp_dir:
 assert LITERAL_KEYWORD_EXAMPLE in rendered, "literal JSON keyword example was not rendered"
 assert FOCUS in rendered, "focus interpolation was lost"
 assert '"target_total_duration_seconds": 180' in rendered, "target duration was not rendered"
-print("PASS: analysis-prompt template renders literal keyword JSON without KeyError")
+for required_phrase in (
+    "COMMENTARY RHYTHM",
+    "crisp, declarative momentum",
+    "Use specific details already supported by the source",
+    "Write the FINAL `voiceover_text` in a tight commentary rhythm",
+    "short declarative sentences, concrete source-backed details",
+    "Do not hedge, recap the same",
+    "declarative commentary style: concrete source-backed facts",
+):
+    assert required_phrase in rendered, f"missing narration-style guidance: {required_phrase}"
+print("PASS: analysis prompt renders literal keyword JSON and declarative narration guidance")

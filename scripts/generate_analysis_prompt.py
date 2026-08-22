@@ -202,6 +202,21 @@ know what happens next." Concretely:
     a longer one reads as a punch. Do not let every sentence in a cut
     settle into the same length and rhythm.
 
+COMMENTARY RHYTHM — short-form narration must move with crisp, declarative momentum.
+  - State concrete facts and visible actions plainly. Prefer "He opens the
+    door" to hedged framing such as "It looks like he may be about to open
+    the door." Do not pad a beat with "seems," "starts to," "kind of," or
+    "maybe" unless the uncertainty is genuinely visible and important.
+  - Use specific details already supported by the source: a number, object,
+    location, action, or consequence. Do not replace those details with vague
+    adjectives or generic hype.
+  - Keep most sentences short and complete. One visual beat, reaction, or
+    consequence per sentence. Let a very short sentence land a surprise,
+    threat, reversal, or emotional hit.
+  - Maintain steady forward motion: fact, action, reaction, consequence. Do
+    not repeat the same point in different words, over-explain the obvious,
+    or drift into flowery commentary.
+
 CHARACTER IDENTIFICATION IS YOUR JOB.
 The pipeline no longer runs a local face-clustering step. That step was
 misidentifying people (splitting the same character into two labels, or
@@ -603,12 +618,19 @@ STEP 3 (assemble cuts).
           describe it to someone who cannot see the screen. Cover the
           visual sequence of events (actions, reactions, expressions,
           scene changes, on-screen text, visual gags) as well as any
-          essential dialogue, in chronological order, but write it
-          with short punchy sentences, clear setup-then-payoff
-          structure, and the character's emotional reaction stated as
-          its own beat — see "WRITE IT TO BE ENGAGING, NOT JUST
-          ACCURATE" above. Do not default to one long clause-stacked
-          sentence per beat.
+          essential dialogue, in chronological order.
+        - Write the FINAL `voiceover_text` in a tight commentary rhythm:
+          short declarative sentences, concrete source-backed details,
+          minimal filler, and steady beat-to-beat momentum. State the
+          action and consequence plainly. Use one sentence for setup and
+          another for the reversal or payoff. Do not hedge, recap the same
+          beat twice, or turn a simple visual fact into a long, winding
+          sentence. A short blunt sentence is welcome when the scene lands
+          a surprise, threat, or emotional reaction.
+        - Keep clear setup-then-payoff structure and state the character's
+          emotional reaction as its own beat — see "WRITE IT TO BE
+          ENGAGING, NOT JUST ACCURATE" above. Do not default to one long
+          clause-stacked sentence per beat.
 
         CHARACTER LABELS IN voiceover_text:
         - Identify each recurring character yourself from the
@@ -840,10 +862,12 @@ CONSTRAINTS
     parentheticals, no directions or commentary ABOUT the video —
     everything in it is heard by the viewer verbatim. Its spoken
     length should roughly fit the cut's duration (about 2.5 words per
-    second); keep it tight rather than breathless. Favor several
-    short sentences over one long compound sentence — short sentences
-    read faster, hit harder, and give the narration a pulse instead
-    of a monotone. When the beat has a reversal, expectation, or twist,
+    second); keep it tight rather than breathless. Write in a crisp,
+    declarative commentary style: concrete source-backed facts, direct
+    action verbs, minimal filler, and steady forward momentum. Favor
+    several short sentences over one long compound sentence — short
+    sentences read faster, hit harder, and give the narration a pulse
+    instead of a monotone. When the beat has a reversal, expectation, or twist,
     write the setup and the payoff as distinct sentences rather than
     folding both into one clause. State a character's emotional
     reaction as its own short beat where the source material supports
