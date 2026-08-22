@@ -1,15 +1,15 @@
 {
   "job_id": "20260822-051719-32553947636",
-  "stage": "error",
-  "message": "Stage A failed. See workflow run for logs.",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
   "release_tag": "clipforge-20260822-051719-32553947636",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787375934,
-  "updated_at_epoch": 1787376398,
+  "updated_at_epoch": 1787378817,
   "expires_at_epoch": 1787419134,
   "extra": {
-    "workflow_run_id": "32553947636",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32553947636"
+    "workflow_run_id": "32556030807",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32556030807"
   }
 }
