@@ -11,6 +11,14 @@ onnxruntime>=1.17,<2
 # final MP4.
 Pillow>=10.3,<12
 
+# --- Local face detection ----------------------------------------------------
+# Scene-level cinematic reframing reuses the repository's CPU-only InsightFace
+# FaceAnalysis approach. OpenCV loads sampled frames and onnxruntime (above)
+# runs the model locally. If model initialization fails at runtime, Stage B
+# retains its safe centered crop rather than failing the render.
+opencv-python-headless>=4.8,<5
+insightface==0.7.3
+
 # --- Numerics ----------------------------------------------------------------
 # numpy is a first-class dependency of faster-whisper and of a couple of
 # our own helpers (subtitle timing math, key-moment scoring). Kept
