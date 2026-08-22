@@ -64,8 +64,9 @@ personal access token.
    scene-level character-centred reframing, per-sentence Coolvetica captions,
    a compact title banner, word-by-word entrance, letter-by-letter exit, and
    a synchronized transition-scale expansion. Captions use crisp white text
-   with a hard black down-right 3D shadow; they intentionally have no glow or
-   blur. `word` is the explicit legacy template compatibility mode.
+   with a markedly darker near-black down-right softened shadow and a narrow
+   keyline; they intentionally have no separate glow treatment. `word` is the
+   explicit legacy template compatibility mode.
 
    Each production-json author chooses optional keyword colours directly. Use
    `"keywords": [{"word": "betrayal", "color": "#FF5C5C"}]` or

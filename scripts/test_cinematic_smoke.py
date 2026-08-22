@@ -186,10 +186,11 @@ assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
 assert all(style in ass for style in ("CinShadow", "CinText"))
 assert f"\\pos({W // 2 + int(round(W * cin.CIN_ASS_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_ASS_SHADOW_OFFSET_Y_FRACTION))})" in ass, "compact diagnostic shadow position missing"
 assert cin.CIN_FONT_FRACTION_OF_HEIGHT == 0.032
-assert cin.CIN_RASTER_SHADOW_RGB == (38, 38, 38)
-assert cin.CIN_RASTER_SHADOW_ALPHA == 0.72
+assert cin.CIN_ASS_SHADOW_COLOR == "&H10000000"
+assert cin.CIN_RASTER_SHADOW_RGB == (0, 0, 0)
+assert cin.CIN_RASTER_SHADOW_ALPHA == 0.94
 assert (cin.CIN_RASTER_SHADOW_X, cin.CIN_RASTER_SHADOW_Y,
-        cin.CIN_RASTER_SHADOW_BLUR_RADIUS) == (3, 5, 4)
+        cin.CIN_RASTER_SHADOW_BLUR_RADIUS) == (4, 6, 5)
 assert cin.CIN_RASTER_STROKE_RGB == (24, 24, 24)
 assert cin.CIN_RASTER_STROKE_WIDTH == 1
 assert "\\alpha" not in ass and "\\t(" not in ass, "caption animation tags remain"
@@ -208,7 +209,7 @@ assert text_evs[0][2] <= text_evs[1][1], "static caption cards overlap"
 assert all(event[0] == "1" for event in text_evs), "animated layer stacks remain"
 for shadow_ev, text_ev in zip(events_by_style["CinShadow"], text_evs):
     assert (shadow_ev[1], shadow_ev[2]) == (text_ev[1], text_ev[2])
-print("PASS: all-caps ASS cards + 1px dark keyline + compact soft-gray raster shadow (no caption animation)")
+print("PASS: all-caps ASS cards + 1px dark keyline + high-opacity near-black raster shadow (no caption animation)")
 
 
 

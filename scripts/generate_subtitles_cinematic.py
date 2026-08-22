@@ -97,25 +97,25 @@ CIN_FONT_FALLBACKS = ["DejaVu Sans", "Liberation Sans", "sans-serif"]
 # they read cleanly without dominating the live footage.
 CIN_FONT_FRACTION_OF_HEIGHT = 0.032
 # The timing/debug ASS sidecar approximates the production drop shadow with a
-# subtle, close offset. The rendered video is authored by the Pillow raster
+# near-black, high-opacity offset. The rendered video is authored by the Pillow raster
 # compositor below, which supplies the actual Gaussian-softened edge.
-CIN_ASS_SHADOW_COLOR = "&H60000000"
+CIN_ASS_SHADOW_COLOR = "&H10000000"
 CIN_ASS_OUTLINE_COLOR = "&H00181818"
 CIN_ASS_OUTLINE_WIDTH = 1
 CIN_ASS_SHADOW_OFFSET_X_FRACTION = 0.0020
 CIN_ASS_SHADOW_OFFSET_Y_FRACTION = 0.0035
 
 # Production captions are rasterized with Pillow as three deliberate layers:
-# a compact dark-gray Gaussian shadow, a subtle one-pixel dark keyline, and
-# literal per-word foreground fills. This is not a separate glow treatment.
+# a compact near-black high-opacity Gaussian shadow, a subtle one-pixel dark
+# keyline, and literal per-word foreground fills. This is not a separate glow treatment.
 CIN_RASTER_FPS = 24
 CIN_RASTER_MAX_WIDTH_FRACTION = 0.86
 CIN_RASTER_Y_FRACTION = 0.55
-CIN_RASTER_SHADOW_RGB = (38, 38, 38)
-CIN_RASTER_SHADOW_ALPHA = 0.72
-CIN_RASTER_SHADOW_X = 3
-CIN_RASTER_SHADOW_Y = 5
-CIN_RASTER_SHADOW_BLUR_RADIUS = 4
+CIN_RASTER_SHADOW_RGB = (0, 0, 0)
+CIN_RASTER_SHADOW_ALPHA = 0.94
+CIN_RASTER_SHADOW_X = 4
+CIN_RASTER_SHADOW_Y = 6
+CIN_RASTER_SHADOW_BLUR_RADIUS = 5
 # A narrow dark keyline preserves readability over pale, high-detail footage.
 # It sits above the existing blur shadow and below the literal per-word fills.
 CIN_RASTER_STROKE_RGB = (24, 24, 24)
