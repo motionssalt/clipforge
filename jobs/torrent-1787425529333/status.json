@@ -1,12 +1,21 @@
 {
   "job_id": "torrent-1787425529333",
+<<<<<<< Updated upstream
   "stage": "error",
   "message": "Stage A failed. See workflow run for logs.",
+=======
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+>>>>>>> Stashed changes
   "release_tag": "clipforge-torrent-1787425529333",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787425529,
+<<<<<<< Updated upstream
   "updated_at_epoch": 1787425676,
+=======
+  "updated_at_epoch": 1787427900,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1787468729,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787425529333/torrent-selection.json",
