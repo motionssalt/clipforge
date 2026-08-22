@@ -74,6 +74,19 @@ assert max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS) \
     == s1["start"] + 1.5
 print("PASS: sentence split on punctuation + 1.5s readability floor")
 
+# --- Sentence-scale transition: the exact cubic-bezier reference drives the
+# existing alpha windows. Captions are enlarged during entry/exit and settle
+# to normal scale during the hold, with no independent timer.
+enter_scale = cin._sentence_transition_scale(s1, s1["start"] + 0.02)
+settled_scale = cin._sentence_transition_scale(s1, s1["start"] + 1.10)
+exit_scale = cin._sentence_transition_scale(s1, s1["start"] + 1.72)
+assert cin.CIN_EXPAND_BEZIER == (0.20, 1.00, 1.00, 1.00)
+assert enter_scale > 1.10 and exit_scale > 1.05, (enter_scale, exit_scale)
+assert settled_scale == 1.0, settled_scale
+assert enter_scale <= cin.CIN_TRANSITION_EXPAND_SCALE + 1e-6
+assert exit_scale <= cin.CIN_TRANSITION_EXPAND_SCALE + 1e-6
+print("PASS: sentence expand is synchronized to fade-in and letter fade-out windows")
+
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
 # centre-crop it to the fixed cinematic canvas before captions or banner.

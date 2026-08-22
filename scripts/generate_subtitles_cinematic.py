@@ -138,6 +138,11 @@ CIN_RASTER_Y_FRACTION = 0.55
 CIN_RASTER_SHADOW_ALPHA = 1.00
 CIN_RASTER_SHADOW_X = 8
 CIN_RASTER_SHADOW_Y = 10
+# Captions hold at their normal size. While entering or leaving, the whole
+# sentence expands up to this multiplier in sync with the existing alpha
+# transitions. The envelope follows cubic-bezier(0.20, 1.00, 1.00, 1.00).
+CIN_TRANSITION_EXPAND_SCALE = 1.18
+CIN_EXPAND_BEZIER = (0.20, 1.00, 1.00, 1.00)
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
@@ -620,6 +625,66 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     return runs
 
 
+def _cubic_bezier_ease(progress: float) -> float:
+    """Evaluate CSS-style cubic-bezier(0.20, 1.00, 1.00, 1.00) at x=progress."""
+    progress = max(0.0, min(1.0, progress))
+    x1, y1, x2, y2 = CIN_EXPAND_BEZIER
+    lo, hi = 0.0, 1.0
+    for _ in range(18):
+        t = (lo + hi) / 2.0
+        x = (3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) * t ** 2 * x2 + t ** 3)
+        if x < progress:
+            lo = t
+        else:
+            hi = t
+    t = (lo + hi) / 2.0
+    return 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) * t ** 2 * y2 + t ** 3
+
+
+def _sentence_transition_scale(sentence: dict, time_s: float) -> float:
+    """Return the sentence-scale envelope tied to the existing fade timings."""
+    start = float(sentence["start"])
+    hold_end = max(float(sentence["speak_end"]), start + CIN_SENTENCE_MIN_SECONDS)
+    fade_in_end = min(
+        hold_end,
+        max(float(word["start"]) for word in sentence["words"]) +
+        CIN_WORD_FADE_IN_MS / 1000.0,
+    )
+    event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
+    if time_s < fade_in_end:
+        # Enter visibly expanded, then settle rapidly as the final word fades
+        # in. This gives the requested fast-in, settle feel without a separate
+        # timer beyond the word alpha animation.
+        progress = (time_s - start) / max(fade_in_end - start, 0.001)
+        return 1.0 + (CIN_TRANSITION_EXPAND_SCALE - 1.0) * \
+            (1.0 - _cubic_bezier_ease(progress))
+    if time_s > hold_end:
+        # Letter fade-out expands from the settled scale using the same
+        # cubic-bezier feel and ends at the transition scale.
+        progress = (time_s - hold_end) / max(event_end - hold_end, 0.001)
+        return 1.0 + (CIN_TRANSITION_EXPAND_SCALE - 1.0) * _cubic_bezier_ease(progress)
+    return 1.0
+
+
+def _scale_mask_about_center(mask: Image.Image, scale: float,
+                             reference_bbox: tuple[int, int, int, int] | None = None) -> Image.Image:
+    """Scale a mask around a shared sentence centre while preserving its canvas."""
+    bbox = reference_bbox or mask.getbbox()
+    if scale <= 1.0001 or not bbox:
+        return mask
+    left, top, right, bottom = bbox
+    crop = mask.crop((left, top, right, bottom))
+    new_w = max(1, int(round(crop.width * scale)))
+    new_h = max(1, int(round(crop.height * scale)))
+    enlarged = crop.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    out = Image.new("L", mask.size, 0)
+    center_x = (left + right) / 2.0
+    center_y = (top + bottom) / 2.0
+    out.paste(enlarged, (int(round(center_x - new_w / 2.0)),
+                         int(round(center_y - new_h / 2.0))))
+    return out
+
+
 def _apply_mask(canvas: Image.Image, mask: Image.Image,
                 rgb: tuple[int, int, int], opacity: float = 1.0,
                 offset: tuple[int, int] = (0, 0)) -> None:
@@ -681,8 +746,16 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                 char_index += 1
         for mask in masks.values():
             union = ImageChops.lighter(union, mask)
-        if not union.getbbox():
+        sentence_bbox = union.getbbox()
+        if not sentence_bbox:
             continue
+        scale = _sentence_transition_scale(sentence, time_s)
+        if scale > 1.0001:
+            masks = {
+                color: _scale_mask_about_center(mask, scale, sentence_bbox)
+                for color, mask in masks.items()
+            }
+            union = _scale_mask_about_center(union, scale, sentence_bbox)
         _apply_mask(foreground, union, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
                     (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
         for color, mask in masks.items():
