@@ -1,12 +1,12 @@
 {
   "job_id": "20260822-051719-32553947636",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "error",
+  "message": "Stage A failed. See workflow run for logs.",
   "release_tag": "clipforge-20260822-051719-32553947636",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787375934,
-  "updated_at_epoch": 1787375934,
+  "updated_at_epoch": 1787376398,
   "expires_at_epoch": 1787419134,
   "extra": {
     "workflow_run_id": "32553947636",
