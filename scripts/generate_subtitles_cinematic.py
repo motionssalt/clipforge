@@ -37,7 +37,7 @@ Cinematic mode (this file):
     timestamp even while the previous sentence's letter-by-letter
     dissolve is still running. Alternating ASS layer pairs keep the
     incoming sentence composited on top of the outgoing one, so the
-    glow/shadow treatment reads as intentional layering, not a glitch.
+    caption transition reads as intentional layering, not a glitch.
   * TIMING — sentence timing is derived from the same word-level
     timestamps the legacy renderer uses (faster-whisper transcription
     of the merged voiceover, aligned back onto the ORIGINAL script via
@@ -50,11 +50,10 @@ Cinematic mode (this file):
     vertically (Alignment=5). The narrow condensed caption font and
     bottom-of-frame placement of template mode are deliberately NOT
     carried over; this mode has no outline, halo, glow, or blur.
-  * KEYWORD COLORING — production.json may mark emotionally charged
-    keywords with a tone (see load_script_with_keywords); matching
-    words are rendered in a tone color (tense/negative -> hot red,
-    warm/positive -> warm amber) instead of the default white, in both
-    the main text and the glow layer.
+  * KEYWORD COLORING — production.json may mark noteworthy words with an
+    author-selected literal hex color (see load_script_with_keywords).
+    The renderer applies that exact color and does not classify tone,
+    sentiment, or emotional weight itself.
   * TITLE BANNER — a one-time intro element: a white full-width banner
     carrying the video's title drops in from off-screen top at t=0,
     holds 7 seconds, then drops back out the same way (up, off the top
@@ -187,21 +186,28 @@ CIN_LETTER_FADE_OUT_MS = 500
 # span is longer, voice timing wins and the hold simply ends later.
 CIN_SENTENCE_MIN_SECONDS = 1.5
 
-# ---------- Keyword sentiment palette ----------
-# production.json cuts may carry an optional "keywords" list marking
-# emotionally charged words with a tone. Tones map to colour families:
-#   tense/negative -> hot red, warm/positive -> warm amber.
-# Matching is on the normalised token (lowercase, alphanumeric only) —
-# the same normalisation the aligner uses — and colours are applied via
-# inline \c (fill) / \3c (glow outline) overrides, so wording and
-# timing are never touched.
-KEYWORD_COLORS = {
-    "tense":    {"fill": "&H5C5CFF", "glow": "&H640000D0"},  # #FF5C5C
-    "negative": {"fill": "&H5C5CFF", "glow": "&H640000D0"},
-    "warm":     {"fill": "&H5AC8FF", "glow": "&H6400A0E0"},  # #FFC85A
-    "positive": {"fill": "&H5AC8FF", "glow": "&H6400A0E0"},
-}
-DEFAULT_TONE = "tense"
+# ---------- Author-controlled keyword colors ----------
+# production.json optionally carries literal #RRGGBB values chosen by its
+# authoring process. This renderer only validates and applies them; it never
+# maps tone or sentiment labels to color.
+_HEX_COLOR_RE = re.compile(r"^#?([0-9A-Fa-f]{6})$")
+
+
+def _normalise_hex_color(value: object) -> str | None:
+    match = _HEX_COLOR_RE.fullmatch(str(value or "").strip())
+    return f"#{match.group(1).upper()}" if match else None
+
+
+def _hex_rgb(color: str | None) -> tuple[int, int, int]:
+    normalized = _normalise_hex_color(color)
+    if not normalized:
+        return (255, 255, 255)
+    return tuple(int(normalized[index:index + 2], 16) for index in (1, 3, 5))
+
+
+def _hex_ass(color: str) -> str:
+    red, green, blue = _hex_rgb(color)
+    return f"&H{blue:02X}{green:02X}{red:02X}"
 
 _SENT_END_RE = re.compile(r'[.!?…]["\'”’)\]]*$')
 
@@ -251,16 +257,15 @@ def split_sentences(events: list[dict]) -> list[dict]:
 def load_script_with_keywords(script_json: str) -> tuple[list[str], dict]:
     """
     Load the ORIGINAL script (one voiceover_text per cut, in cut order)
-    plus the additive keyword-sentiment metadata.
+    plus additive, author-selected keyword-color metadata.
 
     Accepted keyword shapes per cut (all optional, additive only):
-        "keywords": [{"word": "betrayal", "tone": "tense"}, ...]
-        "keywords": {"betrayal": "tense", ...}
+        "keywords": [{"word": "betrayal", "color": "#FF5C5C"}, ...]
+        "keywords": {"betrayal": "#FF5C5C", ...}
 
-    Returns (texts, keyword_map) where keyword_map maps the normalised
-    keyword token -> tone string ("tense"/"warm"/...). Unknown tones
-    fall back to DEFAULT_TONE at colour-lookup time, so a typo never
-    breaks the render.
+    Returns (texts, keyword_map) where keyword_map maps a normalised token to
+    an exact #RRGGBB literal. Tone-only legacy entries are deliberately
+    ignored with a warning: there is no renderer-side tone palette.
     """
     with open(script_json, "r", encoding="utf-8") as f:
         payload = json.load(f)
@@ -291,19 +296,34 @@ def load_script_with_keywords(script_json: str) -> tuple[list[str], dict]:
 
         raw_kw = c.get("keywords")
         if isinstance(raw_kw, dict):
-            items = [{"word": w, "tone": t} for w, t in raw_kw.items()]
+            items = [
+                {"word": word, "color": value.get("color") if isinstance(value, dict) else value}
+                for word, value in raw_kw.items()
+            ]
         elif isinstance(raw_kw, list):
             items = [k for k in raw_kw if isinstance(k, dict)]
         else:
             items = []
         for k in items:
             word = legacy._norm_token(str(k.get("word") or ""))
-            tone = str(k.get("tone") or DEFAULT_TONE).strip().lower()
-            if word:
-                keyword_map[word] = tone
+            color = _normalise_hex_color(k.get("color"))
+            if not word:
+                continue
+            if color:
+                keyword_map[word] = color
+            elif k.get("tone"):
+                print(
+                    f"WARNING: ignoring legacy tone-only keyword {word!r}; "
+                    "production.json must provide a literal #RRGGBB color.",
+                    file=sys.stderr,
+                )
+            elif k.get("color") is not None:
+                raise ValueError(
+                    f"Invalid keyword color for {word!r}: {k.get('color')!r}. "
+                    "Use a #RRGGBB literal.")
     if keyword_map:
-        print(f"Loaded {len(keyword_map)} sentiment keyword(s): "
-              f"{sorted(keyword_map)}", flush=True)
+        print(f"Loaded {len(keyword_map)} author-selected keyword color(s): "
+              f"{keyword_map}", flush=True)
     return texts, keyword_map
 
 
@@ -486,9 +506,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             # Source wording remains authoritative for timing and keyword
             # lookup, while the rendered display glyphs are always uppercase.
             display_word = w["word"].upper()
-            tone = keyword_map.get(legacy._norm_token(w["word"]))
-            colors = KEYWORD_COLORS.get(tone) if tone else None
-            text_tags = f"\\c{colors['fill']}&" if colors else ""
+            color = keyword_map.get(legacy._norm_token(w["word"]))
+            text_tags = f"\\c{_hex_ass(color)}&" if color else ""
             s_run, offset = _char_run(
                 {**w, "word": display_word}, s_start, hold_ms,
                 CIN_LETTER_FADE_OUT_MS, offset, n_chars, "\\c&H000000&")
@@ -581,12 +600,9 @@ def _caption_font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(CIN_FONT_FILE, size)
 
 
-def _caption_color(tone: str | None) -> tuple[int, int, int]:
-    if tone in {"tense", "negative"}:
-        return (255, 92, 92)
-    if tone in {"warm", "positive"}:
-        return (255, 200, 90)
-    return (255, 255, 255)
+def _caption_color(color: str | None) -> tuple[int, int, int]:
+    """Return the literal author-selected RGB value, or white when absent."""
+    return _hex_rgb(color)
 
 
 def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]:
@@ -619,7 +635,6 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
         for item in line:
             item["x"] = x
             item["y"] = y
-            item["tone"] = legacy._norm_token(item["source"]["word"])
             runs.append(item)
             x += metrics.textlength(item["display"] + " ", font=font)
     return runs
@@ -849,7 +864,7 @@ def main() -> None:
                     help="production.json / cuts.json / "
                          "voiceover_manifest.json carrying the ORIGINAL "
                          "script (voiceover_text per cut) plus optional "
-                         "sentiment keywords. Strongly recommended: "
+                         "literal keyword colors. Strongly recommended: "
                          "without it the transcription's wording is used "
                          "as a legacy fallback.")
     ap.add_argument("--model", default="base", choices=["tiny", "base", "small"])
@@ -888,7 +903,7 @@ def main() -> None:
     keyword_map: dict[str, str] = {}
     if args.script_json:
         # Original script = AUTHORITATIVE WORDING; keywords = additive
-        # sentiment colouring metadata.
+        # literal author-selected keyword-color metadata.
         script_texts, keyword_map = load_script_with_keywords(args.script_json)
         words = legacy.align_words_to_script(timed_words, script_texts)
     else:

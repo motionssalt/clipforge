@@ -54,20 +54,19 @@ personal access token.
    or subtitle work left to do.
 
    **Caption modes.** Stage B's `subtitle_mode` input selects the caption
-   renderer. `word` (default) is the legacy template mode above.
-   `cinematic` is the new cinematic mode (`generate_subtitles_cinematic.py`):
-   text is grouped and timed **per sentence** (synced to the same
-   word-level voiceover timestamps), each sentence **fades in word by
-   word** and **fades out letter by letter**, the incoming sentence
-   overlaps the outgoing one's dissolve on stacked layers, sentences
-   hold for roughly 1.5s minimum, and the style is glowing text with a
-   drop shadow **centred in the frame**. production.json may also mark
-   sentiment keywords per cut — an optional `"keywords"` list of
-   `{"word": ..., "tone": ...}` (or a `{"word": "tone"}` map) — and the
-   cinematic renderer colours those words: tense/negative tones in hot
-   red, warm/positive tones in warm amber. Cinematic mode currently
-   runs alongside template mode for testing; a later batch replaces
-   template mode entirely.
+   renderer. `cinematic` is the default mode and renders
+   `generate_subtitles_cinematic.py`: a bare `1080×1200` cropped frame,
+   scene-level character-centred reframing, per-sentence Coolvetica captions,
+   a compact title banner, word-by-word entrance, letter-by-letter exit, and
+   a synchronized transition-scale expansion. Captions use crisp white text
+   with a hard black down-right 3D shadow; they intentionally have no glow or
+   blur. `word` is the explicit legacy template compatibility mode.
+
+   Each production-json author chooses optional keyword colours directly. Use
+   `"keywords": [{"word": "betrayal", "color": "#FF5C5C"}]` or
+   `"keywords": {"betrayal": "#FF5C5C"}` per cut. The cinematic renderer
+   applies the supplied `#RRGGBB` literal to matching words but never maps
+   tone, sentiment, or emotional labels to a colour.
 6. A **cleanup** workflow runs hourly and deletes every job, release
    and job folder older than 12 hours. Nothing lingers.
 

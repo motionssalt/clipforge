@@ -21,7 +21,8 @@ import generate_subtitles_cinematic as cin  # noqa: E402
 WORK = "/tmp/cin_test"
 os.makedirs(WORK, exist_ok=True)
 
-# --- Synthetic production.json: two cuts, keywords in BOTH accepted shapes
+# --- Synthetic production.json: two cuts, literal author-selected colors in
+# both accepted shapes. The renderer receives colors; it does not choose them.
 prod = {
     "title": "The Son-In-Law Nobody Liked",
     "cuts": [
@@ -29,14 +30,14 @@ prod = {
             "start_seconds": 10.0,
             "end_seconds": 20.0,
             "voiceover_text": "She is right there. No she is gone forever.",
-            "keywords": [{"word": "gone", "tone": "tense"},
-                         {"word": "forever", "tone": "negative"}],
+            "keywords": [{"word": "gone", "color": "#FF5C5C"},
+                         {"word": "forever", "color": "#8A5CFF"}],
         },
         {
             "start_seconds": 30.0,
             "end_seconds": 40.0,
             "voiceover_text": "The son-in-law nobody liked became the shield. He saved them all.",
-            "keywords": {"shield": "warm", "saved": "positive"},
+            "keywords": {"shield": "#FFC85A", "saved": "#28C76F"},
         },
     ],
 }
@@ -47,9 +48,10 @@ with open(prod_path, "w", encoding="utf-8") as f:
 # --- Exercise the script loader (texts + keyword map)
 texts, kw = cin.load_script_with_keywords(prod_path)
 assert len(texts) == 2, texts
-assert kw.get("gone") == "tense" and kw.get("shield") == "warm", kw
-assert kw.get("forever") == "negative" and kw.get("saved") == "positive", kw
-print("PASS: keyword loader (list + dict shapes, tones)")
+assert kw.get("gone") == "#FF5C5C" and kw.get("shield") == "#FFC85A", kw
+assert kw.get("forever") == "#8A5CFF" and kw.get("saved") == "#28C76F", kw
+assert "KEYWORD_COLORS" not in open(cin.__file__, encoding="utf-8").read()
+print("PASS: keyword loader (list + dict shapes, author-selected literal colors)")
 
 # --- Synthetic timed words: sentence 1 spoken fast (<1.5s) to exercise the
 #     1.5s floor; sentence 2 normal. Timing stands in for whisper output.
@@ -156,7 +158,7 @@ assert all(style in ass for style in ("CinShadow", "CinText"))
 assert f"\\pos({W // 2 + int(round(W * cin.CIN_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_SHADOW_OFFSET_Y_FRACTION))})" in ass, "hard down-right shadow position missing"
 assert "\\alpha&HFF&" in ass, "fade tags missing"
 assert "\\c&H5C5CFF&" in ass, "tense keyword fill colour missing"
-assert "\\c&H5AC8FF&" in ass, "warm keyword fill colour missing"
+assert "\\c&H5AC8FF&" in ass, "author-selected #FFC85A fill color missing"
 # Letter-by-letter: a mid-sentence char must carry its own fade-out \t
 assert ass.count("\\t(") > sum(len(s["words"]) for s in sentences), \
     "per-character fade-out tags missing"

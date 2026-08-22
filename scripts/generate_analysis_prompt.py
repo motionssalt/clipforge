@@ -801,7 +801,11 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 170,
-      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, using SHORT sentences (one beat per sentence, not clause-stacked run-ons), a confident third person present tense by default, clear setup-then-payoff structure on any beat that has a reversal or twist, and the character's emotional reaction stated as its own short beat where relevant. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts."
+      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, using SHORT sentences (one beat per sentence, not clause-stacked run-ons), a confident third person present tense by default, clear setup-then-payoff structure on any beat that has a reversal or twist, and the character's emotional reaction stated as its own short beat where relevant. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts.",
+      "keywords": [
+        {{"word": "one genuinely noteworthy word from this cut's voiceover_text", "color": "#FF5C5C"}}
+        // optional: choose only the words worth emphasizing and assign each exact #RRGGBB color yourself
+      ]
     }}
     // ... more cuts, ordered chronologically ...
   ],
@@ -849,6 +853,15 @@ CONSTRAINTS
     the SAME label (real name, or a descriptor only when no name
     evidence exists) across every cut for the same character. Describe
     what is visually happening, not just what is said.
+  - `keywords` is optional and belongs inside an individual cut. When you
+    use it, select only words in that cut's `voiceover_text` that are truly
+    noteworthy to a viewer, then assign each one a literal `#RRGGBB` color
+    that fits its emotional weight. You make both editorial decisions: which
+    words deserve emphasis and which exact color they receive. Use
+    `[{"word": "exact script word", "color": "#RRGGBB"}]` (or omit the
+    field). Never emit a `tone`, sentiment label, color family, or other
+    abstract classification; ClipForge applies literal colors and performs no
+    tone-to-color interpretation.
   - Across cuts, `voiceover_text` fields must read as consecutive scenes
     of ONE continuous story, not as independent highlight descriptions.
     Where there is a real gap between adjacent cuts (location change,
