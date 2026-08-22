@@ -55,6 +55,15 @@
   var GEMINI_KEYS_META_PATH = 'branding/gemini_keys.json';
   var GEMINI_KEY_MIN_LEN = 20;
 
+  /* Zernio publishing. The API key is stored only as an encrypted Actions
+   * secret. All non-secret preferences and provider snapshots are committed
+   * outside the expiring jobs/ tree so browser refreshes are harmless. */
+  var ZERNIO_SECRET_NAME = 'ZERNIO_API_KEY';
+  var ZERNIO_SETTINGS_PATH = 'branding/zernio_settings.json';
+  var ZERNIO_ACCOUNTS_PATH = 'branding/zernio_accounts.json';
+  var ZERNIO_QUEUE_PATH = 'branding/zernio_queue.json';
+  var ZERNIO_WORKFLOW = 'zernio-publish.yml';
+
   var POLL_FAST = 5000;        // first 10 minutes
   var POLL_SLOW = 15000;       // after 10 minutes
   var POLL_RATELIMIT = 60000;  // after hitting a rate limit
@@ -202,6 +211,18 @@
     geminiKeys: null,          // Array<string> | null (null = unknown this session)
     geminiKeyMeta: [],         // [{fingerprint, added_at_epoch}]
     geminiKeyMetaSha: null,    // blob sha of gemini_keys.json
+
+    /* Zernio state contains no raw API key. `zernioSettings` is persistent
+     * repo configuration; `zernioAccounts` is a server-side discovery
+     * snapshot, and `zernioQueue` is the durable ClipForge schedule ledger. */
+    zernioSettings: null,
+    zernioSettingsSha: null,
+    zernioAccounts: [],
+    zernioAccountsSha: null,
+    zernioQueue: { version: 1, provider: 'zernio', items: [] },
+    zernioQueueSha: null,
+    zernioSecretConfigured: false,
+    zernioBusy: false,
     avatarFile: null,      // a newly picked picture, not yet committed
     removeAvatar: false,   // true when the user asked to delete the picture
 
@@ -282,6 +303,9 @@
     'branding-save', 'branding-clear-avatar', 'branding-msg', 'branding-preview', 'branding-current',
     'gemini-keys-disclosure', 'gemini-key-form', 'gemini-key-input', 'gemini-key-reveal',
     'gemini-key-add', 'gemini-key-msg', 'gemini-keys-list', 'gemini-keys-empty',
+    'zernio-settings-disclosure', 'zernio-settings-state', 'zernio-key-form', 'zernio-key-input', 'zernio-key-reveal', 'zernio-key-save', 'zernio-key-clear', 'zernio-key-msg',
+    'zernio-settings-form', 'zernio-enabled-input', 'zernio-auto-publish-input', 'zernio-auto-mode-select', 'zernio-timezone-input', 'zernio-interval-input', 'zernio-time-input', 'zernio-queue-depth-input', 'zernio-start-mode-select', 'zernio-custom-start-field', 'zernio-custom-start-input', 'zernio-refresh-accounts', 'zernio-accounts-hint', 'zernio-accounts-list', 'zernio-accounts-msg', 'zernio-settings-save', 'zernio-settings-msg',
+    'zernio-publish-panel', 'zernio-publishing-badge', 'zernio-publish-summary', 'zernio-publish-controls', 'zernio-job-mode-select', 'zernio-job-schedule-field', 'zernio-job-schedule-input', 'zernio-job-targets', 'zernio-publish-job', 'zernio-publish-msg', 'zernio-posts-list',
     'job-facts', 'raw-toggle', 'raw-status', 'raw-status-code'
   ].forEach(function (id) {
     el[id] = $(id);
@@ -578,6 +602,7 @@
     probeRepo();
     loadBranding();
     loadGeminiKeysMeta();
+    loadZernioSettings();
     loadAudioLibrary();
     refreshTasksFromRepo({ silent: true });
     startTasksTimer();
@@ -1171,6 +1196,400 @@
       addGeminiKey();
     });
   }
+
+  /* ------------------------------------------------------ Zernio publishing */
+
+  function defaultZernioSettings() {
+    return {
+      version: 1,
+      enabled: false,
+      auto_publish: false,
+      automatic_mode: 'smart_schedule',
+      target_accounts: { tiktok: [], youtube: [] },
+      smart_schedule: {
+        timezone: 'UTC', interval_days: 1, preferred_time: '19:30',
+        queue_depth: 4, start_mode: 'next_available', custom_start: ''
+      }
+    };
+  }
+
+  function defaultZernioQueue() { return { version: 1, provider: 'zernio', items: [] }; }
+
+  function zernioFingerprint(value) {
+    var raw = String(value || '').trim();
+    return raw.length > 8 ? raw.slice(0, 4) + '\u2026' + raw.slice(-4) : '\u2026';
+  }
+
+  function zernioSettingsOrDefault() {
+    var base = defaultZernioSettings();
+    var current = state.zernioSettings || {};
+    var smart = current.smart_schedule || {};
+    base.enabled = current.enabled === true;
+    base.auto_publish = current.auto_publish === true;
+    base.automatic_mode = current.automatic_mode === 'publish_now' ? 'publish_now' : 'smart_schedule';
+    base.target_accounts = {
+      tiktok: Array.isArray(current.target_accounts && current.target_accounts.tiktok) ? current.target_accounts.tiktok.map(String) : [],
+      youtube: Array.isArray(current.target_accounts && current.target_accounts.youtube) ? current.target_accounts.youtube.map(String) : []
+    };
+    base.smart_schedule.timezone = String(smart.timezone || 'UTC');
+    base.smart_schedule.interval_days = Number(smart.interval_days) || 1;
+    base.smart_schedule.preferred_time = /^\d\d:\d\d$/.test(String(smart.preferred_time || '')) ? String(smart.preferred_time) : '19:30';
+    base.smart_schedule.queue_depth = Number(smart.queue_depth) || 4;
+    base.smart_schedule.start_mode = smart.start_mode === 'custom' ? 'custom' : 'next_available';
+    base.smart_schedule.custom_start = String(smart.custom_start || '');
+    return base;
+  }
+
+  async function loadRepoJson(path, missingValue) {
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo + '/contents/' + path + '?ref=' + REF + '&_=' + Date.now());
+      return { value: JSON.parse(b64decodeUtf8(file.content)), sha: file.sha || null };
+    } catch (err) {
+      if (err.status === 404) return { value: missingValue, sha: null };
+      throw err;
+    }
+  }
+
+  async function probeZernioSecret() {
+    if (!isConfigured()) return;
+    try {
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/secrets/' + encodeURIComponent(ZERNIO_SECRET_NAME));
+      state.zernioSecretConfigured = true;
+    } catch (err) {
+      if (err.status === 404) state.zernioSecretConfigured = false;
+      else if (err.name === 'AuthError' || err.name === 'RateLimitError') handleGlobalError(err);
+    }
+    renderZernioSettings();
+  }
+
+  async function loadZernioSettings() {
+    if (!isConfigured()) return;
+    try {
+      var pair = await loadRepoJson(ZERNIO_SETTINGS_PATH, defaultZernioSettings());
+      state.zernioSettingsSha = pair.sha;
+      state.zernioSettings = pair.value && typeof pair.value === 'object' ? pair.value : defaultZernioSettings();
+      var accounts = await loadRepoJson(ZERNIO_ACCOUNTS_PATH, { accounts: [] });
+      state.zernioAccountsSha = accounts.sha;
+      state.zernioAccounts = Array.isArray(accounts.value && accounts.value.accounts) ? accounts.value.accounts : [];
+      var queue = await loadRepoJson(ZERNIO_QUEUE_PATH, defaultZernioQueue());
+      state.zernioQueueSha = queue.sha;
+      state.zernioQueue = queue.value && typeof queue.value === 'object' ? queue.value : defaultZernioQueue();
+      if (!Array.isArray(state.zernioQueue.items)) state.zernioQueue.items = [];
+    } catch (err) {
+      setMsg(el['zernio-settings-msg'], 'Could not load Zernio settings: ' + err.message, 'bad');
+      if (err.name === 'AuthError' || err.name === 'RateLimitError') handleGlobalError(err, 'zernio-settings');
+    }
+    renderZernioSettings();
+    if (state.status) renderZernioPublishing(state.status);
+    probeZernioSecret();
+  }
+
+  function selectedZernioAccounts() {
+    var selected = { tiktok: [], youtube: [] };
+    (state.zernioAccounts || []).forEach(function (account) {
+      if (!account || (account.platform !== 'tiktok' && account.platform !== 'youtube')) return;
+      var id = String(account.id || account._id || '');
+      var checkbox = $('zernio-account-' + id);
+      if (checkbox && checkbox.checked) selected[account.platform].push(id);
+    });
+    return selected;
+  }
+
+  function renderZernioAccounts() {
+    var list = el['zernio-accounts-list'];
+    if (!list) return;
+    list.innerHTML = '';
+    var settings = zernioSettingsOrDefault();
+    var accounts = state.zernioAccounts || [];
+    if (!accounts.length) {
+      text(el['zernio-accounts-hint'], state.zernioSecretConfigured
+        ? 'No TikTok or YouTube accounts are in the saved snapshot. Use Refresh to discover connected accounts.'
+        : 'Save a Zernio API key, then refresh accounts from the provider.');
+      return;
+    }
+    text(el['zernio-accounts-hint'], 'Select active accounts. A disconnected or disabled account is shown but cannot be selected.');
+    accounts.forEach(function (account) {
+      if (!account || (account.platform !== 'tiktok' && account.platform !== 'youtube')) return;
+      var id = String(account.id || account._id || '');
+      if (!id) return;
+      var usable = account.isActive !== false && account.enabled !== false && account.needsReconnection !== true;
+      var row = document.createElement('label');
+      row.className = 'zernio-account-row' + (usable ? '' : ' is-unavailable');
+      var check = document.createElement('input');
+      check.type = 'checkbox';
+      check.id = 'zernio-account-' + id;
+      check.disabled = !usable;
+      check.checked = usable && settings.target_accounts[account.platform].indexOf(id) !== -1;
+      var title = document.createElement('span');
+      title.className = 'zernio-account-title';
+      title.textContent = account.platform === 'tiktok' ? 'TikTok' : 'YouTube';
+      title.textContent += ' · ' + (account.displayName || account.username || id);
+      var meta = document.createElement('span');
+      meta.className = 'zernio-account-meta';
+      meta.textContent = usable ? 'connected' : (account.needsReconnection ? 'reconnect required' : 'unavailable');
+      row.appendChild(check); row.appendChild(title); row.appendChild(meta); list.appendChild(row);
+    });
+  }
+
+  function renderZernioSettings() {
+    if (!el['zernio-settings-form']) return;
+    var settings = zernioSettingsOrDefault();
+    el['zernio-enabled-input'].checked = settings.enabled;
+    el['zernio-auto-publish-input'].checked = settings.auto_publish;
+    el['zernio-auto-mode-select'].value = settings.automatic_mode;
+    el['zernio-timezone-input'].value = settings.smart_schedule.timezone;
+    el['zernio-interval-input'].value = String(settings.smart_schedule.interval_days);
+    el['zernio-time-input'].value = settings.smart_schedule.preferred_time;
+    el['zernio-queue-depth-input'].value = String(settings.smart_schedule.queue_depth);
+    el['zernio-start-mode-select'].value = settings.smart_schedule.start_mode;
+    el['zernio-custom-start-input'].value = settings.smart_schedule.custom_start;
+    toggleHidden(el['zernio-custom-start-field'], settings.smart_schedule.start_mode !== 'custom');
+    text(el['zernio-settings-state'], state.zernioSecretConfigured ? 'Key secured' : 'Key required');
+    renderZernioAccounts();
+  }
+
+  function zernioSettingsFromForm() {
+    var timezone = el['zernio-timezone-input'].value.trim() || 'UTC';
+    // Browser-side validation is deliberately conservative. The server-side
+    // scheduler validates again with Python's IANA zoneinfo database.
+    if (!/^[A-Za-z_]+(?:\/[A-Za-z_+-]+)+$|^UTC$/.test(timezone)) {
+      throw new Error('Enter an IANA timezone such as Europe/London or America/New_York.');
+    }
+    var interval = Number(el['zernio-interval-input'].value);
+    var depth = Number(el['zernio-queue-depth-input'].value);
+    var preferred = el['zernio-time-input'].value;
+    if (!Number.isInteger(interval) || interval < 1 || interval > 365) throw new Error('Cadence must be a whole number from 1 to 365 days.');
+    if (!Number.isInteger(depth) || depth < 1 || depth > 100) throw new Error('Queue depth must be a whole number from 1 to 100.');
+    if (!/^\d\d:\d\d$/.test(preferred)) throw new Error('Choose a preferred posting time.');
+    var startMode = el['zernio-start-mode-select'].value === 'custom' ? 'custom' : 'next_available';
+    var customStart = el['zernio-custom-start-input'].value || '';
+    if (startMode === 'custom' && !customStart) throw new Error('Choose the first local smart-schedule slot.');
+    return {
+      version: 1,
+      enabled: !!el['zernio-enabled-input'].checked,
+      auto_publish: !!el['zernio-auto-publish-input'].checked,
+      automatic_mode: el['zernio-auto-mode-select'].value === 'publish_now' ? 'publish_now' : 'smart_schedule',
+      target_accounts: selectedZernioAccounts(),
+      smart_schedule: {
+        timezone: timezone, interval_days: interval, preferred_time: preferred,
+        queue_depth: depth, start_mode: startMode, custom_start: customStart
+      },
+      updated_at_epoch: Math.floor(Date.now() / 1000)
+    };
+  }
+
+  async function putZernioSecret(rawKey) {
+    var pk = await gh('/repos/' + state.owner + '/' + state.repo + '/actions/secrets/public-key');
+    if (!pk || !pk.key || !pk.key_id) throw new Error('GitHub did not return the repository Actions public key.');
+    var encrypted = await encryptForActionsSecret(rawKey, pk.key);
+    await gh('/repos/' + state.owner + '/' + state.repo + '/actions/secrets/' + encodeURIComponent(ZERNIO_SECRET_NAME), {
+      method: 'PUT', body: { encrypted_value: encrypted, key_id: pk.key_id }
+    });
+    state.zernioSecretConfigured = true;
+  }
+
+  async function saveZernioKey() {
+    if (state.zernioBusy || !isConfigured()) { setMsg(el['zernio-key-msg'], 'Save GitHub settings first.', 'bad'); return; }
+    var key = el['zernio-key-input'].value.trim();
+    if (key.length < 20 || /\s/.test(key)) { setMsg(el['zernio-key-msg'], 'Enter a valid Zernio API key with no whitespace.', 'bad'); return; }
+    state.zernioBusy = true; el['zernio-key-save'].disabled = true;
+    setMsg(el['zernio-key-msg'], 'Encrypting and storing ' + zernioFingerprint(key) + '…', null);
+    try {
+      await putZernioSecret(key);
+      el['zernio-key-input'].value = '';
+      setMsg(el['zernio-key-msg'], 'API key secured as a repository Actions secret.', 'ok');
+    } catch (err) {
+      setMsg(el['zernio-key-msg'], 'Could not save key: ' + err.message, 'bad');
+      handleGlobalError(err, 'zernio-key');
+    }
+    state.zernioBusy = false; el['zernio-key-save'].disabled = false; renderZernioSettings();
+  }
+
+  async function clearZernioKey() {
+    if (state.zernioBusy || !isConfigured()) return;
+    if (!window.confirm('Remove the ZERNIO_API_KEY repository secret? Existing publishing records remain, but new publishing requests will fail until a new key is saved.')) return;
+    state.zernioBusy = true;
+    try {
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/secrets/' + encodeURIComponent(ZERNIO_SECRET_NAME), { method: 'DELETE' });
+      state.zernioSecretConfigured = false;
+      setMsg(el['zernio-key-msg'], 'Stored Zernio API key removed.', 'ok');
+    } catch (err) {
+      if (err.status === 404) { state.zernioSecretConfigured = false; setMsg(el['zernio-key-msg'], 'No Zernio API key was stored.', 'ok'); }
+      else { setMsg(el['zernio-key-msg'], 'Could not remove key: ' + err.message, 'bad'); handleGlobalError(err, 'zernio-key'); }
+    }
+    state.zernioBusy = false; renderZernioSettings();
+  }
+
+  async function saveZernioSettings() {
+    if (state.zernioBusy || !isConfigured()) { setMsg(el['zernio-settings-msg'], 'Save GitHub settings first.', 'bad'); return; }
+    var doc;
+    try { doc = zernioSettingsFromForm(); }
+    catch (err) { setMsg(el['zernio-settings-msg'], err.message, 'bad'); return; }
+    state.zernioBusy = true; el['zernio-settings-save'].disabled = true;
+    try {
+      await putRepoFile(ZERNIO_SETTINGS_PATH, b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'), 'clipforge: update Zernio publishing settings');
+      state.zernioSettings = doc;
+      setMsg(el['zernio-settings-msg'], 'Publishing preferences saved. Stage B remains independent of publishing.', 'ok');
+      renderZernioSettings();
+    } catch (err) {
+      setMsg(el['zernio-settings-msg'], 'Could not save publishing preferences: ' + err.message, 'bad');
+      handleGlobalError(err, 'zernio-settings');
+    }
+    state.zernioBusy = false; el['zernio-settings-save'].disabled = false;
+  }
+
+  async function refreshZernioAccounts() {
+    if (state.zernioBusy || !isConfigured()) return;
+    if (!state.zernioSecretConfigured) { setMsg(el['zernio-accounts-msg'], 'Save a Zernio API key first.', 'bad'); return; }
+    state.zernioBusy = true; el['zernio-refresh-accounts'].disabled = true;
+    try {
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/workflows/' + ZERNIO_WORKFLOW + '/dispatches', {
+        method: 'POST', body: { ref: REF, inputs: { action: 'discover' } }
+      });
+      setMsg(el['zernio-accounts-msg'], 'Account refresh dispatched. It will save the provider snapshot to branding/zernio_accounts.json.', 'ok');
+    } catch (err) {
+      setMsg(el['zernio-accounts-msg'], 'Could not refresh accounts: ' + err.message, 'bad');
+      handleGlobalError(err, 'zernio-accounts');
+    }
+    state.zernioBusy = false; el['zernio-refresh-accounts'].disabled = false;
+  }
+
+  function zernioTargetsForJob() {
+    var settings = zernioSettingsOrDefault();
+    var targets = [];
+    ['tiktok', 'youtube'].forEach(function (platform) {
+      var ids = settings.target_accounts[platform] || [];
+      if (ids.length) targets.push({ platform: platform, account_ids: ids });
+    });
+    return targets;
+  }
+
+  function zernioStatusMeta(status) {
+    var value = String(status || 'not_requested').toLowerCase();
+    if (value === 'published') return { label: 'published', cls: 'stage-done' };
+    if (value === 'scheduled') return { label: 'scheduled', cls: 'stage-running' };
+    if (value === 'publishing' || value === 'requested') return { label: 'publishing', cls: 'stage-running' };
+    if (value === 'partial') return { label: 'partial', cls: 'stage-await' };
+    if (value === 'failed' || value === 'error') return { label: 'failed', cls: 'stage-error' };
+    if (value === 'cancelled') return { label: 'cancelled', cls: 'stage-cancelled' };
+    return { label: 'not requested', cls: 'stage-unknown' };
+  }
+
+  function renderZernioPosts(publishing) {
+    var list = el['zernio-posts-list'];
+    if (!list) return;
+    list.innerHTML = '';
+    var posts = publishing && Array.isArray(publishing.posts) ? publishing.posts : [];
+    posts.forEach(function (post) {
+      var row = document.createElement('div'); row.className = 'zernio-post-row';
+      var title = document.createElement('span'); title.className = 'zernio-post-title';
+      title.textContent = (post.platform || 'Zernio') + ' · ' + (post.status || 'unknown');
+      var meta = document.createElement('span'); meta.className = 'zernio-post-meta';
+      meta.textContent = post.scheduled_for ? String(post.scheduled_for) : (post.post_id || 'no post id');
+      row.appendChild(title); row.appendChild(meta);
+      (post.platforms || []).forEach(function (target) {
+        if (!target || !target.platformPostUrl) return;
+        var link = document.createElement('a'); link.href = target.platformPostUrl; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Open live post ↗'; row.appendChild(link);
+      });
+      if (post.error) { var err = document.createElement('span'); err.className = 'zernio-post-meta'; err.textContent = post.error; row.appendChild(err); }
+      var current = String(post.status || '').toLowerCase();
+      if (post.post_id && (current === 'failed' || current === 'partial')) {
+        var retry = document.createElement('button'); retry.type = 'button'; retry.className = 'btn btn-secondary btn-sm'; retry.textContent = 'Retry failed target';
+        retry.addEventListener('click', function () { dispatchZernioExistingAction(post.post_id, 'retry'); }); row.appendChild(retry);
+      }
+      if (post.post_id && current === 'scheduled') {
+        var now = document.createElement('button'); now.type = 'button'; now.className = 'btn btn-secondary btn-sm'; now.textContent = 'Publish now';
+        now.addEventListener('click', function () { dispatchZernioExistingAction(post.post_id, 'update', 'publish_now', ''); }); row.appendChild(now);
+        var reschedule = document.createElement('button'); reschedule.type = 'button'; reschedule.className = 'btn btn-quiet btn-sm'; reschedule.textContent = 'Reschedule';
+        reschedule.addEventListener('click', function () {
+          var value = window.prompt('Local scheduled time (YYYY-MM-DDTHH:MM):', post.scheduled_for || '');
+          if (value) dispatchZernioExistingAction(post.post_id, 'update', 'manual_schedule', value);
+        }); row.appendChild(reschedule);
+        var cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'btn btn-danger-ghost btn-sm'; cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', function () { if (window.confirm('Cancel this scheduled Zernio post?')) dispatchZernioExistingAction(post.post_id, 'cancel'); }); row.appendChild(cancel);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  function renderZernioPublishing(status) {
+    var panel = el['zernio-publish-panel'];
+    if (!panel) return;
+    var settings = zernioSettingsOrDefault();
+    if (!settings.enabled) { hide(panel); return; }
+    show(panel);
+    var publishing = status && status.publishing && typeof status.publishing === 'object' ? status.publishing : null;
+    var meta = zernioStatusMeta(publishing && publishing.status);
+    text(el['zernio-publishing-badge'], meta.label);
+    el['zernio-publishing-badge'].className = 'stage-badge ' + meta.cls;
+    var targets = zernioTargetsForJob();
+    text(el['zernio-job-targets'], targets.length
+      ? 'Targets: ' + targets.map(function (target) { return target.platform + ' (' + target.account_ids.length + ')'; }).join(', ') + '.'
+      : 'No active TikTok or YouTube accounts are selected in Zernio settings.');
+    var active = publishing && ['publishing', 'requested'].indexOf(String(publishing.status || '').toLowerCase()) !== -1;
+    el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length || !state.zernioSecretConfigured;
+    var summary = publishing
+      ? 'Provider state: ' + String(publishing.status || 'unknown') + (publishing.scheduled_for ? ' · ' + publishing.scheduled_for : '')
+      : (state.zernioSecretConfigured ? 'Choose a mode and submit a native Zernio publishing request.' : 'Save the Zernio API key in Repository settings before submitting.');
+    text(el['zernio-publish-summary'], summary);
+    renderZernioPosts(publishing);
+    toggleHidden(el['zernio-job-schedule-field'], el['zernio-job-mode-select'].value !== 'manual_schedule');
+  }
+
+  async function dispatchZernioPublish() {
+    if (!state.jobId || state.zernioBusy) return;
+    var targets = zernioTargetsForJob();
+    if (!targets.length) { setMsg(el['zernio-publish-msg'], 'Select at least one active TikTok or YouTube account in Zernio settings.', 'bad'); return; }
+    var settings = zernioSettingsOrDefault();
+    var mode = el['zernio-job-mode-select'].value;
+    var scheduled = el['zernio-job-schedule-input'].value || '';
+    if (mode === 'manual_schedule' && !scheduled) { setMsg(el['zernio-publish-msg'], 'Choose a local scheduled time.', 'bad'); return; }
+    state.zernioBusy = true; renderZernioPublishing(state.status);
+    try {
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/workflows/' + ZERNIO_WORKFLOW + '/dispatches', {
+        method: 'POST', body: { ref: REF, inputs: {
+          action: 'publish', job_id: state.jobId, mode: mode, scheduled_for: scheduled,
+          timezone: settings.smart_schedule.timezone, targets_json: JSON.stringify(targets),
+          request_id: 'clipforge-' + state.jobId + '-' + Date.now().toString(36)
+        }}
+      });
+      setMsg(el['zernio-publish-msg'], 'Publishing request dispatched. Stage B remains complete while Zernio processes it.', 'ok');
+    } catch (err) {
+      setMsg(el['zernio-publish-msg'], 'Could not submit publishing request: ' + err.message, 'bad'); handleGlobalError(err, 'zernio-publish');
+    }
+    state.zernioBusy = false; renderZernioPublishing(state.status);
+  }
+
+  async function dispatchZernioExistingAction(postId, action, mode, scheduled) {
+    if (!state.jobId || state.zernioBusy) return;
+    var settings = zernioSettingsOrDefault();
+    state.zernioBusy = true;
+    try {
+      await gh('/repos/' + state.owner + '/' + state.repo + '/actions/workflows/' + ZERNIO_WORKFLOW + '/dispatches', {
+        method: 'POST', body: { ref: REF, inputs: {
+          action: action, job_id: state.jobId, post_id: postId, mode: mode || '', scheduled_for: scheduled || '', timezone: settings.smart_schedule.timezone
+        }}
+      });
+      setMsg(el['zernio-publish-msg'], 'Zernio ' + action + ' request dispatched. Refresh the task status after the workflow completes.', 'ok');
+    } catch (err) {
+      setMsg(el['zernio-publish-msg'], 'Could not dispatch Zernio ' + action + ': ' + err.message, 'bad'); handleGlobalError(err, 'zernio-publish');
+    }
+    state.zernioBusy = false; renderZernioPublishing(state.status);
+  }
+
+  if (el['zernio-key-reveal']) el['zernio-key-reveal'].addEventListener('click', function () {
+    var revealed = el['zernio-key-input'].type === 'text';
+    el['zernio-key-input'].type = revealed ? 'password' : 'text';
+    el['zernio-key-reveal'].textContent = revealed ? 'Show' : 'Hide';
+    el['zernio-key-reveal'].setAttribute('aria-pressed', revealed ? 'false' : 'true');
+  });
+  if (el['zernio-key-form']) el['zernio-key-form'].addEventListener('submit', function (e) { e.preventDefault(); saveZernioKey(); });
+  if (el['zernio-key-clear']) el['zernio-key-clear'].addEventListener('click', clearZernioKey);
+  if (el['zernio-settings-form']) el['zernio-settings-form'].addEventListener('submit', function (e) { e.preventDefault(); saveZernioSettings(); });
+  if (el['zernio-start-mode-select']) el['zernio-start-mode-select'].addEventListener('change', function () { toggleHidden(el['zernio-custom-start-field'], this.value !== 'custom'); });
+  if (el['zernio-refresh-accounts']) el['zernio-refresh-accounts'].addEventListener('click', refreshZernioAccounts);
+  if (el['zernio-job-mode-select']) el['zernio-job-mode-select'].addEventListener('change', function () { toggleHidden(el['zernio-job-schedule-field'], this.value !== 'manual_schedule'); });
+  if (el['zernio-publish-job']) el['zernio-publish-job'].addEventListener('click', dispatchZernioPublish);
 
   function setMsg(node, message, kind) {
     if (!node) return;
@@ -3110,12 +3529,14 @@
       hide(el['handoff-block']);
     }
 
-    // Complete.
+    // Complete. Stage B stays authoritative; publishing is a sibling state.
     if (stage === 'complete') {
       show(el['complete-block']);
       renderFinalZip(s);
+      renderZernioPublishing(s);
     } else {
       hide(el['complete-block']);
+      hide(el['zernio-publish-panel']);
     }
 
     // Expiry countdown from awaiting_json_upload onwards.
@@ -4493,6 +4914,7 @@
     probeRepo();
     loadBranding();
     loadGeminiKeysMeta();
+    loadZernioSettings();
     loadAudioLibrary();
 
     // Populate the Tasks list from the repo (source of truth) and then

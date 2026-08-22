@@ -12,15 +12,17 @@ from zernio_publish import (
     load_production,
     normalize_hashtags,
     normalize_tags,
+    post_summary,
     production_metadata,
+    publish_video,
     write_publishing_state,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-EXAMPLE = ROOT / "jobs" / "magnet-1787407050747" / "production.json"
+EXAMPLE = ROOT / "scripts" / "fixtures" / "zernio_production.json"
 
 
-def test_actual_production_example() -> None:
+def test_tracked_production_fixture() -> None:
     doc = load_production(EXAMPLE)
     meta = production_metadata(doc)
     assert meta["title"] == "Morty Enters the Fear Hole Alone and It Knows Why"
@@ -68,6 +70,59 @@ def test_optional_caption_and_tags_aliases_are_only_used_when_present() -> None:
     assert meta["tags"] == ["keyword", "plain"]
     assert meta["metadata_source"]["caption"] == "production.json.caption"
     assert meta["metadata_source"]["tags"] == "production.json.tags"
+
+
+def test_idempotent_existing_post_response_is_preserved() -> None:
+    summary = post_summary({"existingPost": {
+        "_id": "existing-1", "status": "scheduled", "scheduledFor": "2026-08-23T19:30:00",
+        "timezone": "Europe/London", "platforms": [{"platform": "youtube", "accountId": "yt-1"}],
+    }})
+    assert summary["post_id"] == "existing-1"
+    assert summary["status"] == "scheduled"
+    assert summary["timezone"] == "Europe/London"
+
+
+class _Response:
+    def __init__(self, payload, status=200):
+        self.payload = json.dumps(payload).encode("utf-8") if isinstance(payload, dict) else payload
+        self.status = status
+    def read(self, *_args):
+        return self.payload
+    def __enter__(self):
+        return self
+    def __exit__(self, *_args):
+        return False
+
+
+def test_publish_flow_isolated_per_platform_and_idempotent() -> None:
+    requests = []
+    def opener(req, timeout=0):
+        requests.append((req.get_method(), req.full_url, req.headers.get("X-request-id")))
+        if req.full_url.endswith("/media/presign"):
+            return _Response({"uploadUrl": "https://upload.example/object", "publicUrl": "https://media.example/final.mp4"})
+        if req.full_url == "https://upload.example/object":
+            return _Response(b"", 200)
+        if req.full_url.endswith("/posts"):
+            body = json.loads(req.data.decode("utf-8"))
+            platform = body["platforms"][0]["platform"]
+            if platform == "youtube":
+                return _Response({"existingPost": {"_id": "yt-existing", "status": "scheduled", "platforms": body["platforms"]}})
+            return _Response({"post": {"_id": "tt-new", "status": "scheduled", "platforms": body["platforms"]}})
+        raise AssertionError(req.full_url)
+    with tempfile.TemporaryDirectory() as tmp:
+        video = Path(tmp) / "final.mp4"
+        video.write_bytes(b"not-a-real-video-but-a-nonempty-fixture")
+        result = publish_video(
+            "sk_test_key_not_logged", EXAMPLE, video,
+            [{"platform": "tiktok", "account_ids": ["tt-1"]}, {"platform": "youtube", "account_ids": ["yt-1"]}],
+            mode="manual_schedule", scheduled_for="2026-08-23T19:30:00", timezone="Europe/London",
+            request_id="clipforge-test-request", opener=opener,
+        )
+    assert result["status"] == "scheduled"
+    assert [post["post_id"] for post in result["posts"]] == ["tt-new", "yt-existing"]
+    assert result["posts"][1]["request_id"] == "clipforge-test-request-youtube"
+    assert any(method == "PUT" and url == "https://upload.example/object" for method, url, _ in requests)
+    assert all("sk_test_key_not_logged" not in str(item) for item in requests)
 
 
 def test_metadata_survives_publishing_state_merge() -> None:

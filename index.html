@@ -154,6 +154,97 @@
           </div>
         </details>
 
+        <!-- Zernio publishing -->
+        <details class="fold" id="zernio-settings-disclosure">
+          <summary>
+            <span class="fold-label">
+              <span class="fold-eyebrow">Distribution</span>
+              <strong>Zernio publishing</strong>
+            </span>
+            <span id="zernio-settings-state" class="fold-cue">Configure</span>
+          </summary>
+          <div class="fold-body">
+            <p class="hint">The Zernio API key is encrypted in this browser and stored only as the <code>ZERNIO_API_KEY</code> GitHub Actions secret. It is never committed, displayed after saving, or sent to the browser again. Account selections and schedule preferences are stored separately at <code>branding/zernio_settings.json</code>.</p>
+            <form id="zernio-key-form" autocomplete="off">
+              <div class="field">
+                <label for="zernio-key-input">Zernio API key</label>
+                <div class="with-reveal">
+                  <input type="password" id="zernio-key-input" name="zernio_key" placeholder="sk_…" spellcheck="false" autocapitalize="off" autocomplete="off">
+                  <button type="button" id="zernio-key-reveal" class="btn btn-quiet btn-sm" aria-pressed="false">Show</button>
+                </div>
+                <p class="hint">Saving replaces the repository secret. Leave this blank when only changing publishing preferences.</p>
+              </div>
+              <div class="row-actions">
+                <button type="submit" id="zernio-key-save" class="btn btn-secondary">Save API key</button>
+                <button type="button" id="zernio-key-clear" class="btn btn-plain btn-sm danger-text">Remove stored key</button>
+                <span id="zernio-key-msg" class="inline-msg" aria-live="polite"></span>
+              </div>
+            </form>
+
+            <form id="zernio-settings-form" autocomplete="off" class="zernio-settings-form">
+              <div class="field-checkboxes">
+                <label class="check-row"><input type="checkbox" id="zernio-enabled-input"> Enable Zernio publishing controls</label>
+                <label class="check-row"><input type="checkbox" id="zernio-auto-publish-input"> Automatically submit eligible Stage B outputs</label>
+              </div>
+              <div class="grid-2">
+                <div class="field">
+                  <label for="zernio-auto-mode-select">Automatic mode</label>
+                  <select id="zernio-auto-mode-select">
+                    <option value="publish_now">Publish immediately</option>
+                    <option value="smart_schedule" selected>Add to smart schedule</option>
+                  </select>
+                  <p class="hint">Automatic publishing is submitted after Stage B completes; scheduled posts are handled natively by Zernio.</p>
+                </div>
+                <div class="field">
+                  <label for="zernio-timezone-input">Account timezone</label>
+                  <input id="zernio-timezone-input" type="text" value="UTC" placeholder="Europe/London" maxlength="80" spellcheck="false">
+                  <p class="hint">Use an IANA timezone, for example <code>Europe/London</code> or <code>America/New_York</code>.</p>
+                </div>
+              </div>
+              <div class="grid-4 launch-options">
+                <div class="field">
+                  <label for="zernio-interval-input">Cadence</label>
+                  <input id="zernio-interval-input" type="number" min="1" max="365" value="1">
+                  <p class="hint">Days between smart-schedule slots.</p>
+                </div>
+                <div class="field">
+                  <label for="zernio-time-input">Preferred time</label>
+                  <input id="zernio-time-input" type="time" value="19:30">
+                </div>
+                <div class="field">
+                  <label for="zernio-queue-depth-input">Max queue depth</label>
+                  <input id="zernio-queue-depth-input" type="number" min="1" max="100" value="4">
+                  <p class="hint">Blocks automatic additions when the persistent queue is full.</p>
+                </div>
+                <div class="field">
+                  <label for="zernio-start-mode-select">Smart start</label>
+                  <select id="zernio-start-mode-select">
+                    <option value="next_available" selected>Next available slot</option>
+                    <option value="custom">Custom local date</option>
+                  </select>
+                </div>
+              </div>
+              <div id="zernio-custom-start-field" class="field is-hidden">
+                <label for="zernio-custom-start-input">First smart-schedule slot</label>
+                <input id="zernio-custom-start-input" type="datetime-local">
+              </div>
+              <div class="mini-panel">
+                <div class="fold-eyebrow">Connected publishing accounts</div>
+                <p id="zernio-accounts-hint" class="hint">Save a Zernio key, then refresh accounts from the provider.</p>
+                <div id="zernio-accounts-list" class="zernio-accounts-list" aria-live="polite"></div>
+                <div class="row-actions">
+                  <button type="button" id="zernio-refresh-accounts" class="btn btn-quiet btn-sm">Refresh TikTok / YouTube accounts</button>
+                  <span id="zernio-accounts-msg" class="inline-msg" aria-live="polite"></span>
+                </div>
+              </div>
+              <div class="row-actions">
+                <button type="submit" id="zernio-settings-save" class="btn btn-secondary">Save publishing preferences</button>
+                <span id="zernio-settings-msg" class="inline-msg" aria-live="polite"></span>
+              </div>
+            </form>
+          </div>
+        </details>
+
         <!-- Channel branding -->
         <details class="fold">
           <summary>
@@ -458,6 +549,36 @@
           <p class="hint" id="scene-list-hint"></p>
           <div class="completion-actions"><a id="final-zip-link" class="btn btn-lg btn-primary" href="#" target="_blank" rel="noopener noreferrer">Download final video</a><button type="button" id="complete-ack" class="btn btn-plain btn-sm">Deselect task</button></div>
           <p class="hint" id="final-zip-hint"></p>
+
+          <section id="zernio-publish-panel" class="zernio-publish-panel is-hidden" aria-labelledby="zernio-publish-heading">
+            <div class="zernio-publish-heading">
+              <div><p class="fold-eyebrow">Distribution</p><h4 id="zernio-publish-heading" class="sub-heading">Publish with Zernio</h4></div>
+              <span id="zernio-publishing-badge" class="stage-badge stage-unknown">not requested</span>
+            </div>
+            <p id="zernio-publish-summary" class="hint">Configure Zernio publishing in Repository settings to publish this completed final cut.</p>
+            <div id="zernio-publish-controls" class="zernio-publish-controls">
+              <div class="grid-2">
+                <div class="field">
+                  <label for="zernio-job-mode-select">Publishing mode</label>
+                  <select id="zernio-job-mode-select">
+                    <option value="publish_now">Publish now</option>
+                    <option value="manual_schedule">Choose date and time</option>
+                    <option value="smart_schedule">Add to smart schedule</option>
+                  </select>
+                </div>
+                <div id="zernio-job-schedule-field" class="field is-hidden">
+                  <label for="zernio-job-schedule-input">Local scheduled time</label>
+                  <input id="zernio-job-schedule-input" type="datetime-local">
+                </div>
+              </div>
+              <p id="zernio-job-targets" class="hint"></p>
+              <div class="row-actions">
+                <button type="button" id="zernio-publish-job" class="btn btn-primary">Submit publishing request</button>
+                <span id="zernio-publish-msg" class="inline-msg" aria-live="polite"></span>
+              </div>
+            </div>
+            <div id="zernio-posts-list" class="zernio-posts-list" aria-live="polite"></div>
+          </section>
         </div>
 
         <details class="technical-details">

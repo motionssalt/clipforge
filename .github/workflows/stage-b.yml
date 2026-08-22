@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: clipforge-stage-b-${{ github.event.inputs.job_id }}
@@ -828,6 +829,71 @@ jobs:
           BRANDING_USERNAME: ${{ env.BRANDING_USERNAME }}
           BRANDING_DISPLAY_NAME: ${{ env.BRANDING_DISPLAY_NAME }}
           BRANDING_PROFILE_PICTURE: ${{ env.BRANDING_PROFILE_PICTURE }}
+
+      # -------------------------------------------------------------------
+      # OPTIONAL DISTRIBUTION — Stage B has already produced, validated,
+      # released, and persisted the final output above. This best-effort
+      # dispatch intentionally cannot change the successful Stage B outcome.
+      # It delegates the actual platform publication to zernio-publish.yml,
+      # which uses the separate ZERNIO_API_KEY Actions secret.
+      # -------------------------------------------------------------------
+      - name: Optionally dispatch automatic Zernio publishing
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_ID: ${{ steps.jid.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          settings="branding/zernio_settings.json"
+          if [ ! -f "$settings" ]; then
+            echo "Zernio is not configured; skipping automatic publishing."
+            exit 0
+          fi
+          python - <<'PY' > work/zernio_auto.env
+          import json
+          from pathlib import Path
+          cfg = json.loads(Path('branding/zernio_settings.json').read_text(encoding='utf-8'))
+          enabled = cfg.get('enabled') is True
+          automatic = cfg.get('auto_publish') is True
+          mode = cfg.get('automatic_mode')
+          targets = cfg.get('target_accounts') if isinstance(cfg.get('target_accounts'), dict) else {}
+          chosen = []
+          for platform in ('tiktok', 'youtube'):
+              ids = targets.get(platform) if isinstance(targets.get(platform), list) else []
+              ids = [str(v).strip() for v in ids if str(v).strip()]
+              if ids:
+                  chosen.append({'platform': platform, 'account_ids': ids})
+          schedule = cfg.get('smart_schedule') if isinstance(cfg.get('smart_schedule'), dict) else {}
+          timezone = str(schedule.get('timezone') or 'UTC')
+          if not (enabled and automatic and mode in {'publish_now', 'smart_schedule'} and chosen):
+              print('SKIP=true')
+          else:
+              print('SKIP=false')
+              print('MODE=' + mode)
+              print('TIMEZONE=' + timezone)
+              print('TARGETS_JSON=' + json.dumps(chosen, separators=(',', ':')))
+          PY
+          # shellcheck disable=SC1091
+          source work/zernio_auto.env
+          if [ "${SKIP:-true}" = "true" ]; then
+            echo "Zernio automatic publishing is disabled or has no selected accounts; skipping."
+            exit 0
+          fi
+          echo "Dispatching the separate Zernio workflow in mode $MODE."
+          # Do not allow a dispatch, configuration, or provider outage to alter
+          # Stage B's successful media outcome. The publishing workflow writes
+          # its own sibling state under status.json.
+          gh workflow run zernio-publish.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            -f action=publish \
+            -f job_id="$JOB_ID" \
+            -f mode="$MODE" \
+            -f timezone="$TIMEZONE" \
+            -f targets_json="$TARGETS_JSON" \
+            -f request_id="clipforge-auto-$JOB_ID-$GITHUB_RUN_ID" \
+            || echo "WARN: automatic Zernio dispatch failed; final video remains complete and available." >&2
 
       - name: On failure, write error status
         if: failure()
