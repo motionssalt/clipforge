@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "enabled": false,
-  "auto_publish": false,
+  "enabled": true,
+  "auto_publish": true,
   "automatic_mode": "smart_schedule",
   "target_accounts": {
     "tiktok": [],
@@ -15,5 +15,5 @@
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1787429256
+  "updated_at_epoch": 1787429266
 }
