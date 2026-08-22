@@ -1,0 +1,15 @@
+{
+  "job_id": "torrent-1787383185485",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-torrent-1787383185485",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787383292,
+  "updated_at_epoch": 1787383292,
+  "expires_at_epoch": 1787426492,
+  "extra": {
+    "workflow_run_id": "32559307839",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32559307839"
+  }
+}
