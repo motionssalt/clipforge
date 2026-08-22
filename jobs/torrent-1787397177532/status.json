@@ -1,16 +1,29 @@
 {
   "job_id": "torrent-1787397177532",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "awaiting_json_upload",
+  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
   "release_tag": "clipforge-torrent-1787397177532",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787397177532",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787397177532/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787397177532/key_moments.json",
+    "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787397177532/original.mkv",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787397177532/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787397177532/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787397177532/transcript.json"
+  },
   "created_at_epoch": 1787397188,
-  "updated_at_epoch": 1787397435,
+  "updated_at_epoch": 1787397921,
   "expires_at_epoch": 1787440388,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787397177532/torrent-selection.json",
     "workflow_run_id": "32569790994",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32569790994"
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32569790994",
+    "duration_seconds": "1323",
+    "screenshot_count": "221",
+    "event_frame_count": "58",
+    "shot_count": "303",
+    "key_moment_count": "60",
+    "original_asset_name": "original.mkv"
   }
 }
