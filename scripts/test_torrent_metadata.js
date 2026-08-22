@@ -6,11 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const torrent = require('../torrent_metadata.js');
 
-const uploadDir = '/home/ubuntu/upload';
-const rick = path.join(uploadDir, 'Rick.and.Morty.S01E01.Pilot.with.Audio.Description.1080p.AMZN.WEB-DL.DDP5.1.H.264-Kitsune[ext.to].torrent');
-const existing = torrent.inspect(new Uint8Array(fs.readFileSync(rick)));
-assert.deepStrictEqual(existing.video_candidates.map((entry) => entry.index), [1]);
-
 function bytes(text) { return Buffer.from(text, 'utf8'); }
 function bstr(text) { return Buffer.concat([bytes(String(Buffer.byteLength(text, 'utf8')) + ':'), bytes(text)]); }
 function bint(value) { return bytes('i' + String(value) + 'e'); }

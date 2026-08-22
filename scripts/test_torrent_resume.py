@@ -6,23 +6,42 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-UPLOADS = Path("/home/ubuntu/upload")
-TORRENT = UPLOADS / (
-    "Rick.and.Morty.S01E01.Pilot.with.Audio.Description.1080p."
-    "AMZN.WEB-DL.DDP5.1.H.264-Kitsune[ext.to].torrent"
-)
-
-assert TORRENT.is_file(), f"missing regression fixture: {TORRENT}"
 writer = ROOT / "scripts" / "write_torrent_selection.py"
 status_writer = ROOT / "scripts" / "write_status.py"
 
+
+def bencode(value: Any) -> bytes:
+    """Build a compact valid torrent fixture without a network dependency."""
+    if isinstance(value, int):
+        return f"i{value}e".encode("ascii")
+    if isinstance(value, str):
+        value = value.encode("utf-8")
+    if isinstance(value, bytes):
+        return str(len(value)).encode("ascii") + b":" + value
+    if isinstance(value, list):
+        return b"l" + b"".join(bencode(item) for item in value) + b"e"
+    if isinstance(value, dict):
+        chunks = []
+        for key in sorted(value):
+            chunks.append(bencode(key))
+            chunks.append(bencode(value[key]))
+        return b"d" + b"".join(chunks) + b"e"
+    raise TypeError(f"unsupported fixture type: {type(value)!r}")
+
+
 with tempfile.TemporaryDirectory(prefix="clipforge_torrent_resume_") as tmp:
     root = Path(tmp)
+    torrent_path = root / "resume-fixture.torrent"
+    torrent_path.write_bytes(bencode({
+        b"announce": b"udp://tracker.example.invalid:6969/announce",
+        b"info": {b"name": b"resume-check.mkv", b"length": 4096},
+    }))
     record_path = root / "jobs" / "resume-check" / "torrent-selection.json"
     subprocess.run([
-        "python3", str(writer), str(TORRENT), str(record_path),
+        "python3", str(writer), str(torrent_path), str(record_path),
         "--job-id", "resume-check", "--whisper-model", "base",
         "--language", "auto", "--target-duration-seconds", "120",
         "--focus", "the opening scene",
@@ -33,8 +52,8 @@ with tempfile.TemporaryDirectory(prefix="clipforge_torrent_resume_") as tmp:
     assert len(record["video_candidates"]) == 1
     candidate = record["video_candidates"][0]
     assert candidate["index"] == 1
-    assert candidate["path"].endswith(".mkv")
-    assert candidate["length"] > 0
+    assert candidate["path"] == "resume-check.mkv"
+    assert candidate["length"] == 4096
     assert record["stage_a_inputs"]["focus"] == "the opening scene"
 
     subprocess.run([
