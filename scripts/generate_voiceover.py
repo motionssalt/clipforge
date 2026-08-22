@@ -63,6 +63,9 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
+import shutil
+import subprocess
 import sys
 import time
 import wave
@@ -79,7 +82,24 @@ SAMPLE_RATE_HZ = 24000
 SAMPLE_WIDTH_BYTES = 2
 CHANNELS = 1
 
+# Gemini's raw PCM is clean synthetic speech, so the clarity stage is deliberately
+# conservative. It removes only sub-speech low end, adds a small intelligibility
+# lift, evens dynamics gently, and targets consistent EBU R128 loudness. Denoising
+# and de-essing are intentionally excluded: there is no source noise to remove,
+# and unnecessary processing would make TTS sound artificial.
+VOICE_CLARITY_PRESET_NAME = "speech_clarity_v1"
+VOICE_CLARITY_TARGET_I_LUFS = -16.0
+VOICE_CLARITY_TARGET_LRA_LU = 7.0
+VOICE_CLARITY_TARGET_TP_DBTP = -1.5
+VOICE_CLARITY_PRE_FILTERS = (
+    "highpass=f=70:p=2,"
+    "equalizer=f=3000:t=q:w=1.1:g=1.5,"
+    "acompressor=threshold=0.125:ratio=1.5:attack=15:release=120:makeup=1.0"
+)
+VOICE_CLARITY_FINAL_LIMITER = "alimiter=limit=0.84:attack=5:release=50:level=0"
+
 GEMINI_ENDPOINT = (
+
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "{model}:generateContent"
 )
@@ -553,17 +573,10 @@ def synthesize_with_failover(
 
 
 # ---------------------------------------------------------------------------
-# WAV writing
+# WAV writing and speech-clarity post-processing
 # ---------------------------------------------------------------------------
-
-
 def write_wav(path: Path, pcm_bytes: bytes) -> float:
-    """
-    Wrap raw 24 kHz mono s16le PCM in a RIFF WAV. Returns duration in
-    seconds. cut_and_produce.py probes the file with ffprobe anyway, but
-    Stage B also emits voiceover_manifest.json alongside the WAVs so the
-    reconciler doesn't have to shell out N times.
-    """
+    """Wrap raw 24 kHz mono s16le PCM in a RIFF WAV and return its duration."""
     if len(pcm_bytes) % (SAMPLE_WIDTH_BYTES * CHANNELS) != 0:
         # Trim a stray trailing byte if Gemini ever returned an odd count —
         # writing an odd-length s16le buffer produces silent noise.
@@ -577,6 +590,118 @@ def write_wav(path: Path, pcm_bytes: bytes) -> float:
         wf.writeframes(pcm_bytes)
     frames = len(pcm_bytes) // (SAMPLE_WIDTH_BYTES * CHANNELS)
     return frames / SAMPLE_RATE_HZ
+
+
+def wav_duration_seconds(path: Path) -> float:
+    """Return a PCM WAV's exact container duration without decoding it."""
+    with wave.open(str(path), "rb") as wav:
+        if wav.getframerate() <= 0:
+            raise RuntimeError(f"Invalid WAV sample rate in {path}.")
+        return wav.getnframes() / wav.getframerate()
+
+
+def _run_ffmpeg(command: List[str], description: str) -> subprocess.CompletedProcess[str]:
+    """Run ffmpeg without inheriting stdin or leaking unrelated environment data."""
+    try:
+        return subprocess.run(
+            command,
+            check=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("ffmpeg is required for voiceover clarity processing.") from exc
+    except subprocess.CalledProcessError as exc:
+        tail = exc.stderr[-1200:] if exc.stderr else "no ffmpeg diagnostic"
+        raise RuntimeError(f"ffmpeg failed during {description}: {tail}") from exc
+
+
+def _measure_loudness_after_preprocessing(input_path: Path) -> dict[str, float]:
+    """Measure the same pre-loudnorm chain used by the second processing pass."""
+    filter_chain = (
+        f"{VOICE_CLARITY_PRE_FILTERS},"
+        f"loudnorm=I={VOICE_CLARITY_TARGET_I_LUFS}:"
+        f"LRA={VOICE_CLARITY_TARGET_LRA_LU}:"
+        f"TP={VOICE_CLARITY_TARGET_TP_DBTP}:print_format=json"
+    )
+    result = _run_ffmpeg(
+        [
+            "ffmpeg", "-hide_banner", "-nostdin", "-i", str(input_path),
+            "-af", filter_chain, "-f", "null", "-",
+        ],
+        "voiceover loudness measurement",
+    )
+    matches = re.findall(r"\{\s*\"input_i\".*?\n\}", result.stderr, flags=re.DOTALL)
+    if not matches:
+        raise RuntimeError("ffmpeg loudnorm did not return parseable JSON measurement data.")
+    try:
+        measured = json.loads(matches[-1])
+        return {
+            "measured_I": float(measured["input_i"]),
+            "measured_LRA": float(measured["input_lra"]),
+            "measured_TP": float(measured["input_tp"]),
+            "measured_thresh": float(measured["input_thresh"]),
+            "offset": float(measured["target_offset"]),
+        }
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError("ffmpeg loudnorm returned incomplete measurement data.") from exc
+
+
+def post_process_voiceover_wav(input_path: Path, output_path: Path) -> dict[str, object]:
+    """Apply the calibrated, speech-appropriate clarity pass to a raw Gemini WAV.
+
+    The first pass measures loudness after corrective filtering. The second pass
+    applies the same corrective filtering plus measured EBU R128 normalization,
+    then a final true-peak safety limiter. Output remains 24 kHz mono PCM WAV so
+    all downstream Stage B timing and mixing contracts remain unchanged.
+    """
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("ffmpeg is required for voiceover clarity processing.")
+    measurement = _measure_loudness_after_preprocessing(input_path)
+    loudnorm = (
+        f"loudnorm=I={VOICE_CLARITY_TARGET_I_LUFS}:"
+        f"LRA={VOICE_CLARITY_TARGET_LRA_LU}:"
+        f"TP={VOICE_CLARITY_TARGET_TP_DBTP}:"
+        f"measured_I={measurement['measured_I']}:"
+        f"measured_LRA={measurement['measured_LRA']}:"
+        f"measured_TP={measurement['measured_TP']}:"
+        f"measured_thresh={measurement['measured_thresh']}:"
+        f"offset={measurement['offset']}:linear=true:print_format=summary"
+    )
+    filter_chain = f"{VOICE_CLARITY_PRE_FILTERS},{loudnorm},{VOICE_CLARITY_FINAL_LIMITER}"
+    temporary_path = output_path.with_name(f".{output_path.stem}.processed.tmp.wav")
+    try:
+        _run_ffmpeg(
+            [
+                "ffmpeg", "-hide_banner", "-nostdin", "-y", "-i", str(input_path),
+                "-af", filter_chain, "-ar", str(SAMPLE_RATE_HZ), "-ac", str(CHANNELS),
+                "-c:a", "pcm_s16le", str(temporary_path),
+            ],
+            "voiceover clarity processing",
+        )
+        if not temporary_path.is_file() or temporary_path.stat().st_size == 0:
+            raise RuntimeError("ffmpeg completed without producing processed voiceover audio.")
+        temporary_path.replace(output_path)
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+    return {
+        "preset": VOICE_CLARITY_PRESET_NAME,
+        "target_integrated_lufs": VOICE_CLARITY_TARGET_I_LUFS,
+        "target_lra_lu": VOICE_CLARITY_TARGET_LRA_LU,
+        "target_true_peak_dbtp": VOICE_CLARITY_TARGET_TP_DBTP,
+        "filters": [
+            "highpass 70 Hz, 2 poles",
+            "equalizer +1.5 dB at 3 kHz (Q 1.1)",
+            "acompressor 1.5:1 above -18 dBFS",
+            "two-pass EBU R128 loudnorm",
+            "true-peak safety limiter at -1.5 dBFS equivalent",
+        ],
+        "measurement": measurement,
+    }
+
 
 
 # ---------------------------------------------------------------------------
@@ -624,6 +749,7 @@ def main() -> None:
         "sample_rate_hz": SAMPLE_RATE_HZ,
         "channels": CHANNELS,
         "sample_width_bytes": SAMPLE_WIDTH_BYTES,
+        "post_processing_preset": VOICE_CLARITY_PRESET_NAME,
         "cuts": [],
     }
 
@@ -646,10 +772,17 @@ def main() -> None:
         )
 
         wav_path = out_dir / f"voiceover_{idx:02d}.wav"
-        duration_s = write_wav(wav_path, pcm)
+        raw_wav_path = out_dir / f".voiceover_{idx:02d}.raw.wav"
+        raw_duration_s = write_wav(raw_wav_path, pcm)
+        try:
+            processing = post_process_voiceover_wav(raw_wav_path, wav_path)
+        finally:
+            if raw_wav_path.exists():
+                raw_wav_path.unlink()
+        duration_s = wav_duration_seconds(wav_path)
         print(
-            f"  [{label}] wrote {wav_path.name} "
-            f"({duration_s:.2f}s, {len(pcm)} PCM bytes)",
+            f"  [{label}] wrote {wav_path.name} after {VOICE_CLARITY_PRESET_NAME} "
+            f"({duration_s:.2f}s from {raw_duration_s:.2f}s raw, {len(pcm)} PCM bytes)",
             flush=True,
         )
 
@@ -662,6 +795,7 @@ def main() -> None:
             "model": used_model,
             "voice": used_voice,
             "key_fingerprint": used_key.redacted(),
+            "post_processing": processing,
         })
 
     # Exact Stage B/cut_and_produce.py contract.

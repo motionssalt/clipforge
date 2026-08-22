@@ -30,12 +30,15 @@ personal access token.
 5. **Stage B** then produces ONE finished video in a single automated
    pass:
    - `generate_voiceover.py` synthesizes each cut's `voiceover_text` to
-     speech with the Gemini API TTS (a solemn anime-narrator delivery in
-     the Jujutsu Kaisen / Hunter x Hunter style, driven by a directorial
-     style prompt). Keys are managed from the site's Settings panel and
-     stored as the `GEMINI_API_KEYS` repository secret; multiple keys
-     are supported with automatic failover on auth / quota / rate-limit
-     errors.
+     speech with the Gemini API TTS using a brisk, matter-of-fact
+     directorial style prompt. It then applies a subtle speech-clarity pass:
+     high-pass cleanup, a small presence lift, gentle compression, two-pass
+     EBU R128 loudness normalization, and peak safety limiting. The output
+     remains a 24 kHz mono PCM WAV, so downstream timing stays unchanged;
+     see `docs/tts_audio_research.md`. Keys are managed from the site's
+     Settings panel and stored as the `GEMINI_API_KEYS` repository secret;
+     multiple keys are supported with automatic failover on auth / quota /
+     rate-limit errors.
    - `cut_and_produce.py` reconciles every cut's length against its
      voiceover (no drift), cuts the ORIGINAL full-quality video, mutes
      the source audio, mixes the voiceover in, optionally mixes your
