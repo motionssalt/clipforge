@@ -138,7 +138,10 @@ assert caption_visible and caption_visible == caption_visible.upper(), caption_v
 assert "SHE" in caption_visible and "She" not in caption_visible
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
 assert all(style in ass for style in ("CinShadow", "CinGlowFar", "CinGlowNear", "CinText"))
-assert f"\\blur{cin.CIN_GLOW_FAR_BLUR}" in ass, "wide outer glow blur missing"
+assert cin.CIN_GLOW_FAR_BLUR <= 8 and cin.CIN_GLOW_NEAR_BLUR <= 4
+assert cin.CIN_GLOW_FAR_OUTLINE_FRACTION <= 0.012
+assert cin.CIN_SHADOW_BLUR <= 4 and cin.CIN_SHADOW_OFFSET_Y_FRACTION <= 0.005
+assert f"\\blur{cin.CIN_GLOW_FAR_BLUR}" in ass, "outer halo blur missing"
 assert f"\\blur{cin.CIN_GLOW_NEAR_BLUR}" in ass, "inner glow blur missing"
 assert f"\\blur{cin.CIN_SHADOW_BLUR}" in ass, "soft shadow blur missing"
 assert f"\\pos({W // 2 + int(round(W * cin.CIN_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_SHADOW_OFFSET_Y_FRACTION))})" in ass, "offset shadow position missing"

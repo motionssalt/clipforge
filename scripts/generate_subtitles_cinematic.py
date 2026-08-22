@@ -122,23 +122,23 @@ CIN_FONT_FALLBACKS = ["DejaVu Sans", "Liberation Sans", "sans-serif"]
 CIN_FONT_FRACTION_OF_HEIGHT = 0.052
 # Dark outline under the glyphs + offset drop shadow for the cinematic
 # treatment. Both scale with frame height like the legacy constants.
-CIN_OUTLINE_FRACTION = 0.0030
-CIN_SHADOW_FRACTION = 0.0045
-# Deep cinematic glow: three independent layers sit beneath the readable
-# text. A wide, low-opacity bloom creates the soft outer halo; a denser
-# mid-radius bloom gives it depth; a dark offset shadow anchors the type over
-# active footage. This deliberately avoids the thin single-outline look.
-CIN_GLOW_FAR_OUTLINE_FRACTION = 0.022
-CIN_GLOW_FAR_COLOR = "&HB0" + "FFFFFF"    # broad neutral-white outer halo
-CIN_GLOW_FAR_BLUR = 18
-CIN_GLOW_NEAR_OUTLINE_FRACTION = 0.014
-CIN_GLOW_NEAR_COLOR = "&H48" + "FFFFFF"   # dense neutral-white inner halo
-CIN_GLOW_NEAR_BLUR = 9
-CIN_SHADOW_OUTLINE_FRACTION = 0.008
-CIN_SHADOW_COLOR = "&H90" + "000000"      # diffuse shadow under glow
-CIN_SHADOW_BLUR = 7
-CIN_SHADOW_OFFSET_X_FRACTION = 0.003
-CIN_SHADOW_OFFSET_Y_FRACTION = 0.008
+CIN_OUTLINE_FRACTION = 0.0008
+CIN_SHADOW_FRACTION = 0.0020
+# Compact cinematic glow: a restrained neutral-white outer halo, a
+# concentrated inner halo, and a soft offset shadow sit beneath the readable
+# text. The stack provides depth without creating the oversized bloom of a
+# title-card effect.
+CIN_GLOW_FAR_OUTLINE_FRACTION = 0.012
+CIN_GLOW_FAR_COLOR = "&HBA" + "FFFFFF"    # restrained neutral-white halo
+CIN_GLOW_FAR_BLUR = 8
+CIN_GLOW_NEAR_OUTLINE_FRACTION = 0.006
+CIN_GLOW_NEAR_COLOR = "&H68" + "FFFFFF"   # concentrated inner white halo
+CIN_GLOW_NEAR_BLUR = 4
+CIN_SHADOW_OUTLINE_FRACTION = 0.004
+CIN_SHADOW_COLOR = "&HA8" + "000000"      # soft, recessive shadow
+CIN_SHADOW_BLUR = 4
+CIN_SHADOW_OFFSET_X_FRACTION = 0.002
+CIN_SHADOW_OFFSET_Y_FRACTION = 0.005
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
