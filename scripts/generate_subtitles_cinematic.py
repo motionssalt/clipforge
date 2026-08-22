@@ -8,11 +8,12 @@ mode is untouched; this script is selected via the Stage B workflow's
 `subtitle_mode` input (`word` = legacy template mode, `cinematic` =
 this renderer). A later batch retires the old mode entirely.
 
-Placement in the pipeline is IDENTICAL to the legacy renderer: it runs
-AFTER cut_and_produce.py (and after the optional enhance pass) but
-BEFORE brand_scenes.py, burning the captions into the still-native-
-aspect merged final.mp4 so the captions are pixels of the VIDEO
-CONTENT and ride with the video into any downstream branded slot.
+Placement in the pipeline is intentionally distinct from the legacy
+renderer: it runs AFTER cut_and_produce.py (and after the optional
+enhance pass), normalises the source into the bare 1080x1200 (10:9)
+cinematic frame, and burns captions plus the one-time title banner into
+that frame. The Stage B workflow never runs brand_scenes.py for this
+mode, so cinematic output cannot acquire legacy channel chrome.
 
 ---------------------------------------------------------------------------
 HOW IT DIFFERS FROM TEMPLATE MODE
@@ -61,7 +62,7 @@ Cinematic mode (this file):
     of the frame) and is gone for the rest of the video. Banner graphic
     and title text move as ONE unit: the title is rendered INTO the
     banner image (Pillow) and libass animates the whole image with a
-    single \move, so text and banner can never drift apart. The title
+    single \\move, so text and banner can never drift apart. The title
     typeface is Coolvetica, vendored at assets/fonts/Coolvetica.ttf —
     it replaces the narrow title font of old template mode INSIDE
     cinematic mode only; template mode itself is untouched here.
@@ -127,6 +128,13 @@ CIN_GLOW_OUTLINE_FRACTION = 0.0085
 CIN_GLOW_COLOR = "&H64" + "00BFFF"   # AABBGGRR: alpha 0x64, gold #FFBF00
 CIN_GLOW_BLUR = 7
 
+# ---------- Cinematic output frame ----------
+# Cinematic output is always a bare 10:9 frame. Source material fills the
+# canvas with a centred crop; no template, header, lower title block, or CTA
+# is ever part of this renderer's filter graph.
+CIN_FRAME_WIDTH = 1080
+CIN_FRAME_HEIGHT = 1200
+
 # ---------- Title banner (Batch 2) ----------
 # One-time intro element: a white full-width banner drops in from the
 # top of the frame at t=0, holds, then drops back out the same way and
@@ -143,8 +151,8 @@ CIN_BANNER_FONT_FILE = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "..", "assets", "fonts", "Coolvetica.ttf"))
 CIN_BANNER_FONT_FALLBACK = "DejaVuSans-Bold.ttf"  # system fontconfig name
-CIN_BANNER_HEIGHT_FRACTION = 0.16      # banner height vs frame height
-CIN_BANNER_TOP_FRACTION = 0.08         # resting top edge vs frame height
+CIN_BANNER_HEIGHT_FRACTION = 0.11      # compact banner height vs frame height
+CIN_BANNER_TOP_FRACTION = 0.0          # resting top edge: flush with y=0
 CIN_BANNER_TEXT_WIDTH_FRACTION = 0.90  # max title width vs frame width
 CIN_BANNER_IN_SECONDS = 0.6            # drop-in duration
 CIN_BANNER_HOLD_SECONDS = 7.0          # fully-visible hold
@@ -372,6 +380,9 @@ def build_banner_png(title: str, width: int, height: int,
     titles are never truncated — they just set smaller.
     """
     banner_h = max(48, int(round(height * CIN_BANNER_HEIGHT_FRACTION)))
+    # The banner is the final rendering boundary for its text, so enforce
+    # uppercase here rather than relying on the source title or a caller.
+    banner_title = title.upper()
     img = Image.new("RGB", (width, banner_h), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
@@ -379,24 +390,24 @@ def build_banner_png(title: str, width: int, height: int,
     size = max(CIN_BANNER_MIN_FONT_PX, int(round(banner_h * 0.52)))
     font = _load_banner_font(size)
     while size > CIN_BANNER_MIN_FONT_PX and \
-            draw.textlength(title, font=font) > max_text_w:
+            draw.textlength(banner_title, font=font) > max_text_w:
         size -= 2
         font = _load_banner_font(size)
 
-    bbox = draw.textbbox((0, 0), title, font=font)
+    bbox = draw.textbbox((0, 0), banner_title, font=font)
     text_w = bbox[2] - bbox[0]
     text_h = bbox[3] - bbox[1]
     # Centre optically: shift by the bbox origin so ascender/descender
     # metrics don't push the glyphs off-centre.
     x = (width - text_w) // 2 - bbox[0]
     y = (banner_h - text_h) // 2 - bbox[1]
-    draw.text((x, y), title, font=font, fill=(18, 18, 18))
+    draw.text((x, y), banner_title, font=font, fill=(18, 18, 18))
 
     img.save(out_png)
     print(
         f"Title banner rendered: {out_png} ({width}x{banner_h}, "
         f"{os.path.basename(CIN_BANNER_FONT_FILE)} {size}px, "
-        f"title={title!r})",
+        f"title={banner_title!r})",
         flush=True,
     )
     return banner_h
@@ -495,8 +506,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         f"{CIN_WORD_FADE_IN_MS}ms/word, letter-by-letter fade-out "
         f"{CIN_LETTER_FADE_OUT_MS}ms/sentence, >= "
         f"{CIN_SENTENCE_MIN_SECONDS}s hold, overlapping layered "
-        f"transitions; burned in BEFORE branding so captions ride with "
-        f"the video into any downstream branded slot)",
+        f"transitions; rendered into the bare 1080x1200 cinematic frame "
+        f"with no downstream branded compositor)",
         flush=True,
     )
 
@@ -536,8 +547,7 @@ def _banner_y_expr(rest_top: int) -> str:
 
 
 def burn_subtitles(video: str, ass_path: str, dst: str,
-                   banner: dict | None = None,
-                   frame_height: int = 0) -> None:
+                   banner: dict | None = None) -> None:
     """
     Burn the cinematic ASS in with libass, overlay the title banner (if
     given) on top, and re-encode video with the SAME mobile-safe
@@ -558,10 +568,18 @@ def burn_subtitles(video: str, ass_path: str, dst: str,
         return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
     inputs = ["-i", video]
-    filters = [f"[0:v]subtitles='{_fescape(ass_path)}'[v0]"]
+    # This is the only cinematic canvas construction. It centre-crops the
+    # source to 10:9 before either captions or the title banner are added.
+    # No legacy branding asset is an input to this graph.
+    filters = [
+        f"[0:v]scale={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT}:"
+        f"force_original_aspect_ratio=increase,"
+        f"crop={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT},setsar=1[base]",
+        f"[base]subtitles='{_fescape(ass_path)}'[v0]",
+    ]
     out_label = "v0"
     if banner is not None:
-        rest_top = int(round(frame_height * CIN_BANNER_TOP_FRACTION))
+        rest_top = int(round(CIN_FRAME_HEIGHT * CIN_BANNER_TOP_FRACTION))
         out_end = (CIN_BANNER_IN_SECONDS + CIN_BANNER_HOLD_SECONDS
                    + CIN_BANNER_OUT_SECONDS)
         # -loop 1 makes the single PNG a (theoretically infinite) video
@@ -671,11 +689,12 @@ def main() -> None:
 
     sentences = split_sentences(words)
 
-    width, height = legacy.probe_video_size(args.merged_video_mp4)
+    source_width, source_height = legacy.probe_video_size(args.merged_video_mp4)
+    width, height = CIN_FRAME_WIDTH, CIN_FRAME_HEIGHT
     print(
-        f"Video resolution: {width}x{height}; cinematic subtitles will be "
-        f"CENTRED in this frame (the frame IS the video image at this "
-        f"stage — branding runs downstream).",
+        f"Source video resolution: {source_width}x{source_height}; "
+        f"cinematic output is centre-cropped to the bare {width}x{height} "
+        f"(10:9) frame, with captions centred in that full frame.",
         flush=True,
     )
 
@@ -703,7 +722,7 @@ def main() -> None:
           f"{' + title banner' if banner else ''} into "
           f"{args.out_video_mp4} ...", flush=True)
     burn_subtitles(args.merged_video_mp4, ass_path, args.out_video_mp4,
-                   banner=banner, frame_height=height)
+                   banner=banner)
     print(f"Final cinematically-subtitled video written: "
           f"{args.out_video_mp4}", flush=True)
 

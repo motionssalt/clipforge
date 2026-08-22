@@ -73,20 +73,31 @@ assert max(s1["speak_end"], s1["start"] + cin.CIN_SENTENCE_MIN_SECONDS) \
     == s1["start"] + 1.5
 print("PASS: sentence split on punctuation + 1.5s readability floor")
 
-# --- Title banner (Batch 2): PNG render + title loading
-W, H = 720, 1280
+# --- Cinematic 10:9 output + title banner
+# The source deliberately differs from the output geometry: the renderer must
+# centre-crop it to the fixed cinematic canvas before captions or banner.
+SRC_W, SRC_H = 720, 1280
+W, H = cin.CIN_FRAME_WIDTH, cin.CIN_FRAME_HEIGHT
+assert (W, H) == (1080, 1200)
 assert cin.load_banner_title(prod_path) == prod["title"]
 banner_png = os.path.join(WORK, "title_banner.png")
 bh = cin.build_banner_png(prod["title"], W, H, banner_png)
 assert os.path.isfile(banner_png)
 assert bh == max(48, int(round(H * cin.CIN_BANNER_HEIGHT_FRACTION)))
+assert bh < int(round(H * 0.16)), "banner height was not reduced"
 from PIL import Image as _Img
 _bw, _bh = _Img.open(banner_png).size
 assert (_bw, _bh) == (W, bh), (_bw, _bh)
-print(f"PASS: title banner PNG ({_bw}x{_bh}) + title loader")
+# The byte-identical render proves the source title is uppercased inside the
+# production renderer, rather than trusting the caller to provide all caps.
+upper_banner_png = os.path.join(WORK, "title_banner_upper.png")
+cin.build_banner_png(prod["title"].upper(), W, H, upper_banner_png)
+assert open(banner_png, "rb").read() == open(upper_banner_png, "rb").read()
+print(f"PASS: 10:9 cinematic canvas + compact all-caps title banner ({_bw}x{_bh})")
 
 # --- Banner motion expression: drop-in 0.6s -> 7s hold -> drop-out 0.6s
 rest_top = int(round(H * cin.CIN_BANNER_TOP_FRACTION))
+assert rest_top == 0, "banner must rest flush at the frame top"
 y_expr = cin._banner_y_expr(rest_top)
 in_s = cin.CIN_BANNER_IN_SECONDS
 hold_s = in_s + cin.CIN_BANNER_HOLD_SECONDS
@@ -142,13 +153,13 @@ print(f"PASS: ASS structure (glow+text layers, centred, blur, alpha anim, "
 # --- Burn into a generated test video and validate the MP4
 src = os.path.join(WORK, "src.mp4")
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
-                "-f", "lavfi", "-i", f"testsrc2=size={W}x{H}:rate=24:duration=9",
+                "-f", "lavfi", "-i", f"testsrc2=size={SRC_W}x{SRC_H}:rate=24:duration=9",
                 "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
                 "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", src], check=True)
 out = os.path.join(WORK, "out.mp4")
 cin.burn_subtitles(src, ass_path, out,
-                   banner={"png": banner_png, "height": bh}, frame_height=H)
+                   banner={"png": banner_png, "height": bh})
 
 probe = subprocess.check_output(
     ["ffprobe", "-v", "error", "-show_entries",
@@ -156,7 +167,9 @@ probe = subprocess.check_output(
     text=True)
 streams = json.loads(probe)["streams"]
 assert len(streams) == 2 and {s["codec_type"] for s in streams} == {"video", "audio"}, streams
-print("PASS: burned MP4 valid (1 video + 1 audio stream)")
+video_stream = next(s for s in streams if s["codec_type"] == "video")
+assert (video_stream["width"], video_stream["height"]) == (W, H), video_stream
+print("PASS: burned MP4 valid (1 video + 1 audio stream, bare 1080x1200 frame)")
 
 # --- Extract frames: early fade-in of sentence 2 overlapping sentence 1's
 #     dissolve (~5.1s), sentence 2 fully on (~6.2s), letter fade-out of the
@@ -165,5 +178,10 @@ for t in (0.3, 1.2, 3.0, 6.2, 7.9, 8.95):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", str(t),
                     "-i", out, "-frames:v", "1",
                     os.path.join(WORK, f"frame_{t}.png")], check=True)
-print("PASS: frames extracted ->", WORK)
+# At 1.2s the banner is fully dropped in. Its white strip must touch y=0 —
+# any source-video gap above it would fail this direct pixel check.
+full_banner = _Img.open(os.path.join(WORK, "frame_1.2.png")).convert("RGB")
+r, g, b = full_banner.getpixel((8, 0))
+assert min(r, g, b) >= 235, (r, g, b)
+print("PASS: rendered frame has compact banner flush at y=0 ->", WORK)
 print("ALL CINEMATIC TESTS PASSED")
