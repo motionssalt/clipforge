@@ -133,15 +133,16 @@ cin.build_banner_png(prod["title"].upper(), W, H, upper_banner_png)
 assert open(banner_png, "rb").read() == open(upper_banner_png, "rb").read()
 print(f"PASS: 10:9 cinematic canvas + compact all-caps title banner ({_bw}x{_bh})")
 
-# --- Banner motion expression: cubic-eased 0.7s drop-in -> 7s hold ->
-# cubic-eased 0.7s drop-out.
+# --- Banner motion expression: cubic-eased 2s drop-in -> 15s hold ->
+# cubic-eased 2s drop-out, then permanently off-screen.
 rest_top = int(round(H * cin.CIN_BANNER_TOP_FRACTION))
 assert rest_top == 0, "banner must rest flush at the frame top"
 y_expr = cin._banner_y_expr(rest_top)
 in_s = cin.CIN_BANNER_IN_SECONDS
 hold_s = in_s + cin.CIN_BANNER_HOLD_SECONDS
 out_s = hold_s + cin.CIN_BANNER_OUT_SECONDS
-assert in_s == cin.CIN_BANNER_OUT_SECONDS == 0.7
+assert in_s == cin.CIN_BANNER_OUT_SECONDS == 2.0
+assert cin.CIN_BANNER_HOLD_SECONDS >= 15.0
 assert "pow" in y_expr and f"t/{in_s}" in y_expr and \
     f"(t-{hold_s})/{cin.CIN_BANNER_OUT_SECONDS}" in y_expr, y_expr
 # Continuity at every boundary, evaluated with the real banner height:
@@ -207,15 +208,18 @@ print("PASS: static ASS cards + compact soft-gray raster shadow (no caption anim
 
 
 
-# --- Burn into a generated test video and validate the MP4
+# --- Burn into a generated 22-second test video and validate the MP4.
+# The duration deliberately outlives the 19-second banner timeline so the test
+# can inspect a real exit and a later frame where the banner is absent.
+TEST_DURATION = 22.0
 src = os.path.join(WORK, "src.mp4")
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
-                "-f", "lavfi", "-i", f"testsrc2=size={SRC_W}x{SRC_H}:rate=24:duration=9",
+                "-f", "lavfi", "-i", f"testsrc2=size={SRC_W}x{SRC_H}:rate=24:duration={TEST_DURATION}",
                 "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-                "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-t", str(TEST_DURATION), "-c:v", "libx264", "-pix_fmt", "yuv420p",
                 "-c:a", "aac", src], check=True)
 foreground_mov = os.path.join(WORK, "cinematic_caption_flat_shadow.mov")
-cin.render_cinematic_overlays(sentences, kw, W, H, 9.0, foreground_mov)
+cin.render_cinematic_overlays(sentences, kw, W, H, TEST_DURATION, foreground_mov)
 assert os.path.isfile(foreground_mov)
 def probe_overlay(path):
     return json.loads(subprocess.check_output(
@@ -229,8 +233,13 @@ assert foreground_probe[0]["pix_fmt"] == "argb", foreground_probe
 print("PASS: single RGBA soft-drop-shadow caption stream is valid")
 
 out = os.path.join(WORK, "out.mp4")
+out_without_banner = os.path.join(WORK, "out_without_banner.mp4")
 cin.burn_subtitles(src, foreground_mov, out,
                    banner={"png": banner_png, "height": bh})
+# A matching base render makes the post-exit assertion independent of the
+# generated background colour: after t=19 the bannered output must agree with
+# a genuinely banner-free render at the same pixels.
+cin.burn_subtitles(src, foreground_mov, out_without_banner)
 
 probe = subprocess.check_output(
     ["ffprobe", "-v", "error", "-show_entries",
@@ -242,17 +251,48 @@ video_stream = next(s for s in streams if s["codec_type"] == "video")
 assert (video_stream["width"], video_stream["height"]) == (W, H), video_stream
 print("PASS: burned MP4 valid (1 video + 1 audio stream, bare 1080x1200 frame)")
 
-# --- Extract representative static-card and banner frames.
-for t in (0.3, 1.2, 3.0, 6.2, 7.9, 8.95):
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", str(t),
-                    "-i", out, "-frames:v", "1",
-                    os.path.join(WORK, f"frame_{t}.png")], check=True)
-# At 1.2s the banner is fully dropped in. Its white strip must touch y=0 —
-# any source-video gap above it would fail this direct pixel check.
-full_banner = _Img.open(os.path.join(WORK, "frame_1.2.png")).convert("RGB")
-r, g, b = full_banner.getpixel((8, 0))
-assert min(r, g, b) >= 235, (r, g, b)
-print("PASS: rendered frame has compact banner flush at y=0 ->", WORK)
+# --- Extract actual entry, hold, exit, and gone frames. These moments map
+# directly to the required 2s/15s/2s timeline: entry at 0.6s, late hold at
+# 16.9s, visible exit at 17.8s, and absent after the 19.0s timeline at 19.2s.
+BANNER_FRAMES = {"entry": 0.6, "hold": 16.9, "exit": 17.8, "gone": 19.2}
+def extract_exact_frame(video, time_s, dst):
+    # Put -ss after the input: input-side seeking can return an earlier keyframe
+    # and would make this timing assertion inspect t=0 instead of the intended
+    # entry/hold/exit/gone moment.
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video,
+                    "-ss", str(time_s), "-frames:v", "1", dst], check=True)
+
+for label, t in BANNER_FRAMES.items():
+    extract_exact_frame(out, t, os.path.join(WORK, f"banner_{label}.png"))
+extract_exact_frame(out_without_banner, BANNER_FRAMES["gone"],
+                    os.path.join(WORK, "banner_gone_base.png"))
+
+def white_strip_height(path):
+    image = _Img.open(path).convert("RGB")
+    height = 0
+    for y in range(bh):
+        if min(image.getpixel((8, y))) < 235:
+            break
+        height += 1
+    return height
+
+entry_h = white_strip_height(os.path.join(WORK, "banner_entry.png"))
+hold_h = white_strip_height(os.path.join(WORK, "banner_hold.png"))
+exit_h = white_strip_height(os.path.join(WORK, "banner_exit.png"))
+assert 0 < entry_h < bh, entry_h
+assert hold_h == bh, hold_h
+assert 0 < exit_h < bh, exit_h
+# The y-expression's final branch puts the banner beyond the full frame.
+# Independent H.264 encodes can differ by a single luma value after earlier
+# overlayed frames, so check both the absence of a white strip and a tiny
+# tolerance against a separately rendered no-banner frame.
+gone = _Img.open(os.path.join(WORK, "banner_gone.png")).convert("RGB")
+gone_base = _Img.open(os.path.join(WORK, "banner_gone_base.png")).convert("RGB")
+assert white_strip_height(os.path.join(WORK, "banner_gone.png")) == 0
+gone_pixel_delta = max(abs(a - b) for a, b in zip(
+    gone.getpixel((8, 0)), gone_base.getpixel((8, 0))))
+assert gone_pixel_delta <= 2, gone_pixel_delta
+print("PASS: rendered banner entry/15s hold/exit/gone frames ->", WORK)
 
 # --- Execute the ACTUAL cinematic CLI production path. The only substituted
 # component is Whisper timing; Stage B's real renderer, title banner, scene
@@ -260,7 +300,7 @@ print("PASS: rendered frame has compact banner flush at y=0 ->", WORK)
 # source. This validates the route that Stage B selects for subtitle_mode.
 voice_wav = os.path.join(WORK, "voiceover.wav")
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi",
-                "-i", "anullsrc=r=24000:cl=mono", "-t", "9", "-c:a",
+                "-i", "anullsrc=r=24000:cl=mono", "-t", str(TEST_DURATION), "-c:a",
                 "pcm_s16le", voice_wav], check=True)
 cli_out = os.path.join(WORK, "cli_cinematic.mp4")
 cli_work = os.path.join(WORK, "cli_work")
@@ -287,10 +327,13 @@ crop_plan = json.load(open(os.path.join(cli_work, "cinematic_crop_plan.json"), e
 assert crop_plan["scene_detector"] == "scene_index.detect_shots", crop_plan
 assert crop_plan["scene_count"] >= 1, crop_plan
 assert len(crop_plan["scenes"]) == crop_plan["scene_count"], crop_plan
-cli_frame = os.path.join(WORK, "cli_frame_1.2.png")
-subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", "1.2", "-i", cli_out,
-                "-frames:v", "1", cli_frame], check=True)
-cli_banner = _Img.open(cli_frame).convert("RGB")
-assert min(cli_banner.getpixel((8, 0))) >= 235
-print("PASS: actual cinematic CLI path renders captioned 1080x1200 frame, title banner, and scene crop plan ->", cli_frame)
+# Confirm the same long timeline through the actual CLI production path,
+# not just the direct compositor helper.
+for label in ("entry", "hold", "exit", "gone"):
+    cli_frame = os.path.join(WORK, f"cli_banner_{label}.png")
+    extract_exact_frame(cli_out, BANNER_FRAMES[label], cli_frame)
+assert 0 < white_strip_height(os.path.join(WORK, "cli_banner_entry.png")) < bh
+assert white_strip_height(os.path.join(WORK, "cli_banner_hold.png")) == bh
+assert 0 < white_strip_height(os.path.join(WORK, "cli_banner_exit.png")) < bh
+print("PASS: actual cinematic CLI path renders entry/hold/exit/gone banner timeline and scene crop plan ->", cli_out)
 print("ALL CINEMATIC TESTS PASSED")

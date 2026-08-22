@@ -32,12 +32,12 @@ CINEMATIC CAPTION BEHAVIOR
     The renderer applies that exact color and does not classify tone,
     sentiment, or emotional weight itself.
   * TITLE BANNER — a one-time intro element: a white full-width banner
-    carrying the video's title drops in from off-screen top at t=0,
-    holds 7 seconds, then drops back out the same way (up, off the top
-    of the frame) and is gone for the rest of the video. Banner graphic
-    and title text move as ONE unit: the title is rendered INTO the
-    banner image (Pillow) and libass animates the whole image with a
-    single \\move, so text and banner can never drift apart. The title
+    carrying the video's title drops in from off-screen top for two seconds,
+    remains fully visible for at least fifteen seconds, then takes two seconds
+    to drop back out (up, off the top of the frame) and is absent for the rest
+    of the video. Banner graphic and title text move as ONE unit: the title is
+    rendered INTO the banner image (Pillow) and the same image is animated as
+    one overlay, so text and banner can never drift apart. The title
     typeface is Coolvetica, vendored at assets/fonts/Coolvetica.ttf —
     it replaces the narrow title font of old template mode INSIDE
     cinematic mode only; template mode itself is untouched here.
@@ -138,9 +138,9 @@ CIN_BANNER_FONT_FALLBACK = "DejaVuSans-Bold.ttf"  # system fontconfig name
 CIN_BANNER_HEIGHT_FRACTION = 0.11      # compact banner height vs frame height
 CIN_BANNER_TOP_FRACTION = 0.0          # resting top edge: flush with y=0
 CIN_BANNER_TEXT_WIDTH_FRACTION = 0.90  # max title width vs frame width
-CIN_BANNER_IN_SECONDS = 0.7            # eased drop-in duration
-CIN_BANNER_HOLD_SECONDS = 7.0          # fully-visible hold
-CIN_BANNER_OUT_SECONDS = 0.7           # eased drop-out duration (same motion, reversed)
+CIN_BANNER_IN_SECONDS = 2.0            # eased drop-in duration
+CIN_BANNER_HOLD_SECONDS = 15.0         # fully-visible hold (minimum requested)
+CIN_BANNER_OUT_SECONDS = 2.0           # eased drop-out duration (same motion, reversed)
 CIN_BANNER_LAYER = 8                   # above the caption stacks (0-7)
 CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 
@@ -472,19 +472,19 @@ def _banner_y_expr(rest_top: int) -> str:
     drop-out schedule in one piecewise expression (ffmpeg if()).
 
       drop-in : t in [0, in)          — the whole banner slides DOWN
-                from fully off-screen top (top edge -H, i.e. the banner
+                from fully off-screen top (top edge -overlay_h, i.e. the banner
                 just above the frame) to its resting slot with cubic easing;
       hold    : t in [in, in+hold)    — parked at rest_top;
       drop-out: t in [in+hold, out)   — the SAME move reversed (slides
-                back UP, top edge from rest_top to -H);
-      after   : top edge pinned at -H, so even a pathological filter
-                graph evaluation past out_end stays off-screen (the
-                enable= gate already stops overlay at out_end, this is
-                belt-and-braces).
+                back UP, top edge from rest_top to -overlay_h);
+      after   : top edge stays pinned at -overlay_h. The overlay source remains
+                alive for the complete base-video duration, so this final
+                branch is visibly evaluated rather than relying on an input
+                trim or an enable-boundary to hide the exit animation.
 
-    'H' is the banner image's own height in the overlay filter — no
-    duplicated constant, so a future banner-height change can't
-    desynchronise the two.
+    `overlay_h` is the banner image's own height in the overlay filter.
+    Use the explicit FFmpeg variable rather than `H`, which denotes the main
+    video height and would make a compact banner travel too far too late.
     """
     t_in = CIN_BANNER_IN_SECONDS
     t_hold = t_in + CIN_BANNER_HOLD_SECONDS
@@ -498,12 +498,12 @@ def _banner_y_expr(rest_top: int) -> str:
     out_ease = f"(1-pow(1-({out_progress}),3))"
     return (
         f"if(lt(t,{t_in}),"
-        f"-H+({rest_top}+H)*{in_ease},"
+        f"-overlay_h+({rest_top}+overlay_h)*{in_ease},"
         f"if(lt(t,{t_hold}),"
         f"{rest_top},"
         f"if(lt(t,{t_out}),"
-        f"{rest_top}-({rest_top}+H)*{out_ease},"
-        f"-H)))"
+        f"{rest_top}-({rest_top}+overlay_h)*{out_ease},"
+        f"-overlay_h)))"
     )
 
 
@@ -700,14 +700,18 @@ def burn_subtitles(video: str, caption_foreground_mov: str, dst: str,
     out_label = "v0"
     if banner is not None:
         rest_top = int(round(CIN_FRAME_HEIGHT * CIN_BANNER_TOP_FRACTION))
-        out_end = (CIN_BANNER_IN_SECONDS + CIN_BANNER_HOLD_SECONDS
-                   + CIN_BANNER_OUT_SECONDS)
+        # Keep the image stream alive for the whole base-video timeline. The
+        # y-expression itself owns every state: two-second entry, fifteen-
+        # second hold, two-second exit, then off-screen. In particular, do not
+        # trim the source or gate it with enable= at the exit boundary: both
+        # approaches can prevent the final animated frames from reaching the
+        # compositor.
         inputs += ["-loop", "1", "-i", banner["png"]]
         y_expr = _banner_y_expr(rest_top)
-        filters.append(f"[2:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]")
+        filters.append("[2:v]setpts=PTS-STARTPTS[bimg]")
         filters.append(
-            f"[v0][bimg]overlay=x=0:y='{y_expr}'"
-            f":enable='lt(t,{out_end})':eof_action=pass[v1]")
+            f"[v0][bimg]overlay=x=0:y='{y_expr}':eval=frame"
+            f":eof_action=pass:repeatlast=0:shortest=1[v1]")
         out_label = "v1"
     cmd = [
         "ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters),
