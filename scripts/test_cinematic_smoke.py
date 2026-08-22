@@ -172,14 +172,16 @@ assert cin.CIN_FONT == "Coolvetica Rg" and os.path.isfile(cin.CIN_FONT_FILE)
 assert all(f"Style: {style},{cin.CIN_FONT}," in ass for style in (
     "CinShadow", "CinText"))
 assert "CinGlow" not in ass and "\\blur" not in ass, ass
+assert f",1,{cin.CIN_ASS_OUTLINE_WIDTH},0,5," in ass, "subtle ASS outline missing"
+assert cin.CIN_ASS_OUTLINE_COLOR == "&H00181818"
 import re as _re
 caption_payloads = _re.findall(
     r"Dialogue: [^\n]*,CinText,,0,0,0,,([^\n]*)", ass)
 caption_visible = "".join(_re.sub(r"\{[^}]*\}", "", text)
                           for text in caption_payloads)
-assert caption_visible and "She" in caption_visible, caption_visible
-assert "SHE" not in caption_visible, caption_visible
-assert "The son-in-law nobody liked became" in caption_visible, caption_visible
+assert caption_visible and "SHE" in caption_visible, caption_visible
+assert "She" not in caption_visible, caption_visible
+assert "THE SON-IN-LAW NOBODY LIKED BECAME" in caption_visible, caption_visible
 assert "Alignment" in ass and ",5," in ass, "centred Alignment=5 missing"
 assert all(style in ass for style in ("CinShadow", "CinText"))
 assert f"\\pos({W // 2 + int(round(W * cin.CIN_ASS_SHADOW_OFFSET_X_FRACTION))},{H // 2 + int(round(H * cin.CIN_ASS_SHADOW_OFFSET_Y_FRACTION))})" in ass, "compact diagnostic shadow position missing"
@@ -188,6 +190,8 @@ assert cin.CIN_RASTER_SHADOW_RGB == (38, 38, 38)
 assert cin.CIN_RASTER_SHADOW_ALPHA == 0.72
 assert (cin.CIN_RASTER_SHADOW_X, cin.CIN_RASTER_SHADOW_Y,
         cin.CIN_RASTER_SHADOW_BLUR_RADIUS) == (3, 5, 4)
+assert cin.CIN_RASTER_STROKE_RGB == (24, 24, 24)
+assert cin.CIN_RASTER_STROKE_WIDTH == 1
 assert "\\alpha" not in ass and "\\t(" not in ass, "caption animation tags remain"
 assert "\\c&H5C5CFF&" in ass, "tense keyword fill colour missing"
 assert "\\c&H5AC8FF&" in ass, "author-selected #FFC85A fill color missing"
@@ -204,7 +208,7 @@ assert text_evs[0][2] <= text_evs[1][1], "static caption cards overlap"
 assert all(event[0] == "1" for event in text_evs), "animated layer stacks remain"
 for shadow_ev, text_ev in zip(events_by_style["CinShadow"], text_evs):
     assert (shadow_ev[1], shadow_ev[2]) == (text_ev[1], text_ev[2])
-print("PASS: static ASS cards + compact soft-gray raster shadow (no caption animation)")
+print("PASS: all-caps ASS cards + 1px dark keyline + compact soft-gray raster shadow (no caption animation)")
 
 
 

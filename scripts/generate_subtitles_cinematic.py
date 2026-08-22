@@ -21,12 +21,12 @@ CINEMATIC CAPTION BEHAVIOR
     close-together cards swap directly with no fade, overlap, scale, tracking,
     or character-level animation. Only a long otherwise-empty gap causes the
     completed card to fade away before the next card arrives.
-  * STYLE — compact Coolvetica text in the source script's casing, with a soft gray-black
-    drop shadow immediately down and right of the glyphs, centred in the
-    frame both horizontally and vertically (Alignment=5). The narrow
-    condensed caption font and bottom-of-frame placement of template mode
-    are deliberately NOT carried over; this mode has no outline, halo, or
-    separate glow layer.
+  * STYLE — compact all-caps Coolvetica text, centred in the frame both
+    horizontally and vertically (Alignment=5), with a one-pixel subtle dark
+    stroke for edge separation and the existing soft gray-black drop shadow
+    immediately down and right of the glyphs. The narrow condensed caption
+    font and bottom-of-frame placement of template mode are deliberately NOT
+    carried over; this mode has no halo or separate glow layer.
   * KEYWORD COLORING — production.json may mark noteworthy words with an
     author-selected literal hex color (see load_script_with_keywords).
     The renderer applies that exact color and does not classify tone,
@@ -100,12 +100,14 @@ CIN_FONT_FRACTION_OF_HEIGHT = 0.032
 # subtle, close offset. The rendered video is authored by the Pillow raster
 # compositor below, which supplies the actual Gaussian-softened edge.
 CIN_ASS_SHADOW_COLOR = "&H60000000"
+CIN_ASS_OUTLINE_COLOR = "&H00181818"
+CIN_ASS_OUTLINE_WIDTH = 1
 CIN_ASS_SHADOW_OFFSET_X_FRACTION = 0.0020
 CIN_ASS_SHADOW_OFFSET_Y_FRACTION = 0.0035
 
-# Production captions are rasterized with Pillow for a compact soft drop
-# shadow: dark gray-black, close to the glyphs, and lightly Gaussian softened.
-# This is a shadow layer only—not an outline or a separate glow treatment.
+# Production captions are rasterized with Pillow as three deliberate layers:
+# a compact dark-gray Gaussian shadow, a subtle one-pixel dark keyline, and
+# literal per-word foreground fills. This is not a separate glow treatment.
 CIN_RASTER_FPS = 24
 CIN_RASTER_MAX_WIDTH_FRACTION = 0.86
 CIN_RASTER_Y_FRACTION = 0.55
@@ -114,6 +116,10 @@ CIN_RASTER_SHADOW_ALPHA = 0.72
 CIN_RASTER_SHADOW_X = 3
 CIN_RASTER_SHADOW_Y = 5
 CIN_RASTER_SHADOW_BLUR_RADIUS = 4
+# A narrow dark keyline preserves readability over pale, high-detail footage.
+# It sits above the existing blur shadow and below the literal per-word fills.
+CIN_RASTER_STROKE_RGB = (24, 24, 24)
+CIN_RASTER_STROKE_WIDTH = 1
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
 # canvas with a centred crop; no template, header, lower title block, or CTA
@@ -420,7 +426,7 @@ WrapStyle: 2
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: CinShadow,{CIN_FONT},{font_size},{CIN_ASS_SHADOW_COLOR},{CIN_ASS_SHADOW_COLOR},{CIN_ASS_SHADOW_COLOR},{CIN_ASS_SHADOW_COLOR},0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
-Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,{margin},{margin},0,1
+Style: CinText,{CIN_FONT},{font_size},&H00FFFFFF,&H00FFFFFF,{CIN_ASS_OUTLINE_COLOR},&H00000000,0,0,0,0,100,100,0,0,1,{CIN_ASS_OUTLINE_WIDTH},0,5,{margin},{margin},0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -433,9 +439,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         shadow_parts: list[str] = []
         text_parts: list[str] = []
         for word in words:
-            # Source wording and casing remain authoritative for timing,
-            # keyword lookup, and the diagnostic text sidecar.
-            display_word = word["word"]
+            # Source wording remains authoritative for timing and keyword
+            # lookup, while the on-screen contract deliberately uppercases
+            # every caption run (including the ASS diagnostic sidecar).
+            display_word = str(word["word"]).upper()
             color = keyword_map.get(subtitle_common._norm_token(word["word"]))
             shadow_parts.append("{\\c&H000000&}" + subtitle_common._ass_escape(display_word))
             text_tags = f"{{\\c{_hex_ass(color)}&}}" if color else ""
@@ -456,8 +463,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     print(
         f"ASS cinematic subtitle file written: {out_ass} "
         f"({len(sentences)} sentence event stack(s), font {CIN_FONT} Regular "
-        f"{font_size}px, crisp white foreground + compact soft-gray shadow "
-        f"diagnostic offset {shadow_x}px right / {shadow_y}px down — CENTRED in "
+        f"{font_size}px, all-caps foreground + {CIN_ASS_OUTLINE_WIDTH}px dark "
+        f"outline + compact soft-gray shadow diagnostic offset {shadow_x}px right / "
+        f"{shadow_y}px down — CENTRED in "
         f"the {width}x{height} video frame; static complete-sentence "
         f"events aligned to the voiceover, no caption animation; rendered "
         f"into the bare 1080x1200 cinematic frame "
@@ -537,7 +545,7 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     lines: list[list[dict]] = []
     current: list[dict] = []
     for word in sentence["words"]:
-        item = {"source": word, "display": word["word"]}
+        item = {"source": word, "display": str(word["word"]).upper()}
         trial = current + [item]
         trial_text = " ".join(x["display"] for x in trial)
         if current and metrics.textlength(trial_text, font=font) > max_width:
@@ -613,7 +621,7 @@ def _apply_mask(canvas: Image.Image, mask: Image.Image,
 def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                            width: int, height: int, time_s: float,
                            font) -> Image.Image:
-    """Return compact caption glyphs over a soft gray-black drop shadow."""
+    """Return all-caps caption glyphs over a thin keyline and soft shadow."""
     foreground = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     for sentence_index, sentence in enumerate(sentences):
         # Cards are static for close dialogue. A completed card may only fade
@@ -624,6 +632,8 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
             continue
         masks: dict[tuple[int, int, int], Image.Image] = {}
         union = Image.new("L", (width, height), 0)
+        stroke_union = Image.new("L", (width, height), 0)
+        stroke_draw = ImageDraw.Draw(stroke_union)
         draw_by_color: dict[tuple[int, int, int], ImageDraw.ImageDraw] = {}
         for run in _caption_layout(sentence, font, width, height):
             word = run["source"]
@@ -633,6 +643,9 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
                 draw_by_color[color] = ImageDraw.Draw(masks[color])
             draw_by_color[color].text((run["x"], run["y"]), run["display"],
                                       font=font, fill=255)
+            stroke_draw.text((run["x"], run["y"]), run["display"], font=font,
+                             fill=255, stroke_width=CIN_RASTER_STROKE_WIDTH,
+                             stroke_fill=255)
         for mask in masks.values():
             union = ImageChops.lighter(union, mask)
         if not union.getbbox():
@@ -642,6 +655,8 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
         _apply_mask(foreground, soft_shadow, CIN_RASTER_SHADOW_RGB,
                     CIN_RASTER_SHADOW_ALPHA * card_opacity,
                     (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
+        _apply_mask(foreground, stroke_union, CIN_RASTER_STROKE_RGB,
+                    card_opacity)
         for color, mask in masks.items():
             _apply_mask(foreground, mask, color, card_opacity)
     return foreground
