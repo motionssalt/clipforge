@@ -1,0 +1,14 @@
+{
+  "job_id": "magnet-1787407050747",
+  "stage": "awaiting_torrent_selection",
+  "message": "Choose a video from this torrent to begin Stage A.",
+  "release_tag": "clipforge-magnet-1787407050747",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787407108,
+  "updated_at_epoch": 1787407108,
+  "expires_at_epoch": 1787450308,
+  "extra": {
+    "torrent_selection_path": "jobs/magnet-1787407050747/torrent-selection.json"
+  }
+}
