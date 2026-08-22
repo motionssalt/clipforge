@@ -1224,6 +1224,7 @@
 
   el['stage-a-form'].addEventListener('submit', function (e) {
     e.preventDefault();
+    el['start-stage-a'].disabled = true;
     startStageA();
   });
 
@@ -1440,7 +1441,10 @@
   }
 
   if (el['start-torrent-stage-a']) {
-    el['start-torrent-stage-a'].addEventListener('click', dispatchPendingTorrentSelection);
+    el['start-torrent-stage-a'].addEventListener('click', function () {
+      this.disabled = true;
+      dispatchPendingTorrentSelection();
+    });
   }
 
   async function startStageA() {
@@ -2315,6 +2319,10 @@
       }
     });
 
+    // Tracks whether this refresh changed the currently-selected task's
+    // detail-panel snapshot, so we can re-render that panel once at the end.
+    var selectedDetailChanged = false;
+
     // Fetch each id's status.json in parallel, capped at 5 concurrent.
     var queue = repoIds.slice();
     var CONC = 5;
@@ -2327,6 +2335,18 @@
             '&_=' + Date.now());
           var parsed = JSON.parse(b64decodeUtf8(file.content));
           recordTaskSnapshot(id, parsed);
+          // If the freshly-fetched snapshot belongs to the task whose
+          // detail panel is currently open, and it differs from what that
+          // panel is showing, update the panel's live state so it doesn't
+          // go stale after its own polling has already stopped (e.g. the
+          // job reached a terminal stage, or was changed from another
+          // session). renderStage() is deferred until after all workers
+          // finish, to avoid re-rendering repeatedly mid-refresh.
+          if (id === state.jobId &&
+              JSON.stringify(parsed) !== JSON.stringify(state.status)) {
+            state.status = parsed;
+            selectedDetailChanged = true;
+          }
         } catch (err) {
           if (err.name === 'AuthError' || err.name === 'RateLimitError') {
             handleGlobalError(err);
@@ -2342,6 +2362,13 @@
     for (var i = 0; i < CONC; i++) workers.push(worker());
     await Promise.all(workers);
     persistTasks();
+
+    // The background refresh only updates the Tasks-list cards via
+    // renderTasksList() below. If it also picked up a change to the
+    // currently-open detail panel's task (state.jobId) — which can happen
+    // once that task's own polling has stopped — re-render the detail
+    // panel too so it doesn't stay stale until a manual page refresh.
+    if (selectedDetailChanged) renderStage();
 
     // Pull the live workflow-step data for tasks that have a known
     // workflow_run_id. Each fetch is strictly scoped to its own job id —
@@ -3945,6 +3972,7 @@
   /* ------------------------------------------------------- upload + stage B */
 
   el['start-stage-b'].addEventListener('click', function () {
+    this.disabled = true;
     startStageB();
   });
 
@@ -4103,8 +4131,14 @@
     startPolling();
   }
 
-  el['restart-stage-b'].addEventListener('click', function () { restartStageB(); });
-  el['cancel-stage-b'].addEventListener('click', function () { cancelStageB(); });
+  el['restart-stage-b'].addEventListener('click', function () {
+    this.disabled = true;
+    restartStageB();
+  });
+  el['cancel-stage-b'].addEventListener('click', function () {
+    this.disabled = true;
+    cancelStageB();
+  });
 
   /**
    * Restart Stage B = a BRAND-NEW Stage B run on the LATEST code, not a
