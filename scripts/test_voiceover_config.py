@@ -23,6 +23,7 @@ for required_phrase in (
     "# DIRECTOR'S NOTES",
     "about 170 words per minute—about 1.1 times normal conversational speed",
     "brisk but calm, with tight forward momentum",
+    "neutral General American (U.S.) accent",
     "Do not draw out syllables or leave long pauses",
     "Articulate every word distinctly",
     "tempo, pitch, loudness, and energy steady",
