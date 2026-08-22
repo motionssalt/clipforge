@@ -1,7 +1,7 @@
 {
   "job_id": "torrent-1787428930305",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-torrent-1787428930305",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787428930305",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/clipforge-torrent-1787428930305-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787428930305/final.mp4"
   },
   "created_at_epoch": 1787428930,
-  "updated_at_epoch": 1787431101,
+  "updated_at_epoch": 1787433952,
   "expires_at_epoch": 1787472130,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787428930305/torrent-selection.json",
@@ -27,6 +29,8 @@
     "shot_count": "78",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "music_ref": ""
+    "music_ref": "",
+    "title": "Rick's Car Battery Is Powered by an Entire Universe",
+    "branding_applied": false
   }
 }
