@@ -2,11 +2,9 @@
 """
 Stage B subtitle step — CINEMATIC MODE.
 
-This is the new cinematic caption renderer that runs ALONGSIDE the
-existing word-by-word template mode (generate_subtitles.py). The old
-mode is untouched; this script is selected via the Stage B workflow's
-`subtitle_mode` input (`word` = legacy template mode, `cinematic` =
-this renderer). A later batch retires the old mode entirely.
+This is ClipForge's sole caption renderer. Stage B always calls this
+script to produce a bare 1080x1200 (10:9) cinematic frame with sentence-
+level captions, a one-time title banner, and scene-level reframing.
 
 Placement in the pipeline is intentionally distinct from the legacy
 renderer: it runs AFTER cut_and_produce.py (and after the optional
@@ -39,9 +37,9 @@ Cinematic mode (this file):
     incoming sentence composited on top of the outgoing one, so the
     caption transition reads as intentional layering, not a glitch.
   * TIMING — sentence timing is derived from the same word-level
-    timestamps the legacy renderer uses (faster-whisper transcription
-    of the merged voiceover, aligned back onto the ORIGINAL script via
-    the shared monotone alignment in generate_subtitles.py). Each
+    timestamps from faster-whisper transcription of the merged voiceover,
+    aligned back onto the ORIGINAL script via the shared monotone alignment
+    helpers in subtitle_common.py. Each
     sentence is held on screen for at least ~1.5s (a readability floor,
     not a hard lock — actual voice timing wins when the spoken span is
     longer).
@@ -73,8 +71,7 @@ Same contract as template mode: the transcription supplies per-word
 TIMING ONLY; the words displayed on screen come from the ORIGINAL
 script (`voiceover_text` per cut, verbatim). Word timing comes from
 the shared transcribe_words()/align_words_to_script() functions in
-generate_subtitles.py so the two modes can never drift apart on
-timing/wording policy.
+subtitle_common.py, which isolates timing policy from caption styling.
 
 Usage:
     python generate_subtitles_cinematic.py <merged_video_mp4> <voiceover_wav>
@@ -96,11 +93,11 @@ import re
 import subprocess
 import sys
 
-# Reuse the legacy renderer's transcription, script alignment, ASS
-# escaping and probing helpers verbatim so timing/wording policy is
-# shared between the two modes by construction.
+# Shared timing, alignment, ASS escaping, probing, and command helpers
+# are styling-neutral so the sole cinematic renderer has no dependency on a
+# retired subtitle mode.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import generate_subtitles as legacy  # noqa: E402
+import subtitle_common  # noqa: E402
 import cinematic_reframe  # noqa: E402
 
 # Pillow renders the title banner image (text composited into the white
@@ -310,7 +307,7 @@ def load_script_with_keywords(script_json: str) -> tuple[list[str], dict]:
         else:
             items = []
         for k in items:
-            word = legacy._norm_token(str(k.get("word") or ""))
+            word = subtitle_common._norm_token(str(k.get("word") or ""))
             color = _normalise_hex_color(k.get("color"))
             if not word:
                 continue
@@ -360,7 +357,7 @@ def _char_run(word: str, s_start: float, hold_ms: int,
             f"\\t({t_in},{t_in + CIN_WORD_FADE_IN_MS},\\alpha&H00&)"
             f"\\t({g0},{g1},\\alpha&HFF&)}}"
         )
-        parts.append(tags + legacy._ass_escape(ch))
+        parts.append(tags + subtitle_common._ass_escape(ch))
     return "".join(parts), char_offset + len(word["word"])
 
 
@@ -512,7 +509,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             # Source wording remains authoritative for timing and keyword
             # lookup, while the rendered display glyphs are always uppercase.
             display_word = w["word"].upper()
-            color = keyword_map.get(legacy._norm_token(w["word"]))
+            color = keyword_map.get(subtitle_common._norm_token(w["word"]))
             text_tags = f"\\c{_hex_ass(color)}&" if color else ""
             s_run, offset = _char_run(
                 {**w, "word": display_word}, s_start, hold_ms,
@@ -524,8 +521,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             shadow_parts.append(s_run)
             text_parts.append(t_run)
 
-        start_ts = legacy._ass_time(s_start)
-        end_ts = legacy._ass_time(event_end)
+        start_ts = subtitle_common._ass_time(s_start)
+        end_ts = subtitle_common._ass_time(event_end)
         shadow_text = " ".join(shadow_parts)
         main_text = " ".join(text_parts)
         lines.append(
@@ -751,7 +748,7 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
         for run in _caption_layout(sentence, font, width, height):
             word = run["source"]
             display = run["display"]
-            color = _caption_color(keyword_map.get(legacy._norm_token(word["word"])))
+            color = _caption_color(keyword_map.get(subtitle_common._norm_token(word["word"])))
             if color not in masks:
                 masks[color] = Image.new("L", (width, height), 0)
                 draw_by_color[color] = ImageDraw.Draw(masks[color])
@@ -869,7 +866,7 @@ def burn_subtitles(video: str, caption_foreground_mov: str, dst: str,
         "-sn", "-dn", "-ignore_unknown", "-fflags", "+genpts",
         "-max_muxing_queue_size", "9999", "-f", "mp4", dst,
     ]
-    legacy.sh(cmd)
+    subtitle_common.sh(cmd)
 
 
 def main() -> None:
@@ -914,7 +911,7 @@ def main() -> None:
     os.makedirs(work_dir, exist_ok=True)
 
     # Transcription = TIMING SOURCE ONLY (shared with template mode).
-    timed_words = legacy.transcribe_words(args.voiceover_wav, args.model,
+    timed_words = subtitle_common.transcribe_words(args.voiceover_wav, args.model,
                                           args.lang, work_dir)
 
     keyword_map: dict[str, str] = {}
@@ -922,7 +919,7 @@ def main() -> None:
         # Original script = AUTHORITATIVE WORDING; keywords = additive
         # literal author-selected keyword-color metadata.
         script_texts, keyword_map = load_script_with_keywords(args.script_json)
-        words = legacy.align_words_to_script(timed_words, script_texts)
+        words = subtitle_common.align_words_to_script(timed_words, script_texts)
     else:
         print(
             "WARNING: no --script-json given — falling back to the "
@@ -936,7 +933,7 @@ def main() -> None:
 
     sentences = split_sentences(words)
 
-    source_width, source_height = legacy.probe_video_size(args.merged_video_mp4)
+    source_width, source_height = subtitle_common.probe_video_size(args.merged_video_mp4)
     width, height = CIN_FRAME_WIDTH, CIN_FRAME_HEIGHT
     crop_plan = cinematic_reframe.build_scene_crop_plan(
         args.merged_video_mp4, threshold=args.scene_threshold)

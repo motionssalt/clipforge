@@ -6,8 +6,8 @@ Gemini API text-to-speech.
 Reads work/production.json's `cuts[].voiceover_text` and renders one
 24 kHz mono 16-bit PCM WAV per cut into work/voiceover/voiceover_NN.wav,
 preserving the numbering used by every downstream step in Stage B
-(cut_and_produce.py mixes them into the video track; generate_subtitles.py
-transcribes the merged track word-by-word). A voiceover_manifest.json with
+(cut_and_produce.py mixes them into the video track; the cinematic renderer
+transcribes the merged track for caption timing). A voiceover_manifest.json with
 the WAV path + duration for each cut is written alongside so the reconciler
 can pick the files up without having to probe them itself.
 
@@ -52,8 +52,8 @@ Interface (unchanged from the previous implementation, deliberately):
 
 Downstream contract (also unchanged): 24 kHz, mono, 16-bit PCM WAV, one
 per cut, numbered 01, 02, ..., using two digits so filenames sort
-lexicographically. cut_and_produce.py and generate_subtitles.py rely on
-that format and layout.
+lexicographically. cut_and_produce.py and the cinematic renderer rely
+on that format and layout.
 """
 
 from __future__ import annotations

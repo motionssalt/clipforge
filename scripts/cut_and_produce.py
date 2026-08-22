@@ -106,8 +106,8 @@ it does NOT act as a compressor and does NOT undo either track's gain.
 The final MP4 has exactly one audio track: voiceover + music, no source
 audio.
 
-A standalone merged voiceover-only WAV is also written for the subtitle
-step (generate_subtitles.py transcribes it for word-level timestamps).
+A standalone merged voiceover-only WAV is also written for the sole
+cinematic subtitle step, which transcribes it for word-level timestamps.
 
 Usage:
     python cut_and_produce.py <original_video> <production_json>
@@ -408,8 +408,8 @@ def write_merged_voiceover(vo_wavs: list[str], plan: list[dict],
     """
     Concatenate the per-cut voiceover WAVs (each padded to its cut's
     planned video length, matching what's in the video) into one
-    standalone WAV. generate_subtitles.py transcribes THIS file for
-    word-level timestamps, so it must line up with the video 1:1.
+    standalone WAV. generate_subtitles_cinematic.py transcribes THIS file
+    for word-level timestamps, so it must line up with the video 1:1.
     """
     n = len(vo_wavs)
     cmd: list[str] = ["ffmpeg", "-y"]

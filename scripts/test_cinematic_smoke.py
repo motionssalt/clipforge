@@ -258,18 +258,18 @@ subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi",
                 "pcm_s16le", voice_wav], check=True)
 cli_out = os.path.join(WORK, "cli_cinematic.mp4")
 cli_work = os.path.join(WORK, "cli_work")
-orig_transcribe = cin.legacy.transcribe_words
-orig_align = cin.legacy.align_words_to_script
+orig_transcribe = cin.subtitle_common.transcribe_words
+orig_align = cin.subtitle_common.align_words_to_script
 orig_argv = sys.argv[:]
 try:
-    cin.legacy.transcribe_words = lambda *_args, **_kwargs: events
-    cin.legacy.align_words_to_script = lambda *_args, **_kwargs: events
+    cin.subtitle_common.transcribe_words = lambda *_args, **_kwargs: events
+    cin.subtitle_common.align_words_to_script = lambda *_args, **_kwargs: events
     sys.argv = ["generate_subtitles_cinematic.py", src, voice_wav, cli_out,
                 "--script-json", prod_path, "--work-dir", cli_work]
     cin.main()
 finally:
-    cin.legacy.transcribe_words = orig_transcribe
-    cin.legacy.align_words_to_script = orig_align
+    cin.subtitle_common.transcribe_words = orig_transcribe
+    cin.subtitle_common.align_words_to_script = orig_align
     sys.argv = orig_argv
 assert os.path.isfile(cli_out)
 cli_probe = json.loads(subprocess.check_output(
