@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "provider": "zernio",
+  "updated_at_epoch": 1787429201,
+  "accounts": [
+    {
+      "id": "6a89d0da77555aae01674321",
+      "platform": "tiktok",
+      "username": ".chimeravfx",
+      "displayName": "CHIMERAVFX",
+      "profileId": "{'_id': '6a89a19b7d5eb15abb21a01a', 'name': 'Default'}",
+      "isActive": true,
+      "enabled": true,
+      "needsReconnection": false
+    },
+    {
+      "id": "6a89d06a77555aae01671ca2",
+      "platform": "youtube",
+      "username": "chimera_vfx",
+      "displayName": "CHIMERAVFX ",
+      "profileId": "{'_id': '6a89a19b7d5eb15abb21a01a', 'name': 'Default'}",
+      "isActive": true,
+      "enabled": true,
+      "needsReconnection": false
+    }
+  ]
+}
