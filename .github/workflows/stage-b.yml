@@ -489,20 +489,13 @@ jobs:
           python scripts/enhance_scenes.py work/out "$enable_arg"
 
       # -------------------------------------------------------------------
-      # Word-by-word subtitles are burned in NOW — BEFORE any branded
-      # composition. This ordering is load-bearing: subtitles are pixels
-      # of the VIDEO CONTENT, not of the surrounding branded canvas. By
-      # burning them into the still-native-aspect merged final.mp4 at
-      # this stage, they become a permanent part of the video image.
-      # When brand_scenes.py subsequently scales-and-letterboxes that
-      # video into the 1080x1200 (10:9) branded slot, the captions ride inside
-      # the slot along with the rest of the picture; they cannot escape
-      # upward into the title/header chrome or downward past the CTA,
-      # because they are structurally part of the video pixels and are
-      # subject to the exact same scale+pad+position math that positions
-      # the slot. No --video-rect hint is passed (or needed) here: at
-      # this point the frame IS the video image, so classic lower-third
-      # placement applies.
+      # Subtitles are burned into the still-native-aspect merged final.mp4
+      # before the legacy compositor is considered. They are pixels of the
+      # video content, not of a surrounding canvas. Crucially, cinematic
+      # renders stop here: the legacy branded compositor is workflow-gated
+      # below and can never run when subtitle_mode is `cinematic`, regardless
+      # of the `brand` input. Legacy word-caption renders may still opt in to
+      # the old 1080x1200 branded template.
       # -------------------------------------------------------------------
       - name: Burn word-by-word subtitles into the video (before branding)
         shell: bash
@@ -540,19 +533,18 @@ jobs:
           ls -lh work/out/
 
       # -------------------------------------------------------------------
-      # Branded 10:9 compositor (optional), applied to the ONE merged
-      # final.mp4 (brand_scenes.py picks up final.mp4 in the directory it
-      # is given). By the time we get here final.mp4 already carries the
-      # burned-in word-by-word subtitles from the step above, so the
-      # brander's scale+pad+overlay math positions the captions with the
-      # rest of the video image — they end up structurally inside the
-      # slot, never over the title/header chrome, regardless of source
-      # aspect ratio. Same three behavior paths as before: toggle off
-      # (no-op), toggle on but no username saved yet (no-op), toggle on
-      # + username configured (final.mp4 composited into the branded
-      # 1080x1200 (10:9) template and atomically swapped in place).
+      # Legacy branded 10:9 compositor (optional). This step is gated at
+      # the workflow level, rather than relying on a caller to supply the
+      # correct `brand` flag: subtitle_mode=cinematic skips it entirely.
+      # Therefore a cinematic output is structurally limited to its cropped
+      # video pixels, cinematic captions, and one-time title banner; no
+      # avatar, channel/category badge, title block, or CTA chrome can be
+      # composited. Legacy word-caption renders retain the three historical
+      # paths: toggle off (no-op), toggle on without a username (no-op), or
+      # toggle on with a username (branded 1080x1200 template).
       # -------------------------------------------------------------------
-      - name: Brand final video (composite into the branded 10:9 template)
+      - name: Brand final video (legacy word-caption output only)
+        if: ${{ github.event.inputs.subtitle_mode != 'cinematic' }}
         shell: bash
         env:
           BRAND_FLAG: ${{ github.event.inputs.brand }}
