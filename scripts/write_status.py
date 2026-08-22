@@ -12,6 +12,7 @@ Usage:
 
 Stages recognized by the frontend contract:
     queued
+    awaiting_torrent_selection
     stage_a_running
     awaiting_json_upload
     stage_b_queued

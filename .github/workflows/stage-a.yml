@@ -63,8 +63,91 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  torrent_selection:
+    name: Torrent selection preflight
+    runs-on: ubuntu-latest
+    outputs:
+      stage_a_ready: ${{ steps.preflight.outputs.stage_a_ready }}
+      job_id: ${{ steps.preflight.outputs.job_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate torrent choice or persist selection substage
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          jid="${{ github.event.inputs.job_id }}"
+          if [ -z "$jid" ]; then
+            jid="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_RUN_ID}"
+          fi
+          jid="$(echo "$jid" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
+          echo "job_id=$jid" >> "$GITHUB_OUTPUT"
+
+          source_ref="${{ github.event.inputs.video_url }}"
+          if [[ "$source_ref" != path:* ]]; then
+            echo "stage_a_ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          torrent_path="${source_ref#path:}"
+          expected_path="jobs/$jid/source.torrent"
+          if [[ "$torrent_path" != "$expected_path" ]] || [[ ! -f "$torrent_path" ]]; then
+            # Leave malformed manual dispatches to Stage A's existing explicit
+            # missing-manifest validation. Browser-uploaded torrents take the
+            # persistent selection branch below when no choice is supplied.
+            echo "stage_a_ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          selected_index="${{ github.event.inputs.torrent_file_index }}"
+          if [[ "$selected_index" =~ ^[1-9][0-9]*$ ]] && \
+              python scripts/torrent_source.py select-index "$torrent_path" "$selected_index" >/dev/null; then
+            echo "stage_a_ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          selection_path="jobs/$jid/torrent-selection.json"
+          python scripts/write_torrent_selection.py "$torrent_path" "$selection_path" \
+            --job-id "$jid" \
+            --whisper-model "${{ github.event.inputs.whisper_model }}" \
+            --language "${{ github.event.inputs.language }}" \
+            --target-duration-seconds "${{ github.event.inputs.target_duration_seconds }}" \
+            --focus "${{ github.event.inputs.focus }}"
+          python scripts/write_status.py "$jid" "awaiting_torrent_selection" \
+            --message "Choose a video from this torrent to begin Stage A." \
+            --release-tag "clipforge-$jid" \
+            --extra "torrent_selection_path=$selection_path"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "$selection_path" "jobs/$jid/status.json"
+          git commit -m "clipforge: await torrent video selection for $jid" || true
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "Could not persist torrent selection status" >&2
+            exit 1
+          fi
+          echo "stage_a_ready=false" >> "$GITHUB_OUTPUT"
+
   stage_a:
     name: Stage A
+    needs: torrent_selection
+    if: needs.torrent_selection.outputs.stage_a_ready == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 180
 
@@ -79,7 +162,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          jid="${{ github.event.inputs.job_id }}"
+          jid="${{ needs.torrent_selection.outputs.job_id }}"
           if [ -z "$jid" ]; then
             jid="$(date -u +%Y%m%d-%H%M%S)-${GITHUB_RUN_ID}"
           fi

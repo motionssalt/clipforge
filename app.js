@@ -170,6 +170,8 @@
     torrentFile: null,     // an optional Stage A .torrent manifest (File object), one-off for this job only
     torrentVideoCandidates: [], // manifest video entries available for the current torrent
     torrentVideoIndex: null, // explicitly selected 1-based torrent-file index, or null
+    torrentSelection: null, // persisted record for the selected awaiting-torrent task
+    torrentSelectionLoading: false,
     musicFile: null,       // an optional picked music file (File object), one-off for this job only
     audioLibrary: null,    // [{name, path, size}] fetched from audio-library/ in the repo, or null = not loaded yet
     audioLibrarySelected: null, // path (string) of the library track chosen for this job, or null
@@ -260,6 +262,7 @@
     'settings-section', 'settings-toggle', 'settings-body', 'settings-state', 'settings-form',
     'owner-input', 'repo-input', 'token-input', 'token-reveal', 'settings-save', 'settings-clear', 'settings-msg',
     'stage-a-section', 'stage-a-form', 'video-url-input', 'torrent-file-input', 'torrent-video-field', 'torrent-video-select', 'torrent-video-hint', 'job-slug-input', 'whisper-model-select',
+    'torrent-selection-block', 'torrent-selection-message', 'torrent-selection-select', 'start-torrent-stage-a',
     'language-input', 'target-duration-select', 'focus-input', 'start-stage-a', 'stage-a-msg',
     'active-job-bar', 'active-job-id', 'run-link', 'resume-btn', 'start-over-btn',
     'resume-offer', 'resume-offer-id', 'resume-offer-btn', 'resume-dismiss-btn',
@@ -1304,6 +1307,142 @@
     });
   }
 
+  function torrentSelectionPaths(jobId) {
+    var base = 'jobs/' + jobId + '/';
+    return {
+      torrent: base + 'source.torrent',
+      selection: base + 'torrent-selection.json',
+      status: base + 'status.json'
+    };
+  }
+
+  function torrentSelectionStatus(jobId, selection) {
+    var now = Math.floor(Date.now() / 1000);
+    return {
+      job_id: jobId,
+      stage: 'awaiting_torrent_selection',
+      message: 'Choose a video from this torrent to begin Stage A.',
+      release_tag: 'clipforge-' + jobId,
+      release_url: '',
+      assets: {},
+      created_at_epoch: now,
+      updated_at_epoch: now,
+      expires_at_epoch: now + 12 * 3600,
+      extra: {
+        torrent_selection_path: torrentSelectionPaths(jobId).selection,
+        torrent_name: selection.torrent_name,
+        torrent_candidate_count: selection.video_candidates.length
+      }
+    };
+  }
+
+  async function createPendingTorrentSelection(jobId, torrentFile, inputs) {
+    var candidates = state.torrentVideoCandidates.slice();
+    if (!candidates.length) throw new Error('This torrent has no supported video files.');
+    var paths = torrentSelectionPaths(jobId);
+    var selection = {
+      version: 1,
+      job_id: jobId,
+      torrent_name: torrentFile.name,
+      video_candidates: candidates,
+      selected_index: state.torrentVideoCandidates.some(function (candidate) {
+        return candidate.index === state.torrentVideoIndex;
+      }) ? state.torrentVideoIndex : null,
+      stage_a_inputs: {
+        whisper_model: inputs.whisper_model,
+        language: inputs.language,
+        target_duration_seconds: inputs.target_duration_seconds,
+        focus: inputs.focus
+      }
+    };
+    var status = torrentSelectionStatus(jobId, selection);
+    await putRepoFile(paths.torrent, await b64encodeFile(torrentFile),
+      'clipforge: upload source.torrent for job ' + jobId);
+    await putRepoFile(paths.selection, b64encodeUtf8(JSON.stringify(selection, null, 2) + '\n'),
+      'clipforge: save torrent video candidates for job ' + jobId);
+    await putRepoFile(paths.status, b64encodeUtf8(JSON.stringify(status, null, 2) + '\n'),
+      'clipforge: await torrent video selection for job ' + jobId);
+    return { selection: selection, status: status };
+  }
+
+  async function loadPendingTorrentSelection(status) {
+    if (!status || status.stage !== 'awaiting_torrent_selection' || !state.jobId ||
+        state.torrentSelectionLoading) return;
+    var path = status.extra && status.extra.torrent_selection_path;
+    if (!path) return;
+    state.torrentSelectionLoading = true;
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + path + '?ref=' + REF + '&_=' + Date.now());
+      var selection = JSON.parse(b64decodeUtf8(file.content));
+      if (selection.job_id === state.jobId && Array.isArray(selection.video_candidates)) {
+        state.torrentSelection = selection;
+      }
+    } catch (err) {
+      if (err.name === 'AuthError' || err.name === 'RateLimitError') handleGlobalError(err);
+      else banner('status', 'warn', 'Could not load torrent video candidates: ' + err.message);
+    } finally {
+      state.torrentSelectionLoading = false;
+      renderStage();
+    }
+  }
+
+  async function dispatchPendingTorrentSelection() {
+    if (state.busy || !state.jobId || !state.torrentSelection) return;
+    var select = el['torrent-selection-select'];
+    var index = Number(select && select.value);
+    var candidates = state.torrentSelection.video_candidates || [];
+    var selected = candidates.filter(function (candidate) { return candidate.index === index; })[0];
+    if (!selected) {
+      text(el['torrent-selection-message'], 'Choose one listed video before starting Stage A.');
+      return;
+    }
+
+    state.busy = true;
+    el['start-torrent-stage-a'].disabled = true;
+    text(el['torrent-selection-message'], 'Saving your selected video and starting Stage A…');
+    try {
+      var paths = torrentSelectionPaths(state.jobId);
+      state.torrentSelection.selected_index = selected.index;
+      await putRepoFile(paths.selection,
+        b64encodeUtf8(JSON.stringify(state.torrentSelection, null, 2) + '\n'),
+        'clipforge: select torrent video for job ' + state.jobId);
+
+      var settings = state.torrentSelection.stage_a_inputs || {};
+      var inputs = {
+        video_url: 'path:' + paths.torrent,
+        torrent_file_index: String(selected.index),
+        job_id: state.jobId,
+        whisper_model: settings.whisper_model || 'base',
+        language: settings.language || 'auto',
+        target_duration_seconds: String(settings.target_duration_seconds || '120'),
+        focus: settings.focus || ''
+      };
+      var dispatchedAt = new Date();
+      await gh('/repos/' + state.owner + '/' + state.repo +
+        '/actions/workflows/stage-a.yml/dispatches', {
+        method: 'POST', body: { ref: REF, inputs: inputs }
+      });
+      text(el['torrent-selection-message'], 'Stage A dispatched for “' + selected.path + '”.');
+      var watch = pushWatch({
+        workflowFile: 'stage-a.yml', dispatchedAt: dispatchedAt,
+        jobId: state.jobId, slug: state.jobId, before: []
+      });
+      findWorkflowRun(watch);
+      startPolling();
+    } catch (err) {
+      if (err.name === 'AuthError' || err.name === 'RateLimitError') handleGlobalError(err);
+      else text(el['torrent-selection-message'], 'Could not start Stage A: ' + err.message);
+    } finally {
+      state.busy = false;
+      renderStage();
+    }
+  }
+
+  if (el['start-torrent-stage-a']) {
+    el['start-torrent-stage-a'].addEventListener('click', dispatchPendingTorrentSelection);
+  }
+
   async function startStageA() {
     if (state.busy) return;
     if (!isConfigured()) {
@@ -1322,12 +1461,6 @@
       setMsg(el['stage-a-msg'], 'Use either a video URL or a torrent file, not both.', 'bad');
       return;
     }
-    if (torrentFile && !state.torrentVideoIndex) {
-      setMsg(el['stage-a-msg'], 'Choose the exact video payload from this torrent before starting Stage A.', 'bad');
-      show(el['torrent-video-field']);
-      return;
-    }
-
     var slug = el['job-slug-input'].value.trim();
     if (torrentFile && !slug) {
       slug = 'torrent-' + Date.now();
@@ -1353,43 +1486,45 @@
       torrent_file_index: torrentFile ? String(state.torrentVideoIndex) : ''
     };
 
+    // Torrent ingestion deliberately has a persistent selection substage.
+    // Uploading the manifest creates the job but never dispatches Stage A;
+    // the selected video is saved and confirmed later from the task detail
+    // panel, even after a browser reload.
+    if (torrentFile) {
+      state.busy = true;
+      el['start-stage-a'].disabled = true;
+      setMsg(el['stage-a-msg'], 'Saving torrent candidates for later selection…', null);
+      try {
+        var pending = await createPendingTorrentSelection(slug, torrentFile, inputs);
+        state.torrentSelection = pending.selection;
+        state.status = pending.status;
+        state.stageBDispatched = false;
+        state.releaseAssets = null;
+        state.releaseAssetsTag = null;
+        setActiveJob(slug);
+        recordTaskSnapshot(slug, pending.status);
+        renderStage();
+        renderTasksList();
+        startPolling();
+        setMsg(el['stage-a-msg'], 'Torrent saved. Confirm the video in the selected task.', 'ok');
+      } catch (torrentErr) {
+        if (torrentErr.name === 'AuthError' || torrentErr.name === 'RateLimitError') {
+          handleGlobalError(torrentErr);
+        } else {
+          setMsg(el['stage-a-msg'], 'Torrent setup failed: ' + torrentErr.message, 'bad');
+        }
+      } finally {
+        state.busy = false;
+        el['start-stage-a'].disabled = false;
+      }
+      return;
+    }
+
     state.busy = true;
     el['start-stage-a'].disabled = true;
     setMsg(el['stage-a-msg'], 'Dispatching stage-a.yml…', null);
     dismissBanner('dispatch');
     dismissBanner('generic');
-
-    // A user-provided torrent is committed under this task before dispatch.
-    // The workflow receives an immutable repository path and uses it exactly
-    // like any other Stage A source input.
-    if (torrentFile) {
-      var torrentPath = 'jobs/' + slug + '/source.torrent';
-      var torrentContentsPath = '/repos/' + state.owner + '/' + state.repo +
-        '/contents/jobs/' + encodeURIComponent(slug) + '/source.torrent';
-      setMsg(el['stage-a-msg'], 'Uploading torrent manifest…', null);
-      try {
-        var existingTorrent = null;
-        try {
-          existingTorrent = await gh(torrentContentsPath + '?ref=' + REF + '&_=' + Date.now());
-        } catch (lookupErr) {
-          if (lookupErr.status !== 404) throw lookupErr;
-        }
-        var torrentBody = {
-          message: 'clipforge: upload source.torrent for job ' + slug,
-          content: await b64encodeFile(torrentFile),
-          branch: REF
-        };
-        if (existingTorrent && existingTorrent.sha) torrentBody.sha = existingTorrent.sha;
-        await gh(torrentContentsPath, { method: 'PUT', body: torrentBody });
-        inputs.video_url = 'path:' + torrentPath;
-      } catch (torrentErr) {
-        state.busy = false;
-        el['start-stage-a'].disabled = false;
-        setMsg(el['stage-a-msg'], 'Torrent upload failed: ' + torrentErr.message, 'bad');
-        handleGlobalError(torrentErr, 'upload');
-        return;
-      }
-    }
 
     // Snapshot existing job folders so we can diff for the new one.
     var before = [];
@@ -1790,9 +1925,10 @@
   }
 
   var TASK_STAGE_CLASS = {
-    queued:              'is-running',
-    stage_a_running:     'is-running',
-    awaiting_json_upload:'is-await',
+    queued:                      'is-running',
+    awaiting_torrent_selection:  'is-await',
+    stage_a_running:             'is-running',
+    awaiting_json_upload:        'is-await',
     stage_b_queued:      'is-running',
     stage_b_running:     'is-running',
     stage_b_cancelling:  'is-running',
@@ -1802,9 +1938,10 @@
   };
 
   var TASK_STAGE_BADGE = {
-    queued:              { label: 'queued', cls: 'stage-running' },
-    stage_a_running:     { label: 'stage a', cls: 'stage-running' },
-    awaiting_json_upload:{ label: 'awaiting production.json', cls: 'stage-await' },
+    queued:                     { label: 'queued', cls: 'stage-running' },
+    awaiting_torrent_selection: { label: 'choose torrent video', cls: 'stage-await' },
+    stage_a_running:            { label: 'stage a', cls: 'stage-running' },
+    awaiting_json_upload:       { label: 'awaiting production.json', cls: 'stage-await' },
     stage_b_queued:      { label: 'stage b queued', cls: 'stage-running' },
     stage_b_running:     { label: 'stage b', cls: 'stage-running' },
     stage_b_cancelling:  { label: 'cancelling', cls: 'stage-cancelling' },
@@ -2216,7 +2353,8 @@
       if (!runId) return false;
       var cached = state.workflowSteps[id];
       var terminal = s.stage === 'complete' || s.stage === 'error' ||
-                     s.stage === 'cancelled' || s.stage === 'awaiting_json_upload';
+                     s.stage === 'cancelled' || s.stage === 'awaiting_json_upload' ||
+                     s.stage === 'awaiting_torrent_selection';
       if (terminal) return !cached;   // terminal: fetch once, then cache
       // active: refresh only when the cache is older than half the
       // tasks-list cadence, to stay well inside the rate limit.
@@ -2620,7 +2758,7 @@
       var doneRun = entry && entry.jobStatus === 'completed';
       var stage = state.status && state.status.stage;
       var doneStage = stage === 'complete' || stage === 'error' || stage === 'cancelled' ||
-                      stage === 'awaiting_json_upload';
+                      stage === 'awaiting_json_upload' || stage === 'awaiting_torrent_selection';
       if (doneRun && doneStage) return;
       var interval = (Date.now() - state.stepsPollStartedAt > POLL_SLOWDOWN_AFTER)
         ? STEPS_POLL_SLOW : STEPS_POLL_FAST;
@@ -2703,7 +2841,8 @@
       // on `stage_b_running` forever. See refreshStageBRun() for why the
       // stageBRun slot is never populated during Stage A.
       if (parsed.stage === 'complete' || parsed.stage === 'error' ||
-          parsed.stage === 'cancelled' || !isKnownStage(parsed.stage)) {
+          parsed.stage === 'cancelled' || parsed.stage === 'awaiting_torrent_selection' ||
+          !isKnownStage(parsed.stage)) {
         stopPolling();
         return;
       }
@@ -2725,8 +2864,9 @@
   }
 
   function isKnownStage(stage) {
-    return ['queued', 'stage_a_running', 'awaiting_json_upload', 'stage_b_queued',
-      'stage_b_running', 'stage_b_cancelling', 'cancelled', 'complete', 'error'].indexOf(stage) !== -1;
+    return ['queued', 'awaiting_torrent_selection', 'stage_a_running',
+      'awaiting_json_upload', 'stage_b_queued', 'stage_b_running',
+      'stage_b_cancelling', 'cancelled', 'complete', 'error'].indexOf(stage) !== -1;
   }
 
   function isActiveStageBRun() {
@@ -2806,6 +2946,10 @@
 
   var STAGE_META = {
     queued: { label: 'queued', cls: 'stage-running', spin: true, text: 'Queued.' },
+    awaiting_torrent_selection: {
+      label: 'choose torrent video', cls: 'stage-await', spin: false,
+      text: 'Choose one video from the saved torrent to begin Stage A.'
+    },
     stage_a_running: {
       label: 'stage a', cls: 'stage-running', spin: true,
       text: 'Stage A running — downloading, transcribing, extracting frames'
@@ -2825,6 +2969,48 @@
     error: { label: 'error', cls: 'stage-error', spin: false, text: 'The job reported an error.' }
   };
 
+  function renderTorrentSelection(s) {
+    var block = el['torrent-selection-block'];
+    var select = el['torrent-selection-select'];
+    var message = el['torrent-selection-message'];
+    var start = el['start-torrent-stage-a'];
+    if (!block || !select || !message || !start) return;
+    show(block);
+
+    var selection = state.torrentSelection;
+    if (!selection || selection.job_id !== state.jobId ||
+        !Array.isArray(selection.video_candidates)) {
+      select.innerHTML = '<option value="">Loading video candidates…</option>';
+      select.disabled = true;
+      start.disabled = true;
+      text(message, 'Loading the video candidates saved with this torrent…');
+      loadPendingTorrentSelection(s);
+      return;
+    }
+
+    var candidates = selection.video_candidates;
+    select.innerHTML = '<option value="">Choose a video from the torrent…</option>';
+    candidates.forEach(function (candidate) {
+      var option = document.createElement('option');
+      option.value = String(candidate.index);
+      option.textContent = candidate.path + ' — ' + torrentSizeLabel(candidate.length);
+      select.appendChild(option);
+    });
+    var chosen = Number(selection.selected_index) || 0;
+    if (candidates.some(function (candidate) { return candidate.index === chosen; })) {
+      select.value = String(chosen);
+    }
+    select.disabled = state.busy;
+    start.disabled = state.busy || !select.value;
+    text(message, candidates.length + ' supported video file' +
+      (candidates.length === 1 ? '' : 's') + ' found in “' +
+      selection.torrent_name + '”. Choose one to begin Stage A.');
+    select.onchange = function () {
+      start.disabled = state.busy || !select.value;
+      if (select.value) text(message, 'Ready to start Stage A with the selected video only.');
+    };
+  }
+
   function renderStage() {
     var s = state.status;
     var actionStage = stageFromRun();
@@ -2843,6 +3029,7 @@
       show(el['stage-spinner']);
       text(el['stage-text'], 'Waiting for Stage A to start…');
       hide(el['error-block']);
+      hide(el['torrent-selection-block']);
       hide(el['handoff-block']);
       hide(el['complete-block']);
       hide(el['job-facts']);
@@ -2878,6 +3065,13 @@
       hide(el['error-block']);
     }
 
+    // Durable human selection between torrent upload and Stage A.
+    if (stage === 'awaiting_torrent_selection') {
+      renderTorrentSelection(s);
+    } else {
+      hide(el['torrent-selection-block']);
+    }
+
     // Handoff (awaiting_json_upload).
     if (stage === 'awaiting_json_upload') {
       show(el['handoff-block']);
@@ -2895,7 +3089,8 @@
     }
 
     // Expiry countdown from awaiting_json_upload onwards.
-    var showCountdown = ['awaiting_json_upload', 'stage_b_running', 'complete'].indexOf(stage) !== -1;
+    var showCountdown = ['awaiting_torrent_selection', 'awaiting_json_upload',
+      'stage_b_running', 'complete'].indexOf(stage) !== -1;
     if (showCountdown && Number(s.expires_at_epoch) > 0) startCountdown(Number(s.expires_at_epoch));
     else stopCountdown();
 
@@ -2928,6 +3123,7 @@
    */
   var STAGE_LADDER = [
     'queued',
+    'awaiting_torrent_selection',
     'stage_a_running',
     'awaiting_json_upload',
     'stage_b_queued',

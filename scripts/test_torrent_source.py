@@ -75,8 +75,9 @@ assert "--select-file=\"$selected_index\"" in workflow
 assert "--seed-time=0" in workflow
 assert "torrent_file_index" in workflow and "select-path" in workflow
 assert "expected_path=\"jobs/${{ steps.jid.outputs.job_id }}/source.torrent\"" in workflow
-assert "torrent-file-input" in app and "inputs.video_url = 'path:' + torrentPath" in app
-assert "!state.torrentVideoIndex" in app and "torrentVideoCandidates" in app
+assert "torrent-file-input" in app and "createPendingTorrentSelection" in app
+assert "dispatchPendingTorrentSelection" in app and "torrent-selection.json" in app
+assert "torrentVideoCandidates" in app and "awaiting_torrent_selection" in app
 assert "torrent-video-select" in html and 'accept=".torrent,application/x-bittorrent"' in html
 
-print("PASS: explicit multi-video torrent selection routes only the chosen safe payload through Stage A")
+print("PASS: persisted multi-video torrent selection routes only the chosen safe payload through Stage A")

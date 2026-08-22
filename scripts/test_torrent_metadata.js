@@ -43,5 +43,7 @@ assert.strictEqual(multi.video_candidates[1].length, 1900);
 
 const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 assert(app.includes("state.torrentVideoIndex = candidates.length === 1 ? candidates[0].index : null;"));
-assert(app.includes("Choose the exact video payload from this torrent before starting Stage A."));
-console.log('PASS: browser torrent parser lists multiple candidate videos and requires explicit multi-video selection');
+assert(app.includes('createPendingTorrentSelection'));
+assert(app.includes('dispatchPendingTorrentSelection'));
+assert(app.includes('awaiting_torrent_selection'));
+console.log('PASS: browser torrent parser lists multiple candidates and persists explicit selection before Stage A');

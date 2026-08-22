@@ -342,6 +342,23 @@
             </div>
           </div>
 
+          <div id="torrent-selection-block" class="handoff-block is-hidden">
+            <div class="read-first">
+              <div class="handoff-header"><span class="callout-icon success" aria-hidden="true">1</span><div><p class="rf-kicker">Stage A — source selection</p><h3>Choose the torrent video</h3></div></div>
+              <p id="torrent-selection-message" class="rf-body">Loading the torrent video candidates…</p>
+              <div class="field">
+                <label for="torrent-selection-select">Video payload <span class="req">required</span></label>
+                <select id="torrent-selection-select" disabled>
+                  <option value="">Loading video candidates…</option>
+                </select>
+              </div>
+              <div class="actions rf-actions">
+                <button type="button" id="start-torrent-stage-a" class="btn btn-big btn-accent" disabled>Start Stage A with this video</button>
+              </div>
+              <p class="hint">This task is saved in the repository. You can leave and return later; only the confirmed video file will be retrieved.</p>
+            </div>
+          </div>
+
           <div id="handoff-block" class="handoff-block is-hidden">
             <div id="release-link-callout" class="read-first">
               <div class="handoff-header"><span class="callout-icon success" aria-hidden="true">✓</span><div><p class="rf-kicker">Stage A complete</p><h3>Ready for creative direction</h3></div></div>
