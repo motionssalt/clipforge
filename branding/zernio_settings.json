@@ -4,8 +4,12 @@
   "auto_publish": true,
   "automatic_mode": "publish_now",
   "target_accounts": {
-    "tiktok": [],
-    "youtube": []
+    "tiktok": [
+      "6a89d0da77555aae01674321"
+    ],
+    "youtube": [
+      "6a89d06a77555aae01671ca2"
+    ]
   },
   "smart_schedule": {
     "timezone": "UTC",
@@ -15,5 +19,5 @@
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1787429382
+  "updated_at_epoch": 1787429417
 }
