@@ -8,10 +8,12 @@ personal access token.
 
 ## What it does
 
-1. You paste any public video URL — a Google Drive share link **or** a
-   direct download link to the video file (mkv/mp4, ~300 MB+) from any
-   host. Optionally you can also attach a background music file (MP3 or
-   similar) for the finished video.
+1. You paste any public video URL — a Google Drive share link, a direct
+   video-file link (mkv/mp4, ~300 MB+), or a BitTorrent magnet URI — or upload
+   a `.torrent` manifest. For torrent and magnet sources, ClipForge retrieves
+   and validates metadata first, then asks you to choose the intended video
+   payload before any media retrieval begins. Optionally you can also attach a
+   background music file (MP3 or similar) for the finished video.
 2. **Stage A** downloads it, transcribes the audio locally with
    faster-whisper on CPU (no paid APIs), builds a compressed 720p copy,
    extracts 1 screenshot per second, and packages
@@ -177,10 +179,12 @@ configured, and records which branding a run used in that job's
 ### 6. Open the site and go
 
 Visit the Pages URL, open Settings, paste owner + repo + token,
-save. Paste any public video URL (Google Drive share link or a direct
-video file link). Click Start Stage A. Watch the status update; when
-Stage A finishes, use the single **Open Release →** link and have your
-agent read `00_READ_THIS_FIRST.txt` from the Release first. Upload the
+save. Paste a public video URL (Google Drive share link, direct video
+file URL, or `magnet:?` URI), or upload a `.torrent` manifest. A torrent
+or magnet first enters a metadata-only selection state: choose the exact
+video payload, then start retrieval. Watch the status update; when Stage A
+finishes, use the single **Open Release →** link and have your agent read
+`00_READ_THIS_FIRST.txt` from the Release first. Upload the
 `production.json` it returns (plus an optional music file) to run
 Stage B and get the finished video.
 
@@ -265,6 +269,12 @@ whether Stage B ever ran. Override the TTL via the workflow's
   off to 15s after 10 minutes, per `SITE_BUILD_PROMPT.md`) — well
   within GitHub's default 5000-request/hour rate limit for a
   single-user tool.
+- Magnet URIs must contain exactly one BitTorrent v1 `xt=urn:btih`
+  identifier. Tracker endpoints are limited to anonymous UDP/HTTP(S) announce
+  URLs. If a magnet includes an HTTP(S) `xs` exact metadata source, ClipForge
+  verifies the downloaded manifest's v1 infohash before using it; otherwise it
+  performs a bounded metadata-only BitTorrent lookup. Neither path begins media
+  retrieval or seeding until the user explicitly chooses a video entry.
 - Job IDs are `<UTC-YYYYMMDD-HHMMSS>-<GITHUB_RUN_ID>` unless the user
   supplies one from the site.
 - `production.json` is uploaded by the site directly to

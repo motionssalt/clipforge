@@ -175,15 +175,15 @@
         <div class="panel-body">
           <form id="stage-a-form" autocomplete="off">
             <div class="field primary-field">
-              <label for="video-url-input">Source video URL <span class="opt">or upload a torrent below</span></label>
-              <input type="url" id="video-url-input" name="video_url" placeholder="https://…/video.mp4 or Drive link" spellcheck="false">
-              <p class="hint">Public video URL or anyone-with-link Google Drive share.</p>
+              <label for="video-url-input">Source video URL or magnet link <span class="opt">or upload a torrent below</span></label>
+              <input type="url" id="video-url-input" name="video_url" placeholder="https://…/video.mp4, Drive link, or magnet:?xt=urn:btih:…" spellcheck="false">
+              <p class="hint">Public video URL, anyone-with-link Google Drive share, or a BitTorrent magnet URI. Magnet metadata is retrieved first, then you choose the intended video payload.</p>
             </div>
 
             <div class="field">
               <label for="torrent-file-input">Source torrent <span class="opt">optional alternative</span></label>
               <input type="file" id="torrent-file-input" accept=".torrent,application/x-bittorrent">
-              <p class="hint">Upload one <code>.torrent</code> manifest (up to 1 MB). Stage A reads its metadata locally and never starts until the intended video file is selected.</p>
+              <p class="hint">Upload one <code>.torrent</code> manifest (up to 1 MB). Uploaded torrents and magnet links both require an explicit video selection before Stage A retrieves media.</p>
             </div>
 
             <div id="torrent-video-field" class="field is-hidden">

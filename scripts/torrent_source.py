@@ -9,6 +9,7 @@ video file from a local directory for Stage A's normal ingest path.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -94,6 +95,36 @@ def _decode_bencode(data: bytes) -> Any:
     if index != len(data):
         raise BencodeError("trailing bencoded data")
     return value
+
+
+def _encode_bencode(value: Any) -> bytes:
+    """Encode parsed torrent metadata canonically for BEP-3 v1 infohashing."""
+    if isinstance(value, int):
+        return f"i{value}e".encode("ascii")
+    if isinstance(value, bytes):
+        return str(len(value)).encode("ascii") + b":" + value
+    if isinstance(value, list):
+        return b"l" + b"".join(_encode_bencode(item) for item in value) + b"e"
+    if isinstance(value, dict):
+        if not all(isinstance(key, bytes) for key in value):
+            raise BencodeError("torrent dictionary has a non-byte key")
+        payload = []
+        for key in sorted(value):
+            payload.append(_encode_bencode(key))
+            payload.append(_encode_bencode(value[key]))
+        return b"d" + b"".join(payload) + b"e"
+    raise BencodeError("torrent contains an unsupported bencode value")
+
+
+def torrent_infohash_v1(torrent_path: Path) -> str:
+    """Return the uppercase SHA-1 of a valid torrent's canonical info dictionary."""
+    raw = torrent_path.read_bytes()
+    if not raw or len(raw) > MAX_TORRENT_BYTES:
+        raise BencodeError("torrent file is empty or exceeds the allowed size")
+    root = _decode_bencode(raw)
+    if not isinstance(root, dict) or not isinstance(root.get(b"info"), dict):
+        raise BencodeError("torrent has no info dictionary")
+    return hashlib.sha1(_encode_bencode(root[b"info"])).hexdigest().upper()
 
 
 def _text(value: Any, field: str) -> str:
@@ -216,6 +247,8 @@ def main() -> None:
     path_parser = sub.add_parser("select-path", help="validate and print a selected manifest video path")
     path_parser.add_argument("torrent", type=Path)
     path_parser.add_argument("selected_index", type=int)
+    infohash_parser = sub.add_parser("infohash", help="print the manifest's normalized v1 infohash")
+    infohash_parser.add_argument("torrent", type=Path)
     args = parser.parse_args()
 
     try:
@@ -227,6 +260,8 @@ def main() -> None:
         elif args.command == "select-path":
             metadata = inspect_torrent(args.torrent)
             print(select_torrent_video(metadata, args.selected_index)["path"])
+        elif args.command == "infohash":
+            print(torrent_infohash_v1(args.torrent))
         else:
             print(select_video(args.directory, args.selected_relative_path))
     except (BencodeError, FileNotFoundError, OSError) as exc:

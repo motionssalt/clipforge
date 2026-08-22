@@ -1453,6 +1453,7 @@
 
     var videoUrl = el['video-url-input'].value.trim();
     var torrentFile = state.torrentFile;
+    var isMagnetLink = /^magnet:\?/i.test(videoUrl);
     if (!videoUrl && !torrentFile) {
       setMsg(el['stage-a-msg'], 'Provide a video URL or choose a .torrent file.', 'bad');
       return;
@@ -1462,8 +1463,8 @@
       return;
     }
     var slug = el['job-slug-input'].value.trim();
-    if (torrentFile && !slug) {
-      slug = 'torrent-' + Date.now();
+    if ((torrentFile || isMagnetLink) && !slug) {
+      slug = (torrentFile ? 'torrent-' : 'magnet-') + Date.now();
       el['job-slug-input'].value = slug;
     }
     var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
@@ -1522,7 +1523,9 @@
 
     state.busy = true;
     el['start-stage-a'].disabled = true;
-    setMsg(el['stage-a-msg'], 'Dispatching stage-a.yml…', null);
+    setMsg(el['stage-a-msg'], isMagnetLink
+      ? 'Retrieving magnet metadata and preparing video selection…'
+      : 'Dispatching stage-a.yml…', null);
     dismissBanner('dispatch');
     dismissBanner('generic');
 

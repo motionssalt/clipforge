@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       video_url:
-        description: "Public video URL, Google Drive share link, or path:jobs/<JOB_ID>/source.torrent uploaded by the site"
+        description: "Public video URL, Google Drive share link, BitTorrent magnet URI, or path:jobs/<JOB_ID>/source.torrent uploaded by the site"
         required: true
         type: string
       torrent_file_index:
@@ -80,6 +80,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install aria2 for bounded magnet metadata preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y aria2
+
       - name: Re-attach dispatch branch for status persistence
         shell: bash
         run: |
@@ -89,6 +96,8 @@ jobs:
       - name: Validate torrent choice or persist selection substage
         id: preflight
         shell: bash
+        env:
+          SOURCE_REF: ${{ github.event.inputs.video_url }}
         run: |
           set -euo pipefail
           jid="${{ github.event.inputs.job_id }}"
@@ -98,7 +107,60 @@ jobs:
           jid="$(echo "$jid" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
           echo "job_id=$jid" >> "$GITHUB_OUTPUT"
 
-          source_ref="${{ github.event.inputs.video_url }}"
+          source_ref="$SOURCE_REF"
+          if [[ "${source_ref,,}" == magnet:* ]]; then
+            # A magnet URI has no file list until its metadata is retrieved.
+            # This bounded, metadata-only aria2 pass saves the .torrent manifest
+            # but never downloads media or starts seeding. The normal explicit
+            # video-selection flow below then resumes from that local manifest.
+            # Validate the complete URI before making any network request.
+            # The validator accepts only a v1 BTIH, ordinary announce endpoints,
+            # and at most three anonymous HTTP(S) exact-metadata sources.
+            python scripts/magnet_source.py validate "$source_ref" >/dev/null
+            infohash="$(python scripts/magnet_source.py infohash "$source_ref")"
+            metadata_source="$(python scripts/magnet_source.py metadata-source "$source_ref")"
+            metadata_dir="work/magnet_metadata"
+            rm -rf "$metadata_dir"
+            mkdir -p "$metadata_dir"
+
+            if [ -n "$metadata_source" ]; then
+              # `xs` gives an optional direct metadata source. Bind it to the
+              # magnet's BTIH before using it, so a mismatched remote manifest
+              # cannot silently redirect this job to another torrent.
+              curl --fail --location --silent --show-error \
+                --connect-timeout 30 --max-time 90 --retry 2 --retry-delay 2 \
+                --output "$metadata_dir/${infohash}.torrent" \
+                "$metadata_source"
+              magnet_torrent="$metadata_dir/${infohash}.torrent"
+              resolved_infohash="$(python scripts/torrent_source.py infohash "$magnet_torrent")"
+              if [ "$resolved_infohash" != "$infohash" ]; then
+                echo "Exact metadata source does not match the magnet infohash" >&2
+                exit 1
+              fi
+            else
+              # Without an exact source, aria2 retrieves metadata only. This
+              # never requests media payload pieces and stops without seeding.
+              timeout 10m aria2c \
+                --dir="$metadata_dir" \
+                --bt-metadata-only=true \
+                --bt-save-metadata=true \
+                --seed-time=0 \
+                --seed-ratio=0 \
+                --bt-stop-timeout=120 \
+                --connect-timeout=60 \
+                --timeout=60 \
+                --max-tries=1 \
+                --file-allocation=none \
+                "$source_ref"
+              magnet_torrent="$(python scripts/magnet_source.py saved-metadata "$metadata_dir" "$infohash")"
+            fi
+            expected_path="jobs/$jid/source.torrent"
+            mkdir -p "$(dirname "$expected_path")"
+            cp "$magnet_torrent" "$expected_path"
+            python scripts/torrent_source.py inspect "$expected_path" >/dev/null
+            source_ref="path:$expected_path"
+          fi
+
           if [[ "$source_ref" != path:* ]]; then
             echo "stage_a_ready=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -136,7 +198,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true
-          git add "$selection_path" "jobs/$jid/status.json"
+          git add "$torrent_path" "$selection_path" "jobs/$jid/status.json"
           git commit -m "clipforge: await torrent video selection for $jid" || true
           pushed=false
           for attempt in 1 2 3; do
@@ -328,12 +390,14 @@ jobs:
             echo "WARN: initial status push failed after 3 attempts; the final status commit will carry it." >&2
           fi
 
-      - name: Download source video (URL, Drive, or uploaded torrent)
+      - name: Download source video (URL, Drive, uploaded torrent, or magnet-resolved torrent)
         shell: bash
+        env:
+          SOURCE_REF: ${{ github.event.inputs.video_url }}
         run: |
           set -euo pipefail
           mkdir -p work
-          source_ref="${{ github.event.inputs.video_url }}"
+          source_ref="$SOURCE_REF"
 
           if [[ "$source_ref" == path:* ]]; then
             torrent_path="${source_ref#path:}"

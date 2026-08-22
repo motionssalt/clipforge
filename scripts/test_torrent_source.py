@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import tempfile
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,45 +16,69 @@ assert spec and spec.loader
 source = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(source)
 
-UPLOADS = Path("/home/ubuntu/upload")
-kimetsu = UPLOADS / "[DKB]KimetsunoYaibaMugenjou-hen-AkazaSairai-[1080p][BD][HEVCx26510bit][Multi-Audio][Multi-Subs][2540E267].mkv.torrent"
-rick = UPLOADS / "Rick.and.Morty.S01E01.Pilot.with.Audio.Description.1080p.AMZN.WEB-DL.DDP5.1.H.264-Kitsune[ext.to].torrent"
 
-for torrent in (kimetsu, rick):
-    metadata = source.inspect_torrent(torrent)
-    candidates = metadata["video_candidates"]
-    assert candidates
-    assert all(item["path"].lower().endswith((".mkv", ".mp4", ".webm"))
-               for item in candidates), candidates
-    assert all(item["length"] > 0 for item in candidates)
+def bencode(value: Any) -> bytes:
+    """Build small deterministic torrent fixtures without network files."""
+    if isinstance(value, int):
+        return f"i{value}e".encode("ascii")
+    if isinstance(value, str):
+        value = value.encode("utf-8")
+    if isinstance(value, bytes):
+        return str(len(value)).encode("ascii") + b":" + value
+    if isinstance(value, list):
+        return b"l" + b"".join(bencode(item) for item in value) + b"e"
+    if isinstance(value, dict):
+        items = []
+        for key in sorted(value):
+            items.append(bencode(key))
+            items.append(bencode(value[key]))
+        return b"d" + b"".join(items) + b"e"
+    raise TypeError(f"unsupported bencode fixture type: {type(value)!r}")
 
-rick_metadata = source.inspect_torrent(rick)
-assert rick_metadata["file_count"] == 3
-assert [item["index"] for item in rick_metadata["video_candidates"]] == [1]
-assert source.select_torrent_video(rick_metadata, 1)["path"].endswith(".mkv")
-kimetsu_metadata = source.inspect_torrent(kimetsu)
-assert kimetsu_metadata["file_count"] == 1
-assert [item["index"] for item in kimetsu_metadata["video_candidates"]] == [1]
-assert source.select_torrent_video(kimetsu_metadata, 1)["path"].endswith(".mkv")
 
-multi_video_metadata = {
-    "files": [
-        {"index": 1, "path": "episodes/episode-01.mkv", "length": 2_000},
-        {"index": 2, "path": "episodes/episode-02.mkv", "length": 1_900},
-        {"index": 3, "path": "extras/trailer.mp4", "length": 100},
-        {"index": 4, "path": "notes/readme.txt", "length": 10},
-    ]
+multi_video_manifest = {
+    b"announce": b"udp://tracker.example.invalid:6969/announce",
+    b"info": {
+        b"name": b"fixture-episodes",
+        b"files": [
+            {b"length": 2_000, b"path": [b"episodes", b"episode-01.mkv"]},
+            {b"length": 1_900, b"path": [b"episodes", b"episode-02.mkv"]},
+            {b"length": 100, b"path": [b"extras", b"trailer.mp4"]},
+            {b"length": 10, b"path": [b"notes", b"readme.txt"]},
+        ],
+    },
 }
-assert [item["index"] for item in source.torrent_video_candidates(multi_video_metadata)] == [1, 2, 3]
-assert source.select_torrent_video(multi_video_metadata, 2)["path"] == "episodes/episode-02.mkv"
-try:
-    source.select_torrent_video(multi_video_metadata, 4)
-    raise AssertionError("non-video torrent selection was accepted")
-except source.BencodeError:
-    pass
+single_video_manifest = {
+    b"announce": b"udp://tracker.example.invalid:6969/announce",
+    b"info": {b"name": b"single-video.webm", b"length": 3_000},
+}
 
-with tempfile.TemporaryDirectory(prefix="clipforge_torrent_download_") as temp_dir:
-    root = Path(temp_dir)
+with tempfile.TemporaryDirectory(prefix="clipforge_torrent_fixture_") as temp_dir:
+    fixture_dir = Path(temp_dir)
+    multi_path = fixture_dir / "multi.torrent"
+    single_path = fixture_dir / "single.torrent"
+    multi_path.write_bytes(bencode(multi_video_manifest))
+    single_path.write_bytes(bencode(single_video_manifest))
+
+    multi_metadata = source.inspect_torrent(multi_path)
+    assert multi_metadata["file_count"] == 4
+    assert [item["index"] for item in multi_metadata["video_candidates"]] == [1, 2, 3]
+    assert source.select_torrent_video(multi_metadata, 2)["path"] == "episodes/episode-02.mkv"
+    assert source.select_torrent_video(multi_metadata, 1)["path"].endswith(".mkv")
+
+    single_metadata = source.inspect_torrent(single_path)
+    assert single_metadata["file_count"] == 1
+    assert [item["index"] for item in single_metadata["video_candidates"]] == [1]
+    assert source.select_torrent_video(single_metadata, 1)["path"] == "single-video.webm"
+
+    try:
+        source.select_torrent_video(multi_metadata, 4)
+        raise AssertionError("non-video torrent selection was accepted")
+    except source.BencodeError:
+        pass
+
+    root = fixture_dir / "download"
+    (root / "readme.txt").parent.mkdir()
     (root / "readme.txt").write_text("not video", encoding="utf-8")
     selected = root / "episodes" / "episode-02.mkv"
     decoy = root / "episodes" / "episode-01.mkv"

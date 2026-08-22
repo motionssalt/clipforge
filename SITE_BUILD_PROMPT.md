@@ -37,9 +37,11 @@ loading `app.js` at the end of `<body>`.
 ## 2. What the site is for (one paragraph)
 
 Single-user personal tool. The user pastes a GitHub personal access
-token once, pastes any public video URL (a Google Drive share link or
-a direct video file link from any host), and clicks "Start Stage A".
-The site dispatches the Stage A
+token once, pastes any public video URL (a Google Drive share link, a
+direct video file link from any host, or a BitTorrent `magnet:?` URI), or
+uploads a `.torrent` manifest, and clicks "Start Stage A". Torrent and
+magnet sources first enter a metadata-only selection state so the user can
+choose the intended video payload before media retrieval. The site dispatches the Stage A
 workflow via the GitHub API, then polls the repo for a
 `jobs/<job-id>/status.json` file that Stage A writes. When status
 transitions to `awaiting_json_upload`, the UI shows ONE prominent
@@ -378,12 +380,15 @@ plus the **Channel branding** block from § 12 (username, display name,
 profile picture, "Save branding").
 
 **Section 2 — Start Stage A** (visible once token is saved). Fields:
-Video URL (required — labeled generically; help text notes that both
-Google Drive share links and direct video file URLs from any host are
-accepted), optional job slug, dropdown for whisper
+Video URL or magnet URI (required unless a `.torrent` manifest is uploaded;
+help text notes that Google Drive share links, direct video file URLs from any
+host, and `magnet:?` URIs are accepted), optional job slug, dropdown for whisper
 model (`tiny` / `base` / `small`, default `base`), language hint text
-input (default `auto`). A single "Start Stage A" button. Shows the
-active job's job id + "View workflow run" link once dispatched.
+input (default `auto`). Include an optional `.torrent` file picker. A single
+"Start Stage A" button. For uploaded torrents and magnet URIs, show an
+`awaiting_torrent_selection` state after metadata retrieval, render the safe
+video candidates, and dispatch the selected 1-based file index only after the
+user confirms it. Shows the active job's job id + "View workflow run" link once dispatched.
 
 **Section 3 — Job status** (visible once a job is active). Renders per
 the state table in § 4. If `awaiting_json_upload`: one prominent
