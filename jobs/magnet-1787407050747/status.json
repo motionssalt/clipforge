@@ -1,7 +1,7 @@
 {
   "job_id": "magnet-1787407050747",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-magnet-1787407050747",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-magnet-1787407050747",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/clipforge-magnet-1787407050747-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787407050747/final.mp4"
   },
   "created_at_epoch": 1787407108,
-  "updated_at_epoch": 1787409981,
+  "updated_at_epoch": 1787411104,
   "expires_at_epoch": 1787450308,
   "extra": {
     "torrent_selection_path": "jobs/magnet-1787407050747/torrent-selection.json",
@@ -25,6 +27,8 @@
     "shot_count": "295",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "music_ref": "path:audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a"
+    "music_ref": "path:audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a",
+    "title": "Morty Enters the Fear Hole Alone and It Knows Why",
+    "branding_applied": false
   }
 }
