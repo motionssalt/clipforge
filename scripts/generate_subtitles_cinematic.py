@@ -91,8 +91,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
+import subprocess
 import sys
 
 # Reuse the legacy renderer's transcription, script alignment, ASS
@@ -104,7 +106,7 @@ import generate_subtitles as legacy  # noqa: E402
 # Pillow renders the title banner image (text composited into the white
 # banner graphic before ffmpeg ever sees it). Already a pipeline
 # dependency (brand_scene.py / brand_scenes.py).
-from PIL import Image, ImageDraw, ImageFont  # noqa: E402
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont  # noqa: E402
 
 
 # ---------- Cinematic styling ----------
@@ -139,6 +141,22 @@ CIN_SHADOW_COLOR = "&HA8" + "000000"      # soft, recessive shadow
 CIN_SHADOW_BLUR = 4
 CIN_SHADOW_OFFSET_X_FRACTION = 0.002
 CIN_SHADOW_OFFSET_Y_FRACTION = 0.005
+
+# High-fidelity raster compositing is used for the final cinematic captions.
+# Rendering the actual glyph masks in Pillow allows genuine multi-radius light
+# diffusion and a separate soft shadow, rather than relying on libass outline
+# approximations. These values are in output pixels at 1080x1200.
+CIN_RASTER_FPS = 24
+CIN_RASTER_MAX_WIDTH_FRACTION = 0.86
+CIN_RASTER_Y_FRACTION = 0.55
+CIN_RASTER_OUTER_GLOW_RADIUS = 16
+CIN_RASTER_OUTER_GLOW_ALPHA = 0.64
+CIN_RASTER_INNER_GLOW_RADIUS = 6
+CIN_RASTER_INNER_GLOW_ALPHA = 0.92
+CIN_RASTER_SHADOW_RADIUS = 9
+CIN_RASTER_SHADOW_ALPHA = 0.82
+CIN_RASTER_SHADOW_X = 3
+CIN_RASTER_SHADOW_Y = 10
 
 # ---------- Cinematic output frame ----------
 # Cinematic output is always a bare 10:9 frame. Source material fills the
@@ -581,52 +599,197 @@ def _banner_y_expr(rest_top: int) -> str:
     )
 
 
-def burn_subtitles(video: str, ass_path: str, dst: str,
+def _probe_video_duration(video: str) -> float:
+    """Return the input duration in seconds for frame-exact overlays."""
+    raw = subprocess.check_output([
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", video,
+    ], text=True).strip()
+    duration = float(raw)
+    if not math.isfinite(duration) or duration <= 0:
+        raise ValueError(f"Invalid video duration reported for {video}: {raw!r}")
+    return duration
+
+
+def _caption_font(size: int) -> ImageFont.FreeTypeFont:
+    if not os.path.isfile(CIN_FONT_FILE):
+        raise FileNotFoundError(f"Missing cinematic font: {CIN_FONT_FILE}")
+    return ImageFont.truetype(CIN_FONT_FILE, size)
+
+
+def _caption_color(tone: str | None) -> tuple[int, int, int]:
+    if tone in {"tense", "negative"}:
+        return (255, 92, 92)
+    if tone in {"warm", "positive"}:
+        return (255, 200, 90)
+    return (255, 255, 255)
+
+
+def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]:
+    """Lay out a sentence as centred, word-addressable glyph runs."""
+    max_width = int(round(width * CIN_RASTER_MAX_WIDTH_FRACTION))
+    lines: list[list[dict]] = []
+    current: list[dict] = []
+    for word in sentence["words"]:
+        item = {"source": word, "display": word["word"].upper()}
+        trial = current + [item]
+        trial_text = " ".join(x["display"] for x in trial)
+        if current and ImageDraw.Draw(Image.new("L", (1, 1))).textlength(
+                trial_text, font=font) > max_width:
+            lines.append(current)
+            current = [item]
+        else:
+            current = trial
+    if current:
+        lines.append(current)
+
+    metrics = ImageDraw.Draw(Image.new("L", (1, 1)))
+    line_height = int(round(font.size * 1.12))
+    top = int(round(height * CIN_RASTER_Y_FRACTION - line_height * len(lines) / 2))
+    runs: list[dict] = []
+    for line_index, line in enumerate(lines):
+        line_text = " ".join(item["display"] for item in line)
+        line_width = metrics.textlength(line_text, font=font)
+        x = (width - line_width) / 2.0
+        y = top + line_index * line_height
+        for item in line:
+            item["x"] = x
+            item["y"] = y
+            item["tone"] = legacy._norm_token(item["source"]["word"])
+            runs.append(item)
+            x += metrics.textlength(item["display"] + " ", font=font)
+    return runs
+
+
+def _apply_mask(canvas: Image.Image, mask: Image.Image,
+                rgb: tuple[int, int, int], opacity: float = 1.0,
+                offset: tuple[int, int] = (0, 0)) -> None:
+    """Composite an L-mask onto an RGBA canvas using a precise alpha scale."""
+    if offset != (0, 0):
+        shifted = Image.new("L", mask.size, 0)
+        shifted.paste(mask, offset)
+        mask = shifted
+    if opacity != 1.0:
+        mask = mask.point(lambda value: int(round(value * opacity)))
+    if not mask.getbbox():
+        return
+    layer = Image.new("RGBA", canvas.size, (*rgb, 0))
+    layer.putalpha(mask)
+    canvas.alpha_composite(layer)
+
+
+def _raster_caption_frame(sentences: list[dict], keyword_map: dict,
+                          width: int, height: int, time_s: float,
+                          font) -> Image.Image:
+    """Render all captions visible at one instant into a transparent frame."""
+    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    for sentence in sentences:
+        start = sentence["start"]
+        hold_end = max(sentence["speak_end"], start + CIN_SENTENCE_MIN_SECONDS)
+        event_end = hold_end + CIN_LETTER_FADE_OUT_MS / 1000.0 + 0.10
+        if time_s < start or time_s > event_end:
+            continue
+        masks: dict[tuple[int, int, int], Image.Image] = {}
+        union = Image.new("L", (width, height), 0)
+        draw_by_color: dict[tuple[int, int, int], ImageDraw.ImageDraw] = {}
+        char_count = sum(len(word["word"].upper()) for word in sentence["words"])
+        char_index = 0
+        for run in _caption_layout(sentence, font, width, height):
+            word = run["source"]
+            display = run["display"]
+            tone = keyword_map.get(legacy._norm_token(word["word"]))
+            color = _caption_color(tone)
+            if color not in masks:
+                masks[color] = Image.new("L", (width, height), 0)
+                draw_by_color[color] = ImageDraw.Draw(masks[color])
+            prefix = ""
+            for char in display:
+                fade_in = max(0.0, min(1.0, (time_s - word["start"]) /
+                                      (CIN_WORD_FADE_IN_MS / 1000.0)))
+                fade_start = hold_end + (char_index / max(char_count, 1)) * \
+                    (CIN_LETTER_FADE_OUT_MS / 1000.0)
+                fade_end = fade_start + max(0.025, (CIN_LETTER_FADE_OUT_MS / 1000.0) /
+                                             max(char_count, 1) * 1.2)
+                fade_out = 1.0 if time_s <= fade_start else max(
+                    0.0, min(1.0, 1.0 - (time_s - fade_start) /
+                    max(fade_end - fade_start, 0.001)))
+                alpha = int(round(255 * fade_in * fade_out))
+                if alpha:
+                    x = run["x"] + ImageDraw.Draw(Image.new("L", (1, 1))).textlength(
+                        prefix, font=font)
+                    draw_by_color[color].text((x, run["y"]), char,
+                                              font=font, fill=alpha,
+                                              stroke_width=0)
+                prefix += char
+                char_index += 1
+        for mask in masks.values():
+            union = ImageChops.lighter(union, mask)
+        if not union.getbbox():
+            continue
+        shadow = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_SHADOW_RADIUS))
+        _apply_mask(canvas, shadow, (0, 0, 0), CIN_RASTER_SHADOW_ALPHA,
+                    (CIN_RASTER_SHADOW_X, CIN_RASTER_SHADOW_Y))
+        outer = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_OUTER_GLOW_RADIUS))
+        _apply_mask(canvas, outer, (255, 255, 255), CIN_RASTER_OUTER_GLOW_ALPHA)
+        inner = union.filter(ImageFilter.GaussianBlur(CIN_RASTER_INNER_GLOW_RADIUS))
+        _apply_mask(canvas, inner, (255, 255, 255), CIN_RASTER_INNER_GLOW_ALPHA)
+        for color, mask in masks.items():
+            _apply_mask(canvas, mask, color)
+    return canvas
+
+
+def render_cinematic_overlay(sentences: list[dict], keyword_map: dict,
+                             width: int, height: int, duration: float,
+                             out_mov: str) -> None:
+    """Encode the physically layered caption light treatment with alpha."""
+    font_size = max(24, int(round(height * CIN_FONT_FRACTION_OF_HEIGHT)))
+    font = _caption_font(font_size)
+    frame_count = max(1, int(math.ceil(duration * CIN_RASTER_FPS)))
+    cmd = [
+        "ffmpeg", "-y", "-f", "rawvideo", "-pix_fmt", "rgba",
+        "-s", f"{width}x{height}", "-r", str(CIN_RASTER_FPS), "-i", "-",
+        "-an", "-c:v", "qtrle", "-pix_fmt", "argb", out_mov,
+    ]
+    print(f"Rendering {frame_count} high-fidelity cinematic caption frame(s) "
+          f"at {CIN_RASTER_FPS}fps -> {out_mov}", flush=True)
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    try:
+        for frame_index in range(frame_count):
+            frame = _raster_caption_frame(
+                sentences, keyword_map, width, height,
+                frame_index / CIN_RASTER_FPS, font)
+            assert proc.stdin is not None
+            proc.stdin.write(frame.tobytes())
+    finally:
+        if proc.stdin is not None:
+            proc.stdin.close()
+    if proc.wait() != 0:
+        raise RuntimeError("ffmpeg failed while encoding the cinematic caption overlay")
+
+
+def burn_subtitles(video: str, caption_overlay_mov: str, dst: str,
                    banner: dict | None = None) -> None:
-    """
-    Burn the cinematic ASS in with libass, overlay the title banner (if
-    given) on top, and re-encode video with the same mobile-safe profile as
-    cut_and_produce.py / generate_subtitles.py. Audio is stream-copied
-    untouched. The cinematic face is the vendored Coolvetica font, supplied to
-    libass through the renderer's fontsdir option for deterministic output.
-
-
-
-    The banner is the pre-rendered PNG from build_banner_png() — white
-    strip with the title text already composited in, so graphic and
-    text move as ONE unit by construction. ffmpeg's overlay filter
-    animates that single image with the piecewise y expression from
-    _banner_y_expr(): drop-in from off-screen top, 7s hold, drop-out
-    the same way, then enable= switches the overlay off and the banner
-    is gone for the rest of the video (one-time intro element).
-    """
+    """Composite the rasterized caption light treatment and title banner."""
     def _fescape(p: str) -> str:
         return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
-    inputs = ["-i", video]
-    # This is the only cinematic canvas construction. It centre-crops the
-    # source to 10:9 before either captions or the title banner are added.
-    # No legacy branding asset is an input to this graph.
+    inputs = ["-i", video, "-i", caption_overlay_mov]
     filters = [
         f"[0:v]scale={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT}:"
         f"force_original_aspect_ratio=increase,"
         f"crop={CIN_FRAME_WIDTH}:{CIN_FRAME_HEIGHT},setsar=1[base]",
-        f"[base]subtitles='{_fescape(ass_path)}':"
-        f"fontsdir='{_fescape(os.path.dirname(CIN_FONT_FILE))}'[v0]",
+        "[1:v]setpts=PTS-STARTPTS[captions]",
+        "[base][captions]overlay=eof_action=pass:repeatlast=0[v0]",
     ]
     out_label = "v0"
     if banner is not None:
         rest_top = int(round(CIN_FRAME_HEIGHT * CIN_BANNER_TOP_FRACTION))
         out_end = (CIN_BANNER_IN_SECONDS + CIN_BANNER_HOLD_SECONDS
                    + CIN_BANNER_OUT_SECONDS)
-        # -loop 1 makes the single PNG a (theoretically infinite) video
-        # stream; trim it to the banner's on-screen span so the filter
-        # graph still terminates when the MAIN video ends instead of
-        # looping forever. enable= already gates visibility to out_end.
         inputs += ["-loop", "1", "-i", banner["png"]]
         y_expr = _banner_y_expr(rest_top)
         filters.append(
-            f"[1:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]"
+            f"[2:v]trim=duration={out_end},setpts=PTS-STARTPTS[bimg]"
         )
         filters.append(
             f"[v0][bimg]overlay=x=0:y='{y_expr}'"
@@ -634,33 +797,17 @@ def burn_subtitles(video: str, ass_path: str, dst: str,
         )
         out_label = "v1"
 
-    filter_graph = ";".join(filters)
     cmd = [
-        "ffmpeg", "-y",
-        *inputs,
-        "-filter_complex", filter_graph,
-        "-map", f"[{out_label}]", "-map", "0:a:0",
-        "-c:v", "libx264",
-        "-profile:v", "high",
-        "-level:v", "4.0",
-        "-preset", "veryfast",
-        "-crf", "18",
-        "-pix_fmt", "yuv420p",
-        "-bf", "0",
-        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
-        "-x264-params", "force-cfr=1",
-        "-video_track_timescale", "15360",
-        "-c:a", "copy",
-        "-movflags", "+faststart",
-        "-use_editlist", "0",
-        "-brand", "mp42",
-        "-map_metadata", "-1",
-        "-map_chapters", "-1",
-        "-sn", "-dn", "-ignore_unknown",
-        "-fflags", "+genpts",
-        "-max_muxing_queue_size", "9999",
-        "-f", "mp4",
-        dst,
+        "ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters),
+        "-map", f"[{out_label}]", "-map", "0:a:0", "-c:v", "libx264",
+        "-profile:v", "high", "-level:v", "4.0", "-preset", "veryfast",
+        "-crf", "18", "-pix_fmt", "yuv420p", "-bf", "0", "-g", "60",
+        "-keyint_min", "60", "-sc_threshold", "0",
+        "-x264-params", "force-cfr=1", "-video_track_timescale", "15360",
+        "-c:a", "copy", "-movflags", "+faststart", "-use_editlist", "0",
+        "-brand", "mp42", "-map_metadata", "-1", "-map_chapters", "-1",
+        "-sn", "-dn", "-ignore_unknown", "-fflags", "+genpts",
+        "-max_muxing_queue_size", "9999", "-f", "mp4", dst,
     ]
     legacy.sh(cmd)
 
@@ -680,7 +827,7 @@ def main() -> None:
     ap.add_argument("--model", default="base", choices=["tiny", "base", "small"])
     ap.add_argument("--lang", default="auto")
     ap.add_argument("--work-dir", default=None,
-                    help="scratch dir for transcript + ASS (default: "
+                    help="scratch dir for transcript, ASS debug data, and raster caption overlay (default: "
                          "<out dir>/subtitle_work_cinematic)")
     ap.add_argument("--title", default=None,
                     help="video title for the cinematic intro banner. "
@@ -752,13 +899,19 @@ def main() -> None:
             file=sys.stderr, flush=True,
         )
 
+    # Retain the ASS as a human-readable timing/debug artefact, while the
+    # production image uses the Pillow-rendered multi-radius light treatment.
     ass_path = os.path.join(work_dir, "subtitles_cinematic.ass")
     write_cinematic_ass(sentences, keyword_map, width, height, ass_path)
+    overlay_mov = os.path.join(work_dir, "cinematic_caption_light.mov")
+    render_cinematic_overlay(
+        sentences, keyword_map, width, height,
+        _probe_video_duration(args.merged_video_mp4), overlay_mov)
 
-    print(f"Burning cinematic subtitles"
+    print(f"Compositing high-fidelity cinematic captions"
           f"{' + title banner' if banner else ''} into "
           f"{args.out_video_mp4} ...", flush=True)
-    burn_subtitles(args.merged_video_mp4, ass_path, args.out_video_mp4,
+    burn_subtitles(args.merged_video_mp4, overlay_mov, args.out_video_mp4,
                    banner=banner)
     print(f"Final cinematically-subtitled video written: "
           f"{args.out_video_mp4}", flush=True)
