@@ -1,7 +1,7 @@
 {
   "job_id": "torrent-1787444414278",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-torrent-1787444414278",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787444414278",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/clipforge-torrent-1787444414278-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/final.mp4"
   },
   "created_at_epoch": 1787444414,
-  "updated_at_epoch": 1787448298,
+  "updated_at_epoch": 1787451409,
   "expires_at_epoch": 1787487614,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787444414278/torrent-selection.json",
@@ -27,6 +29,8 @@
     "shot_count": "114",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a"
+    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
+    "title": "Rick Ran a Stealth Intervention on Mr. Poopy Butthole — And Broke Him in One Line",
+    "creator_watermark_applied": false
   }
 }
