@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "job_id": "torrent-1787444414278",
+  "torrent_name": "Rick.and.Morty.-.S07.Complete.-.2160p.HDR.Ai.Upscale.5.1.MultiSubs.MKV.-Mesc[ext.to].torrent",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Rick and Morty - S07E05 - Unmortricken - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1809574910
+    },
+    {
+      "index": 3,
+      "path": "Rick and Morty - S07E01 - How Poopy Got His Poop Back - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1388837422
+    },
+    {
+      "index": 4,
+      "path": "Rick and Morty - S07E02 - The Jerrick Trap - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1455652042
+    },
+    {
+      "index": 5,
+      "path": "Rick and Morty - S07E03 - Air Force Wong - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1331295676
+    },
+    {
+      "index": 6,
+      "path": "Rick and Morty - S07E04 - That's Amorte - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1341142535
+    },
+    {
+      "index": 8,
+      "path": "Rick and Morty - S07E06 - Rickfending Your Mort - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1364556092
+    },
+    {
+      "index": 9,
+      "path": "Rick and Morty - S07E07 - Wet Kuat Amortican Summer - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1422895895
+    },
+    {
+      "index": 10,
+      "path": "Rick and Morty - S07E08 - Rise of the Numbericons The Movie - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1681963567
+    },
+    {
+      "index": 11,
+      "path": "Rick and Morty - S07E09 - Mort Ragnarick - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1463794535
+    },
+    {
+      "index": 12,
+      "path": "Rick and Morty - S07E10 - Fear No Mort - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1583854228
+    }
+  ],
+  "selected_index": 3,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "180",
+    "focus": "Hostage Situation: Rick tricks the Citadel Council into believing he does not care about Summer's life, using cold logic to manipulate them \nLevel 9 Access: Morty steps in to intervene, but his actions turn out to be part of Rick's plan to gain Level 9 authorization access using a fake gun trick\nCollapsing the Empire: Instead of using weapons or military power, Rick destroys the Galactic Federation's economy by changing the value of their central currency, the Blemflarck, from 1....."
+  }
+}
