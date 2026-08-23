@@ -287,7 +287,7 @@
     'error-block', 'error-message', 'error-run-link', 'error-start-over',
     'handoff-block', 'release-link-callout', 'release-url-link', 'release-url-text', 'release-tag-line',
     'copy-agent-prompt',
-    'cuts-path-hint', 'cuts-file-input', 'start-stage-b', 'cuts-validation', 'music-file-input', 'music-hint',
+    'cuts-path-hint', 'cuts-file-input', 'cuts-paste-toggle', 'cuts-paste-field', 'cuts-paste-input', 'cuts-paste-import', 'start-stage-b', 'cuts-validation', 'music-file-input', 'music-hint',
     'audio-library-list', 'audio-library-empty', 'audio-library-add-input', 'audio-library-add-hint',
     'stage-b-controls', 'stage-b-controls-text', 'restart-stage-b', 'cancel-stage-b',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
@@ -3873,70 +3873,97 @@
 
   /* ------------------------------------------------- production.json validate */
 
-  el['cuts-file-input'].addEventListener('change', function () {
+  /**
+   * Validate raw production-plan text and apply the one shared successful
+   * import state. File upload and pasted JSON deliberately call this exact
+   * function so their JSON errors, schema errors, summary, and Stage B
+   * enablement cannot diverge.
+   */
+  function importProductionPlanText(raw) {
     state.validatedCuts = null;
     el['start-stage-b'].disabled = true;
-    var file = el['cuts-file-input'].files && el['cuts-file-input'].files[0];
-    if (!file) { hide(el['cuts-validation']); return; }
+    raw = String(raw || '');
 
+    var parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      showValidation(['Not valid JSON: ' + e.message], false);
+      return false;
+    }
+    var errors = validateCuts(parsed);
+    if (errors.length) {
+      showValidation(errors, false);
+      return false;
+    }
+
+    state.validatedCuts = raw;
+    var count = parsed.cuts.length;
+    var total = parsed.cuts.reduce(function (sum, c) {
+      return sum + (c.end_seconds - c.start_seconds);
+    }, 0);
+    // Posting-package echo: surface whether this imported plan carries the
+    // title + hashtags + YouTube tags that Stage B writes into metadata.txt.
+    var hashtagsCount = Array.isArray(parsed.hashtags) ? parsed.hashtags.length : 0;
+    var youtubeTagsCount = Array.isArray(parsed.youtube_tags) ? parsed.youtube_tags.length : 0;
+    var postingLine = '';
+    if (hashtagsCount || youtubeTagsCount) {
+      postingLine =
+        '\nPosting package: ' +
+        hashtagsCount + ' hashtag' + (hashtagsCount === 1 ? '' : 's') + ', ' +
+        youtubeTagsCount + ' YouTube tag' + (youtubeTagsCount === 1 ? '' : 's') +
+        ' (shipped in the final ZIP as metadata.txt).';
+    } else {
+      postingLine =
+        '\nPosting package: none (no hashtags / youtube_tags in this production.json — ' +
+        'metadata.txt will ship with only the title populated).';
+    }
+    showValidation([
+      'Valid. ' + count + ' cut' + (count === 1 ? '' : 's') + ', ' +
+      total + 's of source selected (target ' +
+      parsed.target_total_duration_seconds + 's).' +
+      (typeof parsed.title === 'string' && parsed.title.trim() !== ''
+        ? '\nJob title: "' + parsed.title + '" (one title for every scene of this job.)'
+        : '') +
+      postingLine
+    ], true);
+    el['start-stage-b'].disabled = false;
+    return true;
+  }
+
+  function setProductionPlanPasteVisible(visible) {
+    toggleHidden(el['cuts-paste-field'], !visible);
+    el['cuts-paste-toggle'].setAttribute('aria-expanded', String(visible));
+    el['cuts-paste-toggle'].textContent = visible ? 'Hide paste' : 'Paste JSON';
+    if (visible) el['cuts-paste-input'].focus();
+  }
+
+  el['cuts-file-input'].addEventListener('change', function () {
+    var file = el['cuts-file-input'].files && el['cuts-file-input'].files[0];
+    if (!file) {
+      state.validatedCuts = null;
+      el['start-stage-b'].disabled = true;
+      hide(el['cuts-validation']);
+      return;
+    }
     var reader = new FileReader();
     reader.onerror = function () {
+      state.validatedCuts = null;
+      el['start-stage-b'].disabled = true;
       showValidation(['Could not read the selected file.'], false);
     };
     reader.onload = function () {
-      var raw = String(reader.result);
-      var parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch (e) {
-        showValidation(['Not valid JSON: ' + e.message], false);
-        return;
-      }
-      var errors = validateCuts(parsed);
-      if (errors.length) {
-        showValidation(errors, false);
-        return;
-      }
-      state.validatedCuts = raw;
-      var count = parsed.cuts.length;
-      var total = parsed.cuts.reduce(function (sum, c) {
-        return sum + (c.end_seconds - c.start_seconds);
-      }, 0);
-      // Posting-package echo (mirrors the title echo above): surface how many
-      // hashtags / YouTube tags the analysis agent produced so an operator can
-      // tell at a glance whether the uploaded production.json carries a full
-      // posting package (title + hashtags + youtube_tags -> metadata.txt in
-      // the Stage B ZIP has all three sections populated) or a legacy
-      // title-only JSON (older files pre-dating the posting package; the ZIP
-      // still ships fine, but the hashtag / YouTube-tag sections in the TXT
-      // will be blank). Zero counts are noted explicitly so the operator is
-      // not left guessing between "field absent" and "upload ok".
-      var hashtagsCount = Array.isArray(parsed.hashtags) ? parsed.hashtags.length : 0;
-      var youtubeTagsCount = Array.isArray(parsed.youtube_tags) ? parsed.youtube_tags.length : 0;
-      var postingLine = '';
-      if (hashtagsCount || youtubeTagsCount) {
-        postingLine =
-          '\nPosting package: ' +
-          hashtagsCount + ' hashtag' + (hashtagsCount === 1 ? '' : 's') + ', ' +
-          youtubeTagsCount + ' YouTube tag' + (youtubeTagsCount === 1 ? '' : 's') +
-          ' (shipped in the final ZIP as metadata.txt).';
-      } else {
-        postingLine =
-          '\nPosting package: none (no hashtags / youtube_tags in this production.json — ' +
-          'metadata.txt will ship with only the title populated).';
-      }
-      showValidation([
-        'Valid. ' + count + ' cut' + (count === 1 ? '' : 's') + ', ' +
-        total + 's of source selected (target ' +
-        parsed.target_total_duration_seconds + 's).' +
-        (typeof parsed.title === 'string' && parsed.title.trim() !== ''
-          ? '\nJob title: "' + parsed.title + '" (one title for every scene of this job.)'
-          : '') +
-        postingLine
-      ], true);
-      el['start-stage-b'].disabled = false;
+      importProductionPlanText(reader.result);
     };
     reader.readAsText(file);
+  });
+
+  el['cuts-paste-toggle'].addEventListener('click', function () {
+    setProductionPlanPasteVisible(el['cuts-paste-field'].classList.contains('is-hidden'));
+  });
+
+  el['cuts-paste-import'].addEventListener('click', function () {
+    importProductionPlanText(el['cuts-paste-input'].value);
   });
 
   // -------------------------------------------------------------------

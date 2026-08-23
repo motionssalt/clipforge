@@ -490,7 +490,16 @@
               <span class="step-number">2</span>
               <div><h3 class="sub-heading">Upload production plan</h3><p class="hint">Validated in this browser, committed to <code id="cuts-path-hint">jobs/&lt;job-id&gt;/production.json</code>, then used to run Stage B.</p></div>
             </div>
-            <div class="upload-row primary-upload"><input type="file" id="cuts-file-input" accept="application/json,.json,text/plain,.txt"></div>
+            <div class="upload-row primary-upload">
+              <input type="file" id="cuts-file-input" accept="application/json,.json,text/plain,.txt">
+              <button type="button" id="cuts-paste-toggle" class="btn btn-quiet btn-sm" aria-expanded="false" aria-controls="cuts-paste-field">Paste JSON</button>
+            </div>
+            <div id="cuts-paste-field" class="field is-hidden">
+              <label for="cuts-paste-input">Paste production plan JSON</label>
+              <textarea id="cuts-paste-input" rows="10" spellcheck="false" autocapitalize="off" placeholder='Paste the complete production.json here, including the outer { }.'></textarea>
+              <p class="hint">Uses the exact same validation as file upload. Nothing is committed until you start Stage B.</p>
+              <div class="row-actions"><button type="button" id="cuts-paste-import" class="btn btn-secondary">Validate pasted JSON</button></div>
+            </div>
 
             <div class="music-option">
               <div><label class="enhance-toggle-label">Background music <span class="opt">optional</span></label><p class="hint">Trimmed or looped to the final duration and mixed beneath the voiceover.</p></div>
