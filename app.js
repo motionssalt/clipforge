@@ -502,6 +502,40 @@
     throw lastNetworkError || new Error('Unknown network failure.');
   }
 
+  /**
+   * Create or update one repository file through GitHub's Contents API.
+   *
+   * The helper first obtains the current blob SHA, which GitHub requires when
+   * replacing a file. All repository-backed forms use this shared, authenticated
+   * path so creator-watermark, settings, and task writes behave consistently.
+   */
+  async function putRepoFile(repoPath, content, message) {
+    if (!isConfigured()) throw new Error('Save your GitHub settings above first.');
+    if (typeof content !== 'string' || !content) throw new Error('Repository content is missing.');
+    if (typeof message !== 'string' || !message.trim()) throw new Error('Repository commit message is missing.');
+
+    var parts = String(repoPath || '').split('/');
+    if (!parts.length || parts.some(function (part) { return !part || part === '.' || part === '..'; })) {
+      throw new Error('Invalid repository file path.');
+    }
+    var encodedPath = parts.map(function (part) { return encodeURIComponent(part); }).join('/');
+    var endpoint = '/repos/' + state.owner + '/' + state.repo + '/contents/' + encodedPath;
+    var current = null;
+    try {
+      current = await gh(endpoint + '?ref=' + encodeURIComponent(REF));
+    } catch (err) {
+      if (!(err instanceof HttpError) || err.status !== 404) throw err;
+    }
+
+    var body = {
+      message: message.trim(),
+      content: content,
+      branch: REF
+    };
+    if (current && current.sha) body.sha = current.sha;
+    return gh(endpoint, { method: 'PUT', body: body });
+  }
+
   function handleGlobalError(err, contextKey) {
     if (err instanceof AuthError || err.name === 'AuthError') {
       banner('auth', 'error', err.message + ' Re-enter it in Settings.');

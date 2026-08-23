@@ -82,6 +82,14 @@ def test_profile_ui_contains_only_creator_name_controls() -> None:
     assert "watermarkSha" in APP and "putRepoFile(WATERMARK_JSON_PATH" in APP
 
 
+def test_frontend_has_a_safe_repository_file_writer() -> None:
+    assert "async function putRepoFile(repoPath, content, message)" in APP
+    assert "current = await gh(endpoint + '?ref=' + encodeURIComponent(REF))" in APP
+    assert "if (current && current.sha) body.sha = current.sha" in APP
+    assert "return gh(endpoint, { method: 'PUT', body: body })" in APP
+    assert "Invalid repository file path." in APP
+
+
 if __name__ == "__main__":
     tests = [value for name, value in globals().items() if name.startswith("test_") and callable(value)]
     for test in tests:
