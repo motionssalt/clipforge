@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression checks for ClipForge's cinematic creator-title overlay."""
+"""Regression checks for the persistent final-stage creator watermark."""
 from __future__ import annotations
 
 import importlib.util
@@ -21,46 +21,38 @@ watermark = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(watermark)
 
 
-def test_title_layers_are_centered_safe_and_not_banner_like() -> None:
-    with tempfile.TemporaryDirectory(prefix="creator_title_") as directory:
-        shadow_path, accent_path, title_path = watermark.build_layers("Fubara", 1080, 1200, Path(directory))
+def test_layers_are_condensed_centered_and_safe() -> None:
+    with tempfile.TemporaryDirectory(prefix="creator_watermark_") as directory:
+        shadow_path, mask_path = watermark.build_layers("Fubara", 1080, 1200, Path(directory))
         shadow = Image.open(shadow_path).convert("RGBA")
-        accent = Image.open(accent_path).convert("RGBA")
-        title = Image.open(title_path).convert("RGBA")
-        shadow_alpha = shadow.getchannel("A")
-        accent_alpha = accent.getchannel("A")
-        title_alpha = title.getchannel("A")
-        shadow_box = shadow_alpha.getbbox()
-        accent_box = accent_alpha.getbbox()
-        title_box = title_alpha.getbbox()
-        assert shadow_box and accent_box and title_box
-        assert 0 < shadow_alpha.getextrema()[1] < 255, "shadow must be visible but never opaque"
-        assert 0 < title_alpha.getextrema()[1] < 255, "title must retain composited texture"
-        assert 120 < title_box[2] - title_box[0] < 700, "title should be prominent but never full-width"
-        center = (title_box[0] + title_box[2]) / 2
-        assert abs(center - 540) <= 2, "title should remain centred"
-        assert title_box[1] >= round(1200 * watermark.TOP_SAFE_FRACTION)
-        assert title_box[3] <= 1200 - round(1200 * watermark.BOTTOM_SAFE_FRACTION) + 2
-        assert accent_box[1] >= round(1200 * watermark.TOP_SAFE_FRACTION)
-        assert accent_box[3] <= 1200 - round(1200 * watermark.BOTTOM_SAFE_FRACTION) + 2
-        assert accent_box[3] - accent_box[1] < round(1200 * 0.35), "accent composition must not become a large title banner"
+        mask = Image.open(mask_path).convert("L")
+        alpha = shadow.getchannel("A")
+        shadow_box = alpha.getbbox()
+        text_box = mask.getbbox()
+        assert shadow_box and text_box
+        assert 0 < alpha.getextrema()[1] < 255, "shadow must be visibly present but not fully opaque"
+        assert 120 < text_box[2] - text_box[0] < 600, "name should be visibly condensed, not full-width"
+        center = (text_box[0] + text_box[2]) / 2
+        assert abs(center - 540) <= 2, "name should be bottom-centered"
+        assert text_box[3] <= 1200 - round(1200 * watermark.BOTTOM_SAFE_FRACTION) + 2
+        assert mask.getextrema()[1] < 255, "foreground must stay non-opaque for blended treatment"
 
 
-def test_overlay_is_brief_cinematic_treatment_with_letter_shaped_shadow() -> None:
+def test_shadow_uses_soft_letter_shaped_drop_shadow_not_dilation() -> None:
     assert "ImageFilter.GaussianBlur" in COMPOSITOR
     assert "ImageFilter.MaxFilter" not in COMPOSITOR
-    assert "OVERLAY_DURATION_SECONDS = 2.8" in COMPOSITOR
-    assert "OVERLAY_FADE_IN_SECONDS = 0.22" in COMPOSITOR
-    assert "OVERLAY_FADE_OUT_SECONDS = 0.32" in COMPOSITOR
-    assert "fade=t=in:st=0:d={OVERLAY_FADE_IN_SECONDS}:alpha=1" in COMPOSITOR
-    assert "fade=t=out:st={fade_out_start}:d={OVERLAY_FADE_OUT_SECONDS}:alpha=1" in COMPOSITOR
-    assert "between(t,0,{OVERLAY_DURATION_SECONDS})" in COMPOSITOR
-    assert "warm text + soft letter shadow + restrained accent rules" in COMPOSITOR
-    assert "blend=all_mode=screen" not in COMPOSITOR
+    assert "SHADOW_OPACITY = 0.74" in COMPOSITOR
+    assert "hard, opaque word-sized rectangle" in COMPOSITOR
 
 
-def test_empty_name_is_an_explicit_no_overlay_copy() -> None:
-    with tempfile.TemporaryDirectory(prefix="creator_title_") as directory:
+def test_compositor_uses_light_screen_blend_for_foreground() -> None:
+    assert "blend=all_mode=screen" in COMPOSITOR
+    assert "blend=all_mode=overlay" not in COMPOSITOR
+    assert "screen-blended condensed text" in COMPOSITOR
+
+
+def test_empty_name_is_an_explicit_no_watermark_copy() -> None:
+    with tempfile.TemporaryDirectory(prefix="creator_watermark_") as directory:
         source = Path(directory) / "source.bin"
         destination = Path(directory) / "destination.bin"
         source.write_bytes(b"unchanged-video-bytes")
@@ -68,9 +60,9 @@ def test_empty_name_is_an_explicit_no_overlay_copy() -> None:
         assert destination.read_bytes() == source.read_bytes()
 
 
-def test_stage_b_applies_creator_profile_after_captions_and_before_delivery_compression() -> None:
+def test_stage_b_burns_watermark_after_captions_and_before_delivery_compression() -> None:
     captions = WORKFLOW.index("- name: Burn cinematic subtitles into the final video")
-    watermark_step = WORKFLOW.index("- name: Burn cinematic creator title overlay into final video")
+    watermark_step = WORKFLOW.index("- name: Burn creator watermark into final video")
     compress = WORKFLOW.index("- name: Compress final video for delivery")
     assert captions < watermark_step < compress
     assert "scripts/apply_creator_watermark.py" in WORKFLOW
@@ -81,7 +73,7 @@ def test_stage_b_applies_creator_profile_after_captions_and_before_delivery_comp
     assert "BRANDING_" not in WORKFLOW
 
 
-def test_profile_ui_retains_creator_name_controls() -> None:
+def test_profile_ui_contains_only_creator_name_controls() -> None:
     assert "creator_watermark.json" in APP
     assert "watermark-name-input" in APP and "watermark-name-input" in HTML
     assert "branding-username-input" not in APP and "branding-username-input" not in HTML
@@ -103,4 +95,4 @@ if __name__ == "__main__":
     tests = [value for name, value in globals().items() if name.startswith("test_") and callable(value)]
     for test in tests:
         test()
-    print(f"Creator title overlay tests passed ({len(tests)} tests)")
+    print(f"Creator watermark tests passed ({len(tests)} tests)")

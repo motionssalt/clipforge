@@ -493,18 +493,18 @@ jobs:
           ls -lh work/out/
 
       # -------------------------------------------------------------------
-      # The creator title overlay is the final visual operation after captions.
+      # The creator watermark is the final visual operation after captions.
       # It is burned into final.mp4 itself, then survives the existing terminal
       # delivery compression that follows. An empty profile name is an explicit
       # no-op; it never attempts to render empty text.
       # -------------------------------------------------------------------
-      - name: Burn cinematic creator title overlay into final video
+      - name: Burn creator watermark into final video
         shell: bash
         run: |
           set -euo pipefail
           name="$(cat work/creator_watermark_name.txt 2>/dev/null || true)"
           if [ -z "$name" ]; then
-            echo "Creator title overlay skipped: no configured name."
+            echo "Creator watermark skipped: no configured name."
             echo "CREATOR_WATERMARK_APPLIED=false" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -512,7 +512,7 @@ jobs:
             work/out/final.mp4 work/out/final_watermarked.mp4 --name "$name"
           mv -f work/out/final_watermarked.mp4 work/out/final.mp4
           echo "CREATOR_WATERMARK_APPLIED=true" >> "$GITHUB_ENV"
-          echo "Creator title overlay burned into final video."
+          echo "Creator watermark burned into final video."
 
       # -------------------------------------------------------------------
       # Terminal delivery transform: the fully composited MP4 is encoded once
