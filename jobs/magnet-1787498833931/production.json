@@ -1,0 +1,168 @@
+{
+"video_duration_seconds": 1347,
+"title": "Rick Framed by the Multiverse Council",
+"hashtags": [
+"#rickandmorty",
+"#citadelofrics",
+"#councillofricks",
+"#mortyshield",
+"#animation",
+"#multiverse",
+"#scifi"
+],
+"youtube_tags": [
+"rick and morty",
+"citadel of ricks",
+"council of ricks",
+"rick c137",
+"morty shield",
+"machine of unspeakable doom",
+"human cloaking device",
+"portal gun hack",
+"dimension chase",
+"rick and morty season 1",
+"close rick counters",
+"evil rick hideout"
+],
+"cuts": [
+{
+"start_seconds": 133,
+"end_seconds": 173,
+"voiceover_text": "Rick Sanchez and his grandson Morty step into the Citadel of Ricks, a secret metropolis ruled by the Council of Ricks. Rick despises the sight. Thousands of alternate versions of himself have banded together into an interdimensional society. Morty is fascinated by cowboy variants and bizarre Morty merchandise, but Rick calls the entire alliance a pathetic herd mentality.",
+"keywords": [
+{
+"word": "Citadel",
+"color": "#00B4D8"
+},
+{
+"word": "Council",
+"color": "#E63946"
+},
+{
+"word": "alternate",
+"color": "#FFB703"
+},
+{
+"word": "despises",
+"color": "#D90429"
+}
+]
+},
+{
+"start_seconds": 218,
+"end_seconds": 263,
+"voiceover_text": "Dragged before the Council of Ricks, Rick is formally accused of murdering twenty-seven alternate Ricks across the multiverse. He is outraged by the accusation. The council labels him a dangerous rogue who fits the killer's psychological profile. Instead of backing down, Rick mocks the tribunal, declaring that forming a cowardly government makes them far less of a Rick than he is.",
+"keywords": [
+{
+"word": "accused",
+"color": "#E63946"
+},
+{
+"word": "twenty-seven",
+"color": "#F77F00"
+},
+{
+"word": "rogue",
+"color": "#7209B7"
+},
+{
+"word": "outraged",
+"color": "#D90429"
+}
+]
+},
+{
+"start_seconds": 284,
+"end_seconds": 323,
+"voiceover_text": "When Rick demands actual proof, the council scans his portal gun. To his shock, his travel history shows exact visits to every single murder location. Rick insists he is being framed, but the council immediately convicts him. They sentence him to the machine of unspeakable doom, a torture device designed to shatter his mind in endless agony.",
+"keywords": [
+{
+"word": "scans",
+"color": "#4CC9F0"
+},
+{
+"word": "framed",
+"color": "#F72585"
+},
+{
+"word": "convicts",
+"color": "#E63946"
+},
+{
+"word": "doom",
+"color": "#9D0208"
+}
+]
+},
+{
+"start_seconds": 324,
+"end_seconds": 362,
+"voiceover_text": "Refusing his execution, Rick instantly retaliates and blasts past the guards with Morty in tow. The Council gives chase as Rick fires his portal gun through a frantic sequence of surreal dimensions. They sprint past living chairs, sentient phones, and walking pizza people. The chaotic dimension hopping completely confuses their pursuers, securing their escape.",
+"keywords": [
+{
+"word": "retaliates",
+"color": "#D90429"
+},
+{
+"word": "portal",
+"color": "#06D6A0"
+},
+{
+"word": "chase",
+"color": "#F77F00"
+},
+{
+"word": "escape",
+"color": "#2A9D8F"
+}
+]
+},
+{
+"start_seconds": 515,
+"end_seconds": 550,
+"voiceover_text": "While hiding out in a diner, Morty assumes their bond across dimensions is special. Rick bluntly shatters his pride. He explains that his genius brainwaves are easily tracked across the universe, but Morty's complimentary brainwaves cancel them out like a cloaking device. Morty is devastated to learn he is just human camouflage, right before Rick discovers his portal gun was hacked remotely.",
+"keywords": [
+{
+"word": "brainwaves",
+"color": "#4361EE"
+},
+{
+"word": "cloaking",
+"color": "#7209B7"
+},
+{
+"word": "devastated",
+"color": "#D90429"
+},
+{
+"word": "hacked",
+"color": "#F72585"
+}
+]
+},
+{
+"start_seconds": 596,
+"end_seconds": 641,
+"voiceover_text": "Tracking the hacker's signal to an off-the-grid base, Rick and Morty are horrified by what they discover. The entire building is encased in a massive dome of hundreds of captive Mortys strapped together in constant agonizing pain. Rick explains the brutal engineering: their synchronized agony creates an impenetrable radar cloaking shield. Morty is shaken to his core, while Rick scoffs at the barbaric overkill.",
+"keywords": [
+{
+"word": "horrified",
+"color": "#D90429"
+},
+{
+"word": "captive",
+"color": "#E63946"
+},
+{
+"word": "shield",
+"color": "#7209B7"
+},
+{
+"word": "overkill",
+"color": "#F77F00"
+}
+]
+}
+],
+"target_total_duration_seconds": 180
+}
