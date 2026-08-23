@@ -1371,13 +1371,23 @@
     text(el['zernio-job-targets'], targets.length
       ? 'Targets: ' + targets.map(function (target) { return target.platform + ' (' + target.account_ids.length + ')'; }).join(', ') + '.'
       : 'No active TikTok or YouTube accounts are selected in Zernio settings.');
+    var posts = publishing && Array.isArray(publishing.posts) ? publishing.posts : [];
     var active = ['publishing', 'requested'].indexOf(aggregateStatus) !== -1;
+    var repeatBlocked = posts.length > 0 && ['scheduled', 'published', 'failed', 'partial', 'cancelled'].indexOf(aggregateStatus) !== -1;
     // GitHub does not return Actions-secret values and some otherwise-valid
     // fine-grained tokens cannot inspect secret metadata. Never disable a
     // legitimate publish solely because that opaque probe is unavailable.
     // The workflow remains the definitive, server-side ZERNIO_API_KEY check.
-    el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length;
-    var summary = publishing
+    el['zernio-publish-job'].disabled = state.zernioBusy || active || repeatBlocked || !targets.length;
+    el['zernio-publish-job'].title = repeatBlocked
+      ? 'This job already has a Zernio publishing attempt. Use Retry failed target for an individual failed platform.'
+      : '';
+    var outcome = posts.map(function (post) {
+      return String(post.platform || 'platform') + ' · ' + String(post.status || 'unknown');
+    }).join(', ');
+    var summary = repeatBlocked
+      ? 'Already processed by Zernio: ' + outcome + '. Use Retry failed target for an individual failed platform.'
+      : publishing
       ? 'Provider state: ' + aggregateStatus + (publishing.scheduled_for ? ' · ' + publishing.scheduled_for : '')
       : (state.zernioSecretConfigured
         ? 'Choose a mode and submit a native Zernio publishing request.'

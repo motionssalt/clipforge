@@ -78,12 +78,20 @@ def test_stage_b_dispatch_is_best_effort_after_completion() -> None:
     assert "--ref \"${{ github.event.repository.default_branch }}\"" in auto_section
 
 
+def test_frontend_blocks_duplicate_full_publish_after_terminal_outcomes() -> None:
+    rendered = APP.read_text(encoding="utf-8")
+    assert "var repeatBlocked = posts.length > 0" in rendered
+    assert "state.zernioBusy || active || repeatBlocked || !targets.length" in rendered
+    assert "Already processed by Zernio:" in rendered
+    assert "Retry failed target for an individual failed platform" in rendered
+
+
 def test_frontend_derives_publish_state_from_per_platform_posts() -> None:
     rendered = APP.read_text(encoding="utf-8")
     assert "function aggregateZernioStatus(publishing)" in rendered
     assert "statuses.some(function (value) { return value === 'requested' || value === 'publishing'; })" in rendered
     assert "var meta = zernioStatusMeta(aggregateStatus);" in rendered
-    assert "el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length;" in rendered
+    assert "el['zernio-publish-job'].disabled = state.zernioBusy || active || repeatBlocked || !targets.length;" in rendered
     assert "The Zernio key could not be confirmed from this browser." in rendered
 
 
