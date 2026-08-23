@@ -1,7 +1,7 @@
 {
   "job_id": "torrent-1787506079308",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-torrent-1787506079308",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787506079308",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/clipforge-torrent-1787506079308-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787506079308/final.mp4"
   },
   "created_at_epoch": 1787506079,
-  "updated_at_epoch": 1787509249,
+  "updated_at_epoch": 1787509875,
   "expires_at_epoch": 1787549279,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787506079308/torrent-selection.json",
@@ -27,6 +29,9 @@
     "shot_count": "189",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a"
+    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
+    "title": "Morty Defeats Scorpions to Pass Bechdel Test",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
