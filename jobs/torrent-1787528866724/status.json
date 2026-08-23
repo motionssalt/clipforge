@@ -1,7 +1,7 @@
 {
   "job_id": "torrent-1787528866724",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence.",
+  "stage": "error",
+  "message": "Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category.",
   "release_tag": "clipforge-torrent-1787528866724",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787528866724",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/transcript.json"
   },
   "created_at_epoch": 1787528866,
-  "updated_at_epoch": 1787529594,
+  "updated_at_epoch": 1787529598,
   "expires_at_epoch": 1787572066,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787528866724/torrent-selection.json",
