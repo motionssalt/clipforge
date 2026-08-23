@@ -146,7 +146,7 @@ STYLE_PROMPT = (
     "of the same continuous recording session: retain the same neutral vocal "
     "identity, pitch range, timbre, loudness, and energy on every line.\n\n"
     "# DIRECTOR'S NOTES\n"
-    "Deliver concise commentary at about 170 words per minute—about 1.1 times "
+    "Deliver concise commentary at about 188 words per minute—about 1.2 times "
     "normal conversational speed: brisk but calm, with tight forward momentum. "
     "Use a neutral General American (U.S.) accent. Do not draw out syllables "
     "or leave long pauses. Articulate every word "

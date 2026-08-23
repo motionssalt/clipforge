@@ -21,7 +21,7 @@ for required_phrase in (
     "same continuous recording session",
     "same neutral vocal identity, pitch range, timbre, loudness, and energy",
     "# DIRECTOR'S NOTES",
-    "about 170 words per minute—about 1.1 times normal conversational speed",
+    "about 188 words per minute—about 1.2 times normal conversational speed",
     "brisk but calm, with tight forward momentum",
     "neutral General American (U.S.) accent",
     "Do not draw out syllables or leave long pauses",
