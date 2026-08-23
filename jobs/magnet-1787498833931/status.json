@@ -1,7 +1,7 @@
 {
   "job_id": "magnet-1787498833931",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-magnet-1787498833931",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-magnet-1787498833931",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/clipforge-magnet-1787498833931-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/final.mp4"
   },
   "created_at_epoch": 1787498865,
-  "updated_at_epoch": 1787503589,
+  "updated_at_epoch": 1787505055,
   "expires_at_epoch": 1787542065,
   "extra": {
     "torrent_selection_path": "jobs/magnet-1787498833931/torrent-selection.json",
@@ -25,6 +27,9 @@
     "shot_count": "57",
     "key_moment_count": "57",
     "original_asset_name": "original.mkv",
-    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a"
+    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
+    "title": "Rick Framed by the Multiverse Council",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
