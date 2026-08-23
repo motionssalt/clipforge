@@ -15,6 +15,16 @@
   var API = 'https://api.github.com';
   var API_VERSION = '2022-11-28';
   var REF = 'main';
+  var PAGE = document.body.getAttribute('data-page') || 'tasks';
+
+  function taskDetailHref(jobId) {
+    return 'task.html?job=' + encodeURIComponent(jobId);
+  }
+
+  function openTaskPage(jobId) {
+    if (!jobId || PAGE === 'task') return;
+    window.location.href = taskDetailHref(jobId);
+  }
 
   var LS = {
     token: 'clipforge_token',
@@ -623,7 +633,7 @@
     dismissBanner('auth');
     reflectSettings();
     setMsg(el['settings-msg'], 'Saved to localStorage.', 'ok');
-    openSettings(false);
+    openSettings(PAGE === 'settings');
     probeRepo();
     loadWatermark();
     loadGeminiKeysMeta();
@@ -1836,7 +1846,8 @@
         renderStage();
         renderTasksList();
         startPolling();
-        setMsg(el['stage-a-msg'], 'Torrent saved. Confirm the video in the selected task.', 'ok');
+        setMsg(el['stage-a-msg'], 'Torrent saved. Opening the task so you can confirm the video…', 'ok');
+        openTaskPage(slug);
       } catch (torrentErr) {
         if (torrentErr.name === 'AuthError' || torrentErr.name === 'RateLimitError') {
           handleGlobalError(torrentErr);
@@ -1924,7 +1935,10 @@
 
     findWorkflowRun(watch);
     if (!slug) discoverJobId(watch);
-    else startPolling();
+    else {
+      startPolling();
+      openTaskPage(slug);
+    }
   }
 
   /**
@@ -2101,6 +2115,7 @@
         if (!state.jobId) {
           setActiveJob(fresh[fresh.length - 1]);
           startPolling();
+          openTaskPage(fresh[fresh.length - 1]);
         } else {
           // Another task got selected first; still register the new folder
           // in the task list so it is tracked independently.
@@ -2535,9 +2550,9 @@
 
     var selectBtn = document.createElement('button');
     selectBtn.type = 'button';
-    selectBtn.className = 'btn btn-small ' + (isSelected ? 'btn-ghost' : 'btn-accent');
-    selectBtn.textContent = isSelected ? 'Selected' : 'Select';
-    selectBtn.disabled = isSelected || !!state.taskDeleting[jobId];
+    selectBtn.className = 'btn btn-small ' + (isSelected && PAGE === 'task' ? 'btn-ghost' : 'btn-accent');
+    selectBtn.textContent = isSelected && PAGE === 'task' ? 'Selected' : 'View task';
+    selectBtn.disabled = (isSelected && PAGE === 'task') || !!state.taskDeleting[jobId];
     selectBtn.addEventListener('click', function () { selectTask(jobId); });
     actions.appendChild(selectBtn);
 
@@ -2561,6 +2576,11 @@
    */
   function selectTask(jobId) {
     if (!jobId) return;
+    if (PAGE !== 'task') {
+      localStorage.setItem(LS.activeJob, jobId);
+      window.location.href = taskDetailHref(jobId);
+      return;
+    }
     if (state.jobId === jobId) return;
     // Fully reset the DETAIL panel's per-selection state — do NOT touch
     // the task registry. Other tasks keep their snapshots, their
@@ -4823,6 +4843,7 @@
     hide(el['resume-offer']);
     setMsg(el['stage-a-msg'], 'Deselected. Pick another task above or start a new Stage A run.', null);
     window.scrollTo({ top: 0, behavior: 'auto' });
+    if (PAGE === 'task') window.location.href = 'index.html';
   }
 
   el['start-over-btn'].addEventListener('click', startOver);
@@ -4885,7 +4906,7 @@
   function boot() {
     loadSettings();
     loadTasksFromStorage();
-    openSettings(!isConfigured());
+    openSettings(PAGE === 'settings' || !isConfigured());
     openRaw(false);
 
     // Render the Tasks list from the localStorage cache immediately so
@@ -4906,7 +4927,12 @@
     refreshTasksFromRepo({ silent: true });
     startTasksTimer();
 
-    var active = localStorage.getItem(LS.activeJob);
+    var requested = null;
+    if (PAGE === 'task') {
+      requested = new URLSearchParams(window.location.search).get('job');
+      if (requested) localStorage.setItem(LS.activeJob, requested);
+    }
+    var active = requested || localStorage.getItem(LS.activeJob);
     if (active) {
       setActiveJob(active);
       // Seed the detail panel with the cached snapshot so it renders
