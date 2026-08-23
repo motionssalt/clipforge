@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROMPT = ROOT / "scripts" / "generate_analysis_prompt.py"
 FIXTURES = ROOT / "scripts" / "fixtures" / "narration_hook_cases.json"
 RHYTHM_SAMPLE = ROOT / "scripts" / "fixtures" / "commentary_rhythm_sample.json"
+TITLE_SAMPLE = ROOT / "scripts" / "fixtures" / "title_constraint_sample.json"
 TTS = ROOT / "scripts" / "generate_voiceover.py"
 SUBTITLES = ROOT / "scripts" / "generate_subtitles_cinematic.py"
 STAGE_B = ROOT / ".github" / "workflows" / "stage-b.yml"
@@ -54,6 +55,15 @@ def test_prompt_contains_dedicated_source_grounded_opening_hook_strategy() -> No
         "Do not change narration pace, delivery, or audio direction",
     ):
         assert phrase in rendered, f"missing hook instruction: {phrase}"
+
+
+def test_title_guidance_has_a_concrete_short_word_target() -> None:
+    rendered = PROMPT.read_text(encoding="utf-8")
+    assert "roughly 5-8 words" in rendered
+    assert "not a description, plot summary" in rendered
+    sample = json.loads(TITLE_SAMPLE.read_text(encoding="utf-8"))
+    assert 5 <= len(sample["title"].split()) <= 8
+    assert sample["word_count"] == len(sample["title"].split())
 
 
 def test_commentary_rhythm_techniques_are_integrated_and_demonstrated() -> None:

@@ -886,6 +886,9 @@ Rules for the title:
     most arresting element (the twist, the stakes, the impossible
     thing), keep it specific to what actually happens in the cuts, and
     keep it under roughly 90 characters.
+  - Keep it to ONE short sentence or phrase, roughly 5-8 words. A little
+    flexibility is fine for natural phrasing, but this is a simple title,
+    not a description, plot summary, or sentence packed with context.
   - Never invent events the cuts do not show. A title that promises a
     payoff the viewer never sees is worse than a plain one.
 
@@ -940,7 +943,7 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
 
 {{
   "video_duration_seconds": {duration_seconds},
-  "title": "ONE catchy, attention-grabbing title for this whole job — a single line of plain text shared by every scene clip cut from this file (see JOB TITLE above)",
+  "title": "ONE catchy, attention-grabbing title for this whole job — a single 5-8 word sentence or phrase, not a description (see JOB TITLE above)",
   "hashtags": [
     "#hashtag1",
     "#hashtag2"
@@ -983,7 +986,9 @@ CONSTRAINTS
     of 1–2 extra seconds of tail; a slightly long cut is fine, a cut
     that ends before its described beat is on screen is broken.
   - `title` is a single non-empty string: one catchy title for the WHOLE
-    job (all cuts share it). One line, plain text, no emoji/quotes/markdown.
+    job (all cuts share it), roughly 5-8 words as one short sentence or
+    phrase. One line, plain text, no emoji/quotes/markdown, and not a plot
+    description or summary.
   - `hashtags` is a JSON array of 5-8 non-empty strings, each beginning
     with `#`, no spaces inside a hashtag, no duplicates. See the
     POSTING PACKAGE METADATA section above.
