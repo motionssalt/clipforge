@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787463799779/final.mp4"
   },
   "created_at_epoch": 1787463799,
-  "updated_at_epoch": 1787472191,
+  "updated_at_epoch": 1787472231,
   "expires_at_epoch": 1787506999,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787463799779/torrent-selection.json",
@@ -32,5 +32,108 @@
     "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
     "title": "How Rick Toppled an Entire Galactic Empire",
     "creator_watermark_applied": false
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "published",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-torrent-1787463799779-32625991311",
+    "updated_at_epoch": 1787472231,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 40650042,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "How Rick Toppled an Entire Galactic Empire",
+      "caption": "How Rick Toppled an Entire Galactic Empire",
+      "hashtags": [
+        "#rickandmorty",
+        "#rickc137",
+        "#adultswim",
+        "#animatedcomedy",
+        "#galacticfederation",
+        "#scifi",
+        "#cartoon"
+      ],
+      "tags": [
+        "rick and morty",
+        "rick topples galactic empire",
+        "rick changing a 1 to a 0",
+        "rick hostage situation",
+        "rick and morty season 3 episode 1",
+        "the rickshank rickdemption",
+        "rick destroys galactic federation",
+        "rick fake gun trick",
+        "morty shoots rick",
+        "blemflarck currency collapse",
+        "council of ricks standoff",
+        "adult swim",
+        "rick sanchez",
+        "morty smith",
+        "summer smith"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8aa952a28cb6b968433a2f",
+        "status": "published",
+        "scheduled_for": "2026-08-23T08:03:28.451Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=fa36d205&x-expires=1787630400&x-signature=mJ%2FJHm23CaRpv0qzr1spZ8uQiQk%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "username": ".chimeravfx"
+            },
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7677134349821659153",
+            "platformPostUrl": ""
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-torrent-1787463799779-32625991311-tiktok"
+      },
+      {
+        "post_id": "6a8aa96291a8026add02ab91",
+        "status": "published",
+        "scheduled_for": "2026-08-23T08:03:44.486Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "rBYEOLiG6og",
+            "platformPostUrl": "https://www.youtube.com/watch?v=rBYEOLiG6og"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-torrent-1787463799779-32625991311-youtube"
+      }
+    ],
+    "metadata_source": "jobs/torrent-1787463799779/production.json"
   }
 }
