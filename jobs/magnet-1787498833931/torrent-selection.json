@@ -64,7 +64,7 @@
       "length": 1485082471
     }
   ],
-  "selected_index": null,
+  "selected_index": 13,
   "stage_a_inputs": {
     "whisper_model": "base",
     "language": "auto",
