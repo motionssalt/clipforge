@@ -1,10 +1,72 @@
 # ClipForge
 
 A personal, GitHub-only pipeline that turns any full-length source video
-into a finished, ready-to-post short-form commentary video. Static site
-on GitHub Pages drives GitHub Actions workflows; the repo (jobs folder +
-Releases) is the database. Single user, personal use, one repo, one
-personal access token.
+into a finished, ready-to-post short-form commentary video. A static,
+no-build multi-page site on GitHub Pages drives GitHub Actions workflows;
+the repo (jobs folder + Releases) is the database. Single user, personal
+use, one repo, one personal access token.
+
+## Frontend status
+
+### Completed
+
+- A real multi-page static interface with persistent navigation and dedicated
+  pages for the task queue, new-task form, task detail, settings, and the
+  Automatic Mode placeholder.
+- The original GitHub API workflow remains available: repository connection,
+  Gemini TTS keys, Zernio publishing configuration and per-platform status,
+  creator watermark, Stage A dispatch, torrent selection, live task polling,
+  production.json validation/upload, audio library and one-off music, Stage B
+  start/restart/cancel, final downloads, and Zernio publishing controls.
+- Responsive layouts designed mobile-first, with a bottom navigation bar on
+  phones and a compact sticky navigation bar at wider sizes.
+- Deliberately designed light and dark palettes that follow
+  `prefers-color-scheme` automatically.
+
+### Entry URIs
+
+All paths are relative to the GitHub Pages project root and require no server
+routing or build output:
+
+- `index.html` — task queue (default entry point)
+- `new-task.html` — Stage A / create a production task
+- `task.html?job=<job-id>` — live task detail, handoff, Stage B, delivery, and
+  publishing; without `job`, the most recently selected task is used when one
+  exists
+- `settings.html` — repository connection, API-key-backed integrations,
+  publishing defaults, and watermark configuration
+- `automatic.html` — non-functional coming-soon placeholder for Automatic Mode
+
+### Not yet implemented
+
+- Automatic Mode itself. The page intentionally has no functional controls;
+  end-to-end unattended production requirements and safeguards still need to
+  be designed.
+
+### Recommended next steps
+
+1. Define Automatic Mode's generation contract, validation, failure recovery,
+   and publishing safeguards before adding controls.
+2. Exercise the complete Stage A and Stage B flows against a test repository
+   after workflow schema changes.
+3. Add browser automation with a mocked GitHub API for repeatable regression
+   coverage of every task state.
+
+### Storage and services
+
+- Browser `localStorage` stores the GitHub owner, repository, personal access
+  token, selected job id, and a task snapshot cache.
+- GitHub repository files (`jobs/`, `branding/`, `audio-library/`) and Releases
+  remain the source of truth; no application database is used.
+- The frontend calls `https://api.github.com` directly. GitHub Actions provides
+  processing, repository secrets store encrypted Gemini/Zernio credentials,
+  and GitHub Pages hosts the static files.
+
+### Public URLs
+
+- Production pattern: `https://<owner>.github.io/<repo>/`
+- GitHub REST API: `https://api.github.com`
+- No project-specific production URL is hard-coded in this repository.
 
 ## What it does
 
@@ -104,9 +166,11 @@ personal access token.
 └── README.md
 ```
 
-The frontend (`index.html`, `styles.css`, `app.js`) is generated
-separately from `SITE_BUILD_PROMPT.md` and placed in the repo root
-(GitHub Pages serves from `/`, not `/docs`).
+The frontend is a no-build set of root-level HTML pages sharing
+`styles.css`, `shell.js`, and `app.js`. GitHub Pages serves it from `/`
+(not `/docs`). The functional controller remains shared so repository state,
+connection data, and task polling stay consistent while navigation uses real
+HTML documents.
 
 ## Setup
 
@@ -149,14 +213,12 @@ Repository → **Settings → Actions → General**:
 Read-and-write is what lets the workflows commit `status.json`
 updates back to `main`.
 
-### 4. Generate the frontend
+### 4. Serve the frontend
 
-Hand `SITE_BUILD_PROMPT.md` to your preferred site-generation tool
-(any capable HTML+JS generator). It contains every contract — the
-GitHub API calls, the `status.json` schema, the stage-state
-transitions, the exact filenames and localStorage keys — so the tool
-can produce a working `index.html` / `styles.css` / `app.js` with no
-gaps. Commit the generated files at the repo root.
+The frontend is already present at the repository root. It uses plain HTML,
+CSS, and JavaScript with no package manager, bundler, build step, server-side
+route, or application backend. Commit the root-level pages and shared assets,
+then let GitHub Pages serve them directly.
 
 ### 5. Channel branding (set once, persists across jobs)
 
