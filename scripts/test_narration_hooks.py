@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROMPT = ROOT / "scripts" / "generate_analysis_prompt.py"
 FIXTURES = ROOT / "scripts" / "fixtures" / "narration_hook_cases.json"
+RHYTHM_SAMPLE = ROOT / "scripts" / "fixtures" / "commentary_rhythm_sample.json"
 TTS = ROOT / "scripts" / "generate_voiceover.py"
 SUBTITLES = ROOT / "scripts" / "generate_subtitles_cinematic.py"
 STAGE_B = ROOT / ".github" / "workflows" / "stage-b.yml"
@@ -53,6 +54,25 @@ def test_prompt_contains_dedicated_source_grounded_opening_hook_strategy() -> No
         "Do not change narration pace, delivery, or audio direction",
     ):
         assert phrase in rendered, f"missing hook instruction: {phrase}"
+
+
+def test_commentary_rhythm_techniques_are_integrated_and_demonstrated() -> None:
+    rendered = PROMPT.read_text(encoding="utf-8")
+    for phrase in (
+        "present-tense immediacy",
+        "short cause-and-effect chains",
+        "withhold the explanation for one beat",
+        "recurring stakes-language",
+        "Stay externally observational",
+        "Do not write internal monologue",
+    ):
+        assert phrase in rendered, f"missing commentary technique guidance: {phrase}"
+
+    sample = json.loads(RHYTHM_SAMPLE.read_text(encoding="utf-8"))
+    assert len(sample["generated_after_guidance"].split(". ")) >= 6
+    assert all(sample["evidence"].values())
+    assert "The alarm is already live." in sample["generated_after_guidance"]
+    assert "Then the door locks behind him." in sample["generated_after_guidance"]
 
 
 def test_tts_and_caption_pipeline_files_are_not_prompt_targets() -> None:

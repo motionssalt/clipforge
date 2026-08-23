@@ -189,10 +189,12 @@ know what happens next." Concretely:
     ("He was sure he'd already won. He hadn't."). Do not flatten a
     twist into a single matter-of-fact clause alongside everything else.
   - NARRATE THE REACTION, NOT JUST THE EVENT. The emotional engine of a
-    scene is usually how a character FEELS about what just happened, not
-    only the raw event. If a character is shocked, afraid, humiliated,
-    triumphant, or in despair, say so as a beat of its own — don't bury
-    it inside a longer sentence about the action itself.
+    scene is often the visible reaction to what just happened, not only
+    the raw event. Describe what the character does, shows, or causes next
+    (a frozen stare, a flinch, a retreat, a sudden grin) rather than stating
+    private thoughts or feelings the footage cannot establish. Give that
+    observable reaction its own beat instead of burying it in a longer
+    sentence about the action.
   - DO NOT SKIP THE LOW POINT. If the source material has a moment where
     the outcome looks uncertain, bad, or like a failure before the real
     resolution lands, keep that beat in — going straight from
@@ -216,6 +218,22 @@ COMMENTARY RHYTHM — short-form narration must move with crisp, declarative mom
   - Maintain steady forward motion: fact, action, reaction, consequence. Do
     not repeat the same point in different words, over-explain the obvious,
     or drift into flowery commentary.
+  - Keep the overall story frame in past tense when required, but use
+    present-tense immediacy for the play-by-play inside each beat: "He slips
+    inside" and "he takes the bait" feel alive where "he had gone inside"
+    and "he later took the bait" flatten the moment.
+  - Build short cause-and-effect chains. Give the action and its consequence
+    room to land as separate, compact sentences instead of packing both into
+    one clause-heavy line.
+  - Before a twist or reveal, withhold the explanation for one beat: signal
+    the action or approaching danger first, then resolve what it means in the
+    next short sentence. Keep stakes active with brief recurring language
+    such as "his suspicion was confirmed" or "it is already too late" rather
+    than re-explaining plot mechanics the viewer already understands.
+  - Stay externally observational. Do not write internal monologue or assert
+    private thoughts and feelings ("he feels terrified") unless the source
+    explicitly makes them visible or audible; favor observable actions,
+    reactions, and outcomes.
 
 WORD CHOICE & PERSONALITY — change the phrasing, NOT the voice delivery.
   - Sound like a sharp human commentator talking naturally, not a polished
@@ -645,7 +663,14 @@ STEP 3 (assemble cuts).
           essential dialogue, in chronological order.
         - Write the FINAL `voiceover_text` in a tight commentary rhythm:
           short declarative sentences, concrete source-backed details,
-          minimal filler, and steady beat-to-beat momentum. State the
+          minimal filler, and steady beat-to-beat momentum. Keep the story
+          frame in past tense where appropriate, but narrate the visible
+          moment in present tense for immediacy. Give each action and its
+          consequence its own short sentence. Before a twist, withhold its
+          meaning for one beat, then reveal it; reinforce the stakes with
+          concise recurring stakes-language instead of re-explaining plot.
+          Describe only observable actions, reactions, and outcomes — not
+          unsupported internal monologue or private feelings. State the
           action and consequence plainly. Use one sentence for setup and
           another for the reversal or payoff. Do not hedge, recap the same
           beat twice, or turn a simple visual fact into a long, winding
