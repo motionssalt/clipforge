@@ -3,78 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ClipForge — MOTIONSALT</title>
+<title>Tasks — ClipForge</title>
 <meta name="description" content="ClipForge production console for AI-assisted video processing, workflow tracking, and final delivery.">
 <meta name="robots" content="noindex">
-<meta name="color-scheme" content="dark">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="color-scheme" content="light dark">
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
-<body>
-<a class="skip-link" href="#main-content">Skip to workspace</a>
-
-<!-- ============================================================= TOP BAR -->
+<body data-page="tasks">
+<a class="skip-link" href="#main-content">Skip to content</a>
 <header class="topbar">
-  <a class="brand" href="#main-content" aria-label="ClipForge home">
-    <span class="brand-glyph" aria-hidden="true">
-      <b></b><b></b><b></b>
-    </span>
-    <span class="brand-words">
-      <span id="app-title" class="brand-name">ClipForge</span>
-      <span class="brand-studio">MOTIONSALT Studio</span>
-    </span>
+  <a class="brand" href="index.html" aria-label="ClipForge tasks">
+    <span class="brand-mark" aria-hidden="true">CF</span>
+    <span><strong>ClipForge</strong><small>video workspace</small></span>
   </a>
-
-  <div class="topbar-status">
-    <span class="conn">
-      <span class="connection-dot" aria-hidden="true"></span>
-      <span id="repo-indicator" class="repo-indicator" aria-live="polite">no repo configured</span>
-    </span>
-  </div>
+  <span class="connection-status"><span class="connection-dot" aria-hidden="true"></span><span id="repo-indicator" class="repo-indicator" aria-live="polite">no repo configured</span></span>
 </header>
-
+<nav class="site-nav" aria-label="Primary navigation">
+  <a class="nav-link" data-nav="tasks" href="index.html"><span aria-hidden="true">▦</span> Tasks</a>
+  <a class="nav-link" data-nav="new" href="new-task.html"><span aria-hidden="true">＋</span> New task</a>
+  <a class="nav-link" data-nav="automatic" href="automatic.html"><span aria-hidden="true">◇</span> Automatic</a>
+  <a class="nav-link" data-nav="settings" href="settings.html"><span aria-hidden="true">⚙</span> Settings</a>
+</nav>
 <div id="banner-stack" class="banner-stack" aria-live="polite"></div>
-
-<!-- ============================================================= LAYOUT -->
-<div class="shell">
-
-  <!-- ---------------------------------------------- LEFT: pipeline spine -->
-  <aside class="spine" aria-label="Pipeline overview">
-    <div class="spine-inner">
-      <p class="spine-title">The pipeline</p>
-      <ol class="spine-steps">
-        <li class="spine-step">
-          <span class="spine-num">01</span>
-          <span class="spine-copy"><b>Connect</b><small>Repository &amp; credentials</small></span>
-        </li>
-        <li class="spine-step">
-          <span class="spine-num">02</span>
-          <span class="spine-copy"><b>Analyze</b><small>Stage A — read the footage</small></span>
-        </li>
-        <li class="spine-step">
-          <span class="spine-num">03</span>
-          <span class="spine-copy"><b>Direct</b><small>Hand off to your AI agent</small></span>
-        </li>
-        <li class="spine-step">
-          <span class="spine-num">04</span>
-          <span class="spine-copy"><b>Produce</b><small>Stage B — cut, voice, deliver</small></span>
-        </li>
-      </ol>
-      <p class="spine-note">Credentials never leave this browser. The repository is the single source of truth for every task.</p>
-    </div>
-  </aside>
-
-  <!-- ---------------------------------------------- CENTER: guided flow -->
-  <main id="main-content" class="flow">
-
-    <section class="flow-hero" aria-label="Introduction">
-      <p class="kicker">Production console</p>
-      <h1>Turn raw footage into a finished cut — one guided pass.</h1>
-      <p class="lede">Dispatch the two-stage GitHub Actions pipeline, watch every step resolve in real time, and collect delivery-ready output. No servers, no build step, just your repository.</p>
-    </section>
+<main id="main-content" class="flow">
+  <section class="page-intro" aria-labelledby="page-title">
+    <p class="kicker">Workspace</p>
+    <h1 id="page-title">Your tasks</h1>
+    <p class="lede">Follow active productions, revisit handoffs, and collect finished cuts.</p>
+    <a class="btn btn-primary page-action" href="new-task.html">Start a new task</a>
+  </section>
 
     <!-- ===== ACT 01 — CONNECT (settings) ===== -->
     <section id="settings-section" class="act" aria-labelledby="settings-heading">
@@ -585,8 +543,7 @@
       </div>
     </section>
 
-  </main>
-</div>
+</main>
 
 <!-- ============================================================= DIALOG -->
 <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title">
@@ -607,16 +564,17 @@
 
 <!-- ============================================================= FOOTER -->
 <footer class="site-footer">
-  <span class="footer-brand">ClipForge / MOTIONSALT</span>
+  <span class="footer-brand">ClipForge</span>
   <p>Tasks auto-delete 12 hours after creation. Download final artifacts before they expire.</p>
 </footer>
 
 <!-- libsodium is vendored same-origin (assets/vendor/) so key management
      never depends on a third-party CDN. libsodium.js MUST load before
      libsodium-wrappers.js: the wrapper reads window.libsodium at load time. -->
+<script src="shell.js" defer></script>
 <script src="assets/vendor/libsodium.js" defer></script>
 <script src="assets/vendor/libsodium-wrappers.js" defer></script>
 <script src="torrent_metadata.js" defer></script>
-<script src="app.js?v=5d79647" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>
