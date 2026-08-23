@@ -171,69 +171,76 @@ actions, reactions, expressions, visual gags, scene changes — not just
 paraphrase the dialogue. The transcript alone is almost never enough for
 this; the indexes plus the screenshots are how you actually see the video.
 
-WRITE IT TO BE ENGAGING, NOT JUST ACCURATE.
-An accurate description that reads like a flat summary will bore viewers
-into scrolling away, even if every fact in it is correct. The bar is not
-"did I describe what happened" — it's "does this make someone want to
-know what happens next." Concretely:
-  - SHORT SENTENCES. One beat, one idea, one sentence. A cut with three
-    things happening in it is three short sentences, not one sentence
-    with three clauses stitched together with "while" / "as" / "and".
-    Long compound sentences flatten tension; short ones create rhythm
-    and let each beat land before the next one starts.
-  - SET UP, THEN SUBVERT. When the source material has an expectation
-    followed by a reversal (a character is confident and gets proven
-    wrong, a plan seems to fail and then doesn't, someone underestimates
-    an opponent), write it that way on purpose: state the expectation
-    plainly, then land the subversion as its own short beat or sentence
-    ("He was sure he'd already won. He hadn't."). Do not flatten a
-    twist into a single matter-of-fact clause alongside everything else.
-  - NARRATE THE REACTION, NOT JUST THE EVENT. The emotional engine of a
-    scene is often the visible reaction to what just happened, not only
-    the raw event. Describe what the character does, shows, or causes next
-    (a frozen stare, a flinch, a retreat, a sudden grin) rather than stating
-    private thoughts or feelings the footage cannot establish. Give that
-    observable reaction its own beat instead of burying it in a longer
-    sentence about the action.
-  - DO NOT SKIP THE LOW POINT. If the source material has a moment where
-    the outcome looks uncertain, bad, or like a failure before the real
-    resolution lands, keep that beat in — going straight from
-    action to resolution without the moment of doubt in between removes
-    the exact tension that makes a payoff satisfying.
-  - Vary sentence length on purpose: a short, blunt sentence right after
-    a longer one reads as a punch. Do not let every sentence in a cut
-    settle into the same length and rhythm.
+WRITE IT TO BE EMOTION-FIRST, NOT JUST EVENT-ACCURATE.
+An accurate event list still makes viewers scroll. Organize every cut around
+what the moment FEELS like and what is emotionally at stake for the people in
+it; use the visible plot action as the proof and vehicle for that feeling.
+The bar is not "did I list what happened" — it is "does the viewer feel the
+pressure, shock, hope, humiliation, relief, or triumph that makes them need
+the next beat?" The emotional throughline is the story spine. Concretely:
+  - LEAD WITH THE EMOTIONAL TURN. For each beat, first identify the clearest
+    source-supported emotional shift: confidence becoming panic, safety
+    becoming dread, embarrassment becoming defiance, despair becoming relief,
+    or anticipation becoming triumph. Let that shift organize the wording;
+    actions explain WHY it lands, rather than competing as a flat event list.
+  - NAME CLEAR EMOTIONS DIRECTLY. Plain, punchy emotional statements are
+    encouraged when the footage, performance, dialogue, or outcome supports
+    them: "She is shocked." "He is terrified." "That humiliation lands."
+    "He is triumphant." Give that feeling its own short beat so a hook or
+    payoff can land. A frozen stare, flinch, retreat, or grin can be the
+    evidence for the emotion — not a substitute for saying it.
+  - STAY EVIDENCE-GROUNDED, NOT MIND-READING. Do not invent elaborate hidden
+    thoughts, motives, memories, or intentions the source cannot establish
+    (for example, "he wonders whether his mother is proud"). That rule does
+    NOT ban a direct emotion that is clearly visible, audible, or strongly
+    conveyed by the situation. Say "he is devastated" when the performance
+    and outcome support it; do not fabricate a private backstory for why.
+  - SHORT SENTENCES. One emotional or visual beat, one idea, one sentence. A
+    cut with three things happening in it is three short sentences, not one
+    sentence stitched together with "while" / "as" / "and". Short lines let
+    tension, reaction, and payoff land before the next beat starts.
+  - SET UP, THEN SUBVERT. When the source gives an expectation followed by a
+    reversal, frame both the event and its emotional consequence: "He thinks
+    he has won. Then the door opens. He is horrified." Do not flatten the
+    twist into one matter-of-fact clause.
+  - DO NOT SKIP THE LOW POINT. Keep the doubt, loss, or apparent failure that
+    makes the later relief or triumph satisfying. Going straight from action
+    to resolution erases the emotional pressure that earns the payoff.
 
-COMMENTARY RHYTHM — short-form narration must move with crisp, declarative momentum.
-  - State concrete facts and visible actions plainly. Prefer "He opens the
-    door" to hedged framing such as "It looks like he may be about to open
-    the door." Do not pad a beat with "seems," "starts to," "kind of," or
-    "maybe" unless the uncertainty is genuinely visible and important.
-  - Use specific details already supported by the source: a number, object,
-    location, action, or consequence. Do not replace those details with vague
-    adjectives or generic hype.
-  - Keep most sentences short and complete. One visual beat, reaction, or
-    consequence per sentence. Let a very short sentence land a surprise,
-    threat, reversal, or emotional hit.
-  - Maintain steady forward motion: fact, action, reaction, consequence. Do
-    not repeat the same point in different words, over-explain the obvious,
-    or drift into flowery commentary.
+COMMENTARY RHYTHM — emotion-first narration still moves with crisp, declarative momentum.
+  - Make the emotional throughline the connective tissue across cuts. Each
+    new action should raise, reverse, confirm, or release a feeling or stake;
+    do not merely advance plot mechanics.
+  - State source-backed actions and emotional facts plainly. Prefer "The lock
+    snaps shut. She is trapped." to hedged framing such as "It looks like she
+    may be unable to leave." Do not pad a beat with "seems," "starts to,"
+    "kind of," or "maybe" unless the uncertainty is genuinely visible and
+    is itself the emotional point.
+  - Use specific source-supported details — a number, object, location,
+    action, expression, line of dialogue, or consequence — to make the
+    emotional claim earned rather than generic hype.
+  - Keep most sentences short and complete. One visual beat, direct emotion,
+    or emotional consequence per sentence. Let a very short sentence land a
+    shock, threat, reversal, humiliation, relief, or triumph.
   - Keep the overall story frame in past tense when required, but use
     present-tense immediacy for the play-by-play inside each beat: "He slips
     inside" and "he takes the bait" feel alive where "he had gone inside"
     and "he later took the bait" flatten the moment.
-  - Build short cause-and-effect chains. Give the action and its consequence
-    room to land as separate, compact sentences instead of packing both into
-    one clause-heavy line.
+  - Build short cause-and-effect chains in which the effect is often an
+    emotional consequence: action → consequence → fear, relief, rage, or
+    resolve. Give each link its own compact sentence instead of one
+    clause-heavy line.
   - Before a twist or reveal, withhold the explanation for one beat: signal
-    the action or approaching danger first, then resolve what it means in the
+    the danger, hope, or pressure first, then resolve what it means in the
     next short sentence. Keep stakes active with brief recurring language
-    such as "his suspicion was confirmed" or "it is already too late" rather
-    than re-explaining plot mechanics the viewer already understands.
-  - Stay externally observational. Do not write internal monologue or assert
-    private thoughts and feelings ("he feels terrified") unless the source
-    explicitly makes them visible or audible; favor observable actions,
-    reactions, and outcomes.
+    such as "his suspicion is confirmed" or "it is already too late" rather
+    than re-explaining plot mechanics.
+  - EMOTION-FIRST EXAMPLE. If visible footage shows a competitor miss, stare
+    at the result, then lift a trophy after a reversal, write: "For a second,
+    it looks like he has lost. Then the result changes. He is stunned — and
+    triumphant." This is stronger than a neutral list such as "He misses,
+    looks at the result, and lifts the trophy" because the same supported
+    events are organized around the viewer's emotional experience.
 
 WORD CHOICE & PERSONALITY — change the phrasing, NOT the voice delivery.
   - Sound like a sharp human commentator talking naturally, not a polished
@@ -654,47 +661,52 @@ STEP 3 (assemble cuts).
               This check is more important than hitting the target
               total duration exactly.
 
-        - For each cut, write a `voiceover_text` field: an engaging,
-          confident description of WHAT HAPPENS in that segment, the
-          way a good storyteller — not a dry summarizer — would
-          describe it to someone who cannot see the screen. Cover the
-          visual sequence of events (actions, reactions, expressions,
-          scene changes, on-screen text, visual gags) as well as any
-          essential dialogue, in chronological order.
-        - Write the FINAL `voiceover_text` in a tight commentary rhythm:
-          short declarative sentences, concrete source-backed details,
-          minimal filler, and steady beat-to-beat momentum. Keep the story
-          frame in past tense where appropriate, but narrate the visible
-          moment in present tense for immediacy. Give each action and its
-          consequence its own short sentence. Before a twist, withhold its
-          meaning for one beat, then reveal it; reinforce the stakes with
-          concise recurring stakes-language instead of re-explaining plot.
-          Describe only observable actions, reactions, and outcomes — not
-          unsupported internal monologue or private feelings. State the
-          action and consequence plainly. Use one sentence for setup and
-          another for the reversal or payoff. Do not hedge, recap the same
-          beat twice, or turn a simple visual fact into a long, winding
-          sentence. A short blunt sentence is welcome when the scene lands
-          a surprise, threat, or emotional reaction.
+        - For each cut, write a `voiceover_text` field as an engaging,
+          emotion-first account of WHAT HAPPENS in that segment. Before
+          drafting, identify what shifts emotionally for the people involved
+          and what is at stake; then use the visual sequence of events
+          (actions, reactions, expressions, scene changes, on-screen text,
+          visual gags) and essential dialogue as the evidence that makes that
+          emotional throughline believable. Do not write a neutral chronology
+          with one decorative feeling word inserted.
+        - Write the FINAL `voiceover_text` in a tight, emotion-first
+          commentary rhythm: short declarative sentences, concrete
+          source-backed details, minimal filler, and steady forward pull.
+          Keep the story frame in past tense where appropriate, but narrate
+          the visible moment in present tense for immediacy. Give an action,
+          its consequence, and its emotional effect separate short sentences.
+          Before a twist, withhold its meaning for one beat, then reveal it;
+          reinforce the emotional stakes with concise recurring stakes-language
+          instead of re-explaining plot. Name a clearly supported reaction
+          directly and plainly — "she is terrified," "he is humiliated," "they
+          are relieved" — rather than hiding it behind an action-only account.
+          Do not invent an unsupported private monologue, motive, or backstory.
+          Use one sentence for setup and another for the reversal, feeling, or
+          payoff. Do not hedge, recap the same beat twice, or turn a simple
+          visual fact into a long, winding sentence. A short blunt sentence is
+          welcome when the scene lands a shock, threat, loss, relief, or triumph.
         - Give the wording a little lived-in personality when it fits: casual
           phrasing, dry teasing, light slang, and an occasional mild curse
           word are welcome only when grounded in the visible moment. Keep it
           playful rather than forced, cruel, repetitive, or overly vulgar.
           Do not change narration pace, delivery, or audio direction; this
           affects the words on the page only.
-        - Keep clear setup-then-payoff structure and state the character's
-          emotional reaction as its own beat — see "WRITE IT TO BE
-          ENGAGING, NOT JUST ACCURATE" above. Do not default to one long
-          clause-stacked sentence per beat.
+        - Keep clear setup-then-payoff structure with the emotional shift as
+          its own beat — see "WRITE IT TO BE EMOTION-FIRST, NOT JUST
+          EVENT-ACCURATE" above. Do not default to one long clause-stacked
+          sentence per beat.
 
         OPENING HOOK — FIRST-CUT WRITING:
 
         The first 1–2 sentences of the FIRST cut have a higher standard than
         ordinary beat narration. They are the viewer's reason to continue,
-        not merely the chronological start of a summary. Before drafting that
-        cut, identify the strongest fact genuinely supported by the selected
-        story and screenshots: the most curiosity-inducing, surprising,
-        dangerous, absurd, emotional, ironic, or high-stakes truth.
+        not merely the chronological start of a summary. Lead with the
+        strongest source-supported emotional pressure point — the fear,
+        shock, humiliation, hope, relief, desire, or triumph that makes the
+        event matter — then use the event as proof. Before drafting that cut,
+        identify the strongest fact genuinely supported by the selected story
+        and screenshots: the most curiosity-inducing, surprising, dangerous,
+        absurd, emotional, ironic, or high-stakes truth.
 
         Do NOT begin by mechanically summarizing the first chronological event
         when a later consequence, reversal, impossible situation, visible
@@ -960,7 +972,7 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
     {{
       "start_seconds": 142,
       "end_seconds": 170,
-      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, using SHORT sentences (one beat per sentence, not clause-stacked run-ons), a confident third person present tense by default, clear setup-then-payoff structure on any beat that has a reversal or twist, and the character's emotional reaction stated as its own short beat where relevant. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts.",
+      "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. Describe what is visually happening (actions, reactions, scene changes, essential dialogue), in chronological order, using SHORT sentences (one beat per sentence, not clause-stacked run-ons), a confident third person present tense by default, an emotion-first throughline: use visible plot action to prove what the character stands to feel, then state every clearly supported emotional shift directly in its own short beat before moving to the next event. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events to bridge the gap. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts.",
       "keywords": [
         {{"word": "one genuinely noteworthy word from this cut's voiceover_text", "color": "#FF5C5C"}}
         // optional: choose only the words worth emphasizing and assign each exact #RRGGBB color yourself

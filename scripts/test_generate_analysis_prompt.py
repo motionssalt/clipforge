@@ -39,13 +39,21 @@ assert LITERAL_KEYWORD_EXAMPLE in rendered, "literal JSON keyword example was no
 assert FOCUS in rendered, "focus interpolation was lost"
 assert '"target_total_duration_seconds": 180' in rendered, "target duration was not rendered"
 for required_phrase in (
-    "COMMENTARY RHYTHM",
-    "crisp, declarative momentum",
-    "Use specific details already supported by the source",
-    "Write the FINAL `voiceover_text` in a tight commentary rhythm",
-    "short declarative sentences, concrete source-backed details",
-    "Do not hedge, recap the same",
-    "declarative commentary style: concrete source-backed facts",
+    "WRITE IT TO BE EMOTION-FIRST, NOT JUST EVENT-ACCURATE.",
+    "The emotional throughline is the story spine.",
+    "LEAD WITH THE EMOTIONAL TURN.",
+    "NAME CLEAR EMOTIONS DIRECTLY.",
+    "STAY EVIDENCE-GROUNDED, NOT MIND-READING.",
+    '"She is shocked." "He is terrified."',
+    "COMMENTARY RHYTHM — emotion-first narration still moves with crisp, declarative momentum.",
+    "present-tense immediacy",
+    "Build short cause-and-effect chains in which the effect is often an\n    emotional consequence",
+    "Before a twist or reveal, withhold the explanation for one beat",
+    "EMOTION-FIRST EXAMPLE.",
+    "He is stunned — and\n    triumphant.",
+    "same supported\n    events are organized around the viewer's emotional experience",
+    "emotion-first account of WHAT HAPPENS in that segment",
+    '"she is terrified," "he is humiliated," "they\n          are relieved"',
     "WORD CHOICE & PERSONALITY — change the phrasing, NOT the voice delivery",
     "casual turns of phrase, playful understatement, teasing, blunt reactions",
     "Mild profanity is allowed very occasionally",
@@ -54,4 +62,10 @@ for required_phrase in (
     "Do not change narration pace, delivery, or audio direction",
 ):
     assert required_phrase in rendered, f"missing narration-style guidance: {required_phrase}"
-print("PASS: analysis prompt renders literal keyword JSON plus lively, source-grounded wording guidance without changing delivery")
+
+# The prompt's explicit shock/reversal/triumph example is the concrete
+# acceptance sample: emotions lead, while visible events prove them.
+sample = 'write: "For a second,\n    it looks like he has lost. Then the result changes. He is stunned — and\n    triumphant."'
+assert sample in rendered
+assert "He misses,\n    looks at the result, and lifts the trophy" in rendered
+print("PASS: analysis prompt renders emotion-first, evidence-grounded narration guidance with a verified emotional-beat sample")
