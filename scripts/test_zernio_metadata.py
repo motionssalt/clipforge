@@ -13,6 +13,7 @@ from zernio_publish import (
     normalize_hashtags,
     normalize_tags,
     aggregate_publishing_status,
+    caption_with_visible_hashtags,
     post_summary,
     production_metadata,
     publish_video,
@@ -46,18 +47,26 @@ def test_normalization_does_not_duplicate_hashes_or_tags() -> None:
     assert normalize_tags(["#one", "one", "two, words", "x" * 101]) == ["one", "two words"]
 
 
+def test_visible_hashtags_are_appended_once() -> None:
+    visible = caption_with_visible_hashtags("A caption", ["#one", "#two"])
+    assert visible == "A caption\n\n#one #two"
+    assert caption_with_visible_hashtags("", ["#one"]) == "#one"
+    assert caption_with_visible_hashtags("A caption", []) == "A caption"
+
+
 def test_platform_payloads_are_separate() -> None:
     doc = load_production(EXAMPLE)
     tiktok = build_platform_payload(doc, "tiktok", ["tt-1"], "https://media.example/final.mp4")
     youtube = build_platform_payload(doc, "youtube", ["yt-1"], "https://media.example/final.mp4")
-    assert tiktok["content"] == doc["title"]
+    expected_content = doc["title"] + "\n\n" + " ".join(doc["hashtags"])
+    assert tiktok["content"] == expected_content
     assert tiktok["hashtags"] == doc["hashtags"]
     assert "title" not in tiktok
     assert "tags" not in tiktok
     assert youtube["title"] == doc["title"]
     assert youtube["tags"] == doc["youtube_tags"]
     assert youtube["hashtags"] == doc["hashtags"]
-    assert youtube["content"] == doc["title"]
+    assert youtube["content"] == expected_content
     assert all(entry["platform"] == "tiktok" for entry in tiktok["platforms"])
     assert all(entry["platform"] == "youtube" for entry in youtube["platforms"])
 

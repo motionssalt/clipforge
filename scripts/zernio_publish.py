@@ -242,6 +242,15 @@ def validate_request_id(value: str | None) -> str:
     return raw
 
 
+def caption_with_visible_hashtags(caption: str, hashtags: list[str]) -> str:
+    """Return provider-visible caption text with normalized tags appended once."""
+    base = str(caption or '').strip()
+    visible_tags = ' '.join(str(tag).strip() for tag in hashtags if str(tag).strip())
+    if not visible_tags:
+        return base
+    return f'{base}\n\n{visible_tags}' if base else visible_tags
+
+
 def build_platform_payload(
     production: dict[str, Any],
     platform: str,
@@ -261,7 +270,7 @@ def build_platform_payload(
         raise ZernioError("Zernio media URL must be an absolute HTTP(S) URL.")
     meta = production_metadata(production)
     payload: dict[str, Any] = {
-        "content": meta["caption"],
+        "content": caption_with_visible_hashtags(meta["caption"], meta["hashtags"]),
         "platforms": [{"platform": platform, "accountId": account_id} for account_id in ids],
         "mediaItems": [{"type": "video", "url": media_url}],
         "hashtags": meta["hashtags"],
