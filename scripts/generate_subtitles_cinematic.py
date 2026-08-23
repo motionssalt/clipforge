@@ -810,14 +810,18 @@ def main() -> None:
     source_width, source_height = subtitle_common.probe_video_size(args.merged_video_mp4)
     width, height = CIN_FRAME_WIDTH, CIN_FRAME_HEIGHT
     crop_plan = cinematic_reframe.build_scene_crop_plan(
-        args.merged_video_mp4, threshold=args.scene_threshold)
+        args.merged_video_mp4,
+        duration_seconds=_probe_video_duration(args.merged_video_mp4),
+        threshold=args.scene_threshold,
+        enable_face_detection=True,
+    )
     crop_plan_path = os.path.join(work_dir, "cinematic_crop_plan.json")
     cinematic_reframe.write_crop_plan(crop_plan, crop_plan_path)
     print(
         f"Source video resolution: {source_width}x{source_height}; "
         f"cinematic output uses {crop_plan['scene_count']} static scene crop(s) "
-        f"in the bare {width}x{height} (10:9) frame. Initial positions are "
-        f"safe centre fallbacks; character centres are selected in the next stage.",
+        f"in the bare {width}x{height} (10:9) frame with face-centered positions "
+        f"when a confident face is detected.",
         flush=True,
     )
 

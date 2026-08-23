@@ -332,6 +332,8 @@ crop_plan = json.load(open(os.path.join(cli_work, "cinematic_crop_plan.json"), e
 assert crop_plan["scene_detector"] == "scene_index.detect_shots", crop_plan
 assert crop_plan["scene_count"] >= 1, crop_plan
 assert len(crop_plan["scenes"]) == crop_plan["scene_count"], crop_plan
+assert "face_detector" in crop_plan, crop_plan
+assert crop_plan["face_detector"].get("backend") in {"disabled", "unavailable", "insightface/buffalo_sc:detection"}, crop_plan
 # Confirm the same long timeline through the actual CLI production path,
 # not just the direct compositor helper.
 for label in ("entry", "hold", "exit", "gone"):
