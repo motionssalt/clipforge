@@ -1,16 +1,18 @@
 {
   "job_id": "torrent-1787514340111",
-  "stage": "awaiting_torrent_selection",
-  "message": "Choose a video from this torrent to begin Stage A.",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
   "release_tag": "clipforge-torrent-1787514340111",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787514340,
-  "updated_at_epoch": 1787514340,
+  "updated_at_epoch": 1787514479,
   "expires_at_epoch": 1787557540,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787514340111/torrent-selection.json",
     "torrent_name": "[Anime Time] Tokyo Ghoul Complete Series (Tg+√A+Re+Re 2+OVA) [BD] [Dual Audio][1080p][HEVC 10bit x265][AAC][Eng Sub].torrent",
-    "torrent_candidate_count": 64
+    "torrent_candidate_count": 64,
+    "workflow_run_id": "32662289595",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32662289595"
   }
 }
