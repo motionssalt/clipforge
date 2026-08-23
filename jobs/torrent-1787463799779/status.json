@@ -1,0 +1,16 @@
+{
+  "job_id": "torrent-1787463799779",
+  "stage": "awaiting_torrent_selection",
+  "message": "Choose a video from this torrent to begin Stage A.",
+  "release_tag": "clipforge-torrent-1787463799779",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787463799,
+  "updated_at_epoch": 1787463799,
+  "expires_at_epoch": 1787506999,
+  "extra": {
+    "torrent_selection_path": "jobs/torrent-1787463799779/torrent-selection.json",
+    "torrent_name": "Rick.and.Morty.-.S03.-.2160p.HDR.Ai.Upscale.5.1.MKV.-Mesc[ext.to].torrent",
+    "torrent_candidate_count": 10
+  }
+}
