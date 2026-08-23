@@ -1,14 +1,16 @@
 {
   "job_id": "magnet-1787498833931",
-  "stage": "awaiting_torrent_selection",
-  "message": "Choose a video from this torrent to begin Stage A.",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
   "release_tag": "clipforge-magnet-1787498833931",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787498865,
-  "updated_at_epoch": 1787498865,
+  "updated_at_epoch": 1787499033,
   "expires_at_epoch": 1787542065,
   "extra": {
-    "torrent_selection_path": "jobs/magnet-1787498833931/torrent-selection.json"
+    "torrent_selection_path": "jobs/magnet-1787498833931/torrent-selection.json",
+    "workflow_run_id": "32648659757",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32648659757"
   }
 }
