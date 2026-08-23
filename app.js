@@ -3931,11 +3931,48 @@
     return true;
   }
 
-  function setProductionPlanPasteVisible(visible) {
-    toggleHidden(el['cuts-paste-field'], !visible);
-    el['cuts-paste-toggle'].setAttribute('aria-expanded', String(visible));
-    el['cuts-paste-toggle'].textContent = visible ? 'Hide paste' : 'Paste JSON';
-    if (visible) el['cuts-paste-input'].focus();
+  function showProductionPlanPasteField(focus) {
+    toggleHidden(el['cuts-paste-field'], false);
+    el['cuts-paste-toggle'].setAttribute('aria-expanded', 'true');
+    if (focus) el['cuts-paste-input'].focus();
+  }
+
+  /**
+   * Clipboard access is requested only from the person's explicit button
+   * press. Clipboard text is kept in the visible field for review and then
+   * passed through the same importer as uploaded and manually typed plans.
+   */
+  function showClipboardImportFallback(message) {
+    // Do not leave a previous successful plan armed after a clipboard error.
+    state.validatedCuts = null;
+    el['start-stage-b'].disabled = true;
+    showProductionPlanPasteField(true);
+    showValidation([message], false);
+    return false;
+  }
+
+  async function importProductionPlanFromClipboard() {
+    if (!navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
+      return showClipboardImportFallback(
+        'Clipboard access is unavailable here. Paste the production plan into the field, then choose Validate typed JSON.'
+      );
+    }
+
+    try {
+      var raw = await navigator.clipboard.readText();
+      if (!String(raw || '').trim()) {
+        return showClipboardImportFallback(
+          'Your clipboard is empty. Copy a production plan, then try again or paste it into the field.'
+        );
+      }
+      el['cuts-paste-input'].value = raw;
+      showProductionPlanPasteField(false);
+      return importProductionPlanText(raw);
+    } catch (err) {
+      return showClipboardImportFallback(
+        'Could not read your clipboard. Allow clipboard access, then try again, or paste the production plan into the field.'
+      );
+    }
   }
 
   el['cuts-file-input'].addEventListener('change', function () {
@@ -3959,7 +3996,7 @@
   });
 
   el['cuts-paste-toggle'].addEventListener('click', function () {
-    setProductionPlanPasteVisible(el['cuts-paste-field'].classList.contains('is-hidden'));
+    importProductionPlanFromClipboard();
   });
 
   el['cuts-paste-import'].addEventListener('click', function () {

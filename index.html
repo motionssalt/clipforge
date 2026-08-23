@@ -492,13 +492,13 @@
             </div>
             <div class="upload-row primary-upload">
               <input type="file" id="cuts-file-input" accept="application/json,.json,text/plain,.txt">
-              <button type="button" id="cuts-paste-toggle" class="btn btn-quiet btn-sm" aria-expanded="false" aria-controls="cuts-paste-field">Paste JSON</button>
+              <button type="button" id="cuts-paste-toggle" class="btn btn-quiet btn-sm" aria-expanded="false" aria-controls="cuts-paste-field">Paste from clipboard</button>
             </div>
             <div id="cuts-paste-field" class="field is-hidden">
               <label for="cuts-paste-input">Paste production plan JSON</label>
               <textarea id="cuts-paste-input" rows="10" spellcheck="false" autocapitalize="off" placeholder='Paste the complete production.json here, including the outer { }.'></textarea>
-              <p class="hint">Uses the exact same validation as file upload. Nothing is committed until you start Stage B.</p>
-              <div class="row-actions"><button type="button" id="cuts-paste-import" class="btn btn-secondary">Validate pasted JSON</button></div>
+              <p class="hint">Paste from clipboard reads text only after you press the button. If your browser blocks clipboard access, paste here manually; both paths use the same validation. Nothing is committed until you start Stage B.</p>
+              <div class="row-actions"><button type="button" id="cuts-paste-import" class="btn btn-secondary">Validate typed JSON</button></div>
             </div>
 
             <div class="music-option">

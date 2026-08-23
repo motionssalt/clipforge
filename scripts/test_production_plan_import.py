@@ -22,10 +22,22 @@ assert "importProductionPlanText(reader.result)" in APP
 
 # Pasting is an alternative input surface, not an independent validator.
 assert 'id="cuts-paste-toggle"' in HTML
+assert '>Paste from clipboard<' in HTML
 assert 'id="cuts-paste-input"' in HTML
 assert 'id="cuts-paste-import"' in HTML
-assert "function setProductionPlanPasteVisible(visible)" in APP
+assert '>Validate typed JSON<' in HTML
+assert "function showProductionPlanPasteField(focus)" in APP
+assert "async function importProductionPlanFromClipboard()" in APP
+assert "navigator.clipboard.readText()" in APP
+assert "el['cuts-paste-input'].value = raw" in APP
+assert "return importProductionPlanText(raw)" in APP
+assert "function showClipboardImportFallback(message)" in APP
+assert "Do not leave a previous successful plan armed after a clipboard error." in APP
+assert "Clipboard access is unavailable here." in APP
+assert "Could not read your clipboard." in APP
+assert "el['cuts-paste-toggle'].addEventListener('click'" in APP
+assert "importProductionPlanFromClipboard();" in APP
 assert "el['cuts-paste-import'].addEventListener('click'" in APP
 assert "importProductionPlanText(el['cuts-paste-input'].value)" in APP
 
-print("PASS: .json, .txt, and pasted production plans share one validation and Stage B enablement path")
+print("PASS: .json, .txt, clipboard, and typed production plans share one validation and Stage B enablement path")
