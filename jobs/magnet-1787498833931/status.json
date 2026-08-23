@@ -1,7 +1,7 @@
 {
   "job_id": "magnet-1787498833931",
-  "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-magnet-1787498833931",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-magnet-1787498833931",
   "assets": {
@@ -13,17 +13,18 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/transcript.json"
   },
   "created_at_epoch": 1787498865,
-  "updated_at_epoch": 1787500248,
+  "updated_at_epoch": 1787503589,
   "expires_at_epoch": 1787542065,
   "extra": {
     "torrent_selection_path": "jobs/magnet-1787498833931/torrent-selection.json",
-    "workflow_run_id": "32648659757",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32648659757",
+    "workflow_run_id": "32652652413",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32652652413",
     "duration_seconds": "1347",
     "screenshot_count": "225",
     "event_frame_count": "60",
     "shot_count": "57",
     "key_moment_count": "57",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a"
   }
 }
