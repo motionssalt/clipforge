@@ -36,6 +36,8 @@ def test_publish_workflow_contract() -> None:
     assert "ref: ${{ github.event.repository.default_branch }}" in rendered
     assert "read_json_object_safely" in rendered
     assert "publishing_error_state, read_json_object_safely" in rendered
+    assert "from scripts.zernio_publish import aggregate_publishing_status" in rendered
+    assert "publishing['status'] = aggregate_publishing_status(updated)" in rendered
     assert "publishing = publishing_error_state(prior)" in rendered
 
 
@@ -76,8 +78,11 @@ def test_stage_b_dispatch_is_best_effort_after_completion() -> None:
     assert "--ref \"${{ github.event.repository.default_branch }}\"" in auto_section
 
 
-def test_frontend_does_not_disable_publish_on_an_opaque_secret_probe() -> None:
+def test_frontend_derives_publish_state_from_per_platform_posts() -> None:
     rendered = APP.read_text(encoding="utf-8")
+    assert "function aggregateZernioStatus(publishing)" in rendered
+    assert "statuses.some(function (value) { return value === 'requested' || value === 'publishing'; })" in rendered
+    assert "var meta = zernioStatusMeta(aggregateStatus);" in rendered
     assert "el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length;" in rendered
     assert "The Zernio key could not be confirmed from this browser." in rendered
 

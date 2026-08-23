@@ -1342,6 +1342,20 @@
     });
   }
 
+  function aggregateZernioStatus(publishing) {
+    var posts = publishing && Array.isArray(publishing.posts) ? publishing.posts : [];
+    var statuses = posts.map(function (post) { return String(post && post.status || 'unknown').toLowerCase(); });
+    if (!statuses.length) return String(publishing && publishing.status || 'not_requested').toLowerCase();
+    if (statuses.some(function (value) { return value === 'requested' || value === 'publishing'; })) return 'publishing';
+    if (statuses.some(function (value) { return value === 'scheduled'; })) return 'scheduled';
+    if (statuses.every(function (value) { return value === 'published'; })) return 'published';
+    if (statuses.some(function (value) { return value === 'published'; }) && statuses.some(function (value) {
+      return ['failed', 'cancelled', 'error', 'not_requested'].indexOf(value) !== -1;
+    })) return 'partial';
+    if (statuses.every(function (value) { return ['failed', 'cancelled', 'error', 'not_requested'].indexOf(value) !== -1; })) return 'failed';
+    return statuses.some(function (value) { return value === 'partial'; }) ? 'partial' : statuses[0];
+  }
+
   function renderZernioPublishing(status) {
     var panel = el['zernio-publish-panel'];
     if (!panel) return;
@@ -1349,21 +1363,22 @@
     if (!settings.enabled) { hide(panel); return; }
     show(panel);
     var publishing = status && status.publishing && typeof status.publishing === 'object' ? status.publishing : null;
-    var meta = zernioStatusMeta(publishing && publishing.status);
+    var aggregateStatus = aggregateZernioStatus(publishing);
+    var meta = zernioStatusMeta(aggregateStatus);
     text(el['zernio-publishing-badge'], meta.label);
     el['zernio-publishing-badge'].className = 'stage-badge ' + meta.cls;
     var targets = zernioTargetsForJob();
     text(el['zernio-job-targets'], targets.length
       ? 'Targets: ' + targets.map(function (target) { return target.platform + ' (' + target.account_ids.length + ')'; }).join(', ') + '.'
       : 'No active TikTok or YouTube accounts are selected in Zernio settings.');
-    var active = publishing && ['publishing', 'requested'].indexOf(String(publishing.status || '').toLowerCase()) !== -1;
+    var active = ['publishing', 'requested'].indexOf(aggregateStatus) !== -1;
     // GitHub does not return Actions-secret values and some otherwise-valid
     // fine-grained tokens cannot inspect secret metadata. Never disable a
     // legitimate publish solely because that opaque probe is unavailable.
     // The workflow remains the definitive, server-side ZERNIO_API_KEY check.
     el['zernio-publish-job'].disabled = state.zernioBusy || active || !targets.length;
     var summary = publishing
-      ? 'Provider state: ' + String(publishing.status || 'unknown') + (publishing.scheduled_for ? ' · ' + publishing.scheduled_for : '')
+      ? 'Provider state: ' + aggregateStatus + (publishing.scheduled_for ? ' · ' + publishing.scheduled_for : '')
       : (state.zernioSecretConfigured
         ? 'Choose a mode and submit a native Zernio publishing request.'
         : 'The Zernio key could not be confirmed from this browser. Submit to perform the secure server-side check; save the key in Repository settings if the workflow reports it missing.');

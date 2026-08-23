@@ -12,6 +12,7 @@ from zernio_publish import (
     load_production,
     normalize_hashtags,
     normalize_tags,
+    aggregate_publishing_status,
     post_summary,
     production_metadata,
     publish_video,
@@ -31,6 +32,13 @@ def test_tracked_production_fixture() -> None:
     assert meta["tags"] == doc["youtube_tags"]
     assert all(tag.startswith("#") and not tag.startswith("##") for tag in meta["hashtags"])
     assert all(not tag.startswith("#") and "," not in tag for tag in meta["tags"])
+
+
+def test_aggregate_status_comes_from_per_platform_posts() -> None:
+    assert aggregate_publishing_status([{"status": "published"}, {"status": "publishing"}]) == "publishing"
+    assert aggregate_publishing_status([{"status": "published"}, {"status": "failed"}]) == "partial"
+    assert aggregate_publishing_status([{"status": "published"}, {"status": "published"}]) == "published"
+    assert aggregate_publishing_status([{"status": "failed"}, {"status": "cancelled"}]) == "failed"
 
 
 def test_normalization_does_not_duplicate_hashes_or_tags() -> None:

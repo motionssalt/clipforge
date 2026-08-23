@@ -172,6 +172,27 @@ def load_production(path: str | Path) -> dict[str, Any]:
     return doc
 
 
+def aggregate_publishing_status(posts: list[dict[str, Any]]) -> str:
+    """Derive the job state from the actual per-platform post states."""
+    statuses = [str(post.get("status") or "unknown").strip().lower()
+                for post in posts if isinstance(post, dict)]
+    if not statuses:
+        return "unknown"
+    active = {"requested", "publishing"}
+    terminal_failures = {"failed", "cancelled", "error", "not_requested"}
+    if any(value in active for value in statuses):
+        return "publishing"
+    if any(value == "scheduled" for value in statuses):
+        return "scheduled"
+    if all(value == "published" for value in statuses):
+        return "published"
+    if any(value == "published" for value in statuses) and any(value in terminal_failures for value in statuses):
+        return "partial"
+    if all(value in terminal_failures for value in statuses):
+        return "failed"
+    return "partial" if any(value == "partial" for value in statuses) else statuses[0]
+
+
 def production_metadata(doc: dict[str, Any]) -> dict[str, Any]:
     """Resolve only fields that ClipForge actually stores in production.json."""
     title = doc.get("title") if isinstance(doc.get("title"), str) else ""
@@ -424,18 +445,7 @@ def publish_video(
         summary["platform"] = platform
         summary["request_id"] = per_platform_id
         posts.append(summary)
-    statuses = [str(post.get("status") or "unknown") for post in posts]
-    successish = {"published", "scheduled", "publishing"}
-    if statuses and all(value == "published" for value in statuses):
-        overall = "published"
-    elif statuses and all(value == "scheduled" for value in statuses):
-        overall = "scheduled"
-    elif any(value in successish for value in statuses) and any(value not in successish for value in statuses):
-        overall = "partial"
-    elif statuses and all(value == "failed" for value in statuses):
-        overall = "failed"
-    else:
-        overall = statuses[0] if statuses else "unknown"
+    overall = aggregate_publishing_status(posts)
     return {
         "provider": "zernio",
         "status": overall,

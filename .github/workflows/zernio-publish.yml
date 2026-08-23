@@ -310,6 +310,7 @@ jobs:
           import json, os, time
           from pathlib import Path
           from scripts.zernio_state import default_queue, remove_queue_item, upsert_queue_item
+          from scripts.zernio_publish import aggregate_publishing_status
           from scripts.zernio_workflow_state import publishing_error_state, read_json_object_safely
 
           jid = os.environ['JOB_ID']
@@ -345,11 +346,7 @@ jobs:
               publishing = dict(prior)
               publishing['provider'] = 'zernio'
               publishing['posts'] = updated
-              statuses = [str(p.get('status') or 'unknown') for p in updated if isinstance(p, dict)]
-              publishing['status'] = ('published' if statuses and all(s == 'published' for s in statuses) else
-                                     'scheduled' if statuses and all(s == 'scheduled' for s in statuses) else
-                                     'partial' if any(s in {'published', 'scheduled', 'publishing'} for s in statuses) else
-                                     statuses[0] if statuses else 'unknown')
+              publishing['status'] = aggregate_publishing_status(updated)
               if action == 'update':
                   publishing['mode'] = os.environ['MODE']
                   publishing['scheduled_for'] = result.get('scheduled_for') or os.environ['SCHEDULED_FOR'] or None
