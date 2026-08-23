@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787514340111/final.mp4"
   },
   "created_at_epoch": 1787514340,
-  "updated_at_epoch": 1787517685,
+  "updated_at_epoch": 1787517745,
   "expires_at_epoch": 1787557540,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787514340111/torrent-selection.json",
@@ -33,5 +33,106 @@
     "title": "His Dream Date Turned Him Into a Ghoul",
     "creator_watermark_applied": true,
     "creator_watermark_name": "CHIMERAVFX"
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "published",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-torrent-1787514340111-32664202264",
+    "updated_at_epoch": 1787517745,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 49299527,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "His Dream Date Turned Him Into a Ghoul",
+      "caption": "His Dream Date Turned Him Into a Ghoul",
+      "hashtags": [
+        "#tokyoghoul",
+        "#kaneki",
+        "#anime",
+        "#animerecap",
+        "#ghoul",
+        "#darkfantasy",
+        "#animetwist"
+      ],
+      "tags": [
+        "tokyo ghoul",
+        "kaneki ken",
+        "rize kamishiro",
+        "touka kirishima",
+        "anime recap",
+        "tokyo ghoul episode 1",
+        "half ghoul",
+        "kakugan",
+        "anime twist",
+        "kaneki transformation",
+        "ghoul date",
+        "anime dark fantasy",
+        "binge eater ghoul"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8b5b18d4c24645d279ad14",
+        "status": "published",
+        "scheduled_for": "2026-08-23T20:41:57.783Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "MOTIONSALT",
+              "isActive": true,
+              "profilePicture": "https://media.zernio.com/media/tiktok-avatars/1787477124009_wzjr6do4_tiktok-avatar--000SxU-aDh7k3BI3XoKgFISx1xLz0AUZcTw.jpg",
+              "username": "motionsalt"
+            },
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7677329353529149471",
+            "platformPostUrl": ""
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-torrent-1787514340111-32664202264-tiktok"
+      },
+      {
+        "post_id": "6a8b5b2d5d46db8d1cedd832",
+        "status": "published",
+        "scheduled_for": "2026-08-23T20:42:19.163Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "eanp6ukWMwQ",
+            "platformPostUrl": "https://www.youtube.com/watch?v=eanp6ukWMwQ"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-torrent-1787514340111-32664202264-youtube"
+      }
+    ],
+    "metadata_source": "jobs/torrent-1787514340111/production.json"
   }
 }
