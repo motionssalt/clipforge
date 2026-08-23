@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787440316145/final.mp4"
   },
   "created_at_epoch": 1787440316,
-  "updated_at_epoch": 1787444391,
+  "updated_at_epoch": 1787444537,
   "expires_at_epoch": 1787483516,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787440316145/torrent-selection.json",
@@ -32,5 +32,103 @@
     "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
     "title": "Morty's Invisible Belt Gets Him Caught, Then Jerry Ruins the Surrender",
     "creator_watermark_applied": false
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "publishing",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-torrent-1787440316145-mt52b8wg",
+    "updated_at_epoch": 1787444537,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 18203983,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "Morty's Invisible Belt Gets Him Caught, Then Jerry Ruins the Surrender",
+      "caption": "Morty's Invisible Belt Gets Him Caught, Then Jerry Ruins the Surrender",
+      "hashtags": [
+        "#rickandmorty",
+        "#morty",
+        "#invisibilitybelt",
+        "#scifi",
+        "#adultswim",
+        "#funnyanimation",
+        "#shorts"
+      ],
+      "tags": [
+        "rick and morty",
+        "morty invisible belt",
+        "summer thermal goggles",
+        "invisibility belt prank",
+        "jerry drops the gun",
+        "galactic federation invasion",
+        "morty psychic powers bluff",
+        "rick and morty funny moments",
+        "rick and morty clips",
+        "adult swim animation",
+        "animated comedy",
+        "science fiction comedy"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8a3d30584a87380c349e43",
+        "status": "publishing",
+        "scheduled_for": "2026-08-23T00:22:07.504Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://media.zernio.com/media/tiktok-avatars/1787437168879_2m2nup2d_tiktok-avatar--0003IL_UGLWZzU4NFh1PSU2Ex1YvKPeuBhq.jpg",
+              "username": ".chimeravfx"
+            },
+            "status": "processing"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-torrent-1787440316145-mt52b8wg-tiktok"
+      },
+      {
+        "post_id": "6a8a3d353def80040785d198",
+        "status": "published",
+        "scheduled_for": "2026-08-23T00:22:11.916Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "g3JddL5lWng",
+            "platformPostUrl": "https://www.youtube.com/watch?v=g3JddL5lWng"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-torrent-1787440316145-mt52b8wg-youtube"
+      }
+    ],
+    "metadata_source": "jobs/torrent-1787440316145/production.json"
   }
 }

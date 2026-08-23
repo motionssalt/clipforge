@@ -13,6 +13,18 @@
         "6a8a1812610fca16c8d1a4f5"
       ],
       "updated_at_epoch": 1787437368
+    },
+    {
+      "job_id": "torrent-1787440316145",
+      "status": "publishing",
+      "mode": "publish_now",
+      "scheduled_for": null,
+      "timezone": "UTC",
+      "post_ids": [
+        "6a8a3d30584a87380c349e43",
+        "6a8a3d353def80040785d198"
+      ],
+      "updated_at_epoch": 1787444537
     }
   ]
 }
