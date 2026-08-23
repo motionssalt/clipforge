@@ -30,11 +30,13 @@ Automatic Mode — ClipForge
   <section class="page-intro" aria-labelledby="page-title">
     <p class="kicker">Unattended source-to-delivery</p>
     <h1 id="page-title">Automatic Mode</h1>
-    <p class="lede">Choose a source and optional editorial focus. ClipForge runs Stage A, uses bounded evidence-driven Automatic Mode analysis, validates production.json, and then continues through the existing Stage B delivery flow.</p>
+    <p class="lede">Choose a source and optional editorial focus. ClipForge runs Stage A, uses bounded evidence-driven Automatic Mode analysis, validates production.json, and then continues through the existing Stage B delivery flow. Configure repository and Puter credentials once on the main <a href="settings.html">Settings</a> page.</p>
   </section>
 
-    <!-- ===== ACT 01 — CONNECT (settings) ===== -->
-    <section id="settings-section" class="act" aria-labelledby="settings-heading">
+    <!-- Shared controller bindings remain in this hidden section so the static
+         application can read existing local settings; configuration belongs on
+         the main Settings page, never in Automatic Mode. -->
+    <section id="settings-section" class="act" aria-labelledby="settings-heading" hidden aria-hidden="true">
       <button type="button" id="settings-toggle" class="act-bar" aria-expanded="true" aria-controls="settings-body">
         <span class="act-index" aria-hidden="true">01</span>
         <span class="act-titles">

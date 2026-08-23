@@ -33,9 +33,13 @@ assert "note: 'Masked fingerprints only. Raw Puter auth tokens live in the PUTER
 assert "loadPuterKeysMeta();" in APP
 
 assert META["version"] == 1
-assert META["keys"] == []
+assert isinstance(META["keys"], list)
 assert "Masked fingerprints only" in META["note"]
 assert "PUTER_AUTH_TOKENS" in META["note"]
+for entry in META["keys"]:
+    assert set(entry).issubset({"fingerprint", "added_at_epoch"})
+    assert isinstance(entry.get("fingerprint"), str) and "…" in entry["fingerprint"]
+    assert isinstance(entry.get("added_at_epoch"), int)
 
 for page in ("index.html", "new-task.html", "settings.html", "task.html"):
     html = (ROOT / page).read_text(encoding="utf-8")
