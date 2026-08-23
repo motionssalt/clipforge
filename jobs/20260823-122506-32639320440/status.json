@@ -1,0 +1,15 @@
+{
+  "job_id": "20260823-122506-32639320440",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-20260823-122506-32639320440",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787488008,
+  "updated_at_epoch": 1787488008,
+  "expires_at_epoch": 1787531208,
+  "extra": {
+    "workflow_run_id": "32639320440",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32639320440"
+  }
+}
