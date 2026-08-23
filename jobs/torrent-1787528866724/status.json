@@ -1,12 +1,19 @@
 {
   "job_id": "torrent-1787528866724",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence.",
   "release_tag": "clipforge-torrent-1787528866724",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787528866724",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/key_moments.json",
+    "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/original.mkv",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787528866724/transcript.json"
+  },
   "created_at_epoch": 1787528866,
-  "updated_at_epoch": 1787529023,
+  "updated_at_epoch": 1787529594,
   "expires_at_epoch": 1787572066,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787528866724/torrent-selection.json",
@@ -14,6 +21,7 @@
     "torrent_candidate_count": 64,
     "workflow_run_id": "32674695272",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32674695272",
-    "automatic_mode": "true"
+    "automatic_mode": "true",
+    "automatic_analysis_result": "jobs/torrent-1787528866724/automatic_analysis.json"
   }
 }
