@@ -1,7 +1,7 @@
 {
   "job_id": "torrent-1787444414278",
-  "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-torrent-1787444414278",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-torrent-1787444414278",
   "assets": {
@@ -13,19 +13,20 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787444414278/transcript.json"
   },
   "created_at_epoch": 1787444414,
-  "updated_at_epoch": 1787445666,
+  "updated_at_epoch": 1787448298,
   "expires_at_epoch": 1787487614,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787444414278/torrent-selection.json",
     "torrent_name": "Rick.and.Morty.-.S07.Complete.-.2160p.HDR.Ai.Upscale.5.1.MultiSubs.MKV.-Mesc[ext.to].torrent",
     "torrent_candidate_count": 10,
-    "workflow_run_id": "32607610550",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32607610550",
+    "workflow_run_id": "32610258862",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32610258862",
     "duration_seconds": "1345",
     "screenshot_count": "225",
     "event_frame_count": "60",
     "shot_count": "114",
     "key_moment_count": "60",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a"
   }
 }
