@@ -1,16 +1,29 @@
 {
   "job_id": "magnet-1787498833931",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "awaiting_json_upload",
+  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
   "release_tag": "clipforge-magnet-1787498833931",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-magnet-1787498833931",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/key_moments.json",
+    "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/original.mkv",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-magnet-1787498833931/transcript.json"
+  },
   "created_at_epoch": 1787498865,
-  "updated_at_epoch": 1787499033,
+  "updated_at_epoch": 1787500248,
   "expires_at_epoch": 1787542065,
   "extra": {
     "torrent_selection_path": "jobs/magnet-1787498833931/torrent-selection.json",
     "workflow_run_id": "32648659757",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32648659757"
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32648659757",
+    "duration_seconds": "1347",
+    "screenshot_count": "225",
+    "event_frame_count": "60",
+    "shot_count": "57",
+    "key_moment_count": "57",
+    "original_asset_name": "original.mkv"
   }
 }
