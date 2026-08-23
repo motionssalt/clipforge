@@ -14,6 +14,7 @@ Stages recognized by the frontend contract:
     queued
     awaiting_torrent_selection
     stage_a_running
+    automatic_analysis_running
     awaiting_json_upload
     stage_b_queued
     stage_b_running

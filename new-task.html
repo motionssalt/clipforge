@@ -111,6 +111,39 @@ New task — ClipForge
           </div>
         </details>
 
+        <!-- Puter Automatic Mode tokens -->
+        <details class="fold" id="puter-keys-disclosure">
+          <summary>
+            <span class="fold-label">
+              <span class="fold-eyebrow">Automatic Mode credentials</span>
+              <strong>Puter auth tokens</strong>
+            </span>
+            <span class="fold-cue">Manage</span>
+          </summary>
+          <div class="fold-body">
+            <p class="hint">Stored as the <code>PUTER_AUTH_TOKENS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the bundled libsodium files are loaded locally). Multiple tokens are supported — Automatic Mode rotates to the next token only for authentication, rate-limit, or quota failures. The runner verifies a Claude-first model and GPT fallback against Puter’s live capability catalog before it starts analysis.</p>
+            <form id="puter-key-form" autocomplete="off">
+              <div class="field">
+                <label for="puter-key-input">Add a Puter auth token</label>
+                <div class="with-reveal">
+                  <input type="password" id="puter-key-input" name="puter_auth_token" placeholder="Puter auth token…" spellcheck="false" autocapitalize="off" autocomplete="off">
+                  <button type="button" id="puter-key-reveal" class="btn btn-quiet btn-sm" aria-pressed="false">Show</button>
+                </div>
+                <p class="hint">The raw token never touches the repo, logs, or artifacts. Only a masked fingerprint (first 4 + last 4 characters) is committed for display.</p>
+              </div>
+              <div class="row-actions">
+                <button type="submit" id="puter-key-add" class="btn btn-secondary">Add token</button>
+                <span id="puter-key-msg" class="inline-msg" aria-live="polite"></span>
+              </div>
+            </form>
+            <div class="mini-panel">
+              <div class="fold-eyebrow">Configured tokens</div>
+              <ul id="puter-keys-list" class="gemini-keys-list" aria-live="polite"></ul>
+              <p id="puter-keys-empty" class="hint">No Puter auth tokens configured yet.</p>
+            </div>
+          </div>
+        </details>
+
         <!-- Zernio publishing -->
         <details class="fold" id="zernio-settings-disclosure">
           <summary>
@@ -574,6 +607,7 @@ New task — ClipForge
 <script src="assets/vendor/libsodium.js" defer></script>
 <script src="assets/vendor/libsodium-wrappers.js" defer></script>
 <script src="torrent_metadata.js" defer></script>
+<script src="production-plan-contract.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

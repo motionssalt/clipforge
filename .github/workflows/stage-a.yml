@@ -47,9 +47,15 @@ on:
         required: false
         type: string
         default: "true"
+      automatic_mode:
+        description: "When true, replace only the manual external-agent production.json handoff with bounded Puter Automatic Mode analysis and then dispatch Stage B. Default false preserves the manual flow."
+        required: false
+        type: string
+        default: "false"
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   # Multi-task isolation: when a job slug is supplied, runs for the SAME
@@ -356,7 +362,8 @@ jobs:
             --message "Downloading source video" \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
             --extra "workflow_run_id=${{ github.run_id }}" \
-            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --extra "automatic_mode=${{ github.event.inputs.automatic_mode }}"
 
       - name: Commit initial status
         shell: bash
@@ -773,7 +780,10 @@ jobs:
               f.write("assets_json=" + json.dumps(out) + "\n")
           '
 
+      # Manual runs retain this exact release-to-external-agent handoff. The
+      # automatic branch below is opt-in and only replaces this one handoff.
       - name: Write awaiting_json_upload status
+        if: ${{ github.event.inputs.automatic_mode != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -803,7 +813,146 @@ jobs:
           JID: ${{ steps.jid.outputs.job_id }}
           ASSETS_JSON: ${{ steps.assets.outputs.assets_json }}
 
+      - name: Write automatic_analysis_running status
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "automatic_analysis_running" \
+            --message "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence." \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --release-url "${{ steps.assets.outputs.release_url }}" \
+            --extra "automatic_mode=true" \
+            --extra "automatic_analysis_result=jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json"
+
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          jid = os.environ["JID"]
+          assets = json.loads(os.environ["ASSETS_JSON"])
+          p = Path(f"jobs/{jid}/status.json")
+          data = json.loads(p.read_text())
+          data.setdefault("assets", {}).update(assets)
+          p.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+          PY
+        env:
+          JID: ${{ steps.jid.outputs.job_id }}
+          ASSETS_JSON: ${{ steps.assets.outputs.assets_json }}
+
+      - name: Commit automatic analysis start status
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.jid.outputs.job_id }}/status.json"
+          git commit -m "clipforge: job ${{ steps.jid.outputs.job_id }} automatic analysis running" || echo "nothing to commit"
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "automatic analysis start status push attempt $attempt failed — rebasing and retrying…" >&2
+            git pull --rebase --autostash
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "FATAL: could not persist automatic analysis start status." >&2
+            exit 1
+          fi
+
+      - name: Download released analysis assets for Automatic Mode
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          rm -rf work/automatic-release
+          mkdir -p work/automatic-release
+          gh release download "${{ steps.jid.outputs.release_tag }}" --repo "$GITHUB_REPOSITORY" \
+            --dir work/automatic-release \
+            --pattern '00_READ_THIS_FIRST.txt' \
+            --pattern 'transcript.json' \
+            --pattern 'scene_index.json' \
+            --pattern 'key_moments.json' \
+            --pattern 'screenshots.zip'
+          for required in 00_READ_THIS_FIRST.txt transcript.json scene_index.json key_moments.json screenshots.zip; do
+            test -s "work/automatic-release/$required"
+          done
+
+      - name: Run bounded Puter Automatic Mode analysis
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        env:
+          PUTER_AUTH_TOKENS: ${{ secrets.PUTER_AUTH_TOKENS }}
+        run: |
+          set -euo pipefail
+          # automatic_analysis.py deliberately emits no secret values. It uses
+          # only token indexes in safe failover messages and writes production
+          # JSON only after the shared browser/runner contract validates it.
+          python scripts/automatic_analysis.py \
+            --artifacts-dir work/automatic-release \
+            --output "jobs/${{ steps.jid.outputs.job_id }}/production.json" \
+            --result-path "jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json"
+
+      - name: Write automatic Stage B queued status
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "stage_b_queued" \
+            --message "Automatic analysis validated production.json. Dispatching the existing Stage B workflow." \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --release-url "${{ steps.assets.outputs.release_url }}" \
+            --extra "automatic_mode=true" \
+            --extra "automatic_analysis_result=jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json" \
+            --extra "production_ref=path:jobs/${{ steps.jid.outputs.job_id }}/production.json" \
+            --extra "original_asset_name=${ORIGINAL_ASSET_NAME}"
+
+      - name: Commit automatic production plan and status
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.jid.outputs.job_id }}/production.json" \
+                  "jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json" \
+                  "jobs/${{ steps.jid.outputs.job_id }}/status.json"
+          git commit -m "clipforge: automatic production plan for job ${{ steps.jid.outputs.job_id }}" || echo "nothing to commit"
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "automatic production plan push attempt $attempt failed — rebasing and retrying…" >&2
+            git pull --rebase --autostash
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "FATAL: could not persist automatic production plan and queued status." >&2
+            exit 1
+          fi
+
+      - name: Dispatch existing Stage B from validated automatic plan
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Resolve the default branch after the automatic production.json push,
+          # matching the browser's fresh-code Stage B dispatch behavior.
+          code_ref="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test -n "$code_ref"
+          gh workflow run stage-b.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f "job_id=${{ steps.jid.outputs.job_id }}" \
+            -f "production_ref=path:jobs/${{ steps.jid.outputs.job_id }}/production.json" \
+            -f "music_ref=" \
+            -f "code_ref=$code_ref"
+
       - name: Commit final status
+        if: ${{ github.event.inputs.automatic_mode != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -832,11 +981,18 @@ jobs:
       - name: On failure, write error status
         if: failure()
         shell: bash
+        env:
+          AUTOMATIC_MODE_INPUT: ${{ github.event.inputs.automatic_mode }}
         run: |
           set -euo pipefail
+          message="Stage A failed. See workflow run for logs."
+          if [ "$AUTOMATIC_MODE_INPUT" = "true" ]; then
+            message="Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category."
+          fi
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "error" \
-            --message "Stage A failed. See workflow run for logs." \
-            --release-tag "${{ steps.jid.outputs.release_tag }}" || true
+            --message "$message" \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --extra "automatic_mode=${AUTOMATIC_MODE_INPUT}" || true
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true

@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "note": "Masked fingerprints only. Raw Puter auth tokens live in the PUTER_AUTH_TOKENS repo secret and are never committed.",
+  "keys": [],
+  "updated_at_epoch": 0
+}

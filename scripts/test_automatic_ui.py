@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Regression checks for the Automatic Mode source-to-delivery workspace."""
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+HTML = (ROOT / "automatic.html").read_text(encoding="utf-8")
+APP = (ROOT / "app.js").read_text(encoding="utf-8")
+
+
+for required in (
+    '<body data-page="automatic">',
+    "Automatic Mode",
+    'id="stage-a-form"',
+    'id="video-url-input"',
+    'id="torrent-file-input"',
+    'id="focus-input"',
+    'id="start-stage-a"',
+    "Start Automatic Mode",
+    "whole-video highlight reels",
+    'id="status-section"',
+    'id="tasks-section"',
+    'id="handoff-block"',
+    'id="complete-block"',
+    'src="production-plan-contract.js"',
+    'src="app.js"',
+):
+    assert required in HTML, f"Automatic Mode page missing: {required}"
+
+for required in (
+    "if (PAGE === 'automatic' && !state.puterKeyMeta.length)",
+    "var automaticMode = PAGE === 'automatic';",
+    "automatic_mode: automaticMode ? 'true' : 'false'",
+    "automatic_mode: settings.automatic_mode === 'true' ? 'true' : 'false'",
+    "automatic_analysis_running",
+    "var page = PAGE === 'automatic' ? 'automatic.html' : 'task.html';",
+    "if (PAGE === 'task' || PAGE === 'automatic')",
+    "Automatic Mode is reading evidence, selecting one story thread, and validating production.json.",
+):
+    assert required in APP, f"Automatic Mode controller missing: {required}"
+
+print("PASS: Automatic Mode has a real source/focus launch form, Puter prerequisite, unattended dispatch flag, and continuous task-progress route")

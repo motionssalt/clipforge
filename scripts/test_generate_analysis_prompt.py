@@ -68,4 +68,43 @@ for required_phrase in (
 sample = 'write: "For a second,\n    it looks like he has lost. Then the result changes. He is stunned — and\n    triumphant."'
 assert sample in rendered
 assert "He misses,\n    looks at the result, and lifts the trophy" in rendered
-print("PASS: analysis prompt renders emotion-first, evidence-grounded narration guidance with a verified emotional-beat sample")
+
+# A missing focus is deliberately not historic whole-video mode. It must issue
+# an independent, evidence-first editorial constraint before any screenshots
+# are opened and must explicitly prohibit a broad highlight reel.
+with tempfile.TemporaryDirectory(prefix="clipforge_no_focus_prompt_test_") as temp_dir:
+    no_focus_output = Path(temp_dir) / "00_READ_THIS_FIRST.txt"
+    subprocess.run(
+        [
+            sys.executable,
+            str(GENERATOR),
+            "600",
+            "100",
+            str(no_focus_output),
+            "--target-duration",
+            "180",
+            "--job-id",
+            "20260824-no-focus",
+        ],
+        check=True,
+    )
+    no_focus_rendered = no_focus_output.read_text(encoding="utf-8")
+
+for required_phrase in (
+    "NO OPERATOR FOCUS — SELF-SELECT ONE COMPELLING STORY THREAD FIRST",
+    "Read transcript.json in timeline order.",
+    "Read key_moments.json before using vision.",
+    "`emotional_score`, `priority`, dialogue, and candidate ranking",
+    "Choose EXACTLY ONE strongest supported scene, exchange, or story thread.",
+    "State that self-selected thread",
+    "open any screenshot composite, you must create your own narrow editorial focus",
+    "Every screenshot opened, cut selected, and voiceover_text line must serve",
+    "evenly sampled episode summary or a whole-video highlight reel",
+    "Do not collect one high-priority beat from each subplot or act.",
+    "A broad recap or evenly sampled highlight reel is prohibited.",
+):
+    assert required_phrase in no_focus_rendered, f"missing no-focus single-thread guidance: {required_phrase}"
+
+assert "FOCUS DIRECTIVE — READ AND OBEY BEFORE ANYTHING ELSE BELOW" not in no_focus_rendered
+assert "(none — whole video considered)" not in no_focus_rendered
+print("PASS: analysis prompt preserves emotion-first guidance and requires one self-selected thread in no-focus mode")

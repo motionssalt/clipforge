@@ -34,7 +34,7 @@ def test_prompt_contains_dedicated_source_grounded_opening_hook_strategy() -> No
     for phrase in (
         "OPENING HOOK — FIRST-CUT WRITING",
         "curiosity-inducing, surprising,",
-        "dangerous, absurd, emotional, ironic, or high-stakes truth.",
+        "dangerous,\n        absurd, emotional, ironic, or high-stakes truth.",
         "Do NOT begin by mechanically summarizing the first chronological event",
         "HOOK → minimal context → escalation → payoff",
         "Write several candidate opening lines internally",
@@ -73,8 +73,7 @@ def test_commentary_rhythm_techniques_are_integrated_and_demonstrated() -> None:
         "short cause-and-effect chains",
         "withhold the explanation for one beat",
         "recurring stakes-language",
-        "Stay externally observational",
-        "Do not write internal monologue",
+        "Do not invent an unsupported private monologue, motive, or backstory.",
     ):
         assert phrase in rendered, f"missing commentary technique guidance: {phrase}"
 

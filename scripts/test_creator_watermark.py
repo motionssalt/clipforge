@@ -88,7 +88,9 @@ def test_frontend_has_a_safe_repository_file_writer() -> None:
     assert "if (current && current.sha) body.sha = current.sha" in APP
     assert "return gh(endpoint, { method: 'PUT', body: body })" in APP
     assert "Invalid repository file path." in APP
-    assert 'src="app.js?v=' in HTML
+    # The redesigned static workspace deliberately uses a plain same-origin
+    # app.js reference; cache-busted historic builds remain acceptable too.
+    assert 'src="app.js"' in HTML or 'src="app.js?v=' in HTML
 
 
 if __name__ == "__main__":

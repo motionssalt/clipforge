@@ -18,7 +18,10 @@
   var PAGE = document.body.getAttribute('data-page') || 'tasks';
 
   function taskDetailHref(jobId) {
-    return 'task.html?job=' + encodeURIComponent(jobId);
+    // Keep Automatic Mode's source-to-delivery progress in its own workspace;
+    // all other pages retain the normal reusable Task detail destination.
+    var page = PAGE === 'automatic' ? 'automatic.html' : 'task.html';
+    return page + '?job=' + encodeURIComponent(jobId);
   }
 
   function openTaskPage(jobId) {
@@ -60,6 +63,14 @@
   var GEMINI_SECRET_NAME = 'GEMINI_API_KEYS';
   var GEMINI_KEYS_META_PATH = 'branding/gemini_keys.json';
   var GEMINI_KEY_MIN_LEN = 20;
+
+  /* Puter Automatic Mode tokens follow the same browser-to-GitHub sealed-box
+   * path as Gemini keys. `branding/puter_keys.json` contains masked
+   * fingerprints only; raw tokens exist only in browser memory and the
+   * encrypted `PUTER_AUTH_TOKENS` Actions secret. */
+  var PUTER_SECRET_NAME = 'PUTER_AUTH_TOKENS';
+  var PUTER_KEYS_META_PATH = 'branding/puter_keys.json';
+  var PUTER_TOKEN_MIN_LEN = 20;
 
   /* Zernio publishing. The API key is stored only as an encrypted Actions
    * secret. All non-secret preferences and provider snapshots are committed
@@ -124,6 +135,13 @@
     'Create GitHub Release with analysis bundle':                           'Publishing analysis release',
     'Resolve release asset URLs':                                           'Resolving release asset URLs',
     'Write awaiting_json_upload status':                                    'Publishing awaiting-upload status',
+    'Write automatic_analysis_running status':                             'Starting Automatic Mode analysis',
+    'Commit automatic analysis start status':                              'Committing Automatic Mode status',
+    'Download released analysis assets for Automatic Mode':                'Loading analysis evidence',
+    'Run bounded Puter Automatic Mode analysis':                           'Analyzing selected story thread',
+    'Write automatic Stage B queued status':                               'Queuing validated production plan',
+    'Commit automatic production plan and status':                         'Committing automatic production plan',
+    'Dispatch existing Stage B from validated automatic plan':             'Starting Stage B production',
     'Commit final status':                                                  'Committing final status',
 
     // ---- Stage B pipeline ----
@@ -216,6 +234,14 @@
     geminiKeyMeta: [],         // [{fingerprint, added_at_epoch}]
     geminiKeyMetaSha: null,    // blob sha of gemini_keys.json
 
+    /* Puter tokens use the same ephemeral-only plaintext policy as Gemini.
+     * GitHub never returns Actions secret values, therefore a reload retains
+     * only masked metadata and any new save warns before it replaces unknown
+     * tokens already held by GitHub. */
+    puterTokens: null,          // Array<string> | null (current browser session only)
+    puterKeyMeta: [],           // [{fingerprint, added_at_epoch}]
+    puterKeyMetaSha: null,      // blob sha of puter_keys.json
+
     /* Zernio state contains no raw API key. `zernioSettings` is persistent
      * repo configuration; `zernioAccounts` is a server-side discovery
      * snapshot, and `zernioQueue` is the durable ClipForge schedule ledger. */
@@ -304,6 +330,8 @@
     'watermark-form', 'watermark-name-input', 'watermark-save', 'watermark-msg', 'watermark-current',
     'gemini-keys-disclosure', 'gemini-key-form', 'gemini-key-input', 'gemini-key-reveal',
     'gemini-key-add', 'gemini-key-msg', 'gemini-keys-list', 'gemini-keys-empty',
+    'puter-keys-disclosure', 'puter-key-form', 'puter-key-input', 'puter-key-reveal',
+    'puter-key-add', 'puter-key-msg', 'puter-keys-list', 'puter-keys-empty',
     'zernio-settings-disclosure', 'zernio-settings-state', 'zernio-key-form', 'zernio-key-input', 'zernio-key-reveal', 'zernio-key-save', 'zernio-key-clear', 'zernio-key-msg',
     'zernio-settings-form', 'zernio-enabled-input', 'zernio-auto-publish-input', 'zernio-auto-mode-select', 'zernio-timezone-input', 'zernio-interval-input', 'zernio-time-input', 'zernio-queue-depth-input', 'zernio-start-mode-select', 'zernio-custom-start-field', 'zernio-custom-start-input', 'zernio-refresh-accounts', 'zernio-accounts-hint', 'zernio-accounts-list', 'zernio-accounts-msg', 'zernio-settings-save', 'zernio-settings-msg',
     'zernio-publish-panel', 'zernio-publishing-badge', 'zernio-publish-summary', 'zernio-publish-controls', 'zernio-job-mode-select', 'zernio-job-schedule-field', 'zernio-job-schedule-input', 'zernio-job-targets', 'zernio-publish-job', 'zernio-publish-msg', 'zernio-posts-list',
@@ -637,6 +665,7 @@
     probeRepo();
     loadWatermark();
     loadGeminiKeysMeta();
+    loadPuterKeysMeta();
     loadZernioSettings();
     loadAudioLibrary();
     refreshTasksFromRepo({ silent: true });
@@ -1068,6 +1097,277 @@
     el['gemini-key-form'].addEventListener('submit', function (e) {
       e.preventDefault();
       addGeminiKey();
+    });
+  }
+
+  /* ------------------------------------------------ Puter Automatic Mode auth */
+
+  /* Log-safe masked identifier. Raw Puter auth tokens are never persisted in
+   * the repository or written to UI messages. */
+  function puterFingerprint(token) {
+    var s = String(token || '');
+    if (s.length <= 8) return '\u2026';
+    return s.slice(0, 4) + '\u2026' + s.slice(-4);
+  }
+
+  function validatePuterToken(token) {
+    var s = String(token || '').trim();
+    if (!s) return 'Enter a Puter auth token.';
+    if (s.length < PUTER_TOKEN_MIN_LEN) return 'That token looks too short to be a Puter auth token.';
+    if (/\s/.test(s)) return 'Puter auth tokens must not contain whitespace.';
+    return null;
+  }
+
+  async function loadPuterKeysMeta() {
+    if (!isConfigured()) return;
+    state.puterKeyMeta = [];
+    state.puterKeyMetaSha = null;
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + PUTER_KEYS_META_PATH + '?ref=' + REF + '&_=' + Date.now());
+      var parsed;
+      try {
+        parsed = JSON.parse(b64decodeUtf8(file.content));
+      } catch (e) {
+        setMsg(el['puter-key-msg'], PUTER_KEYS_META_PATH + ' is not valid JSON — add a token to repair it.', 'bad');
+        renderPuterKeys();
+        return;
+      }
+      state.puterKeyMetaSha = file.sha || null;
+      var list = Array.isArray(parsed.keys) ? parsed.keys : [];
+      state.puterKeyMeta = list.filter(function (entry) { return entry && entry.fingerprint; })
+        .map(function (entry) {
+          return {
+            fingerprint: String(entry.fingerprint),
+            added_at_epoch: Number(entry.added_at_epoch) || 0
+          };
+        });
+    } catch (err) {
+      if (err.status === 404) {
+        // No tokens have been saved yet.
+      } else if (err.name === 'AuthError' || err.name === 'RateLimitError') {
+        handleGlobalError(err);
+        return;
+      } else {
+        setMsg(el['puter-key-msg'], 'Could not load token list: ' + err.message, 'bad');
+      }
+    }
+    renderPuterKeys();
+  }
+
+  function renderPuterKeys() {
+    var list = el['puter-keys-list'];
+    var empty = el['puter-keys-empty'];
+    if (!list || !empty) return;
+    list.innerHTML = '';
+    if (!state.puterKeyMeta.length) {
+      show(empty);
+      return;
+    }
+    hide(empty);
+    state.puterKeyMeta.forEach(function (entry) {
+      var li = document.createElement('li');
+      li.className = 'gemini-key-row';
+      var fp = document.createElement('span');
+      fp.className = 'gemini-key-fp';
+      fp.textContent = entry.fingerprint;
+      var added = document.createElement('span');
+      added.className = 'gemini-key-added';
+      added.textContent = entry.added_at_epoch
+        ? 'added ' + new Date(entry.added_at_epoch * 1000).toLocaleDateString()
+        : '';
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn btn-small';
+      del.textContent = 'Delete';
+      del.addEventListener('click', function () { deletePuterToken(entry.fingerprint); });
+      li.appendChild(fp);
+      li.appendChild(added);
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  async function persistPuterTokens(rawTokens, metaEntries) {
+    var pk = await gh('/repos/' + state.owner + '/' + state.repo +
+      '/actions/secrets/public-key');
+    if (!pk || !pk.key || !pk.key_id) {
+      throw new Error('GitHub did not return an Actions public key for this repo.');
+    }
+    if (rawTokens.length === 0) {
+      try {
+        await gh('/repos/' + state.owner + '/' + state.repo +
+          '/actions/secrets/' + encodeURIComponent(PUTER_SECRET_NAME),
+          { method: 'DELETE' });
+      } catch (err) {
+        if (err.status !== 404) throw err;
+      }
+    } else {
+      var joined = rawTokens.join('\n');
+      var encrypted = await encryptForActionsSecret(joined, pk.key);
+      await gh('/repos/' + state.owner + '/' + state.repo +
+        '/actions/secrets/' + encodeURIComponent(PUTER_SECRET_NAME), {
+          method: 'PUT',
+          body: { encrypted_value: encrypted, key_id: pk.key_id }
+        });
+    }
+
+    var doc = {
+      version: 1,
+      note: 'Masked fingerprints only. Raw Puter auth tokens live in the PUTER_AUTH_TOKENS repo secret and are never committed.',
+      keys: metaEntries,
+      updated_at_epoch: Math.floor(Date.now() / 1000)
+    };
+    await putRepoFile(PUTER_KEYS_META_PATH,
+      b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
+      'clipforge: update Puter auth token metadata (masked fingerprints only)');
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + PUTER_KEYS_META_PATH + '?ref=' + REF + '&_=' + Date.now());
+      state.puterKeyMetaSha = file.sha || null;
+    } catch (_) { /* best effort */ }
+  }
+
+  async function addPuterToken() {
+    if (state.busy) return;
+    if (!isConfigured()) {
+      setMsg(el['puter-key-msg'], 'Save your GitHub settings above first.', 'bad');
+      return;
+    }
+    var raw = (el['puter-key-input'].value || '').trim();
+    var problem = validatePuterToken(raw);
+    if (problem) {
+      setMsg(el['puter-key-msg'], problem, 'bad');
+      return;
+    }
+    var fp = puterFingerprint(raw);
+    if (state.puterKeyMeta.some(function (entry) { return entry.fingerprint === fp; })) {
+      setMsg(el['puter-key-msg'], 'A token with that fingerprint is already configured.', 'bad');
+      return;
+    }
+
+    state.busy = true;
+    el['puter-key-add'].disabled = true;
+    setMsg(el['puter-key-msg'], 'Encrypting and uploading…', null);
+
+    try {
+      // GitHub secrets replace rather than append. Keep all plaintext only
+      // while this page is open; otherwise require explicit confirmation
+      // before unknown secret values could be overwritten.
+      var raws, metaEntries;
+      var knownFps = (state.puterTokens || []).map(puterFingerprint);
+      var haveAllKnown = state.puterKeyMeta.every(function (entry) {
+        return knownFps.indexOf(entry.fingerprint) !== -1;
+      });
+
+      if (state.puterKeyMeta.length === 0) {
+        raws = [raw];
+        metaEntries = [{ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) }];
+      } else if (haveAllKnown && state.puterTokens && state.puterTokens.length) {
+        raws = state.puterTokens.slice();
+        raws.push(raw);
+        metaEntries = state.puterKeyMeta.slice();
+        metaEntries.push({ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) });
+      } else {
+        var confirmed = window.confirm(
+          'Adding this token from a fresh browser session will OVERWRITE the existing PUTER_AUTH_TOKENS secret with only this new token.\n\n' +
+          'GitHub never returns secret values, so the site cannot combine the new token with previously saved tokens unless you enter them again in this session.\n\n' +
+          'Existing fingerprints that will be discarded:\n  • ' +
+          state.puterKeyMeta.map(function (entry) { return entry.fingerprint; }).join('\n  • ') +
+          '\n\nProceed?'
+        );
+        if (!confirmed) {
+          setMsg(el['puter-key-msg'], 'Cancelled.', null);
+          state.busy = false;
+          el['puter-key-add'].disabled = false;
+          return;
+        }
+        raws = [raw];
+        metaEntries = [{ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) }];
+      }
+
+      await persistPuterTokens(raws, metaEntries);
+      state.puterTokens = raws;
+      state.puterKeyMeta = metaEntries;
+      el['puter-key-input'].value = '';
+      renderPuterKeys();
+      setMsg(el['puter-key-msg'], 'Token added. Automatic Mode will use it on the next analysis run.', 'ok');
+    } catch (err) {
+      setMsg(el['puter-key-msg'], 'Add failed: ' + err.message, 'bad');
+      handleGlobalError(err, 'puter-key');
+    }
+
+    state.busy = false;
+    el['puter-key-add'].disabled = false;
+  }
+
+  async function deletePuterToken(fingerprint) {
+    if (state.busy) return;
+    if (!isConfigured()) {
+      setMsg(el['puter-key-msg'], 'Save your GitHub settings above first.', 'bad');
+      return;
+    }
+
+    var known = state.puterTokens || [];
+    var knownFps = known.map(puterFingerprint);
+    var isTargetKnown = knownFps.indexOf(fingerprint) !== -1;
+    var otherUnknown = state.puterKeyMeta.filter(function (entry) {
+      return entry.fingerprint !== fingerprint && knownFps.indexOf(entry.fingerprint) === -1;
+    });
+
+    if (otherUnknown.length > 0) {
+      var ok = window.confirm(
+        'Deleting ' + fingerprint + ' now will REBUILD the PUTER_AUTH_TOKENS secret from the tokens this session still knows. ' +
+        'GitHub never returns secret values, so the following tokens will also be removed from the secret unless you re-enter them first:\n  • ' +
+        otherUnknown.map(function (entry) { return entry.fingerprint; }).join('\n  • ') +
+        '\n\nProceed?'
+      );
+      if (!ok) return;
+    }
+
+    state.busy = true;
+    setMsg(el['puter-key-msg'], 'Deleting ' + fingerprint + '…', null);
+
+    try {
+      var newRaws = known.filter(function (token) { return puterFingerprint(token) !== fingerprint; });
+      var newMeta;
+      if (otherUnknown.length > 0) {
+        newMeta = state.puterKeyMeta.filter(function (entry) {
+          return entry.fingerprint !== fingerprint && knownFps.indexOf(entry.fingerprint) !== -1;
+        });
+      } else {
+        newMeta = state.puterKeyMeta.filter(function (entry) { return entry.fingerprint !== fingerprint; });
+      }
+
+      await persistPuterTokens(newRaws, newMeta);
+      state.puterTokens = newRaws;
+      state.puterKeyMeta = newMeta;
+      renderPuterKeys();
+      setMsg(el['puter-key-msg'],
+        isTargetKnown
+          ? 'Deleted ' + fingerprint + '.'
+          : 'Deleted ' + fingerprint + ' from the fingerprint list.',
+        'ok');
+    } catch (err) {
+      setMsg(el['puter-key-msg'], 'Delete failed: ' + err.message, 'bad');
+      handleGlobalError(err, 'puter-key');
+    }
+
+    state.busy = false;
+  }
+
+  if (el['puter-key-reveal']) {
+    el['puter-key-reveal'].addEventListener('click', function () {
+      var revealed = el['puter-key-input'].type === 'text';
+      el['puter-key-input'].type = revealed ? 'password' : 'text';
+      el['puter-key-reveal'].textContent = revealed ? 'Show' : 'Hide';
+      el['puter-key-reveal'].setAttribute('aria-pressed', revealed ? 'false' : 'true');
+    });
+  }
+  if (el['puter-key-form']) {
+    el['puter-key-form'].addEventListener('submit', function (e) {
+      e.preventDefault();
+      addPuterToken();
     });
   }
 
@@ -1687,8 +1987,10 @@
       stage_a_inputs: {
         whisper_model: inputs.whisper_model,
         language: inputs.language,
-        target_duration_seconds: inputs.target_duration_seconds,
-        focus: inputs.focus
+                  target_duration_seconds: inputs.target_duration_seconds,
+          focus: inputs.focus,
+          automatic_mode: inputs.automatic_mode
+
       }
     };
     var status = torrentSelectionStatus(jobId, selection);
@@ -1751,8 +2053,10 @@
         job_id: state.jobId,
         whisper_model: settings.whisper_model || 'base',
         language: settings.language || 'auto',
-        target_duration_seconds: String(settings.target_duration_seconds || '120'),
-        focus: settings.focus || ''
+                  target_duration_seconds: String(settings.target_duration_seconds || '120'),
+          focus: settings.focus || '',
+          automatic_mode: settings.automatic_mode === 'true' ? 'true' : 'false'
+
       };
       var dispatchedAt = new Date();
       await gh('/repos/' + state.owner + '/' + state.repo +
@@ -1784,13 +2088,20 @@
 
   async function startStageA() {
     if (state.busy) return;
-    if (!isConfigured()) {
-      setMsg(el['stage-a-msg'], 'Save your settings first.', 'bad');
-      openSettings(true);
-      return;
-    }
+          if (!isConfigured()) {
+        setMsg(el['stage-a-msg'], 'Save your settings first.', 'bad');
+        openSettings(true);
+        return;
+      }
+      if (PAGE === 'automatic' && !state.puterKeyMeta.length) {
+        setMsg(el['stage-a-msg'], 'Automatic Mode needs at least one Puter auth token. Add one in Repository settings first.', 'bad');
+        openSettings(true);
+        if (el['puter-keys-disclosure']) el['puter-keys-disclosure'].open = true;
+        return;
+      }
 
-    var videoUrl = el['video-url-input'].value.trim();
+      var videoUrl = el['video-url-input'].value.trim();
+
     var torrentFile = state.torrentFile;
     var isMagnetLink = /^magnet:\?/i.test(videoUrl);
     if (!videoUrl && !torrentFile) {
@@ -1816,15 +2127,17 @@
     var focusRaw = (el['focus-input'] && el['focus-input'].value) || '';
     var focus = focusRaw.replace(/^\s+|\s+$/g, '');
 
-    var inputs = {
-      video_url: videoUrl,
-      job_id: slug,
-      whisper_model: el['whisper-model-select'].value,
-      language: el['language-input'].value.trim() || 'auto',
-      target_duration_seconds: String(targetDurInt),
-      focus: focus,
-      torrent_file_index: torrentFile ? String(state.torrentVideoIndex) : ''
-    };
+      var automaticMode = PAGE === 'automatic';
+      var inputs = {
+        video_url: videoUrl,
+        job_id: slug,
+        whisper_model: el['whisper-model-select'].value,
+        language: el['language-input'].value.trim() || 'auto',
+        target_duration_seconds: String(targetDurInt),
+        focus: focus,
+        torrent_file_index: torrentFile ? String(state.torrentVideoIndex) : '',
+        automatic_mode: automaticMode ? 'true' : 'false'
+      };
 
     // Torrent ingestion deliberately has a persistent selection substage.
     // Uploading the manifest creates the job but never dispatches Stage A;
@@ -1865,7 +2178,7 @@
     el['start-stage-a'].disabled = true;
     setMsg(el['stage-a-msg'], isMagnetLink
       ? 'Retrieving magnet metadata and preparing video selection…'
-      : 'Dispatching stage-a.yml…', null);
+      : (automaticMode ? 'Dispatching Automatic Mode…' : 'Dispatching stage-a.yml…'), null);
     dismissBanner('dispatch');
     dismissBanner('generic');
 
@@ -2275,6 +2588,7 @@
     queued:                      'is-running',
     awaiting_torrent_selection:  'is-await',
     stage_a_running:             'is-running',
+    automatic_analysis_running:  'is-running',
     awaiting_json_upload:        'is-await',
     stage_b_queued:      'is-running',
     stage_b_running:     'is-running',
@@ -2288,6 +2602,7 @@
     queued:                     { label: 'queued', cls: 'stage-running' },
     awaiting_torrent_selection: { label: 'choose torrent video', cls: 'stage-await' },
     stage_a_running:            { label: 'stage a', cls: 'stage-running' },
+    automatic_analysis_running: { label: 'automatic analysis', cls: 'stage-running' },
     awaiting_json_upload:       { label: 'awaiting production.json', cls: 'stage-await' },
     stage_b_queued:      { label: 'stage b queued', cls: 'stage-running' },
     stage_b_running:     { label: 'stage b', cls: 'stage-running' },
@@ -2417,7 +2732,7 @@
     // fetchWorkflowStepsFor(jobId, <that task's run id>) — one task's bar
     // can therefore never show another task's progress.
     var taskActive = stage === 'queued' || stage === 'stage_a_running' ||
-                     stage === 'stage_b_queued' || stage === 'stage_b_running' ||
+                     stage === 'automatic_analysis_running' || stage === 'stage_b_queued' || stage === 'stage_b_running' ||
                      stage === 'stage_b_cancelling';
     var cardSteps = state.workflowSteps[jobId] || null;
     var cardProg = deriveProgress(cardSteps);
@@ -3240,7 +3555,7 @@
 
   function isKnownStage(stage) {
     return ['queued', 'awaiting_torrent_selection', 'stage_a_running',
-      'awaiting_json_upload', 'stage_b_queued', 'stage_b_running',
+      'automatic_analysis_running', 'awaiting_json_upload', 'stage_b_queued', 'stage_b_running',
       'stage_b_cancelling', 'cancelled', 'complete', 'error'].indexOf(stage) !== -1;
   }
 
@@ -3328,6 +3643,10 @@
     stage_a_running: {
       label: 'stage a', cls: 'stage-running', spin: true,
       text: 'Stage A running — downloading, transcribing, extracting frames'
+    },
+    automatic_analysis_running: {
+      label: 'automatic analysis', cls: 'stage-running', spin: true,
+      text: 'Automatic Mode is reading evidence, selecting one story thread, and validating production.json.'
     },
     awaiting_json_upload: {
       label: 'awaiting production.json', cls: 'stage-await', spin: false,
@@ -3466,8 +3785,8 @@
     }
 
     // Expiry countdown from awaiting_json_upload onwards.
-    var showCountdown = ['awaiting_torrent_selection', 'awaiting_json_upload',
-      'stage_b_running', 'complete'].indexOf(stage) !== -1;
+    var showCountdown = ['awaiting_torrent_selection', 'automatic_analysis_running', 'awaiting_json_upload',
+      'stage_b_queued', 'stage_b_running', 'complete'].indexOf(stage) !== -1;
     if (showCountdown && Number(s.expires_at_epoch) > 0) startCountdown(Number(s.expires_at_epoch));
     else stopCountdown();
 
@@ -3502,6 +3821,7 @@
     'queued',
     'awaiting_torrent_selection',
     'stage_a_running',
+    'automatic_analysis_running',
     'awaiting_json_upload',
     'stage_b_queued',
     'stage_b_running',
@@ -4256,39 +4576,40 @@
 
   function isInt(v) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v; }
 
-  /** Full client-side contract check from §6.5. */
+  /**
+   * Validate against schemas/production_plan_contract.json, the portable rule
+   * source also consumed by scripts/production_plan_contract.py in Automatic
+   * Mode. This intentionally preserves optional metadata, legacy narration,
+   * and unknown-field compatibility for existing manual production plans.
+   */
   function validateCuts(doc) {
+    var contract = window.ClipForgeProductionPlanContract;
+    if (!contract || contract.version !== 1) {
+      return [window.ClipForgeProductionPlanContractError ||
+        'The shared production-plan validation contract is unavailable. Refresh and try again.'];
+    }
     var errors = [];
-
-    if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+    if (contract.top_level.must_be_object &&
+        (!doc || typeof doc !== 'object' || Array.isArray(doc))) {
       return ['Top level must be a JSON object.'];
     }
 
-    // Optional one-per-job title (generated by the same agent step that
-    // produces the cuts; see 00_READ_THIS_FIRST.txt). Validated when
-    // present so a malformed title is caught before upload, never required
-    // so older production.json files keep working.
-    if (doc.title !== undefined &&
+    var titleRules = contract.title || {};
+    if (titleRules.optional && doc.title !== undefined &&
         (typeof doc.title !== 'string' || doc.title.trim() === '')) {
       errors.push('`title` must be a non-empty string when present (or omit it entirely).');
     }
 
-    // Optional social-media metadata (generated by the same agent step that
-    // produces the cuts and title; see the POSTING PACKAGE METADATA section
-    // of 00_READ_THIS_FIRST.txt). Stage B writes these into the final ZIP's
-    // metadata.txt alongside the finished video. Validated when present so a
-    // malformed array is caught before upload; NEVER required so older
-    // production.json files that pre-date the posting package still upload
-    // cleanly.
-    function checkStringArray(key, min, max, opts) {
+    function checkStringArray(key, opts) {
       var val = doc[key];
-      if (val === undefined) return;
+      if (opts.optional && val === undefined) return;
       if (!Array.isArray(val)) {
         errors.push('`' + key + '` must be a JSON array of strings when present (or omit it entirely).');
         return;
       }
-      if (val.length < min || val.length > max) {
-        errors.push('`' + key + '` must contain between ' + min + ' and ' + max + ' entries when present (got ' + val.length + ').');
+      if (val.length < opts.minimum_items || val.length > opts.maximum_items) {
+        errors.push('`' + key + '` must contain between ' + opts.minimum_items + ' and ' +
+          opts.maximum_items + ' entries when present (got ' + val.length + ').');
       }
       var seen = {};
       val.forEach(function (entry, i) {
@@ -4298,45 +4619,54 @@
           return;
         }
         var trimmed = entry.trim();
-        if (opts && opts.requireHash && trimmed.charAt(0) !== '#') {
-          errors.push(at + ' must start with `#` (got ' + JSON.stringify(entry) + ').');
+        if (opts.require_prefix && trimmed.indexOf(opts.require_prefix) !== 0) {
+          errors.push(at + ' must start with `' + opts.require_prefix + '` (got ' + JSON.stringify(entry) + ').');
         }
-        if (opts && opts.requireHash && /\s/.test(trimmed)) {
+        if (opts.forbid_whitespace && /\s/.test(trimmed)) {
           errors.push(at + ' must not contain whitespace inside a hashtag.');
         }
-        if (opts && opts.forbidHash && trimmed.charAt(0) === '#') {
-          errors.push(at + ' must not start with `#` (YouTube tags are plain keywords).');
+        if (opts.forbid_prefix && trimmed.indexOf(opts.forbid_prefix) === 0) {
+          errors.push(at + ' must not start with `' + opts.forbid_prefix + '` (YouTube tags are plain keywords).');
         }
-        if (opts && opts.forbidComma && trimmed.indexOf(',') !== -1) {
+        if (opts.forbid_substring && trimmed.indexOf(opts.forbid_substring) !== -1) {
           errors.push(at + ' must not contain a comma inside a single tag.');
         }
-        var lower = trimmed.toLowerCase();
-        if (Object.prototype.hasOwnProperty.call(seen, lower)) {
+        var comparison = opts.case_insensitive_unique ? trimmed.toLowerCase() : trimmed;
+        if (Object.prototype.hasOwnProperty.call(seen, comparison)) {
           errors.push(at + ' duplicates an earlier entry (' + JSON.stringify(entry) + ').');
         } else {
-          seen[lower] = true;
+          seen[comparison] = true;
         }
       });
     }
-    checkStringArray('hashtags', 5, 8, { requireHash: true });
-    checkStringArray('youtube_tags', 10, 20, { forbidHash: true, forbidComma: true });
+    Object.keys(contract.string_arrays || {}).forEach(function (key) {
+      checkStringArray(key, contract.string_arrays[key]);
+    });
 
-    if (!isInt(doc.video_duration_seconds) || doc.video_duration_seconds <= 0) {
-      errors.push('`video_duration_seconds` must be a positive integer.');
-    }
-    if (!isInt(doc.target_total_duration_seconds) || doc.target_total_duration_seconds <= 0) {
-      errors.push('`target_total_duration_seconds` must be a positive integer.');
-    }
+    var scalarRules = contract.scalar_fields || {};
+    Object.keys(scalarRules).forEach(function (key) {
+      var rule = scalarRules[key];
+      if (rule.required && (!isInt(doc[key]) || doc[key] <= 0)) {
+        errors.push('`' + key + '` must be a positive integer.');
+      }
+    });
+
+    var cutRules = contract.cuts || {};
     if (!Array.isArray(doc.cuts)) {
       errors.push('`cuts` must be an array.');
       return errors;
     }
-    if (doc.cuts.length === 0) {
+    if (doc.cuts.length < cutRules.minimum_items) {
       errors.push('`cuts` is empty — at least one cut is required.');
       return errors;
     }
 
-    var duration = isInt(doc.video_duration_seconds) ? doc.video_duration_seconds : null;
+    var durationKey = 'video_duration_seconds';
+    var duration = isInt(doc[durationKey]) ? doc[durationKey] : null;
+    var startField = cutRules.start_field;
+    var endField = cutRules.end_field;
+    var voiceoverField = cutRules.voiceover_field;
+    var legacyVoiceoverField = cutRules.legacy_voiceover_field;
     var prevEnd = null;
 
     doc.cuts.forEach(function (cut, i) {
@@ -4345,36 +4675,34 @@
         errors.push(at + ' must be an object.');
         return;
       }
-      if (!isInt(cut.start_seconds)) errors.push(at + '.start_seconds must be an integer.');
-      if (!isInt(cut.end_seconds)) errors.push(at + '.end_seconds must be an integer.');
-      // voiceover_text is the final, ready-to-speak line for this cut. The
-      // legacy raw_narration field is accepted as a fallback so in-flight
-      // pre-rename cuts.json files still validate and run.
-      var vo = (typeof cut.voiceover_text === 'string' && cut.voiceover_text.trim() !== '')
-        ? cut.voiceover_text
-        : cut.raw_narration;
+      if (!isInt(cut[startField])) errors.push(at + '.' + startField + ' must be an integer.');
+      if (!isInt(cut[endField])) errors.push(at + '.' + endField + ' must be an integer.');
+      var vo = (typeof cut[voiceoverField] === 'string' && cut[voiceoverField].trim() !== '')
+        ? cut[voiceoverField]
+        : cut[legacyVoiceoverField];
       if (typeof vo !== 'string' || vo.trim() === '') {
-        errors.push(at + '.voiceover_text must be a non-empty string (legacy raw_narration accepted).');
+        errors.push(at + '.' + voiceoverField + ' must be a non-empty string (legacy ' +
+          legacyVoiceoverField + ' accepted).');
       }
-      if (!isInt(cut.start_seconds) || !isInt(cut.end_seconds)) return;
+      if (!isInt(cut[startField]) || !isInt(cut[endField])) return;
 
-      if (cut.end_seconds <= cut.start_seconds) {
-        errors.push(at + ': end_seconds (' + cut.end_seconds +
-          ') must be greater than start_seconds (' + cut.start_seconds + ').');
+      if (cutRules.end_must_be_after_start && cut[endField] <= cut[startField]) {
+        errors.push(at + ': ' + endField + ' (' + cut[endField] +
+          ') must be greater than ' + startField + ' (' + cut[startField] + ').');
       }
-      if (cut.start_seconds < 0) {
-        errors.push(at + ': start_seconds (' + cut.start_seconds + ') is below 0.');
+      if (cut[startField] < cutRules.start_minimum) {
+        errors.push(at + ': ' + startField + ' (' + cut[startField] + ') is below ' + cutRules.start_minimum + '.');
       }
-      if (duration !== null && cut.end_seconds > duration) {
-        errors.push(at + ': end_seconds (' + cut.end_seconds +
-          ') exceeds video_duration_seconds (' + duration + ').');
+      if (duration !== null && cut[endField] > duration) {
+        errors.push(at + ': ' + endField + ' (' + cut[endField] +
+          ') exceeds ' + durationKey + ' (' + duration + ').');
       }
-      if (prevEnd !== null && cut.start_seconds < prevEnd) {
-        errors.push(at + ': starts at ' + cut.start_seconds +
+      if (cutRules.strictly_sorted_non_overlapping && prevEnd !== null && cut[startField] < prevEnd) {
+        errors.push(at + ': starts at ' + cut[startField] +
           ' which overlaps or precedes the previous cut ending at ' + prevEnd +
           ' — cuts must not overlap and must be sorted ascending.');
       }
-      prevEnd = cut.end_seconds;
+      prevEnd = cut[endField];
     });
 
     return errors;
@@ -4918,6 +5246,7 @@
     probeRepo();
     loadWatermark();
     loadGeminiKeysMeta();
+    loadPuterKeysMeta();
     loadZernioSettings();
     loadAudioLibrary();
 
@@ -4928,7 +5257,7 @@
     startTasksTimer();
 
     var requested = null;
-    if (PAGE === 'task') {
+    if (PAGE === 'task' || PAGE === 'automatic') {
       requested = new URLSearchParams(window.location.search).get('job');
       if (requested) localStorage.setItem(LS.activeJob, requested);
     }

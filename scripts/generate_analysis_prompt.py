@@ -128,6 +128,59 @@ conflict, the FOCUS DIRECTIVE wins.
 """
 
 
+NO_FOCUS_DIRECTIVE = """\
+################################################################################
+##  NO OPERATOR FOCUS — SELF-SELECT ONE COMPELLING STORY THREAD FIRST
+################################################################################
+
+No focus was supplied by the operator. This is NOT permission to make a broad,
+evenly sampled episode summary or a whole-video highlight reel. Before you
+open any screenshot composite, you must create your own narrow editorial focus
+from the evidence in the supplied artifacts.
+
+Follow this order without shortcuts:
+
+  1. Read transcript.json in timeline order. Identify concrete candidate
+     scenes, exchanges, reversals, confrontations, reveals, decisions, or
+     turning points with a beginning, development, and payoff.
+
+  2. Read key_moments.json before using vision. Use its existing
+     `emotional_score`, `priority`, dialogue, and candidate ranking only as
+     evidence to compare those transcript-supported candidates. Do not invent
+     a new criterion or select a beat merely because it is isolated spectacle.
+
+  3. Choose EXACTLY ONE strongest supported scene, exchange, or story thread.
+     It can span several adjacent moments when they form one coherent arc, but
+     it must be nameable as one throughline. State that self-selected thread
+     in one short line at the top of your response before production.json.
+
+  4. Only after that choice, inspect scene_index.json and selectively open the
+     composites that cover this thread's setup, development, and payoff. Do
+     not open unrelated windows just to represent other parts of the video.
+
+From the selection onward, treat your self-selected thread exactly like a hard
+operator focus:
+
+  - Every screenshot opened, cut selected, and voiceover_text line must serve
+    that one thread and advance its single emotional/story arc.
+  - Reject the tempting alternative of choosing the strongest beat from each
+    act or evenly sampling the source from beginning to end. That produces a
+    diluted highlight reel and is a failure for this run.
+  - When the source has several independently strong subplots, choose only the
+    best-supported one; do not balance them or pad to the target duration with
+    unrelated material. A shorter coherent cut is better than a wider one.
+  - Continue to use only grounded transcript/index evidence. Do not invent
+    connective events, motives, dialogue, or visual details.
+
+The target duration remains about {target_duration}s, but it is subordinate to
+the one self-selected story thread. Everything below this box is general
+ClipForge guidance; read it through that thread, not through the whole video.
+
+################################################################################
+
+"""
+
+
 TEMPLATE = """\
 {focus_block}================================================================================
   READ THIS FIRST — Source-video cut-selection instructions for the AI agent
@@ -1119,11 +1172,11 @@ def main() -> None:
     focus_text = _resolve_focus(args)
     has_focus = bool(focus_text)
 
-    # Compose the focus-conditional blocks. When focus is empty, every
-    # focus_* substitution is "" and the prompt reads exactly as the
-    # pre-feature version. When focus is set, a strong FOCUS DIRECTIVE
-    # block is prepended and inline reminders are woven through the
-    # working-order / cut-selection / narration / constraints sections.
+    # Compose the focus-conditional blocks. Supplied focus preserves its
+    # operator-controlled directive. Empty focus gets a distinct directive that
+    # requires a transcript + key_moments-grounded, self-selected SINGLE story
+    # thread before vision or cut selection; it never falls back to a broad
+    # whole-video/highlight-reel interpretation.
     if has_focus:
         focus_block = FOCUS_DIRECTIVE.format(
             focus_text=focus_text,
@@ -1178,16 +1231,49 @@ def main() -> None:
             "isolation."
         )
     else:
-        focus_block = ""
-        focus_scope_clause = ""
-        focus_metadata = "(none — whole video considered)"
-        step1_focus_note = ""
-        step2_focus_note = ""
-        indexes_focus_note = ""
-        cut_step1_focus_note = ""
-        cut_step1_skip_focus_note = ""
-        narration_focus_note = ""
-        constraints_focus_note = ""
+        focus_block = NO_FOCUS_DIRECTIVE.format(
+            target_duration=args.target_duration,
+        )
+        focus_scope_clause = " — after selecting one self-supported story thread first"
+        focus_metadata = "(none supplied — agent must self-select one compelling supported story thread)"
+        step1_focus_note = (
+            "\n     NO-FOCUS ADDITION: before inspecting screenshots, map transcript "
+            "candidates and choose one concrete scene/exchange/turning point with "
+            "a coherent setup, development, and payoff. This choice becomes the "
+            "run's hard throughline."
+        )
+        step2_focus_note = (
+            "\n     NO-FOCUS ADDITION: use `emotional_score`, `priority`, dialogue, "
+            "and candidate ranking to compare transcript-supported candidates, then "
+            "commit to exactly ONE. Do not collect one high-priority beat from each "
+            "subplot or act."
+        )
+        indexes_focus_note = (
+            "\n\n  NO-FOCUS ADDITION (both indexes):\n"
+            "    - After choosing one supported thread from transcript + key_moments, "
+            "open and use only the shots/moments that build its setup, development, "
+            "or payoff. Do not use indexes to assemble a whole-video montage."
+        )
+        cut_step1_focus_note = (
+            "\n\n        NO-FOCUS ADDITION: candidate cuts must be the subset that "
+            "serves your one self-selected supported story thread, not the "
+            "independently strongest beats across the video."
+        )
+        cut_step1_skip_focus_note = (
+            "\n          - Belong to another subplot, side character, running gag, "
+            "or isolated spectacle outside the one self-selected thread, even if "
+            "they are independently strong."
+        )
+        narration_focus_note = (
+            "\n            NO-FOCUS ADDITION: narrate only the one self-selected "
+            "thread's arc from setup to payoff. A broad recap or evenly sampled "
+            "highlight reel is prohibited."
+        )
+        constraints_focus_note = (
+            "\n  - Every cut in this production.json must serve the one self-selected "
+            "thread declared at the top of the response. Do not broaden into an "
+            "evenly sampled whole-video/episode highlight reel."
+        )
 
     content = TEMPLATE.format(
         focus_block=focus_block,
