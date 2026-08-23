@@ -390,6 +390,47 @@ def post_summary(payload: Any) -> dict[str, Any]:
     }
 
 
+TERMINAL_POST_STATUSES = {"published", "failed", "cancelled"}
+
+
+def refresh_post_status(api_key: str, post_id: str, *, opener: Callable[..., Any] = urlopen) -> dict[str, Any]:
+    """Read the authoritative current status for one Zernio post."""
+    return post_summary(request_json(
+        "GET", "/posts/" + quote(str(post_id), safe=""), api_key, opener=opener,
+    ))
+
+
+def reconcile_post_status(
+    api_key: str,
+    summary: dict[str, Any],
+    *,
+    mode: str,
+    opener: Callable[..., Any] = urlopen,
+    sleep: Callable[[float], None] = time.sleep,
+    poll_interval_seconds: float = 5.0,
+    max_attempts: int = 12,
+) -> dict[str, Any]:
+    """Refresh an immediate post until every platform target is terminal."""
+    if mode != "publish_now" or not summary.get("post_id"):
+        return summary
+    current = summary
+    for attempt in range(max(1, int(max_attempts))):
+        targets = current.get("platforms") if isinstance(current.get("platforms"), list) else []
+        statuses = [str(target.get("status") or "unknown").lower()
+                    for target in targets if isinstance(target, dict)]
+        if statuses and all(status in TERMINAL_POST_STATUSES for status in statuses):
+            return current
+        if attempt + 1 >= max(1, int(max_attempts)):
+            break
+        sleep(max(0.0, float(poll_interval_seconds)))
+        try:
+            current = refresh_post_status(api_key, str(summary["post_id"]), opener=opener)
+        except ZernioError as error:
+            current = dict(current)
+            current["refresh_error"] = str(error)[:300]
+    return current
+
+
 def _existing_post_on_duplicate(api_key: str, error: ZernioError, *, opener: Callable[..., Any]) -> dict[str, Any] | None:
     existing_id = ((error.details.get("details") or {}).get("existingPostId") if isinstance(error.details, dict) else None)
     if error.status != 409 or not existing_id:
@@ -440,8 +481,15 @@ def publish_video(
         try:
             response = request_json("POST", "/posts", api_key, body=payload, request_id=per_platform_id, opener=opener)
             summary = post_summary(response)
+            summary = reconcile_post_status(
+                api_key, summary, mode=mode, opener=opener,
+            )
         except ZernioError as err:
             summary = _existing_post_on_duplicate(api_key, err, opener=opener)
+            if summary is not None:
+                summary = reconcile_post_status(
+                    api_key, summary, mode=mode, opener=opener,
+                )
             if summary is None:
                 # Preserve the failure beside any successful platform rather
                 # than abandoning the entire multi-platform publishing state.

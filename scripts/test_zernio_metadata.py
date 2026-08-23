@@ -17,6 +17,7 @@ from zernio_publish import (
     post_summary,
     production_metadata,
     publish_video,
+    reconcile_post_status,
     write_publishing_state,
 )
 
@@ -109,6 +110,30 @@ class _Response:
         return self
     def __exit__(self, *_args):
         return False
+
+
+def test_reconcile_refreshes_tiktok_until_terminal() -> None:
+    responses = iter([
+        {"post": {"_id": "tt-async", "status": "published", "platforms": [
+            {"platform": "tiktok", "accountId": "tt-1", "status": "published", "platformPostId": "live-1"},
+        ]}},
+    ])
+    requests = []
+    def opener(req, timeout=0):
+        requests.append((req.get_method(), req.full_url))
+        return _Response(next(responses))
+    initial = {"post_id": "tt-async", "status": "publishing", "platforms": [
+        {"platform": "tiktok", "accountId": "tt-1", "status": "publishing"},
+    ]}
+    sleeps = []
+    result = reconcile_post_status(
+        "sk_test_key_not_logged", initial, mode="publish_now", opener=opener,
+        sleep=sleeps.append, poll_interval_seconds=0, max_attempts=3,
+    )
+    assert result["status"] == "published"
+    assert result["platforms"][0]["status"] == "published"
+    assert requests == [("GET", "https://zernio.com/api/v1/posts/tt-async")]
+    assert sleeps == [0]
 
 
 def test_publish_flow_isolated_per_platform_and_idempotent() -> None:
