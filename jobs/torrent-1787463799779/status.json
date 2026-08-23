@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-torrent-1787463799779/final.mp4"
   },
   "created_at_epoch": 1787463799,
-  "updated_at_epoch": 1787472231,
+  "updated_at_epoch": 1787476822,
   "expires_at_epoch": 1787506999,
   "extra": {
     "torrent_selection_path": "jobs/torrent-1787463799779/torrent-selection.json",
@@ -39,8 +39,8 @@
     "mode": "publish_now",
     "scheduled_for": null,
     "timezone": "UTC",
-    "idempotency_key": "clipforge-auto-torrent-1787463799779-32625991311",
-    "updated_at_epoch": 1787472231,
+    "idempotency_key": "clipforge-torrent-1787463799779-mt5linut",
+    "updated_at_epoch": 1787476821,
     "media": {
       "filename": "final.mp4",
       "size_bytes": 40650042,
@@ -84,9 +84,9 @@
     },
     "posts": [
       {
-        "post_id": "6a8aa952a28cb6b968433a2f",
+        "post_id": "6a8abb36ca48d57da7cf0e1f",
         "status": "published",
-        "scheduled_for": "2026-08-23T08:03:28.451Z",
+        "scheduled_for": "2026-08-23T09:19:48.144Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -101,17 +101,17 @@
               "username": ".chimeravfx"
             },
             "status": "published",
-            "platformPostId": "v_pub_url~v2-1.7677134349821659153",
+            "platformPostId": "v_pub_url~v2-1.7677153866554804241",
             "platformPostUrl": ""
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-auto-torrent-1787463799779-32625991311-tiktok"
+        "request_id": "clipforge-torrent-1787463799779-mt5linut-tiktok"
       },
       {
-        "post_id": "6a8aa96291a8026add02ab91",
+        "post_id": "6a8abb51ca48d57da7cf146c",
         "status": "published",
-        "scheduled_for": "2026-08-23T08:03:44.486Z",
+        "scheduled_for": "2026-08-23T09:20:15.130Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -126,12 +126,12 @@
               "username": "chimera_vfx"
             },
             "status": "published",
-            "platformPostId": "rBYEOLiG6og",
-            "platformPostUrl": "https://www.youtube.com/watch?v=rBYEOLiG6og"
+            "platformPostId": "1ogmaUBOwIg",
+            "platformPostUrl": "https://www.youtube.com/watch?v=1ogmaUBOwIg"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-torrent-1787463799779-32625991311-youtube"
+        "request_id": "clipforge-torrent-1787463799779-mt5linut-youtube"
       }
     ],
     "metadata_source": "jobs/torrent-1787463799779/production.json"
