@@ -1,0 +1,72 @@
+{
+  "video_duration_seconds": 52,
+  "title": "A Lonely Search Across Forbidden Lands",
+  "hashtags": [
+    "#sintel",
+    "#fantasy",
+    "#animation",
+    "#quest",
+    "#cinematic",
+    "#shortfilm"
+  ],
+  "youtube_tags": [
+    "sintel",
+    "open movie",
+    "blender animation",
+    "sintel trailer",
+    "fantasy quest",
+    "gatekeepers",
+    "lonely journey",
+    "animated short film",
+    "searching for someone",
+    "desert journey"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 10,
+      "end_seconds": 17,
+      "voiceover_text": "An ancient gatekeeper confronts a red-haired traveler, demanding to know her purpose. She meets his gaze, carrying the quiet pressure of a long journey.",
+      "keywords": [
+        {
+          "word": "gatekeeper",
+          "color": "#FFD700"
+        },
+        {
+          "word": "traveler",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 17,
+      "end_seconds": 28,
+      "voiceover_text": "She reveals she is searching for someone lost. Pushing through the ruined streets, her determination deepens despite the danger.",
+      "keywords": [
+        {
+          "word": "searching",
+          "color": "#4A90E2"
+        },
+        {
+          "word": "determination",
+          "color": "#50E3C2"
+        }
+      ]
+    },
+    {
+      "start_seconds": 37,
+      "end_seconds": 52,
+      "voiceover_text": "Trekking alone through endless desert dunes, her solitary quest unfolds. She carries years of isolation, driven by the hope of finding what was lost.",
+      "keywords": [
+        {
+          "word": "desert",
+          "color": "#F5A623"
+        },
+        {
+          "word": "solitude",
+          "color": "#BD10E0"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 30
+}

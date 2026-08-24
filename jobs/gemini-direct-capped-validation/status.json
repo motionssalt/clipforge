@@ -1,7 +1,7 @@
 {
   "job_id": "gemini-direct-capped-validation",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
+  "stage": "stage_b_queued",
+  "message": "Automatic analysis validated production.json. Dispatching the existing Stage B workflow.",
   "release_tag": "clipforge-gemini-direct-capped-validation",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-gemini-direct-capped-validation",
   "assets": {
@@ -13,12 +13,16 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/transcript.json"
   },
   "created_at_epoch": 1787543342,
-  "updated_at_epoch": 1787543358,
+  "updated_at_epoch": 1787543427,
   "expires_at_epoch": 1787586542,
   "extra": {
     "workflow_run_id": "32687648780",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32687648780",
     "automatic_mode": "true",
-    "automatic_analysis_result": "jobs/gemini-direct-capped-validation/automatic_analysis.json"
+    "automatic_analysis_result": "jobs/gemini-direct-capped-validation/automatic_analysis.json",
+    "production_ref": "path:jobs/gemini-direct-capped-validation/production.json",
+    "music_ref": "",
+    "music_source": "none",
+    "original_asset_name": "original.mp4"
   }
 }
