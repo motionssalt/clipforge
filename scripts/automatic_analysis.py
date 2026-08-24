@@ -84,7 +84,10 @@ def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
     error_value = payload.get("error", "")
     if isinstance(error_value, dict):
         error_value = " ".join(str(error_value.get(key, "")) for key in ("code", "type", "message"))
-    haystack = str(error_value).lower()
+    haystack = " ".join(str(payload.get(key, "")) for key in ("code", "message", "stage", "error"))
+    if isinstance(error_value, str):
+        haystack += " " + error_value
+    haystack = haystack.lower()
     if status in (401, 403) or "auth" in haystack or "invalid token" in haystack or "unauthor" in haystack:
         return "authentication"
     # Puter can return 402 for a model-specific payment/spend threshold even
@@ -97,6 +100,8 @@ def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
         return "rate_or_quota"
     if status in (400, 404, 422) or "model" in haystack:
         return "model_or_request"
+    if "network" in haystack or "failed to fetch" in haystack or "timed out" in haystack:
+        return "network"
     if status is not None and status >= 500:
         return "provider_server"
     return "provider_request"

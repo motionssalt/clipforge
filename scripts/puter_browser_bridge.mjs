@@ -49,15 +49,17 @@ function withTimeout(promise, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-function errorShape(error) {
+function errorShape(error, stage = 'browser_call') {
   const object = error && typeof error === 'object' ? error : {};
   const response = object.response && typeof object.response === 'object' ? object.response : {};
-  const status = Number(object.status || object.statusCode || response.status || 0) || null;
+  const responseData = response.data ?? object.data ?? object.body ?? object.error ?? null;
+  const status = Number(object.status || object.statusCode || response.status || responseData?.status || 0) || null;
   return safeValue({
     status,
-    code: object.code || object.error?.code || null,
-    message: object.message || object.error?.message || String(error || 'Puter.js browser call failed.'),
-    error: object.error || null,
+    code: object.code || object.error?.code || responseData?.code || null,
+    message: object.message || object.error?.message || responseData?.message || String(error || 'Puter.js browser call failed.'),
+    error: responseData,
+    stage,
   });
 }
 
@@ -112,7 +114,7 @@ async function listModels(token) {
     }), 'model discovery');
     return { ok: true, models: safeValue(models) };
   } catch (error) {
-    return { ok: false, error: errorShape(error) };
+    return { ok: false, error: errorShape(error, 'list_models') };
   }
 }
 
@@ -139,7 +141,7 @@ async function chat(token, payload) {
     }, payload), 'chat request');
     return { ok: true, message: messageShape(result) };
   } catch (error) {
-    return { ok: false, error: errorShape(error) };
+    return { ok: false, error: errorShape(error, 'chat') };
   }
 }
 
