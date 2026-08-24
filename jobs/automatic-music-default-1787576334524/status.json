@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-music-default-1787576334524",
-  "stage": "stage_b_queued",
-  "message": "Automatic analysis validated production.json. Dispatching the existing Stage B workflow.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-automatic-music-default-1787576334524",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-music-default-1787576334524",
   "assets": {
@@ -13,13 +13,13 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-music-default-1787576334524/transcript.json"
   },
   "created_at_epoch": 1787576451,
-  "updated_at_epoch": 1787576596,
+  "updated_at_epoch": 1787576668,
   "expires_at_epoch": 1787619651,
   "extra": {
-    "workflow_run_id": "32730024464",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32730024464",
+    "workflow_run_id": "32730440579",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32730440579",
     "automatic_mode": "true",
-    "workflow_phase": "stage_a",
+    "workflow_phase": "stage_b",
     "automatic_analysis_result": "jobs/automatic-music-default-1787576334524/automatic_analysis.json",
     "production_ref": "path:jobs/automatic-music-default-1787576334524/production.json",
     "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a",
