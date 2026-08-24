@@ -79,6 +79,22 @@ class ProviderRequestError(AutomaticAnalysisError):
         super().__init__(f"Puter provider request failed ({status_text}; {category}).")
 
 
+def safe_browser_error_summary(payload: dict[str, Any], category: str) -> str:
+    """Return limited, redacted browser-failure metadata suitable for Actions logs."""
+    status = payload.get("status")
+    status_text = str(status) if isinstance(status, int) else "none"
+    code = re.sub(r"[^A-Za-z0-9_.-]", "", str(payload.get("code") or "none"))[:80] or "none"
+    stage = re.sub(r"[^A-Za-z0-9_.-]", "", str(payload.get("stage") or "browser_call"))[:80] or "browser_call"
+    message = str(payload.get("message") or "")[:320]
+    message = re.sub(r"(?i)bearer\\s+[^\\s\"',}]+", "Bearer [REDACTED]", message)
+    message = re.sub(
+        r"(?i)((?:token|authorization|secret|password|api[_-]?key|cookie|session)\\s*[=:]\\s*)[^,\\s}]+",
+        r"\\1[REDACTED]",
+        message,
+    )
+    return "Puter.js browser failure: status=" + status_text + " category=" + category + " stage=" + stage + " code=" + code + " message=" + (message or "[none]")
+
+
 def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
     """Classify failures from status and generic error labels, never log payload."""
     error_value = payload.get("error", "")
@@ -457,6 +473,7 @@ class PuterBrowserGateway:
             status = status if isinstance(status, int) else None
             category = provider_error_category(status, error_payload)
             error = ProviderRequestError(status, category)
+            safe_log(safe_browser_error_summary(error_payload, category))
             if not token_failure_should_rotate(status, category):
                 raise error
             last_error = error
