@@ -521,6 +521,11 @@ def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
     )
 
 
+def model_supports_temperature(model: str) -> bool:
+    """Puter's GPT-5.6 Terra route rejects OpenAI-style temperature controls."""
+    return not model.startswith("openai/gpt-5.6")
+
+
 def run_tool_agent(gateway: PuterBrowserGateway, model: str, tools: EvidenceTools, seed: str) -> tuple[dict[str, Any], str, int, int]:
     """Run one model with strict tool protocol and at most one validation correction."""
     messages: list[dict[str, Any]] = [
@@ -532,14 +537,16 @@ def run_tool_agent(gateway: PuterBrowserGateway, model: str, tools: EvidenceTool
         {"role": "user", "content": agent_seed(seed, tools.composites.keys())},
     ]
     for turn in range(1, MAX_TOOL_TURNS + 1):
-        message = gateway.chat({
+        request = {
             "model": model,
             "messages": messages,
             "tools": tool_specs(),
             "tool_choice": "auto",
-            "temperature": 0.2,
             "max_tokens": 6000,
-        })
+        }
+        if model_supports_temperature(model):
+            request["temperature"] = 0.2
+        message = gateway.chat(request)
         calls = normalize_tool_calls(message)
         messages.append({
             "role": "assistant",
@@ -567,13 +574,15 @@ def run_tool_agent(gateway: PuterBrowserGateway, model: str, tools: EvidenceTool
                 "Validation errors:\n- " + "\n- ".join(errors)
             )
             messages.append({"role": "user", "content": correction_prompt})
-            corrected = gateway.chat({
+            correction_request = {
                 "model": model,
                 "messages": messages,
                 "tool_choice": "none",
-                "temperature": 0,
                 "max_tokens": 6000,
-            })
+            }
+            if model_supports_temperature(model):
+                correction_request["temperature"] = 0
+            corrected = gateway.chat(correction_request)
             if normalize_tool_calls(corrected):
                 raise AutomaticAnalysisError("Automatic analysis ignored the bounded correction rule by requesting more tools.")
             corrected_document, corrected_canonical = extract_json_object(corrected.get("content"))

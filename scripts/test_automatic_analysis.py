@@ -20,6 +20,7 @@ from automatic_analysis import (
     PuterBrowserGateway,
     ToolProtocolError,
     provider_error_category,
+    model_supports_temperature,
     discover_compatible_models,
     parse_tokens,
     run_analysis,
@@ -102,6 +103,8 @@ assert discover_compatible_models(CATALOG, "google/gemini-3.6-flash", "openai/gp
 assert validate_production_plan(VALID_PLAN) == []
 assert validate_production_plan({**VALID_PLAN, "cuts": []}) == ["`cuts` is empty — at least one cut is required."]
 assert provider_error_category(None, {"code": "upstream_failed", "message": "All AI providers failed"}) == "provider_server"
+assert model_supports_temperature("google/gemini-3.6-flash") is True
+assert model_supports_temperature("openai/gpt-5.6-terra") is False
 
 
 with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
@@ -168,7 +171,9 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     def fallback_handler(token: str, payload: dict[str, Any]) -> dict[str, Any]:
         del token
         if payload["model"] == "google/gemini-3.6-flash":
+            assert "temperature" in payload
             return {"ok": False, "error": {"status": 402, "code": "payment_required"}}
+        assert "temperature" not in payload, "GPT-5.6 Terra rejects the temperature parameter"
         fallback_index = len([call for call in fallback_bridge.calls if call[0] == "chat" and call[2].get("model") == "openai/gpt-5.6-terra"])
         if fallback_index == 1:
             return tool_message("fallback-1", "read_transcript")
