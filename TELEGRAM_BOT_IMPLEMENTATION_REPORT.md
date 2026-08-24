@@ -2,7 +2,7 @@
 
 **Author:** Manus AI  
 **Scope:** A new Cloudflare Workers Telegram operator interface for ClipForge.  
-**Implementation status:** The shared bot was previously published and deployed; the legacy-settings and torrent-routing update is pending publication and deployment validation.
+**Implementation status:** The shared bot and the legacy-settings/torrent-routing update are published and deployed.
 
 ## Outcome
 
@@ -67,7 +67,7 @@ The final operator-facing deployment guide is [`TELEGRAM_BOT_SETUP.md`](TELEGRAM
 | Bot access scope | Restricted to private chats; this is a security hardening measure for credential and clone isolation. |
 | Torrent manifest upload | The bot accepts a non-empty `.torrent` document up to 1 MB only while a new Manual or Automatic source is expected. It uploads raw bytes only to `jobs/<job-id>/source.torrent`, starts the existing Stage A selection substage with no file index, reads `torrent-selection.json`, and dispatches a user-selected, workflow-validated 1-based index. It does not parse torrent metadata or download media in the Worker. |
 | Automatic Mode backend | Remains the current direct-Gemini Action path. The earlier FreeLLMAPI experiment remains removed and is not referenced by this bot. |
-| Cloudflare deployment | The shared Worker, production KV binding, webhook, and command menu were previously configured and validated. This update requires a fresh scoped deployment token because earlier credentials were exposed and have been removed from the workspace. |
+| Cloudflare deployment | The update was deployed to the existing shared Worker without changing its KV binding or secret bindings. The public health endpoint returned `ok`, and an unauthenticated webhook request remained rejected with HTTP `401`. |
 
 ## Validation
 
@@ -82,7 +82,7 @@ The final operator-facing deployment guide is [`TELEGRAM_BOT_SETUP.md`](TELEGRAM
 
 ## Publication status
 
-The shared-bot baseline was published to `motionssalt/clipforge` and deployed successfully by authenticated GitHub REST updates and a Cloudflare Worker code deployment. The current legacy-settings and torrent-routing update remains local until it is committed, published using a newly rotated GitHub token, and deployed with a newly rotated scoped Cloudflare token. A code-only deployment preserves the Worker’s existing secret bindings; it must be followed by `/health` and protected-webhook validation.
+The legacy-settings and torrent-routing update was published to `motionssalt/clipforge` at commit `1955a0b41453134c1070e630041103c8a31df709` and deployed to the existing shared Worker. The published code includes the settings migration guard, raw-byte bounded torrent intake, persistent Stage A video selection, documentation, and regression coverage. The deployment preserved the existing KV binding and Worker secret bindings. Post-deployment validation returned `ok` from `/health`, while a `POST /webhook` without Telegram’s secret header returned HTTP `401`.
 
 ## References
 
