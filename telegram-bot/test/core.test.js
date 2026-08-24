@@ -146,6 +146,13 @@ test('source and command helpers retain the intended operator contract', () => {
   assert.equal(__test.normalizeFocus('-'), '');
 });
 
+test('music and torrent inline-button labels are bounded by UTF-8 bytes', () => {
+  const label = __test.telegramButtonText('𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a');
+  assert.ok(new TextEncoder().encode(label).length <= 60);
+  assert.match(label, /…$/);
+  assert.equal(__test.telegramButtonText('CRY_FOR_ME_FUNK.m4a'), 'CRY_FOR_ME_FUNK.m4a');
+});
+
 test('a staged torrent task remains resumable after returning to the home menu and is not presented as dispatched', () => {
   const staged = { flow: 'manual_focus', pending: { mode: 'manual', source: 'path:jobs/manual-example/source.torrent', jobId: 'manual-example' } };
   assert.equal(__test.hasResumablePendingTask(staged), true);

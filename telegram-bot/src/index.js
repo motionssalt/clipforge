@@ -26,6 +26,19 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
+function telegramButtonText(value, maximumBytes = 60) {
+  const text = String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim() || 'Unnamed track';
+  const encoder = new TextEncoder();
+  if (encoder.encode(text).length <= maximumBytes) return text;
+  const suffix = '…';
+  let output = '';
+  for (const character of text) {
+    if (encoder.encode(output + character + suffix).length > maximumBytes) break;
+    output += character;
+  }
+  return `${output || 'Track'}${suffix}`;
+}
+
 function redact(value) {
   return String(value || '')
     .replace(/(?:ghp|github_pat)_[A-Za-z0-9_]{12,}/g, '[redacted]')
@@ -317,7 +330,7 @@ async function chooseLibrary(env, chatId) {
   const state = await getState(env, chatId);
   state.pending.musicOptions = tracks;
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, 'Choose a library track for this task.', { replyMarkup: buttons(tracks.map((track, index) => [{ text: track.name.slice(0, 48), callback_data: `music:track:${index}` }])) });
+  await sendMessage(env, chatId, 'Choose a library track for this task.', { replyMarkup: buttons(tracks.map((track, index) => [{ text: telegramButtonText(track.name), callback_data: `music:track:${index}` }])) });
 }
 
 async function selectMusic(env, chatId, choice) {
@@ -569,7 +582,7 @@ async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
   const rows = candidates.slice(page * TORRENT_CANDIDATES_PER_PAGE, (page + 1) * TORRENT_CANDIDATES_PER_PAGE).map((candidate) => {
     const index = Number(candidate && candidate.index);
     if (!Number.isInteger(index) || index < 1) return null;
-    const name = String(candidate.path || `Video ${index}`).replace(/\s+/g, ' ').slice(0, 40);
+    const name = telegramButtonText(candidate.path || `Video ${index}`, 50);
     return [{ text: `${index}. ${name}`, callback_data: `torrentpick:${label}:${index}` }];
   }).filter(Boolean);
   if (totalPages > 1) {
@@ -796,4 +809,4 @@ export default {
   }
 };
 
-export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatStatus, hasResumablePendingTask, homeMenu, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
+export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
