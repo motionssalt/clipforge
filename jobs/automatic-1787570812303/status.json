@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787570812303",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-automatic-1787570812303",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787570812303",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/original.mp4",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/clipforge-automatic-1787570812303-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787570812303/final.mp4"
   },
   "created_at_epoch": 1787570932,
-  "updated_at_epoch": 1787571080,
+  "updated_at_epoch": 1787571196,
   "expires_at_epoch": 1787614132,
   "extra": {
     "workflow_run_id": "32722192951",
@@ -24,6 +26,9 @@
     "production_ref": "path:jobs/automatic-1787570812303/production.json",
     "music_ref": "",
     "music_source": "none",
-    "original_asset_name": "original.mp4"
+    "original_asset_name": "original.mp4",
+    "title": "A Solitary Wanderer's Relentless Quest Through Peril",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
