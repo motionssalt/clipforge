@@ -1,0 +1,84 @@
+{
+  "video_duration_seconds": 888,
+  "title": "Sintel's Quest Ends in Devastating Tragedy",
+  "hashtags": [
+    "#sintel",
+    "#openmovie",
+    "#animation",
+    "#dragon",
+    "#tragedy",
+    "#storytelling"
+  ],
+  "youtube_tags": [
+    "sintel",
+    "sintel full movie",
+    "sintel dragon scene",
+    "sintel story explained",
+    "blender open movie",
+    "animated short film",
+    "sintel ending reaction",
+    "scales dragon",
+    "animated movie recap",
+    "emotional animation"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 101,
+      "end_seconds": 160,
+      "voiceover_text": "Exhausted and bruised, Sintel collapses in a remote hut, where an old shaman hands her a bowl of warm soup. She hesitates, then drinks eagerly as he questions why a lone traveler would venture so unprepared into the dangerous lands of the gatekeepers. He calls her a fool for traveling alone, but Sintel remains quiet and guarded. When pressed about her purpose, she confesses that she is searching for someone very dear, a kindred spirit who was taken from her. The shaman observes her determination, noting how unusual such a quest is for a loner. Sintel reflects on her solitary past, admitting that she has been on her own for as long as she can remember. This quest is not a mere task for her; it is her entire reason for surviving. As she sits by the flickering firelight, her mind drifts back to the moment her journey truly began. She remembers the wounded creature she rescued in her youth, the tiny dragon she named Scales. That bond changed her forever, giving her life a purpose she never knew before.",
+      "keywords": [
+        {
+          "word": "collapses",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "searching",
+          "color": "#4D94FF"
+        },
+        {
+          "word": "Scales",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 205,
+      "end_seconds": 265,
+      "voiceover_text": "In the quiet sanctuary of her memories, Sintel cradles the injured young dragon in her arms. Its wing is bloody and broken, but she gently binds the wound and comforts the helpless creature. Over time, a deep trust grows between them, transforming her lonely existence into a shared life of joy and warmth. They train together, play in the snow, and become inseparable companions. But that peace is shattered when an adult dragon swoops down from the storm and tears Scales away from her. Sintel is overwhelmed by grief and fury, swearing to search the ends of the earth to bring her companion back. Years pass as she endures freezing blizzards, treacherous mountains, and ruthless bandits, driven solely by her devotion. Every step brings her closer to the dragon's lair, hardening her resolve into deadly focus. She prepares her blade for the ultimate fight, knowing that failure means losing Scales forever. As she approaches the dark cavern, the bitter air grows heavy with heat and ash. Sintel draws her weapon, ready to strike down whatever beast stands in her path.",
+      "keywords": [
+        {
+          "word": "cradles",
+          "color": "#4D94FF"
+        },
+        {
+          "word": "shattered",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "devotion",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 271,
+      "end_seconds": 332,
+      "voiceover_text": "Crossing into the shadows of the dragon's lair, Sintel faces the towering monster in a violent, desperate battle. The massive beast roars and lunges, forcing her to dodge flames and razor-sharp talons. Her heart pounds with hatred for the monster that stole her friend. Sintel lunges forward and drives her blade deep into the dragon's chest. The colossal creature collapses to the ground, gasping for its final breaths. Sintel stands triumphant over her fallen enemy, her vengeance finally complete. But as she steps closer to inspect the dying beast, the dragon reaches out with a gentle, hesitant motion. It does not attack; instead, it gazes at her with a look of quiet recognition. Sintel freezes as she notices a familiar scar on its wing, the exact wound she had patched years ago. Horrified, the painful truth crashes down upon her. The terrifying monster she just struck down is Scales, grown massive over the years. Her triumph instantly turns to crushing agony. Sintel drops her weapon and cradles the dying dragon's head, weeping uncontrollably as the life drains from her beloved companion. She realized too late that her obsession with revenge cost her the only friend she ever had.",
+      "keywords": [
+        {
+          "word": "triumphant",
+          "color": "#FFD700"
+        },
+        {
+          "word": "Horrified",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "agony",
+          "color": "#9B51E0"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 180
+}
