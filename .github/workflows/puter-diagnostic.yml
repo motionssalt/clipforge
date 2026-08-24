@@ -1,0 +1,47 @@
+name: Puter diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      primary_model:
+        description: Exact primary model string to probe
+        required: true
+        default: google/gemini-3.6-flash
+      fallback_model:
+        description: Exact fallback model string to probe
+        required: true
+        default: openai/gpt-5.6-terra
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Redacted provider diagnostic
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Probe live catalog and model responses
+        env:
+          PUTER_AUTH_TOKENS: ${{ secrets.PUTER_AUTH_TOKENS }}
+        run: |
+          set -euo pipefail
+          python scripts/puter_402_diagnostic.py \
+            --model "${{ inputs.primary_model }}" \
+            --model "${{ inputs.fallback_model }}" \
+            --output puter-diagnostic.json
+
+      - name: Upload redacted diagnostic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: puter-diagnostic-redacted
+          path: puter-diagnostic.json
+          if-no-files-found: error
+          retention-days: 1
