@@ -1,12 +1,12 @@
 {
   "job_id": "automatic-duration-1787573337483",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "error",
+  "message": "Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category.",
   "release_tag": "clipforge-automatic-duration-1787573337483",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787573458,
-  "updated_at_epoch": 1787573458,
+  "updated_at_epoch": 1787573461,
   "expires_at_epoch": 1787616658,
   "extra": {
     "workflow_run_id": "32725534471",
