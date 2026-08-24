@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-duration-1787574179590",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
   "release_tag": "clipforge-automatic-duration-1787574179590",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-duration-1787574179590",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/transcript.json"
   },
   "created_at_epoch": 1787574293,
-  "updated_at_epoch": 1787575248,
+  "updated_at_epoch": 1787575335,
   "expires_at_epoch": 1787617493,
   "extra": {
     "workflow_run_id": "32728187766",
