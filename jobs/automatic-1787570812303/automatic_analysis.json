@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "provider": "gemini-developer-api",
+  "model": "gemini-3.6-flash",
+  "model_route": "fallback",
+  "tool_turns": 7,
+  "opened_composites": 3,
+  "validation_corrections": 0,
+  "key_rotations": 1,
+  "gemini_usage": {
+    "prompt_token_count": 113141,
+    "candidates_token_count": 696,
+    "total_token_count": 116334,
+    "thoughts_token_count": 2497,
+    "cached_content_token_count": 65164
+  }
+}
