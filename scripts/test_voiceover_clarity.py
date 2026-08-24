@@ -16,6 +16,12 @@ voice = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = voice
 spec.loader.exec_module(voice)
 
+cut_spec = importlib.util.spec_from_file_location("cut", ROOT / "cut_and_produce.py")
+assert cut_spec and cut_spec.loader
+cut = importlib.util.module_from_spec(cut_spec)
+sys.modules[cut_spec.name] = cut
+cut_spec.loader.exec_module(cut)
+
 # A changing-amplitude speech-like tone is sufficient to exercise every ffmpeg
 # filter without requiring a network call or committing generated audio.
 frames = []
@@ -42,4 +48,15 @@ with tempfile.TemporaryDirectory(prefix="clipforge_clarity_test_") as temp_dir:
         assert wav.getsampwidth() == 2
         assert wav.getframerate() == voice.SAMPLE_RATE_HZ
 
-print("PASS: voiceover clarity pass preserves 24 kHz mono PCM timing contract")
+    # 24,011 samples are 1.000458…s. A millisecond manifest rounds that
+    # down to 1.000s, which historically let atrim remove eleven input
+    # samples; Stage B must instead retain its exact post-resample tail.
+    tail_path = Path(temp_dir) / "sub_millisecond_tail.wav"
+    tail_frames = voice.SAMPLE_RATE_HZ + 11
+    voice.write_wav(tail_path, b"\0\0" * tail_frames)
+    tail_duration, output_frames = cut.final_wav_timing(str(tail_path))
+    assert output_frames == tail_frames * 2
+    assert tail_duration == output_frames / int(cut.AAC_SAMPLE_RATE)
+    assert tail_duration > round(tail_frames / voice.SAMPLE_RATE_HZ, 3)
+
+print("PASS: voiceover clarity pass and Stage B preserve exact final-WAV timing")

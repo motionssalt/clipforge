@@ -120,6 +120,7 @@ import json
 import os
 import subprocess
 import sys
+import wave
 
 
 # ---------- Mobile-safe encoding parameters ----------
@@ -182,6 +183,29 @@ def probe_duration(path: str) -> float:
         text=True,
     ).strip()
     return float(out)
+
+
+def final_wav_timing(path: str) -> tuple[float, int]:
+    """Return final-WAV duration plus its exact 48 kHz trim-frame target.
+
+    Stage B has historically trusted a manifest duration rounded to milliseconds.
+    That can round *down* and make atrim remove final phoneme samples. The final
+    WAV is the authoritative post-processing artifact, so derive both the video
+    retiming duration and the atrim endpoint from its container frame count.
+    """
+    try:
+        with wave.open(path, "rb") as wav:
+            input_frames = wav.getnframes()
+            input_rate = wav.getframerate()
+    except (wave.Error, EOFError) as exc:
+        raise ValueError(f"Voiceover WAV is unreadable: {path}") from exc
+    if input_frames <= 0 or input_rate <= 0:
+        raise ValueError(f"Voiceover WAV has invalid timing: {path}")
+    output_rate = int(AAC_SAMPLE_RATE)
+    output_frames = round(input_frames * output_rate / input_rate)
+    if output_frames <= 0:
+        raise ValueError(f"Voiceover WAV has no renderable samples: {path}")
+    return output_frames / output_rate, output_frames
 
 
 # ---------------------------------------------------------------------------
@@ -347,14 +371,14 @@ def produce_merged_video(src: str, plan: list[dict], vo_wavs: list[str],
             f"[v{i}]"
         )
         # Audio: normalized voiceover only — source audio is never mapped.
-        # Pad the voiceover with silence to the cut's planned length so concat
-        # sees equal-length A/V per segment.  The unity volume is intentional:
-        # generate_voiceover.py has already normalized dialogue assets.
+        # Pad to the exact post-resample sample count so concat sees equal A/V
+        # segment lengths. end_sample avoids millisecond rounding truncating a
+        # final consonant or vowel; the video retime uses the same sample count.
         parts.append(
             f"[{n + i}:a:0]"
             f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=stereo,"
             f"aresample=async=1:first_pts=0,"
-            f"apad,atrim=0:{p['video_seconds']:.3f},"
+            f"apad,atrim=end_sample={p['audio_samples']},"
             f"volume={VOICEOVER_VOLUME}"
             f"[a{i}]"
         )
@@ -475,7 +499,7 @@ def write_merged_voiceover(vo_wavs: list[str], plan: list[dict],
             f"[{i}:a:0]"
             f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=mono,"
             f"aresample=async=1:first_pts=0,"
-            f"apad,atrim=0:{plan[i]['video_seconds']:.3f}"
+            f"apad,atrim=end_sample={plan[i]['audio_samples']}"
             f"[w{i}]"
         )
         labels.append(f"[w{i}]")
@@ -670,12 +694,19 @@ def main() -> None:
         sys.exit(2)
     vo_entries = sorted(vo_entries, key=lambda e: int(e["index"]))
     vo_wavs = [e["wav"] for e in vo_entries]
-    vo_durations = [float(e["duration_seconds"]) for e in vo_entries]
     for w in vo_wavs:
         if not os.path.exists(w):
             print(f"Voiceover WAV from manifest does not exist: {w}",
                   file=sys.stderr)
             sys.exit(2)
+    try:
+        vo_timings = [final_wav_timing(w) for w in vo_wavs]
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(2)
+    # The final WAV is authoritative. This supports existing manifests while
+    # eliminating any stale or rounded duration value before atrim executes.
+    vo_durations = [duration for duration, _ in vo_timings]
 
     src_duration = probe_duration(args.original_video)
     print(f"Source video duration: {src_duration:.2f}s", flush=True)
@@ -684,6 +715,8 @@ def main() -> None:
     print("\nReconciling per-cut timing against voiceover durations...",
           flush=True)
     plan = reconcile_cuts(cuts, vo_durations, src_duration)
+    for item, (_, audio_samples) in zip(plan, vo_timings):
+        item["audio_samples"] = audio_samples
     assert_reconciled_duration_coverage(cuts, plan)
 
     total_video = sum(p["video_seconds"] for p in plan)

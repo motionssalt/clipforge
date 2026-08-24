@@ -32,7 +32,7 @@ from production_plan_contract import parse_and_validate_production_plan
 
 DEFAULT_PRIMARY_MODEL = "gemini-3.7-flash"
 DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")
-MAX_TOOL_TURNS = 12
+MAX_TOOL_TURNS = 20
 MAX_CORRECTION_RETRIES = 1
 MAX_SEED_BYTES = 1024 * 1024
 MAX_JSON_ARTIFACT_BYTES = 5 * 1024 * 1024
@@ -43,9 +43,13 @@ MIN_NARRATION_DURATION_COVERAGE = 0.90
 MAX_ZIP_ENTRIES = 800
 MAX_ZIP_MEMBER_BYTES = 6 * 1024 * 1024
 MAX_ZIP_TOTAL_BYTES = 160 * 1024 * 1024
-MAX_OPEN_COMPOSITES = 3
+# Each final cut needs independent visual coverage at both its head and tail.
+# Twelve images bounds vision cost while supporting up to six verified cuts.
+MAX_OPEN_COMPOSITES = 12
 MAX_COMPOSITE_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 24 * 1024 * 1024
+BASELINE_COMPOSITE_WINDOW_SECONDS = 6.0
+EVENT_COMPOSITE_WINDOW_SECONDS = 4.0
 
 
 class AutomaticAnalysisError(RuntimeError):
@@ -169,6 +173,33 @@ def read_text_artifact(root: Path, filename: str, maximum: int) -> str:
     return strict_artifact_path(root, filename, maximum).read_text(encoding="utf-8")
 
 
+def composite_window_seconds(filename: str, baseline_window_seconds: float) -> tuple[float, float]:
+    """Return the exact source-time window represented by a released composite."""
+    baseline = re.fullmatch(r"frame_(\d{6})\.(?:jpg|jpeg|png|webp)", filename, flags=re.IGNORECASE)
+    if baseline:
+        start = float(int(baseline.group(1)))
+        return start, start + baseline_window_seconds
+    event = re.fullmatch(r"event_(\d{9})\.(?:jpg|jpeg|png|webp)", filename, flags=re.IGNORECASE)
+    if event:
+        center = int(event.group(1)) / 1000.0
+        half_window = EVENT_COMPOSITE_WINDOW_SECONDS / 2.0
+        return center - half_window, center + half_window
+    raise AutomaticAnalysisError(
+        "Stage A screenshot composite has an unsupported timestamped filename: " + filename + "."
+    )
+
+
+def infer_baseline_window_seconds(composite_names: Iterable[str]) -> float:
+    """Infer Stage A's baseline-composite cadence from its released filenames."""
+    starts = sorted({
+        int(match.group(1))
+        for name in composite_names
+        if (match := re.fullmatch(r"frame_(\d{6})\.(?:jpg|jpeg|png|webp)", name, flags=re.IGNORECASE))
+    })
+    gaps = [right - left for left, right in zip(starts, starts[1:]) if right > left]
+    return float(min(gaps)) if gaps else BASELINE_COMPOSITE_WINDOW_SECONDS
+
+
 def safe_extract_screenshots(zip_path: Path, destination: Path) -> dict[str, Path]:
     if not zip_path.is_file():
         raise AutomaticAnalysisError("Stage A screenshots.zip is unavailable.")
@@ -232,10 +263,17 @@ class EvidenceTools:
         self.artifact_dir = artifact_dir
         self.screenshot_dir = screenshot_dir.resolve()
         self.composites = composites
+        self.baseline_window_seconds = infer_baseline_window_seconds(composites)
+        self.composite_windows = {
+            name: composite_window_seconds(name, self.baseline_window_seconds)
+            for name in composites
+        }
         self.transcript_read = False
         self.scene_index_read = False
         self.key_moments_read = False
-        self.opened: set[str] = set()
+        # Preserve open order so the tool layer can enforce the prompt's
+        # chronological-viewing rule rather than merely suggesting it.
+        self.opened: list[str] = []
         self.total_image_bytes = 0
 
     def _assert_order(self, name: str) -> None:
@@ -280,16 +318,30 @@ class EvidenceTools:
             raise ToolProtocolError("The same screenshot composite may not be opened twice.")
         if len(self.opened) >= MAX_OPEN_COMPOSITES:
             raise ToolProtocolError("Automatic Mode reached its maximum selected composite count.")
+        window_start, window_end = self.composite_windows[filename]
+        if self.opened:
+            prior_start, _ = self.composite_windows[self.opened[-1]]
+            if window_start < prior_start:
+                raise ToolProtocolError(
+                    "open_composite must be requested in ascending source-time order; "
+                    "the prior opened composite starts at " + f"{prior_start:.3f}s."
+                )
         raw = path.read_bytes()
         if len(raw) > MAX_COMPOSITE_IMAGE_BYTES:
             raise ToolProtocolError("The selected composite exceeds the safe image byte limit.")
         if self.total_image_bytes + len(raw) > MAX_TOTAL_IMAGE_BYTES:
             raise ToolProtocolError("Automatic Mode reached its total image byte limit.")
-        self.opened.add(filename)
+        self.opened.append(filename)
         self.total_image_bytes += len(raw)
         mime_type = mimetypes.guess_type(filename)[0] or "image/png"
         return ToolResult(
-            {"filename": filename, "mime_type": mime_type, "instruction": "Inspect the attached released screenshot composite."},
+            {
+                "filename": filename,
+                "mime_type": mime_type,
+                "coverage_start_seconds": window_start,
+                "coverage_end_seconds": window_end,
+                "instruction": "Inspect this attached released screenshot composite. Its exact source-time coverage is supplied above; retain it as evidence for any final cut it supports.",
+            },
             image_bytes=raw,
             mime_type=mime_type,
             display_name=filename,
@@ -481,9 +533,66 @@ def narration_duration_errors(document: dict[str, Any]) -> list[str]:
     return errors
 
 
-def automatic_plan_errors(document: dict[str, Any], canonical: str) -> list[str]:
+def visual_grounding_errors(document: dict[str, Any], tools: EvidenceTools) -> list[str]:
+    """Reject an Automatic Mode plan unless each cut is visually evidenced.
+
+    The shared production-plan contract intentionally permits extra properties for
+    manual compatibility. Automatic Mode uses its optional ``visual_evidence``
+    field only while validating the model response, then strips it before Stage B.
+    """
+    errors: list[str] = []
+    cuts = document.get("cuts")
+    if not isinstance(cuts, list):
+        return errors
+    for index, cut in enumerate(cuts, start=1):
+        if not isinstance(cut, dict):
+            continue
+        evidence = cut.get("visual_evidence")
+        if not isinstance(evidence, list) or not evidence:
+            errors.append(f"cut #{index} must include a non-empty visual_evidence array of opened composite basenames.")
+            continue
+        if not all(isinstance(name, str) and name in tools.opened for name in evidence):
+            errors.append(f"cut #{index} visual_evidence must reference only composites opened during this run.")
+            continue
+        if len(set(evidence)) != len(evidence):
+            errors.append(f"cut #{index} visual_evidence must not repeat a composite basename.")
+            continue
+        try:
+            start = float(cut.get("start_seconds"))
+            end = float(cut.get("end_seconds"))
+        except (TypeError, ValueError):
+            continue
+        windows = [tools.composite_windows[name] for name in evidence]
+        start_covered = any(window_start <= start < window_end for window_start, window_end in windows)
+        end_covered = any(window_start < end <= window_end for window_start, window_end in windows)
+        if not start_covered or not end_covered:
+            missing = "start" if not start_covered else "end"
+            errors.append(
+                f"cut #{index} visual_evidence does not cover its {missing}_seconds; "
+                "open chronological composites that visibly cover both cut endpoints."
+            )
+    return errors
+
+
+def production_document_without_visual_evidence(document: dict[str, Any]) -> dict[str, Any]:
+    """Remove Automatic Mode's validation-only evidence citations before Stage B."""
+    result = dict(document)
+    cuts = document.get("cuts")
+    if isinstance(cuts, list):
+        result["cuts"] = [
+            {key: value for key, value in cut.items() if key != "visual_evidence"}
+            if isinstance(cut, dict) else cut
+            for cut in cuts
+        ]
+    return result
+
+
+def automatic_plan_errors(document: dict[str, Any], canonical: str, tools: EvidenceTools) -> list[str]:
     shared_errors = parse_and_validate_production_plan(canonical)[1]
-    return shared_errors if shared_errors else narration_duration_errors(document)
+    if shared_errors:
+        return shared_errors
+    narration_errors = narration_duration_errors(document)
+    return narration_errors if narration_errors else visual_grounding_errors(document, tools)
 
 
 def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
@@ -492,7 +601,9 @@ def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
         "You are ClipForge Automatic Mode. The text below is the complete Stage A instruction seed. "
         "Follow its editorial rules exactly. Use only the supplied native functions in this non-negotiable order: "
         "read_transcript first; then read_scene_index and read_key_moments; only then selectively call open_composite. "
-        "Open only one to three selectively chosen composites; never request all composites. After reviewing enough evidence, return one valid production.json object as plain JSON. "
+        "Open the selected composites in ascending source-time order. You may open up to twelve deliberately selected composites; never request all composites. "
+        "Every final cut MUST include a validation-only visual_evidence array naming the composites you opened that cover both its start_seconds and end_seconds. "
+        "Do not cite a composite you did not open. This field is removed before production. After reviewing enough evidence, return one valid production.json object as plain JSON. "
         "Do not invent facts or use unsupported evidence.\n\n"
         "===== 00_READ_THIS_FIRST.txt =====\n" + seed +
         "\n===== Released composite basenames (text catalog only) =====\n" + listing
@@ -511,9 +622,11 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
             document, canonical = extract_json_object(turn.text)
             if document is None:
                 raise AutomaticAnalysisError("Automatic analysis did not return a JSON production plan.")
-            errors = automatic_plan_errors(document, canonical)
+            errors = automatic_plan_errors(document, canonical, tools)
             if not errors:
-                return document, canonical, turn_number, 0
+                production_document = production_document_without_visual_evidence(document)
+                production_canonical = json.dumps(production_document, ensure_ascii=False, indent=2) + "\n"
+                return production_document, production_canonical, turn_number, 0
             gateway.append_tool_results(history, turn, [])
             gateway.append_user_text(
                 history,
@@ -526,10 +639,12 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
             corrected_document, corrected_canonical = extract_json_object(corrected.text)
             if corrected_document is None:
                 raise AutomaticAnalysisError("Automatic analysis correction did not return JSON.")
-            correction_errors = automatic_plan_errors(corrected_document, corrected_canonical)
+            correction_errors = automatic_plan_errors(corrected_document, corrected_canonical, tools)
             if correction_errors:
                 raise AutomaticAnalysisError("Automatic analysis returned an invalid production plan after its one correction retry: " + "; ".join(correction_errors[:3]))
-            return corrected_document, corrected_canonical, turn_number, MAX_CORRECTION_RETRIES
+            production_document = production_document_without_visual_evidence(corrected_document)
+            production_canonical = json.dumps(production_document, ensure_ascii=False, indent=2) + "\n"
+            return production_document, production_canonical, turn_number, MAX_CORRECTION_RETRIES
 
         names = [call.name for call in turn.calls]
         safe_log("Gemini native tool turn " + str(turn_number) + ": " + ", ".join(names))
@@ -583,6 +698,14 @@ def run_analysis(
                     "model_route": "primary" if model_index == 0 else "fallback",
                     "tool_turns": turns,
                     "opened_composites": len(tools.opened),
+                    "opened_composite_evidence": [
+                        {
+                            "filename": name,
+                            "coverage_start_seconds": tools.composite_windows[name][0],
+                            "coverage_end_seconds": tools.composite_windows[name][1],
+                        }
+                        for name in tools.opened
+                    ],
                     "validation_corrections": corrections,
                     "key_rotations": int(getattr(active_gateway, "key_rotations", 0)),
                     "gemini_usage": dict(getattr(active_gateway, "usage_totals", {})),

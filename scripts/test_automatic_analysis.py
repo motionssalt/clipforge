@@ -2,8 +2,8 @@
 """Deterministic native-Gemini coverage for ClipForge Automatic Mode.
 
 No provider credential, browser, or external request is used. The fake gateway
-uses the same native function-call boundary as the official Google Gen AI SDK
-adapter, including the multimodal ``open_composite`` response path.
+uses the same native function-call boundary as the official Google Gen AI SDK,
+including the multimodal ``open_composite`` response path.
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ from production_plan_contract import validate_production_plan
 RUNNER_SOURCE = Path(__file__).with_name("automatic_analysis.py").read_text(encoding="utf-8")
 assert "from google import genai" in RUNNER_SOURCE, "Automatic Mode must use the official Google Gen AI SDK"
 assert "FunctionResponseBlob" in RUNNER_SOURCE
+assert "visual_evidence" in RUNNER_SOURCE
 assert "Puter" not in RUNNER_SOURCE
 assert "puter_browser_bridge" not in RUNNER_SOURCE
 
@@ -49,7 +50,7 @@ COVERED_LINE_TWO = (
     "the narrow bridge, and finally understands why the silent guardian waited through the storm, guarding the answer until someone brave enough could listen."
 )
 
-VALID_PLAN = {
+PRODUCTION_PLAN = {
     "video_duration_seconds": 60,
     "target_total_duration_seconds": 20,
     "cuts": [
@@ -59,6 +60,20 @@ VALID_PLAN = {
     "hashtags": ["#clip", "#story", "#moment", "#edit", "#video"],
     "youtube_tags": [
         "clip", "story", "moment", "edit", "video", "scene", "turning point", "character", "drama", "analysis"
+    ],
+}
+
+GROUNDED_PLAN = {
+    **PRODUCTION_PLAN,
+    "cuts": [
+        {
+            **PRODUCTION_PLAN["cuts"][0],
+            "visual_evidence": ["frame_000000.jpg", "event_000010000.jpg"],
+        },
+        {
+            **PRODUCTION_PLAN["cuts"][1],
+            "visual_evidence": ["event_000010000.jpg", "event_000020000.jpg"],
+        },
     ],
 }
 
@@ -74,6 +89,7 @@ class ScriptedGateway:
 
     def new_history(self, prompt: str) -> list[Any]:
         assert "read_transcript first" in prompt
+        assert "visual_evidence" in prompt
         return [("user", prompt)]
 
     def append_user_text(self, history: list[Any], text: str) -> None:
@@ -109,10 +125,10 @@ assert [key.raw for key in parse_api_keys(" one, two\n one \n\nthree ")] == ["on
 assert model_candidates("gemini-3.7-flash", ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-2.5-flash"]) == [
     "gemini-3.7-flash", "gemini-3.6-flash", "gemini-2.5-flash"
 ]
-assert validate_production_plan(VALID_PLAN) == []
-assert validate_production_plan({**VALID_PLAN, "cuts": []}) == ["`cuts` is empty — at least one cut is required."]
-assert narration_duration_errors(VALID_PLAN) == []
-short_but_schema_valid = {**VALID_PLAN, "cuts": [
+assert validate_production_plan(PRODUCTION_PLAN) == []
+assert validate_production_plan({**PRODUCTION_PLAN, "cuts": []}) == ["`cuts` is empty — at least one cut is required."]
+assert narration_duration_errors(PRODUCTION_PLAN) == []
+short_but_schema_valid = {**PRODUCTION_PLAN, "cuts": [
     {"start_seconds": 0, "end_seconds": 10, "voiceover_text": "Too short."},
     {"start_seconds": 10, "end_seconds": 20, "voiceover_text": "Still too short."},
 ]}
@@ -140,51 +156,55 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     (root / "transcript.json").write_text('{"segments": [{"start": 0, "text": "A choice is made."}]}', encoding="utf-8")
     (root / "scene_index.json").write_text('{"shots": [{"start": 0, "end": 20}]}', encoding="utf-8")
     (root / "key_moments.json").write_text('{"moments": [{"priority": 9, "emotional_score": 8}]}', encoding="utf-8")
-    composite = root / "scene-000.png"
-    composite.write_bytes(b"\x89PNG\r\n\x1a\nmock-image-data")
+    composite_names = ["frame_000000.jpg", "event_000010000.jpg", "event_000020000.jpg"]
+    for name in composite_names:
+        (root / name).write_bytes(b"\x89PNG\r\n\x1a\nmock-image-data")
     with zipfile.ZipFile(root / "screenshots.zip", "w") as archive:
-        archive.write(composite, "scene-000.png")
-    composite.unlink()
+        for name in composite_names:
+            archive.write(root / name, name)
+            (root / name).unlink()
 
     screenshots = root / "screenshots"
     screenshots.mkdir()
-    tools = EvidenceTools(root, screenshots, {"scene-000.png": root / "scene-000.png"})
+    tools = EvidenceTools(root, screenshots, {name: root / name for name in composite_names})
     try:
         tools.call("read_scene_index", {})
         raise AssertionError("scene index was allowed before transcript")
     except ToolProtocolError:
         pass
 
-    invalid_plan = {**VALID_PLAN, "cuts": [{"start_seconds": 10, "end_seconds": 0, "voiceover_text": "Bad order"}]}
     primary_gateway = ScriptedGateway({
         "gemini-3.7-flash": [
             native_call("call-1", "read_transcript"),
             native_call("call-2", "read_scene_index"),
             native_call("call-3", "read_key_moments"),
             native_call("call-4", "open_composite"),  # safe argument error, model must retry
-            native_call("call-5", "open_composite", filename="scene-000.png"),
-            plain_turn(invalid_plan),
-            plain_turn(VALID_PLAN),
+            native_call("call-5", "open_composite", filename="frame_000000.jpg"),
+            native_call("call-6", "open_composite", filename="event_000010000.jpg"),
+            native_call("call-7", "open_composite", filename="event_000020000.jpg"),
+            plain_turn(PRODUCTION_PLAN),  # schema-valid but ungrounded; must be corrected
+            plain_turn(GROUNDED_PLAN),
         ]
     }, key_rotations=1)
     plan, canonical, summary = run_analysis(root, "unused-by-fake", gateway=primary_gateway)
-    assert plan == VALID_PLAN
-    assert json.loads(canonical) == VALID_PLAN
+    assert plan == PRODUCTION_PLAN
+    assert json.loads(canonical) == PRODUCTION_PLAN
     assert summary["provider"] == "gemini-developer-api"
     assert summary["model"] == "gemini-3.7-flash"
     assert summary["model_route"] == "primary"
-    assert summary["opened_composites"] == 1
+    assert summary["opened_composites"] == 3
+    assert [item["filename"] for item in summary["opened_composite_evidence"]] == composite_names
+    assert summary["opened_composite_evidence"][0]["coverage_start_seconds"] == 0.0
     assert summary["validation_corrections"] == 1
     assert summary["key_rotations"] == 1
     assert primary_gateway.calls[-1] == ("gemini-3.7-flash", False), "only the bounded plan correction must disable tools"
     tool_payloads = [result.response for batch in primary_gateway.tool_results for _, result in batch]
     assert any("open_composite requires one safe composite basename" in str(payload) for payload in tool_payloads)
     opened = [result for batch in primary_gateway.tool_results for call, result in batch if call.name == "open_composite" and result.image_bytes]
-    assert len(opened) == 1
-    assert opened[0].mime_type == "image/png"
-    assert opened[0].display_name == "scene-000.png"
-    assert opened[0].image_bytes == b"\x89PNG\r\n\x1a\nmock-image-data"
-    assert b"http" not in opened[0].image_bytes
+    assert [result.display_name for result in opened] == composite_names
+    assert opened[0].response["coverage_start_seconds"] == 0.0
+    assert opened[1].response["coverage_start_seconds"] == 8.0
+    assert opened[2].response["coverage_end_seconds"] == 22.0
 
     fallback_gateway = ScriptedGateway({
         "gemini-3.7-flash": [ProviderRequestError(503, "provider_server")],
@@ -192,12 +212,14 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
             native_call("fallback-1", "read_transcript"),
             native_call("fallback-2", "read_scene_index"),
             native_call("fallback-3", "read_key_moments"),
-            native_call("fallback-4", "open_composite", filename="scene-000.png"),
-            plain_turn(VALID_PLAN),
+            native_call("fallback-4", "open_composite", filename="frame_000000.jpg"),
+            native_call("fallback-5", "open_composite", filename="event_000010000.jpg"),
+            native_call("fallback-6", "open_composite", filename="event_000020000.jpg"),
+            plain_turn(GROUNDED_PLAN),
         ],
     })
     fallback_plan, _, fallback_summary = run_analysis(root, "unused-by-fake", gateway=fallback_gateway)
-    assert fallback_plan == VALID_PLAN
+    assert fallback_plan == PRODUCTION_PLAN
     assert fallback_summary["model"] == "gemini-3.6-flash"
     assert fallback_summary["model_route"] == "fallback"
 
@@ -208,4 +230,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     except AllKeysExhausted:
         pass
 
-print("PASS: Automatic Mode enforces direct Gemini native function calls, strict evidence order, multimodal local composite responses, bounded correction, model fallback, and secure key-failover semantics")
+print("PASS: Automatic Mode enforces chronological native evidence retrieval, per-cut visual grounding, bounded correction, provider fallback, and secure key-failover semantics")

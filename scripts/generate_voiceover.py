@@ -600,6 +600,12 @@ def wav_duration_seconds(path: Path) -> float:
         return wav.getnframes() / wav.getframerate()
 
 
+def wav_frame_count(path: Path) -> int:
+    """Return the exact final PCM frame count for downstream timing diagnostics."""
+    with wave.open(str(path), "rb") as wav:
+        return wav.getnframes()
+
+
 def _run_ffmpeg(command: List[str], description: str) -> subprocess.CompletedProcess[str]:
     """Run ffmpeg without inheriting stdin or leaking unrelated environment data."""
     try:
@@ -791,7 +797,11 @@ def main() -> None:
             # cut_and_produce.py is called from the repository root, so
             # record a path that exists from that process's working directory.
             "wav": str(wav_path),
-            "duration_seconds": round(duration_s, 3),
+            # Do not round to milliseconds: Stage B retimes video to this
+            # value, and rounding down can make atrim remove the last spoken
+            # samples. JSON preserves Python's lossless float representation.
+            "duration_seconds": duration_s,
+            "duration_frames": wav_frame_count(wav_path),
             "model": used_model,
             "voice": used_voice,
             "key_fingerprint": used_key.redacted(),

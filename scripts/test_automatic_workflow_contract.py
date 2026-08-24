@@ -47,9 +47,9 @@ assert "Write awaiting_json_upload status" in WORKFLOW
 assert WORKFLOW.count("- name: Write awaiting_json_upload status") == 1
 
 for required in (
-    "MAX_TOOL_TURNS = 12",
+    "MAX_TOOL_TURNS = 20",
     "MAX_CORRECTION_RETRIES = 1",
-    "MAX_OPEN_COMPOSITES = 3",
+    "MAX_OPEN_COMPOSITES = 12",
     "MAX_TOTAL_IMAGE_BYTES",
     "safe_extract_screenshots",
     "read_transcript",
@@ -59,7 +59,9 @@ for required in (
     "from google import genai",
     "FunctionDeclaration",
     "FunctionResponseBlob",
-    "Open only one to three selectively chosen composites",
+    "Open the selected composites in ascending source-time order",
+    "visual_evidence",
+    "composite_window_seconds",
     "Gemini native tool turn",
     "GEMINI_API_KEYS",
     "All configured Gemini API keys failed",
