@@ -29,8 +29,8 @@ from production_plan_contract import validate_production_plan
 CATALOG = {
     "models": [
         {
-            "id": "claude-opus-4-7",
-            "aliases": ["anthropic/claude-opus-4-7"],
+            "id": "gemini-3.6-flash",
+            "aliases": ["google/gemini-3.6-flash"],
             "modalities": {"input": ["text", "image"], "output": ["text"]},
             "tool_call": True,
         },
@@ -41,7 +41,7 @@ CATALOG = {
             "tool_call": True,
         },
         # A same-alias relay lacking explicit capabilities must never be selected.
-        {"id": "relay:claude", "aliases": ["anthropic/claude-opus-4-7"]},
+        {"id": "relay:gemini", "aliases": ["google/gemini-3.6-flash"]},
     ]
 }
 
@@ -60,8 +60,8 @@ VALID_PLAN = {
 
 
 assert parse_tokens(" one, two\n one \n\nthree ") == ["one", "two", "three"]
-assert discover_compatible_models(CATALOG, "anthropic/claude-opus-4-7", "openai/gpt-5.6-terra") == [
-    "anthropic/claude-opus-4-7",
+assert discover_compatible_models(CATALOG, "google/gemini-3.6-flash", "openai/gpt-5.6-terra") == [
+    "google/gemini-3.6-flash",
     "openai/gpt-5.6-terra",
 ]
 assert validate_production_plan(VALID_PLAN) == []

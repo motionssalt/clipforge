@@ -41,7 +41,10 @@ from production_plan_contract import parse_and_validate_production_plan
 
 MODEL_CATALOG_ENDPOINT = "https://api.puter.com/puterai/chat/models/details"
 OPENAI_BASE_URL = "https://api.puter.com/puterai/openai/v1/"
-DEFAULT_PRIMARY_MODEL = "anthropic/claude-opus-4-7"
+# Gemini 3.6 Flash is the cost-conscious primary. The runner still proves
+# image-input and function-calling capability from Puter's live catalog before
+# any analysis begins; the non-Opus GPT route remains a bounded fallback.
+DEFAULT_PRIMARY_MODEL = "google/gemini-3.6-flash"
 DEFAULT_FALLBACK_MODEL = "openai/gpt-5.6-terra"
 MAX_TOOL_TURNS = 12
 MAX_CORRECTION_RETRIES = 1

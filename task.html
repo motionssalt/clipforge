@@ -129,7 +129,7 @@ Task detail — ClipForge
             <span class="fold-cue">Manage</span>
           </summary>
           <div class="fold-body">
-            <p class="hint">Stored as the <code>PUTER_AUTH_TOKENS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the bundled libsodium files are loaded locally). Multiple tokens are supported — Automatic Mode rotates to the next token only for authentication, rate-limit, or quota failures. The runner verifies a Claude-first model and GPT fallback against Puter’s live capability catalog before it starts analysis.</p>
+            <p class="hint">Stored as the <code>PUTER_AUTH_TOKENS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the bundled libsodium files are loaded locally). Multiple tokens are supported — Automatic Mode rotates to the next token only for authentication, rate-limit, or quota failures. The runner verifies Gemini Flash as its primary model and a non-Opus GPT fallback against Puter’s live capability catalog before it starts analysis.</p>
             <form id="puter-key-form" autocomplete="off">
               <div class="field">
                 <label for="puter-key-input">Add a Puter auth token</label>
