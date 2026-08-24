@@ -119,6 +119,12 @@ def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
     haystack = str(error_value).lower()
     if status in (401, 403) or "auth" in haystack or "invalid token" in haystack or "unauthor" in haystack:
         return "authentication"
+    # Puter can return 402 for a model-specific payment/spend threshold even
+    # when the account-wide credit display is not empty. It is neither a bad
+    # token nor a malformed request: rotate any additional token first, then
+    # let the orchestration attempt the configured cheaper model route.
+    if status == 402 or "payment required" in haystack or "payment" in haystack or "spend" in haystack:
+        return "payment_or_spend_limit"
     if status == 429 or "rate" in haystack or "quota" in haystack or "credit" in haystack or "limit" in haystack:
         return "rate_or_quota"
     if status in (400, 404, 422) or "model" in haystack:
@@ -129,7 +135,9 @@ def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
 
 
 def token_failure_should_rotate(status: int | None, category: str) -> bool:
-    return status in (401, 403, 429) or category in {"authentication", "rate_or_quota"}
+    return status in (401, 402, 403, 429) or category in {
+        "authentication", "rate_or_quota", "payment_or_spend_limit"
+    }
 
 
 def parse_tokens(raw: str | None) -> list[str]:
@@ -434,6 +442,11 @@ class PuterGateway:
             last_error = error
             safe_log("Puter token index " + str(index) + " hit " + category + "; rotating token index.")
             self.current_token_index = (index + 1) % len(self.tokens)
+        # A payment/spend-limit response may be specific to the selected model.
+        # Return it to run_analysis after bounded token rotation so the cheaper
+        # configured fallback model gets one controlled attempt.
+        if last_error is not None and last_error.category == "payment_or_spend_limit":
+            raise last_error
         raise AllTokensExhausted(
             "All configured Puter tokens failed with authentication, rate-limit, or quota errors."
         ) from last_error
@@ -583,7 +596,9 @@ def run_analysis(
                 raise
             except ProviderRequestError as exc:
                 last_model_error = exc
-                if model_index + 1 < len(models) and exc.category in {"model_or_request", "provider_server", "network"}:
+                if model_index + 1 < len(models) and exc.category in {
+                    "model_or_request", "provider_server", "network", "payment_or_spend_limit"
+                }:
                     safe_log("Puter model route failed safely; trying configured fallback model.")
                     continue
                 raise

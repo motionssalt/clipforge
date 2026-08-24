@@ -18,6 +18,7 @@ from automatic_analysis import (
     EvidenceTools,
     HttpResponse,
     PuterGateway,
+    ProviderRequestError,
     ToolProtocolError,
     discover_compatible_models,
     parse_tokens,
@@ -134,6 +135,37 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     assert "data:image/png;base64," in all_bodies, "image tool results must use data content, not hosted URLs"
     assert "http://" not in all_bodies and "https://" not in all_bodies
 
+    fallback_bodies: list[dict] = []
+
+    def payment_then_fallback_transport(method: str, url: str, headers: dict[str, str], body: dict | None) -> HttpResponse:
+        if method == "GET":
+            return HttpResponse(200, CATALOG)
+        assert body is not None
+        if body["model"] == "google/gemini-3.6-flash":
+            return HttpResponse(402, {"error": {"code": "payment_required"}})
+        fallback_bodies.append(body)
+        post_index = len(fallback_bodies)
+        if post_index == 1:
+            return HttpResponse(200, {"choices": [{"message": {"content": "", "tool_calls": [{"id": "fallback-1", "function": {"name": "read_transcript", "arguments": "{}"}}]}}]})
+        if post_index == 2:
+            return HttpResponse(200, {"choices": [{"message": {"content": "", "tool_calls": [{"id": "fallback-2", "function": {"name": "read_scene_index", "arguments": "{}"}}]}}]})
+        if post_index == 3:
+            return HttpResponse(200, {"choices": [{"message": {"content": "", "tool_calls": [{"id": "fallback-3", "function": {"name": "read_key_moments", "arguments": "{}"}}]}}]})
+        if post_index == 4:
+            return HttpResponse(200, {"choices": [{"message": {"content": "", "tool_calls": [{"id": "fallback-4", "function": {"name": "open_composite", "arguments": '{"filename":"scene-000.png"}'}}]}}]})
+        return HttpResponse(200, {"choices": [{"message": {"content": json.dumps(VALID_PLAN)}}]})
+
+    fallback_plan, _, fallback_summary = run_analysis(
+        root,
+        "test-token-index-zero,test-token-index-one",
+        transport=payment_then_fallback_transport,
+        catalog_endpoint="mock://catalog",
+        base_url="mock://provider/",
+    )
+    assert fallback_plan == VALID_PLAN
+    assert fallback_summary["model"] == "openai/gpt-5.6-terra"
+    assert fallback_summary["model_route"] == "fallback"
+
 
 def exhausted_transport(method: str, url: str, headers: dict[str, str], body: dict | None) -> HttpResponse:
     return HttpResponse(429, {"error": {"code": "rate_limit"}})
@@ -145,4 +177,18 @@ try:
 except AllTokensExhausted:
     pass
 
-print("PASS: Automatic Mode enforces capability gating, tool order, data-image results, bounded correction, shared-plan validation, and token-index failover")
+payment_attempts: list[str] = []
+
+def payment_transport(method: str, url: str, headers: dict[str, str], body: dict | None) -> HttpResponse:
+    payment_attempts.append(headers["Authorization"])
+    return HttpResponse(402, {"error": {"code": "payment_required"}})
+
+try:
+    PuterGateway(["test-token-index-zero", "test-token-index-one"], transport=payment_transport, base_url="mock://provider/").chat({"model": "x"})
+    raise AssertionError("all payment-limited token indexes did not return the safe model-route error")
+except ProviderRequestError as exc:
+    assert exc.status == 402
+    assert exc.category == "payment_or_spend_limit"
+assert len(payment_attempts) == 2
+
+print("PASS: Automatic Mode enforces capability gating, tool order, data-image results, bounded correction, 402 fallback, and token-index failover")
