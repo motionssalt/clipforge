@@ -39,7 +39,7 @@ MAX_JSON_ARTIFACT_BYTES = 5 * 1024 * 1024
 MAX_ZIP_ENTRIES = 800
 MAX_ZIP_MEMBER_BYTES = 6 * 1024 * 1024
 MAX_ZIP_TOTAL_BYTES = 160 * 1024 * 1024
-MAX_OPEN_COMPOSITES = 12
+MAX_OPEN_COMPOSITES = 3
 MAX_COMPOSITE_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_TOTAL_IMAGE_BYTES = 24 * 1024 * 1024
 
@@ -426,7 +426,7 @@ def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
         "You are ClipForge Automatic Mode. The text below is the complete Stage A instruction seed. "
         "Follow its editorial rules exactly. Use only the supplied native functions in this non-negotiable order: "
         "read_transcript first; then read_scene_index and read_key_moments; only then selectively call open_composite. "
-        "Never request all composites. After sufficient evidence, return one valid production.json object as plain JSON. "
+        "Open only one to three selectively chosen composites; never request all composites. After reviewing enough evidence, return one valid production.json object as plain JSON. "
         "Do not invent facts or use unsupported evidence.\n\n"
         "===== 00_READ_THIS_FIRST.txt =====\n" + seed +
         "\n===== Released composite basenames (text catalog only) =====\n" + listing
@@ -466,6 +466,7 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
             return corrected_document, corrected_canonical, turn_number, MAX_CORRECTION_RETRIES
 
         names = [call.name for call in turn.calls]
+        safe_log("Gemini native tool turn " + str(turn_number) + ": " + ", ".join(names))
         if not tools.transcript_read and (len(names) != 1 or names[0] != "read_transcript"):
             raise ToolProtocolError("The first agent turn must call only read_transcript.")
         if "open_composite" in names and not (tools.scene_index_read and tools.key_moments_read):
