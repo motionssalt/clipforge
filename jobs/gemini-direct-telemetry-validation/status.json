@@ -1,7 +1,7 @@
 {
   "job_id": "gemini-direct-telemetry-validation",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
+  "stage": "stage_b_queued",
+  "message": "Automatic analysis validated production.json. Dispatching the existing Stage B workflow.",
   "release_tag": "clipforge-gemini-direct-telemetry-validation",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-gemini-direct-telemetry-validation",
   "assets": {
@@ -13,12 +13,16 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-telemetry-validation/transcript.json"
   },
   "created_at_epoch": 1787544096,
-  "updated_at_epoch": 1787544117,
+  "updated_at_epoch": 1787544382,
   "expires_at_epoch": 1787587296,
   "extra": {
     "workflow_run_id": "32688356098",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32688356098",
     "automatic_mode": "true",
-    "automatic_analysis_result": "jobs/gemini-direct-telemetry-validation/automatic_analysis.json"
+    "automatic_analysis_result": "jobs/gemini-direct-telemetry-validation/automatic_analysis.json",
+    "production_ref": "path:jobs/gemini-direct-telemetry-validation/production.json",
+    "music_ref": "",
+    "music_source": "none",
+    "original_asset_name": "original.mp4"
   }
 }
