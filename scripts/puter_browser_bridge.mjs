@@ -49,10 +49,18 @@ function withTimeout(promise, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+class BrowserClientError extends Error {
+  constructor(payload) {
+    super(String(payload?.message || 'Puter.js browser client failed.'));
+    this.name = 'BrowserClientError';
+    this.payload = payload;
+  }
+}
+
 function errorShape(error, stage = 'browser_call') {
   const object = error && typeof error === 'object' ? error : {};
   const response = object.response && typeof object.response === 'object' ? object.response : {};
-  const responseData = response.data ?? object.data ?? object.body ?? object.error ?? null;
+  const responseData = response.data ?? object.data ?? object.body ?? object.payload ?? object.error ?? null;
   const status = Number(object.status || object.statusCode || response.status || responseData?.status || 0) || null;
   return safeValue({
     status,
@@ -88,11 +96,27 @@ async function ensurePage() {
 async function setToken(token) {
   await ensurePage();
   if (token === activeToken) return;
-  const applied = await withTimeout(page.evaluate((authToken) => {
-    globalThis.puter.setAuthToken(authToken);
-    return Boolean(globalThis.puter.authToken);
+  const outcome = await withTimeout(page.evaluate((authToken) => {
+    const serialize = (error) => {
+      const object = error && typeof error === 'object' ? error : {};
+      const response = object.response && typeof object.response === 'object' ? object.response : {};
+      const data = response.data ?? object.data ?? object.body ?? object.error ?? null;
+      return {
+        status: Number(object.status || object.statusCode || response.status || data?.status || 0) || null,
+        code: object.code || object.error?.code || data?.code || null,
+        message: object.message || object.error?.message || data?.message || String(error || 'Puter.js authentication initialization failed.'),
+        error: data,
+      };
+    };
+    try {
+      globalThis.puter.setAuthToken(authToken);
+      return { ok: true, applied: Boolean(globalThis.puter.authToken) };
+    } catch (error) {
+      return { ok: false, error: serialize(error) };
+    }
   }, token), 'authentication initialization');
-  if (!applied) throw new Error('Puter.js browser token initialization did not produce an authenticated client state.');
+  if (!outcome?.ok) throw new BrowserClientError(outcome?.error);
+  if (!outcome.applied) throw new Error('Puter.js browser token initialization did not produce an authenticated client state.');
   activeToken = token;
 }
 
@@ -108,11 +132,27 @@ function messageShape(message) {
 async function listModels(token) {
   try {
     await setToken(token);
-    const models = await withTimeout(page.evaluate(async () => {
-      const result = await globalThis.puter.ai.listModels();
-      return JSON.parse(JSON.stringify(result));
+    const outcome = await withTimeout(page.evaluate(async () => {
+      const serialize = (error) => {
+        const object = error && typeof error === 'object' ? error : {};
+        const response = object.response && typeof object.response === 'object' ? object.response : {};
+        const data = response.data ?? object.data ?? object.body ?? object.error ?? null;
+        return {
+          status: Number(object.status || object.statusCode || response.status || data?.status || 0) || null,
+          code: object.code || object.error?.code || data?.code || null,
+          message: object.message || object.error?.message || data?.message || String(error || 'Puter.js model discovery failed.'),
+          error: data,
+        };
+      };
+      try {
+        const result = await globalThis.puter.ai.listModels();
+        return { ok: true, models: JSON.parse(JSON.stringify(result)) };
+      } catch (error) {
+        return { ok: false, error: serialize(error) };
+      }
     }), 'model discovery');
-    return { ok: true, models: safeValue(models) };
+    if (!outcome?.ok) return { ok: false, error: safeValue(outcome?.error || {}) };
+    return { ok: true, models: safeValue(outcome.models) };
   } catch (error) {
     return { ok: false, error: errorShape(error, 'list_models') };
   }
@@ -121,25 +161,41 @@ async function listModels(token) {
 async function chat(token, payload) {
   try {
     await setToken(token);
-    const result = await withTimeout(page.evaluate(async (request) => {
-      const options = {
-        model: request.model,
-        temperature: request.temperature,
-        max_tokens: request.max_tokens,
+    const outcome = await withTimeout(page.evaluate(async (request) => {
+      const serialize = (error) => {
+        const object = error && typeof error === 'object' ? error : {};
+        const response = object.response && typeof object.response === 'object' ? object.response : {};
+        const data = response.data ?? object.data ?? object.body ?? object.error ?? null;
+        return {
+          status: Number(object.status || object.statusCode || response.status || data?.status || 0) || null,
+          code: object.code || object.error?.code || data?.code || null,
+          message: object.message || object.error?.message || data?.message || String(error || 'Puter.js chat failed.'),
+          error: data,
+        };
       };
-      // Puter.js documents tools, but not OpenAI's tool_choice flag. Omitting
-      // tools is the browser-client equivalent of the correction turn's
-      // no-tools constraint.
-      if (request.tool_choice !== 'none' && Array.isArray(request.tools)) options.tools = request.tools;
-      const response = await globalThis.puter.ai.chat(request.messages, options);
-      const message = response?.message ?? response;
-      return JSON.parse(JSON.stringify({
-        content: message?.content ?? '',
-        tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : undefined,
-        role: message?.role || 'assistant',
-      }));
+      try {
+        const options = {
+          model: request.model,
+          temperature: request.temperature,
+          max_tokens: request.max_tokens,
+        };
+        // Puter.js documents tools, but not OpenAI's tool_choice flag. Omitting
+        // tools is the browser-client equivalent of the correction turn's
+        // no-tools constraint.
+        if (request.tool_choice !== 'none' && Array.isArray(request.tools)) options.tools = request.tools;
+        const response = await globalThis.puter.ai.chat(request.messages, options);
+        const message = response?.message ?? response;
+        return { ok: true, message: JSON.parse(JSON.stringify({
+          content: message?.content ?? '',
+          tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : undefined,
+          role: message?.role || 'assistant',
+        })) };
+      } catch (error) {
+        return { ok: false, error: serialize(error) };
+      }
     }, payload), 'chat request');
-    return { ok: true, message: messageShape(result) };
+    if (!outcome?.ok) return { ok: false, error: safeValue(outcome?.error || {}) };
+    return { ok: true, message: messageShape(outcome.message) };
   } catch (error) {
     return { ok: false, error: errorShape(error, 'chat') };
   }
