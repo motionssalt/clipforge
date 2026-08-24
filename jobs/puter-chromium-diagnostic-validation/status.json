@@ -1,0 +1,16 @@
+{
+  "job_id": "puter-chromium-diagnostic-validation",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-puter-chromium-diagnostic-validation",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787537750,
+  "updated_at_epoch": 1787537750,
+  "expires_at_epoch": 1787580950,
+  "extra": {
+    "workflow_run_id": "32682378780",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32682378780",
+    "automatic_mode": "true"
+  }
+}
