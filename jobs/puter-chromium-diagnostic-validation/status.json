@@ -1,7 +1,7 @@
 {
   "job_id": "puter-chromium-diagnostic-validation",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence.",
+  "stage": "error",
+  "message": "Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category.",
   "release_tag": "clipforge-puter-chromium-diagnostic-validation",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-puter-chromium-diagnostic-validation",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-diagnostic-validation/transcript.json"
   },
   "created_at_epoch": 1787537750,
-  "updated_at_epoch": 1787537768,
+  "updated_at_epoch": 1787537819,
   "expires_at_epoch": 1787580950,
   "extra": {
     "workflow_run_id": "32682378780",
