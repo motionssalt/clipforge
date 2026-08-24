@@ -1,0 +1,16 @@
+{
+  "job_id": "gemini-direct-diagnostic-validation",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-gemini-direct-diagnostic-validation",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787542627,
+  "updated_at_epoch": 1787542627,
+  "expires_at_epoch": 1787585827,
+  "extra": {
+    "workflow_run_id": "32686957510",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32686957510",
+    "automatic_mode": "true"
+  }
+}
