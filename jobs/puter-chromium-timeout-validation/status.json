@@ -1,0 +1,16 @@
+{
+  "job_id": "puter-chromium-timeout-validation",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-puter-chromium-timeout-validation",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787535327,
+  "updated_at_epoch": 1787535327,
+  "expires_at_epoch": 1787578527,
+  "extra": {
+    "workflow_run_id": "32680164815",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32680164815",
+    "automatic_mode": "true"
+  }
+}
