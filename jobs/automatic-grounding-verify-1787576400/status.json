@@ -1,0 +1,17 @@
+{
+  "job_id": "automatic-grounding-verify-1787576400",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-automatic-grounding-verify-1787576400",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787578899,
+  "updated_at_epoch": 1787578899,
+  "expires_at_epoch": 1787622099,
+  "extra": {
+    "workflow_run_id": "32733995939",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32733995939",
+    "automatic_mode": "true",
+    "workflow_phase": "stage_a"
+  }
+}
