@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787580258892",
-  "stage": "error",
-  "message": "Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category.",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
   "release_tag": "clipforge-automatic-1787580258892",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787580258892",
   "assets": {
@@ -13,7 +13,11 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787580258892/transcript.json"
   },
   "created_at_epoch": 1787598785,
+<<<<<<< Updated upstream
   "updated_at_epoch": 1787604946,
+=======
+  "updated_at_epoch": 1787605229,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1787641985,
   "extra": {
     "automatic_mode": "true",
