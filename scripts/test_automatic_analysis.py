@@ -26,6 +26,13 @@ from automatic_analysis import (
 from production_plan_contract import validate_production_plan
 
 
+RUNNER_SOURCE = Path(__file__).with_name("automatic_analysis.py").read_text(encoding="utf-8")
+# A JSONL bridge request must end in a newline byte, not the two literal
+# characters backslash+n, or Node's readline listener never receives it.
+assert r'}) + "\n")' in RUNNER_SOURCE
+assert r'}) + "\\n")' not in RUNNER_SOURCE
+
+
 CATALOG = {
     "models": [
         {

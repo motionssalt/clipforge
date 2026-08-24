@@ -404,7 +404,7 @@ class SubprocessBrowserBridge:
             "op": operation,
             "token": token,
             "payload": payload or {},
-        }) + "\\n")
+        }) + "\n")
         self.process.stdin.flush()
         ready, _, _ = select.select([self.process.stdout], [], [], self.timeout_seconds)
         if not ready:
