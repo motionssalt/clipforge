@@ -1,7 +1,7 @@
 {
   "job_id": "automatic",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-automatic",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/clipforge-automatic-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic/final.mp4"
   },
   "created_at_epoch": 1787570220,
-  "updated_at_epoch": 1787570846,
+  "updated_at_epoch": 1787571184,
   "expires_at_epoch": 1787613420,
   "extra": {
     "workflow_run_id": "32721857726",
@@ -24,6 +26,9 @@
     "production_ref": "path:jobs/automatic/production.json",
     "music_ref": "",
     "music_source": "none",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "The Tragic Final Moments of King Meruem",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
