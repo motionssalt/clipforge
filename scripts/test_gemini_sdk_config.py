@@ -19,6 +19,14 @@ class FakeResponse:
     function_calls = []
     text = "{}"
     candidates = [type("Candidate", (), {"content": {"role": "model"}})()]
+    usage_metadata = type("Usage", (), {
+        "prompt_token_count": 11,
+        "candidates_token_count": 7,
+        "total_token_count": 18,
+        "thoughts_token_count": None,
+        "cached_content_token_count": 0,
+        "tool_use_prompt_token_count": None,
+    })()
 
 class FakeModels:
     def __init__(self, client):
@@ -41,4 +49,10 @@ def factory(_key):
 gateway = GeminiGateway([ApiKey("offline-test-key")], client_factory=factory, types_module=gateway.types)
 turn = gateway.generate("gemini-3.7-flash", gateway.new_history("probe"), tools_enabled=True)
 assert turn.calls == [] and len(created) == 1
-print("PASS: official Gemini SDK accepts native ClipForge function declarations, multimodal tool configuration, and a retained client lifecycle")
+assert gateway.usage_totals == {
+    "prompt_token_count": 11,
+    "candidates_token_count": 7,
+    "total_token_count": 18,
+    "cached_content_token_count": 0,
+}
+print("PASS: official Gemini SDK accepts native ClipForge function declarations, multimodal tool configuration, a retained client lifecycle, and numeric usage telemetry")

@@ -83,6 +83,7 @@ class NativeTurn:
     calls: list[NativeToolCall]
     text: str
     model_content: Any
+    usage: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -319,6 +320,7 @@ class GeminiGateway:
         self.keys = keys
         self.current_key_index = 0
         self.key_rotations = 0
+        self.usage_totals: dict[str, int] = {}
 
     def _config(self, tools_enabled: bool) -> Any:
         if not tools_enabled:
@@ -349,7 +351,26 @@ class GeminiGateway:
             if not isinstance(name, str) or not name or not isinstance(call_id, str) or not call_id or not isinstance(args, dict):
                 raise ProviderRequestError(None, "malformed_function_call")
             calls.append(NativeToolCall(id=call_id, name=name, args=dict(args)))
-        return NativeTurn(calls=calls, text=str(getattr(response, "text", "") or ""), model_content=candidates[0].content)
+        metadata = getattr(response, "usage_metadata", None)
+        usage: dict[str, int] = {}
+        for name in (
+            "prompt_token_count", "candidates_token_count", "total_token_count",
+            "thoughts_token_count", "cached_content_token_count", "tool_use_prompt_token_count",
+        ):
+            value = getattr(metadata, name, None) if metadata is not None else None
+            if isinstance(value, int) and value >= 0:
+                usage[name] = value
+        return NativeTurn(
+            calls=calls,
+            text=str(getattr(response, "text", "") or ""),
+            model_content=candidates[0].content,
+            usage=usage,
+        )
+
+    def _record_usage(self, usage: dict[str, int] | None) -> None:
+        for name, value in (usage or {}).items():
+            if isinstance(value, int) and value >= 0:
+                self.usage_totals[name] = self.usage_totals.get(name, 0) + value
 
     def generate(self, model: str, history: list[Any], *, tools_enabled: bool) -> NativeTurn:
         attempted: set[int] = set()
@@ -366,7 +387,9 @@ class GeminiGateway:
                 response = client.models.generate_content(
                     model=model, contents=history, config=self._config(tools_enabled)
                 )
-                return self._native_turn(response)
+                turn = self._native_turn(response)
+                self._record_usage(turn.usage)
+                return turn
             except ProviderRequestError:
                 raise
             except Exception as error:
@@ -519,6 +542,7 @@ def run_analysis(
                     "opened_composites": len(tools.opened),
                     "validation_corrections": corrections,
                     "key_rotations": int(getattr(active_gateway, "key_rotations", 0)),
+                    "gemini_usage": dict(getattr(active_gateway, "usage_totals", {})),
                 }
             except (ProviderRequestError, AllKeysExhausted) as error:
                 last_error = error
