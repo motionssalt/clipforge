@@ -72,6 +72,12 @@
   var PUTER_KEYS_META_PATH = 'branding/puter_keys.json';
   var PUTER_TOKEN_MIN_LEN = 20;
 
+  /* Last-selected background music. Only a safe repository path under
+   * audio-library/ is persisted; one-off job uploads are intentionally never
+   * written here. The setting lives outside jobs/ so expiry cleanup cannot
+   * erase the default used by future manual or Automatic Mode runs. */
+  var MUSIC_DEFAULT_PATH = 'branding/music_default.json';
+
   /* Zernio publishing. The API key is stored only as an encrypted Actions
    * secret. All non-secret preferences and provider snapshots are committed
    * outside the expiring jobs/ tree so browser refreshes are harmless. */
@@ -207,7 +213,9 @@
     torrentSelectionLoading: false,
     musicFile: null,       // an optional picked music file (File object), one-off for this job only
     audioLibrary: null,    // [{name, path, size}] fetched from audio-library/ in the repo, or null = not loaded yet
-    audioLibrarySelected: null, // path (string) of the library track chosen for this job, or null
+    audioLibrarySelected: null, // path (string) explicitly chosen for the current job, or null
+    audioLibraryDefault: null,  // last explicit audio-library/ selection persisted repo-side, or null
+    musicDefaultLoaded: false,  // true after branding/music_default.json has been checked
     audioLibraryBusy: false,    // true while adding/deleting/listing so double-clicks don't race
     busy: false,
     stageBDispatched: false,
@@ -667,6 +675,7 @@
     loadGeminiKeysMeta();
     loadPuterKeysMeta();
     loadZernioSettings();
+    loadMusicDefault();
     loadAudioLibrary();
     refreshTasksFromRepo({ silent: true });
     startTasksTimer();
@@ -2112,9 +2121,12 @@
       setMsg(el['stage-a-msg'], 'Use either a video URL or a torrent file, not both.', 'bad');
       return;
     }
+    var automaticMode = PAGE === 'automatic';
     var slug = el['job-slug-input'].value.trim();
-    if ((torrentFile || isMagnetLink) && !slug) {
-      slug = (torrentFile ? 'torrent-' : 'magnet-') + Date.now();
+    // Automatic Mode must know its job id before dispatch so an upfront music
+    // choice can be committed safely for the unattended Stage B handoff.
+    if ((torrentFile || isMagnetLink || automaticMode) && !slug) {
+      slug = (automaticMode ? 'automatic-' : (torrentFile ? 'torrent-' : 'magnet-')) + Date.now();
       el['job-slug-input'].value = slug;
     }
     var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
@@ -2127,7 +2139,6 @@
     var focusRaw = (el['focus-input'] && el['focus-input'].value) || '';
     var focus = focusRaw.replace(/^\s+|\s+$/g, '');
 
-      var automaticMode = PAGE === 'automatic';
       var inputs = {
         video_url: videoUrl,
         job_id: slug,
@@ -2148,6 +2159,10 @@
       el['start-stage-a'].disabled = true;
       setMsg(el['stage-a-msg'], 'Saving torrent candidates for later selection…', null);
       try {
+        if (automaticMode) {
+          setMsg(el['stage-a-msg'], 'Saving Automatic Mode music choice…', null);
+          await prepareAutomaticMusicChoice(slug);
+        }
         var pending = await createPendingTorrentSelection(slug, torrentFile, inputs);
         state.torrentSelection = pending.selection;
         state.status = pending.status;
@@ -2181,6 +2196,19 @@
       : (automaticMode ? 'Dispatching Automatic Mode…' : 'Dispatching stage-a.yml…'), null);
     dismissBanner('dispatch');
     dismissBanner('generic');
+
+    if (automaticMode) {
+      try {
+        setMsg(el['stage-a-msg'], 'Saving Automatic Mode music choice…', null);
+        await prepareAutomaticMusicChoice(slug);
+      } catch (musicErr) {
+        state.busy = false;
+        el['start-stage-a'].disabled = false;
+        setMsg(el['stage-a-msg'], 'Could not save Automatic Mode music choice: ' + musicErr.message, 'bad');
+        handleGlobalError(musicErr, 'automatic-music');
+        return;
+      }
+    }
 
     // Snapshot existing job folders so we can diff for the new one.
     var before = [];
@@ -4359,6 +4387,111 @@
 
   var AUDIO_LIBRARY_DIR = 'audio-library';
 
+  function isSafeAudioLibraryPath(path) {
+    return typeof path === 'string' &&
+      new RegExp('^' + AUDIO_LIBRARY_DIR.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '/[A-Za-z0-9._-]+$').test(path);
+  }
+
+  function musicDefaultLabel() {
+    if (!state.audioLibraryDefault) return 'No saved default library track.';
+    var name = state.audioLibraryDefault.slice((AUDIO_LIBRARY_DIR + '/').length);
+    if (Array.isArray(state.audioLibrary) && !state.audioLibrary.some(function (track) {
+      return track.path === state.audioLibraryDefault;
+    })) {
+      return 'Saved default “' + name + '” is no longer in the audio library.';
+    }
+    return 'Default: ' + name + ' — used when no track is chosen for this run.';
+  }
+
+  function renderMusicDefault() {
+    if (el['audio-library-default']) el['audio-library-default'].textContent = musicDefaultLabel();
+  }
+
+  async function loadMusicDefault() {
+    if (!isConfigured()) return;
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + MUSIC_DEFAULT_PATH + '?ref=' + REF + '&_=' + Date.now());
+      var doc = JSON.parse(b64decodeUtf8(file.content));
+      state.audioLibraryDefault = doc && doc.version === 1 &&
+        isSafeAudioLibraryPath(doc.library_track_path) ? doc.library_track_path : null;
+    } catch (err) {
+      // Missing/default-unconfigured is normal. Invalid or unavailable settings
+      // fail closed to no fallback and leave a visible non-secret hint.
+      state.audioLibraryDefault = null;
+      if (err && err.status !== 404 && el['audio-library-default']) {
+        el['audio-library-default'].textContent = 'Could not load the saved music default: ' + err.message;
+      }
+    }
+    state.musicDefaultLoaded = true;
+    renderMusicDefault();
+    renderAudioLibrary();
+  }
+
+  async function saveMusicDefault(trackPath) {
+    if (!isSafeAudioLibraryPath(trackPath)) throw new Error('Default music must be a track from audio-library/.');
+    var prior = state.audioLibraryDefault;
+    state.audioLibraryDefault = trackPath;
+    renderMusicDefault();
+    renderAudioLibrary();
+    var doc = {
+      version: 1,
+      library_track_path: trackPath,
+      updated_at_epoch: Math.floor(Date.now() / 1000),
+      note: 'Last explicitly selected audio-library track. One-off job uploads are never stored as the default.'
+    };
+    try {
+      await putRepoFile(MUSIC_DEFAULT_PATH,
+        b64encodeUtf8(JSON.stringify(doc, null, 2) + '\\n'),
+        'clipforge: save default background music');
+    } catch (err) {
+      state.audioLibraryDefault = prior;
+      renderMusicDefault();
+      renderAudioLibrary();
+      throw err;
+    }
+  }
+
+  function resolvedLibraryMusicRef() {
+    var path = state.audioLibrarySelected || state.audioLibraryDefault;
+    if (!isSafeAudioLibraryPath(path)) return '';
+    if (Array.isArray(state.audioLibrary) && !state.audioLibrary.some(function (track) {
+      return track.path === path;
+    })) return '';
+    return 'path:' + path;
+  }
+
+  async function prepareAutomaticMusicChoice(jobId) {
+    if (!jobId) throw new Error('Automatic Mode needs a job id before saving music choice.');
+    if (!state.musicDefaultLoaded) await loadMusicDefault();
+    if (state.audioLibrary === null) await loadAudioLibrary();
+
+    var musicRef = resolvedLibraryMusicRef();
+    var source = state.audioLibrarySelected ? 'explicit_library' :
+      (musicRef ? 'saved_library_default' : 'none');
+    if (state.musicFile) {
+      var musicPath = 'jobs/' + jobId + '/music.mp3';
+      await putRepoFile(musicPath, await b64encodeFile(state.musicFile),
+        'clipforge: upload automatic music for job ' + jobId);
+      musicRef = 'path:' + musicPath;
+      source = 'one_off_upload';
+    }
+
+    // Stage A reads this job-scoped, non-secret configuration only on the
+    // opt-in Automatic Mode branch. It never changes manual Stage A or the
+    // production.json schema.
+    var selection = {
+      version: 1,
+      music_ref: musicRef,
+      source: source,
+      created_at_epoch: Math.floor(Date.now() / 1000)
+    };
+    await putRepoFile('jobs/' + jobId + '/automatic_music.json',
+      b64encodeUtf8(JSON.stringify(selection, null, 2) + '\\n'),
+      'clipforge: save automatic music choice for job ' + jobId);
+    return musicRef;
+  }
+
   async function loadAudioLibrary() {
     if (!isConfigured()) return;
     try {
@@ -4396,6 +4529,7 @@
   function renderAudioLibrary() {
     var node = el['audio-library-list'];
     if (!node) return;
+    renderMusicDefault();
     var lib = state.audioLibrary;
 
     if (lib === null) {
@@ -4413,7 +4547,10 @@
     node.innerHTML = '';
     lib.forEach(function (track) {
       var row = document.createElement('div');
-      row.className = 'audio-track-row' + (state.audioLibrarySelected === track.path ? ' is-selected' : '');
+      var isSelected = state.audioLibrarySelected === track.path;
+      var isDefault = state.audioLibraryDefault === track.path;
+      row.className = 'audio-track-row' + (isSelected ? ' is-selected' : '') +
+        (isDefault ? ' is-default' : '');
 
       var name = document.createElement('span');
       name.className = 'audio-track-name';
@@ -4428,22 +4565,41 @@
       var selectBtn = document.createElement('button');
       selectBtn.type = 'button';
       selectBtn.className = 'btn btn-secondary';
-      var isSelected = state.audioLibrarySelected === track.path;
-      selectBtn.textContent = isSelected ? 'Selected ✓' : 'Use for this job';
+      selectBtn.textContent = isSelected ? 'Selected ✓' :
+        (isDefault ? 'Use saved default' : 'Use for this job');
       selectBtn.disabled = state.audioLibraryBusy;
-      selectBtn.addEventListener('click', function () {
-        if (isSelected) {
+      selectBtn.addEventListener('click', async function () {
+        if (state.audioLibrarySelected === track.path) {
+          // Deselecting restores ordinary fallback behavior: the saved default
+          // is still used unless an explicit one-off upload was supplied.
           state.audioLibrarySelected = null;
-        } else {
-          state.audioLibrarySelected = track.path;
-          // A library selection and a one-off upload are mutually
-          // exclusive for a given job — clear any picked file so it's
-          // unambiguous which one startStageB() will use.
-          state.musicFile = null;
-          if (el['music-file-input']) el['music-file-input'].value = '';
-          if (el['music-hint']) el['music-hint'].textContent = '';
+          renderAudioLibrary();
+          return;
         }
+        state.audioLibrarySelected = track.path;
+        // A library selection and a one-off upload are mutually exclusive for
+        // this job. The library choice is the only kind that becomes the
+        // persistent default shared by manual and Automatic Mode runs.
+        state.musicFile = null;
+        if (el['music-file-input']) el['music-file-input'].value = '';
+        if (el['music-hint']) el['music-hint'].textContent = '';
+        state.audioLibraryBusy = true;
         renderAudioLibrary();
+        try {
+          await saveMusicDefault(track.path);
+          if (el['audio-library-add-hint']) {
+            el['audio-library-add-hint'].textContent =
+              'Saved “' + track.name + '” as the default library track.';
+          }
+        } catch (err) {
+          if (el['audio-library-add-hint']) {
+            el['audio-library-add-hint'].textContent =
+              'Selected for this run, but could not save the default: ' + err.message;
+          }
+        } finally {
+          state.audioLibraryBusy = false;
+          renderAudioLibrary();
+        }
       });
       row.appendChild(selectBtn);
 
@@ -4535,6 +4691,10 @@
         }
       });
       if (state.audioLibrarySelected === track.path) state.audioLibrarySelected = null;
+      if (state.audioLibraryDefault === track.path) {
+        state.audioLibraryDefault = null;
+        renderMusicDefault();
+      }
     } catch (err) {
       if (el['audio-library-add-hint']) {
         el['audio-library-add-hint'].textContent = 'Delete failed: ' + err.message;
@@ -4778,18 +4938,19 @@
       return;
     }
 
-    // Background music: a selected library track is used directly by
-    // repo path (already committed permanently under audio-library/, so
-    // there is nothing to upload here — this is exactly the network
-    // failure this feature exists to avoid). A freshly picked one-off
-    // file is committed to jobs/<jobId>/music.mp3 same as before. No
-    // library pick and no file picked -> music_ref stays empty and the
-    // workflow skips music entirely.
-    var musicRef = '';
+    // Background music precedence is explicit library selection, then a
+    // one-off upload, then the persisted last-selected library default. The
+    // default remains a library path only; a job-local upload is one-off and
+    // never becomes a future-run fallback.
+    if (!state.musicDefaultLoaded) await loadMusicDefault();
+    if (state.audioLibrary === null) await loadAudioLibrary();
+    var musicRef = resolvedLibraryMusicRef();
     if (state.audioLibrarySelected) {
-      musicRef = 'path:' + state.audioLibrarySelected;
-      showValidation([path + ' committed. Using library track: ' + state.audioLibrarySelected + '…'], true);
-    } else if (state.musicFile) {
+      showValidation([path + ' committed. Using selected library track: ' + state.audioLibrarySelected + '…'], true);
+    } else if (musicRef) {
+      showValidation([path + ' committed. Using saved library default: ' + musicRef.slice(5) + '…'], true);
+    }
+    if (state.musicFile) {
       var musicPath = 'jobs/' + state.jobId + '/music.mp3';
       showValidation([path + ' committed. Committing ' + musicPath + '…'], true);
       var musicContentsPath = '/repos/' + state.owner + '/' + state.repo +
@@ -4952,12 +5113,16 @@
 
       var musicRef = savedMusicRef;
       if (musicRef === null) {
-        musicRef = '';
-        try {
-          await gh(base + '/music.mp3?ref=' + REF + '&_=' + Date.now());
-          musicRef = 'path:jobs/' + state.jobId + '/music.mp3';
-        } catch (musicErr) {
-          if (musicErr.status !== 404) throw musicErr;
+        if (!state.musicDefaultLoaded) await loadMusicDefault();
+        if (state.audioLibrary === null) await loadAudioLibrary();
+        musicRef = resolvedLibraryMusicRef();
+        if (!musicRef) {
+          try {
+            await gh(base + '/music.mp3?ref=' + REF + '&_=' + Date.now());
+            musicRef = 'path:jobs/' + state.jobId + '/music.mp3';
+          } catch (musicErr) {
+            if (musicErr.status !== 404) throw musicErr;
+          }
         }
       }
 
@@ -5248,6 +5413,7 @@
     loadGeminiKeysMeta();
     loadPuterKeysMeta();
     loadZernioSettings();
+    loadMusicDefault();
     loadAudioLibrary();
 
     // Populate the Tasks list from the repo (source of truth) and then

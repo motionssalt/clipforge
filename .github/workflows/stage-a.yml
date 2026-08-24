@@ -896,6 +896,16 @@ jobs:
             --output "jobs/${{ steps.jid.outputs.job_id }}/production.json" \
             --result-path "jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json"
 
+      - name: Resolve Automatic Mode music selection
+        id: automatic_music
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/read_automatic_music.py \
+            "${{ steps.jid.outputs.job_id }}" \
+            "jobs/${{ steps.jid.outputs.job_id }}/automatic_music.json"
+
       - name: Write automatic Stage B queued status
         if: ${{ github.event.inputs.automatic_mode == 'true' }}
         shell: bash
@@ -908,6 +918,8 @@ jobs:
             --extra "automatic_mode=true" \
             --extra "automatic_analysis_result=jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json" \
             --extra "production_ref=path:jobs/${{ steps.jid.outputs.job_id }}/production.json" \
+            --extra "music_ref=${{ steps.automatic_music.outputs.music_ref }}" \
+            --extra "music_source=${{ steps.automatic_music.outputs.music_source }}" \
             --extra "original_asset_name=${ORIGINAL_ASSET_NAME}"
 
       - name: Commit automatic production plan and status
@@ -948,7 +960,7 @@ jobs:
           gh workflow run stage-b.yml --repo "$GITHUB_REPOSITORY" --ref main \
             -f "job_id=${{ steps.jid.outputs.job_id }}" \
             -f "production_ref=path:jobs/${{ steps.jid.outputs.job_id }}/production.json" \
-            -f "music_ref=" \
+            -f "music_ref=${{ steps.automatic_music.outputs.music_ref }}" \
             -f "code_ref=$code_ref"
 
       - name: Commit final status

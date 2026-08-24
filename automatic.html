@@ -332,6 +332,24 @@ Automatic Mode — ClipForge
             </div>
           </div>
 
+          <div class="music-option automatic-music-option">
+            <div><label class="enhance-toggle-label">Background music <span class="opt">optional</span></label><p class="hint">Choose a library track now for this unattended run, or upload one one-off file. Library picks become the shared last-selected default; one-off uploads never do.</p></div>
+            <p class="hint" id="audio-library-default">Loading saved default…</p>
+            <div class="audio-library">
+              <div class="audio-library-header">
+                <h4 class="sub-heading" style="margin:0;">Audio library</h4>
+                <p class="hint">Committed once, kept forever — pick a track here instead of re-uploading it on a slow connection. Add more any time.</p>
+              </div>
+              <div id="audio-library-list" class="audio-library-list" aria-live="polite">
+                <p class="hint" id="audio-library-empty">Loading library…</p>
+              </div>
+              <div class="upload-row"><input type="file" id="audio-library-add-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" multiple></div>
+              <p class="hint" id="audio-library-add-hint">Add one or more tracks to the library (does not select them for this job).</p>
+            </div>
+            <div class="upload-row"><label for="music-file-input" class="hint">Or upload a one-off track for this Automatic Mode run:</label><input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac"></div>
+            <p class="hint" id="music-hint"></p>
+          </div>
+
           <div class="row-actions launch-actions">
             <button type="submit" id="start-stage-a" class="btn btn-primary btn-lg"><span aria-hidden="true">▶</span> Start Automatic Mode</button>
             <span id="stage-a-msg" class="inline-msg" aria-live="polite"></span>
@@ -493,25 +511,6 @@ Automatic Mode — ClipForge
               <textarea id="cuts-paste-input" rows="10" spellcheck="false" autocapitalize="off" placeholder='Paste the complete production.json here, including the outer { }.'></textarea>
               <p class="hint">Paste from clipboard reads text only after you press the button. If your browser blocks clipboard access, paste here manually; both paths use the same validation. Nothing is committed until you start Stage B.</p>
               <div class="row-actions"><button type="button" id="cuts-paste-import" class="btn btn-secondary">Validate typed JSON</button></div>
-            </div>
-
-            <div class="music-option">
-              <div><label class="enhance-toggle-label">Background music <span class="opt">optional</span></label><p class="hint">Trimmed or looped to the final duration and mixed beneath the voiceover.</p></div>
-
-              <div class="audio-library">
-                <div class="audio-library-header">
-                  <h4 class="sub-heading" style="margin:0;">Audio library</h4>
-                  <p class="hint">Committed once, kept forever — pick a track here instead of re-uploading it on a slow connection. Add more any time.</p>
-                </div>
-                <div id="audio-library-list" class="audio-library-list" aria-live="polite">
-                  <p class="hint" id="audio-library-empty">Loading library…</p>
-                </div>
-                <div class="upload-row"><input type="file" id="audio-library-add-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac" multiple></div>
-                <p class="hint" id="audio-library-add-hint">Add one or more tracks to the library (does not select them for this job).</p>
-              </div>
-
-              <div class="upload-row"><label for="music-file-input" class="hint">Or upload a one-off track for just this job:</label><input type="file" id="music-file-input" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.flac"></div>
-              <p class="hint" id="music-hint"></p>
             </div>
 
             <div id="cuts-validation" class="validation is-hidden" aria-live="polite"></div>

@@ -39,9 +39,11 @@ assert(
 assert(
   app.includes("var musicRef = savedMusicRef;") &&
   app.includes("if (musicRef === null) {") &&
+  app.includes("if (!state.musicDefaultLoaded) await loadMusicDefault();") &&
+  app.includes("musicRef = resolvedLibraryMusicRef();") &&
   app.includes("await gh(base + '/music.mp3?ref=' + REF + '&_=' + Date.now());") &&
   app.includes('music_ref: musicRef,'),
-  'restart must prefer persisted selection, then use only the legacy upload fallback'
+  'restart must prefer persisted selection, then saved library default, then legacy job upload fallback'
 );
 
-console.log('PASS: restart retains library music, job upload music, and explicit no-music selection');
+console.log('PASS: restart retains library music, saved defaults, job uploads, and explicit no-music selection');
