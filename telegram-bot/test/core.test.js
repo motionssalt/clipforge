@@ -181,6 +181,14 @@ test('existing masked Gemini metadata is recognised without materialising an opa
   assert.equal(__test.existingGeminiLabel([], []), 'Gemini keys: not configured');
 });
 
+test('the copied agent handoff contains the exact release URL', () => {
+  const releaseUrl = 'https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-test';
+  const prompt = __test.buildAgentHandoffPrompt(releaseUrl);
+  assert.ok(prompt.includes(releaseUrl));
+  assert.ok(prompt.includes('00_READ_THIS_FIRST.txt'));
+  assert.ok(new TextEncoder().encode(prompt).length <= 256);
+});
+
 test('manual Stage A status exposes the agent-prompt control before production upload', () => {
   const markup = __test.taskButtons('A', { stage: 'awaiting_json_upload' });
   const callbacks = markup.inline_keyboard.flat().map((button) => button.callback_data);

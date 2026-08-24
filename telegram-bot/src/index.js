@@ -398,6 +398,10 @@ async function selectMusic(env, chatId, choice) {
   await finishTaskLaunch(env, chatId);
 }
 
+function buildAgentHandoffPrompt(releaseUrl) {
+  return `Open this GitHub Release: ${releaseUrl}\nRead 00_READ_THIS_FIRST.txt first, inspect the release assets and original video, create production.json, and return only that file.`;
+}
+
 async function sendManualAgentPrompt(env, chatId, label) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
@@ -409,7 +413,7 @@ async function sendManualAgentPrompt(env, chatId, label) {
   }
   const releaseUrl = status.release_url;
   if (typeof releaseUrl !== 'string' || !releaseUrl.startsWith('https://')) throw new Error('The Stage A release link is unavailable. Open the release from this task’s status and retry after the release completes.');
-  const prompt = `Open the GitHub Release link below. Read 00_READ_THIS_FIRST.txt first, then inspect transcript.json, scene_index.json, key_moments.json, screenshots.zip, and the original video. Create production.json and return only that file.`;
+  const prompt = buildAgentHandoffPrompt(releaseUrl);
   const replyMarkup = { inline_keyboard: [[
     { text: 'Open GitHub Release', url: releaseUrl },
     { text: 'Copy agent prompt', copy_text: { text: prompt } }
@@ -871,4 +875,4 @@ export default {
   }
 };
 
-export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, torrentCandidateButtonText, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
+export const __test = { buildAgentHandoffPrompt, cloneOnboardingMenu, commandOf, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, torrentCandidateButtonText, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
