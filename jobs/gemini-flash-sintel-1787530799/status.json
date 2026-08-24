@@ -1,0 +1,16 @@
+{
+  "job_id": "gemini-flash-sintel-1787530799",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-gemini-flash-sintel-1787530799",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787530932,
+  "updated_at_epoch": 1787530932,
+  "expires_at_epoch": 1787574132,
+  "extra": {
+    "workflow_run_id": "32676356323",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32676356323",
+    "automatic_mode": "true"
+  }
+}
