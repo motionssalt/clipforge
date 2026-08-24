@@ -75,6 +75,12 @@ class ToolProtocolError(AutomaticAnalysisError):
     """The model tried an unsupported or out-of-order local evidence operation."""
 
 
+class ModelResponseError(AutomaticAnalysisError):
+    """The selected Gemini model returned an unusable final response."""
+
+    category = "provider_malformed"
+
+
 class AllKeysExhausted(AutomaticAnalysisError):
     """Every configured API key reached an authentication or quota failure."""
 
@@ -709,13 +715,13 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
                 # a fallback model instead of misreporting a schema failure.
                 raise
             if corrected.calls:
-                raise AutomaticAnalysisError("Automatic analysis ignored the bounded correction rule by requesting more tools.")
+                raise ModelResponseError("Automatic analysis ignored the bounded correction rule by requesting more tools.")
             corrected_document, corrected_canonical = extract_json_object(corrected.text)
             if corrected_document is None:
-                raise AutomaticAnalysisError("Automatic analysis correction did not return JSON.")
+                raise ModelResponseError("Automatic analysis correction did not return JSON.")
             correction_errors = automatic_plan_errors(corrected_document, corrected_canonical, tools)
             if correction_errors:
-                raise AutomaticAnalysisError("Automatic analysis returned an invalid production plan after its one correction retry: " + "; ".join(correction_errors[:3]))
+                raise ModelResponseError("Automatic analysis returned an invalid production plan after its one correction retry: " + "; ".join(correction_errors[:3]))
             production_document = production_document_without_visual_evidence(corrected_document)
             production_canonical = json.dumps(production_document, ensure_ascii=False, indent=2) + "\n"
             return production_document, production_canonical, turn_number, MAX_CORRECTION_RETRIES
@@ -734,7 +740,7 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
                 result = ToolResult({"error": str(error), "retry_within_remaining_tool_turns": True})
             results.append((call, result))
         gateway.append_tool_results(history, turn, results)
-    raise AutomaticAnalysisError("Automatic analysis exceeded its bounded tool-turn limit.")
+    raise ModelResponseError("Automatic analysis exceeded its bounded tool-turn limit.")
 
 
 def model_candidates(primary: str, fallbacks: Iterable[str]) -> list[str]:
@@ -784,7 +790,7 @@ def run_analysis(
                     "key_rotations": int(getattr(active_gateway, "key_rotations", 0)),
                     "gemini_usage": dict(getattr(active_gateway, "usage_totals", {})),
                 }
-            except (ProviderRequestError, AllKeysExhausted) as error:
+            except (ProviderRequestError, AllKeysExhausted, ModelResponseError) as error:
                 last_error = error
                 if model_index + 1 < len(candidates) and getattr(error, "category", "") in {
                     "model_or_request", "provider_server", "network", "rate_or_quota", "provider_malformed"

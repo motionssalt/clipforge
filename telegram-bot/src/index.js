@@ -411,12 +411,18 @@ async function sendManualAgentPrompt(env, chatId, label) {
   if (typeof assetUrl !== 'string' || !assetUrl.startsWith('https://')) throw new Error('The Stage A release did not publish its agent prompt asset. Open the release from this task’s status and retry after the release completes.');
   const prompt = await getReleaseTextAsset(credentials, assetUrl);
   const content = new TextEncoder().encode(prompt);
+  const copyText = String(prompt).slice(0, 256);
+  const replyMarkup = { inline_keyboard: [[{
+    text: prompt.length <= 256 ? 'Copy full agent prompt' : 'Copy prompt opening',
+    copy_text: { text: copyText }
+  }]] };
   await sendDocumentBytes(
     env,
     chatId,
     content,
     `${jobId}-agent-prompt.txt`,
-    `<b>Task ${escapeHtml(label)} agent prompt</b>\nThis is the exact Stage A release prompt. Open the text file in Telegram to copy or forward the complete prompt, then upload the returned production.json.`
+    `<b>Task ${escapeHtml(label)} agent prompt</b>\nThis is the exact Stage A release prompt. Use the copy button for the opening section, or open the attached text file to select and copy the complete prompt, then upload the returned production.json.`,
+    replyMarkup
   );
 }
 

@@ -25,6 +25,7 @@ from automatic_analysis import (
     NativeToolCall,
     NativeTurn,
     ProviderRequestError,
+    ModelResponseError,
     ToolProtocolError,
     ToolResult,
     key_failure_should_rotate,
@@ -350,6 +351,32 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
         "correction-time provider exhaustion must propagate before plan validation"
     )
 
+    malformed_final_gateway = ScriptedGateway({
+        "gemini-3.7-flash": [
+            native_call("malformed-final-1", "read_transcript"),
+            native_call("malformed-final-2", "read_scene_index"),
+            native_call("malformed-final-3", "read_key_moments"),
+            native_call("malformed-final-4", "open_composite", filename="frame_000000.jpg"),
+            native_call("malformed-final-5", "open_composite", filename="event_000010000.jpg"),
+            native_call("malformed-final-6", "open_composite", filename="event_000020000.jpg"),
+            NativeTurn(calls=[], text="temporary malformed final", model_content={"role": "model"}),
+            NativeTurn(calls=[], text="still not JSON", model_content={"role": "model"}),
+        ],
+        "gemini-3.6-flash": [
+            native_call("malformed-final-fallback-1", "read_transcript"),
+            native_call("malformed-final-fallback-2", "read_scene_index"),
+            native_call("malformed-final-fallback-3", "read_key_moments"),
+            native_call("malformed-final-fallback-4", "open_composite", filename="frame_000000.jpg"),
+            native_call("malformed-final-fallback-5", "open_composite", filename="event_000010000.jpg"),
+            native_call("malformed-final-fallback-6", "open_composite", filename="event_000020000.jpg"),
+            plain_turn(GROUNDED_PLAN),
+        ],
+    })
+    malformed_final_plan, _, malformed_final_summary = run_analysis(root, "unused-by-fake", gateway=malformed_final_gateway)
+    assert malformed_final_plan == PRODUCTION_PLAN
+    assert malformed_final_summary["model"] == "gemini-3.6-flash"
+    assert malformed_final_summary["model_route"] == "fallback"
+
     malformed_provider_gateway = ScriptedGateway({
         "gemini-3.7-flash": [ProviderRequestError(None, "provider_malformed")],
         "gemini-3.6-flash": [
@@ -391,4 +418,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     except AllKeysExhausted:
         pass
 
-print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, per-cut visual grounding, correction-time provider-failure propagation, bounded temporary-provider retries, malformed-provider fallback, bounded fallback, and secure key-failover semantics")
+print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, malformed-final fallback, per-cut visual grounding, correction-time provider-failure propagation, bounded temporary-provider retries, malformed-provider fallback, bounded fallback, and secure key-failover semantics")
