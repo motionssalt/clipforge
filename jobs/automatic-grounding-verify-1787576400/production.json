@@ -1,0 +1,89 @@
+{
+  "video_duration_seconds": 52,
+  "title": "Sintel Risked Everything to Save Her Dragon",
+  "hashtags": [
+    "#sintel",
+    "#openmovie",
+    "#blender",
+    "#animation",
+    "#dragons",
+    "#fantasy"
+  ],
+  "youtube_tags": [
+    "sintel",
+    "blender animation",
+    "sintel dragon",
+    "open movie project",
+    "sintel story",
+    "animated short film",
+    "dragon rescue",
+    "fantasy animation",
+    "sintel desert scene",
+    "dragon snatch scene",
+    "sintel full story",
+    "cgi animated movie"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 0,
+      "end_seconds": 12,
+      "voiceover_text": "Sintel battles through freezing blizzards and hostile mountain peaks in her relentless search for her lost dragon. An old gatekeeper questions her journey, but her resolve never wavers. Every brutal step through the snow proves her absolute determination.",
+      "keywords": [
+        {
+          "word": "freezing",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "relentless",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 18,
+      "end_seconds": 27,
+      "voiceover_text": "Reaching a ruined city, Sintel spots the young dragon fluttering above the rooftops. Hope flares as she leaps across the crumbling ledges and reaches out. She believes her long search is finally over.",
+      "keywords": [
+        {
+          "word": "fluttering",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "Hope",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 27,
+      "end_seconds": 36,
+      "voiceover_text": "Without warning, a massive adult dragon swoops down and snatches the tiny creature in its giant claws. Sintel stares in horror as the beast disappears over the canyon. She is utterly devastated, but refuses to give up.",
+      "keywords": [
+        {
+          "word": "snatches",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "horror",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 36,
+      "end_seconds": 42,
+      "voiceover_text": "Facing the harsh consequences of her relentless pursuit, Sintel marches alone across the endless desert into hostile dragon territory.",
+      "keywords": [
+        {
+          "word": "consequences",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "desert",
+          "color": "#FF5C5C"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 30
+}
