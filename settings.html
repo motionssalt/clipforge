@@ -78,17 +78,17 @@ Settings — ClipForge
           </div>
         </form>
 
-        <!-- Gemini TTS keys -->
+        <!-- Gemini Automatic Mode keys -->
         <details class="fold" id="gemini-keys-disclosure">
           <summary>
             <span class="fold-label">
-              <span class="fold-eyebrow">Voiceover + Automatic Mode credentials</span>
+              <span class="fold-eyebrow">Automatic Mode credentials</span>
               <strong>Gemini API keys</strong>
             </span>
             <span class="fold-cue">Manage</span>
           </summary>
           <div class="fold-body">
-            <p class="hint">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the libsodium bundle ships with the site itself, so no third-party CDN request is made). The same key list powers Stage B voiceover and Automatic Mode’s direct Gemini analysis. Multiple keys are tried in order for authentication, quota, rate-limit, or transient API errors.</p>
+            <p class="hint">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the libsodium bundle ships with the site itself, so no third-party CDN request is made). This key list powers Automatic Mode’s direct Gemini analysis. Multiple keys are tried in order for authentication, quota, rate-limit, or transient API errors.</p>
             <form id="gemini-key-form" autocomplete="off">
               <div class="field">
                 <label for="gemini-key-input">Add a Gemini API key</label>
@@ -199,6 +199,25 @@ Settings — ClipForge
                 <span id="zernio-settings-msg" class="inline-msg" aria-live="polite"></span>
               </div>
             </form>
+          </div>
+        </details>
+
+        <!-- Edge TTS narrator -->
+        <details class="fold" id="tts-settings-disclosure">
+          <summary>
+            <span class="fold-label">
+              <span class="fold-eyebrow">Reusable production default</span>
+              <strong>Voiceover narrator</strong>
+            </span>
+            <span class="fold-cue">Choose voice</span>
+          </summary>
+          <div class="fold-body">
+            <p class="hint">Every future Stage B render uses Edge TTS with your saved narrator. Preview any curated U.S. English voice before making it the default. Narration remains brisk at the ClipForge commentary pace and uses the same clarity mastering profile.</p>
+            <div id="tts-voice-current" class="hint">Loading saved narrator…</div>
+            <div id="tts-voice-list" class="tts-voice-list" aria-live="polite"></div>
+            <div class="row-actions">
+              <span id="tts-voice-msg" class="inline-msg" aria-live="polite"></span>
+            </div>
           </div>
         </details>
 

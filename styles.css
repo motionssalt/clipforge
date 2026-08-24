@@ -247,7 +247,12 @@ input[type="checkbox"] { width: 18px; min-height: 18px; accent-color: var(--acce
 .upload-workspace { margin-top: 1.3rem; padding-top: 1.3rem; border-top: 1px solid var(--line); }
 .upload-row { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; margin-top: .75rem; }
 .upload-row input { flex: 1 1 260px; }
-.audio-library-list, .scene-list, .zernio-posts-list { display: grid; gap: .55rem; margin-top: .7rem; }
+.audio-library-list, .scene-list, .zernio-posts-list, .tts-voice-list { display: grid; gap: .55rem; margin-top: .7rem; }
+.tts-voice-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .55rem; align-items: center; padding: .7rem .75rem; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+.tts-voice-row.is-default { border-color: var(--teal); background: var(--teal-soft); }
+.tts-voice-details { display: grid; gap: .1rem; min-width: 0; }
+.tts-voice-details strong { font-size: .84rem; }
+.tts-voice-details span { color: var(--muted); font-size: .72rem; line-height: 1.35; }
 .validation { margin-top: 1rem; padding: .85rem; border-radius: 10px; white-space: pre-line; font-size: .78rem; }
 .validation.ok { background: var(--teal-soft); color: var(--teal); }
 .validation.bad { background: var(--danger-soft); color: var(--danger); }
@@ -308,6 +313,8 @@ input[type="checkbox"] { width: 18px; min-height: 18px; accent-color: var(--acce
   .status-head { top: 0; }
   .handoff-header, .completion-heading, .zernio-publish-heading { align-items: flex-start; }
   .row-actions .btn, .completion-actions .btn { flex: 1 1 auto; }
+  .tts-voice-row { grid-template-columns: 1fr auto; }
+  .tts-voice-row .tts-voice-details { grid-column: 1 / -1; }
   .site-footer { padding-bottom: 2.5rem; }
 }
 

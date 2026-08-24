@@ -165,13 +165,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Gemini TTS replaced Chatterbox for voiceover generation, so
-          # the previous setuptools<81 / pkuseg-from-sdist workaround
-          # (needed only by resemble-perth's pkg_resources import) is
-          # gone. Standard modern pip / setuptools / wheel are enough for
-          # the remaining stack (faster-whisper + onnxruntime + Pillow +
-          # requests + numpy). The Gemini TTS call itself uses only
-          # urllib from the stdlib and needs no additional package.
+          # Edge TTS is a small Python dependency and requires no API key.
+          # Standard modern pip / setuptools / wheel are enough for the
+          # remaining stack and for the Edge online synthesis client.
           python -m pip install --upgrade pip wheel setuptools
           pip install -r scripts/requirements.txt
 
@@ -404,31 +400,18 @@ jobs:
       #                            align authoritative script text, and render
       #                            cinematic sentence captions.
       # -------------------------------------------------------------------
-      - name: Generate voiceover (Gemini TTS, one clip per cut)
+      - name: Generate voiceover (Edge TTS, one clip per cut)
         shell: bash
-        env:
-          # Newline-separated list of Gemini API keys, populated from the
-          # GEMINI_API_KEYS repository secret managed by the site's
-          # Settings panel (Gemini TTS keys). scripts/generate_voiceover.py
-          # iterates the list per cut and transparently fails over on
-          # 401/403/429/5xx / API_KEY_INVALID responses; if every key
-          # fails for a cut across every model / voice combination the
-          # job stops with a clear error asking the operator to rotate
-          # keys. The secret is never printed and never written to disk.
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           set -euo pipefail
-          if [ -z "${GEMINI_API_KEYS:-}" ]; then
-            echo "FATAL: the GEMINI_API_KEYS repository secret is empty." >&2
-            echo "Add at least one Gemini API key in the site's Settings" >&2
-            echo "panel (Gemini TTS keys) before running Stage B." >&2
-            exit 2
-          fi
+          # Edge TTS uses the saved, non-secret narrator selection in
+          # branding/tts_settings.json. A missing or invalid setting safely
+          # falls back to the catalog's neutral Andrew default.
           mkdir -p work/voiceover
           python scripts/generate_voiceover.py \
             work/production.json \
             work/voiceover
-          # List only file names + sizes; never dump env or secrets.
+          # List only file names + sizes; no settings payload is logged.
           ls -lh work/voiceover/
 
       - name: Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4

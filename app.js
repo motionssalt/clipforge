@@ -70,6 +70,25 @@
    * erase the default used by future manual or Automatic Mode runs. */
   var MUSIC_DEFAULT_PATH = 'branding/music_default.json';
 
+  /* Edge TTS narrator preference. This is deliberately non-secret: the
+   * browser stores only a curated Microsoft voice identifier in the repo;
+   * Stage B reads it to choose its production narrator. */
+  var TTS_SETTINGS_PATH = 'branding/tts_settings.json';
+  var TTS_PREVIEW_DIR = 'assets/tts-previews/';
+  var TTS_DEFAULT_VOICE = 'en-US-AndrewNeural';
+  var TTS_VOICE_CATALOG = {
+    'en-US-AndrewNeural': { label: 'Andrew', gender: 'Male', style: 'Warm, confident, conversational' },
+    'en-US-BrianNeural': { label: 'Brian', gender: 'Male', style: 'Approachable, casual, sincere' },
+    'en-US-ChristopherNeural': { label: 'Christopher', gender: 'Male', style: 'Reliable, authoritative narrator' },
+    'en-US-EricNeural': { label: 'Eric', gender: 'Male', style: 'Rational, measured narrator' },
+    'en-US-GuyNeural': { label: 'Guy', gender: 'Male', style: 'Energetic news-style narrator' },
+    'en-US-RogerNeural': { label: 'Roger', gender: 'Male', style: 'Lively narrator' },
+    'en-US-AvaNeural': { label: 'Ava', gender: 'Female', style: 'Expressive, caring, conversational' },
+    'en-US-AriaNeural': { label: 'Aria', gender: 'Female', style: 'Positive, confident narrator' },
+    'en-US-JennyNeural': { label: 'Jenny', gender: 'Female', style: 'Friendly, considerate narrator' },
+    'en-US-MichelleNeural': { label: 'Michelle', gender: 'Female', style: 'Friendly, polished narrator' }
+  };
+
   /* Zernio publishing. The API key is stored only as an encrypted Actions
    * secret. All non-secret preferences and provider snapshots are committed
    * outside the expiring jobs/ tree so browser refreshes are harmless. */
@@ -209,6 +228,10 @@
     audioLibraryDefault: null,  // last explicit audio-library/ selection persisted repo-side, or null
     musicDefaultLoaded: false,  // true after branding/music_default.json has been checked
     audioLibraryBusy: false,    // true while adding/deleting/listing so double-clicks don't race
+    ttsVoice: TTS_DEFAULT_VOICE,
+    ttsVoiceLoaded: false,
+    ttsVoiceBusy: false,
+    ttsPreviewAudio: null,
     busy: false,
     stageBDispatched: false,
     stageBRun: null,      // matched GitHub Actions Stage B run for this job
@@ -321,6 +344,7 @@
     'stage-b-controls', 'stage-b-controls-text', 'restart-stage-b', 'cancel-stage-b',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'watermark-form', 'watermark-name-input', 'watermark-save', 'watermark-msg', 'watermark-current',
+    'tts-settings-disclosure', 'tts-voice-current', 'tts-voice-list', 'tts-voice-msg',
     'gemini-keys-disclosure', 'gemini-key-form', 'gemini-key-input', 'gemini-key-reveal',
     'gemini-key-add', 'gemini-key-msg', 'gemini-keys-list', 'gemini-keys-empty',
     'zernio-settings-disclosure', 'zernio-settings-state', 'zernio-key-form', 'zernio-key-input', 'zernio-key-reveal', 'zernio-key-save', 'zernio-key-clear', 'zernio-key-msg',
@@ -658,6 +682,7 @@
     loadGeminiKeysMeta();
     loadZernioSettings();
     loadMusicDefault();
+    loadTtsSettings();
     loadAudioLibrary();
     refreshTasksFromRepo({ silent: true });
     startTasksTimer();
@@ -672,6 +697,139 @@
     localStorage.removeItem(LS.jobsCache);
     location.reload();
   });
+
+  /* ---------------------------------------------------------- Edge TTS */
+
+  function isSupportedTtsVoice(voice) {
+    return typeof voice === 'string' && Object.prototype.hasOwnProperty.call(TTS_VOICE_CATALOG, voice);
+  }
+
+  function selectedTtsVoiceMeta() {
+    return TTS_VOICE_CATALOG[state.ttsVoice] || TTS_VOICE_CATALOG[TTS_DEFAULT_VOICE];
+  }
+
+  function ttsVoiceSummary() {
+    var meta = selectedTtsVoiceMeta();
+    return 'Default narrator: ' + meta.label + ' (' + meta.gender + ') — ' + meta.style + '.';
+  }
+
+  function stopTtsPreview() {
+    var audio = state.ttsPreviewAudio;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    state.ttsPreviewAudio = null;
+  }
+
+  function renderTtsVoiceSettings() {
+    if (el['tts-voice-current']) el['tts-voice-current'].textContent = ttsVoiceSummary();
+    var list = el['tts-voice-list'];
+    if (!list) return;
+    list.innerHTML = '';
+
+    Object.keys(TTS_VOICE_CATALOG).forEach(function (voice) {
+      var meta = TTS_VOICE_CATALOG[voice];
+      var isDefault = state.ttsVoice === voice;
+      var row = document.createElement('div');
+      row.className = 'tts-voice-row' + (isDefault ? ' is-default' : '');
+
+      var details = document.createElement('div');
+      details.className = 'tts-voice-details';
+      var name = document.createElement('strong');
+      name.textContent = meta.label;
+      details.appendChild(name);
+      var descriptor = document.createElement('span');
+      descriptor.textContent = meta.gender + ' · ' + meta.style;
+      details.appendChild(descriptor);
+      row.appendChild(details);
+
+      var preview = document.createElement('button');
+      preview.type = 'button';
+      preview.className = 'btn btn-quiet btn-sm';
+      preview.textContent = 'Preview';
+      preview.disabled = state.ttsVoiceBusy;
+      preview.addEventListener('click', function () {
+        stopTtsPreview();
+        var audio = new Audio(TTS_PREVIEW_DIR + encodeURIComponent(voice) + '.mp3');
+        state.ttsPreviewAudio = audio;
+        audio.addEventListener('ended', function () {
+          if (state.ttsPreviewAudio === audio) state.ttsPreviewAudio = null;
+        });
+        audio.addEventListener('error', function () {
+          if (state.ttsPreviewAudio === audio) state.ttsPreviewAudio = null;
+          setMsg(el['tts-voice-msg'], 'Could not load this voice preview.', 'bad');
+        });
+        audio.play().catch(function () {
+          if (state.ttsPreviewAudio === audio) state.ttsPreviewAudio = null;
+          setMsg(el['tts-voice-msg'], 'Preview playback was blocked by the browser.', 'bad');
+        });
+      });
+      row.appendChild(preview);
+
+      var choose = document.createElement('button');
+      choose.type = 'button';
+      choose.className = isDefault ? 'btn btn-secondary' : 'btn btn-primary';
+      choose.textContent = isDefault ? 'Default ✓' : 'Set default';
+      choose.disabled = state.ttsVoiceBusy || isDefault;
+      choose.addEventListener('click', function () { saveTtsVoice(voice); });
+      row.appendChild(choose);
+      list.appendChild(row);
+    });
+  }
+
+  async function loadTtsSettings() {
+    if (!isConfigured()) return;
+    state.ttsVoice = TTS_DEFAULT_VOICE;
+    try {
+      var file = await gh('/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + TTS_SETTINGS_PATH + '?ref=' + REF + '&_=' + Date.now());
+      var doc = parseJsonWithLegacyTrailingNewline(b64decodeUtf8(file.content));
+      if (doc && doc.version === 1 && isSupportedTtsVoice(doc.voice)) state.ttsVoice = doc.voice;
+    } catch (err) {
+      if (err && err.status !== 404 && el['tts-voice-msg']) {
+        setMsg(el['tts-voice-msg'], 'Could not load saved narrator: ' + err.message, 'bad');
+      }
+    }
+    state.ttsVoiceLoaded = true;
+    renderTtsVoiceSettings();
+  }
+
+  async function saveTtsVoice(voice) {
+    if (!isSupportedTtsVoice(voice)) return;
+    if (!isConfigured()) {
+      setMsg(el['tts-voice-msg'], 'Save your repository connection first.', 'bad');
+      return;
+    }
+    var previous = state.ttsVoice;
+    state.ttsVoice = voice;
+    state.ttsVoiceBusy = true;
+    renderTtsVoiceSettings();
+    var meta = TTS_VOICE_CATALOG[voice];
+    var doc = {
+      version: 1,
+      engine: 'edge-tts',
+      voice: voice,
+      voice_label: meta.label,
+      rate: '+20%',
+      volume: '+0%',
+      pitch: '+0Hz',
+      updated_at_epoch: Math.floor(Date.now() / 1000)
+    };
+    try {
+      await putRepoFile(
+        TTS_SETTINGS_PATH,
+        b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
+        'clipforge: save Edge TTS narrator'
+      );
+      setMsg(el['tts-voice-msg'], meta.label + ' saved as the default narrator.', 'ok');
+    } catch (err) {
+      state.ttsVoice = previous;
+      setMsg(el['tts-voice-msg'], 'Could not save narrator: ' + err.message, 'bad');
+    } finally {
+      state.ttsVoiceBusy = false;
+      renderTtsVoiceSettings();
+    }
+  }
 
   /* -------------------------------------------------- creator watermark */
 
@@ -5268,6 +5426,10 @@
     // Render the Tasks list from the localStorage cache immediately so
     // the list is populated even before the first repo refresh returns.
     renderTasksList();
+    // Voice previews are static assets, so they remain useful even before a
+    // repository connection exists. Saving a selected default still requires
+    // the normal authenticated repo setup.
+    renderTtsVoiceSettings();
 
     if (!isConfigured()) return;
 
@@ -5276,6 +5438,7 @@
     loadGeminiKeysMeta();
     loadZernioSettings();
     loadMusicDefault();
+    loadTtsSettings();
     loadAudioLibrary();
 
     // Populate the Tasks list from the repo (source of truth) and then

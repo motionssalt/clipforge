@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration checks for the conservative Gemini voiceover clarity pass."""
+"""Integration checks for ClipForge Edge TTS defaults and voiceover mastering."""
 from __future__ import annotations
 
 import importlib.util
@@ -32,8 +32,25 @@ for index in range(voice.SAMPLE_RATE_HZ * 2):
     frames.append(value.to_bytes(2, byteorder="little", signed=True))
 pcm = b"".join(frames)
 
+assert voice.DEFAULT_TTS_VOICE == "en-US-AndrewNeural"
+assert len(voice.TTS_VOICE_CATALOG) == 10
+assert set(voice.TTS_VOICE_CATALOG) == {
+    "en-US-AndrewNeural", "en-US-BrianNeural", "en-US-ChristopherNeural",
+    "en-US-EricNeural", "en-US-GuyNeural", "en-US-RogerNeural",
+    "en-US-AvaNeural", "en-US-AriaNeural", "en-US-JennyNeural", "en-US-MichelleNeural",
+}
+
 with tempfile.TemporaryDirectory(prefix="clipforge_clarity_test_") as temp_dir:
-    raw_path = Path(temp_dir) / "raw.wav"
+    root = Path(temp_dir)
+    default_settings = voice.load_tts_settings(root / "missing.json")
+    assert default_settings.voice == voice.DEFAULT_TTS_VOICE
+    saved_settings = root / "tts_settings.json"
+    saved_settings.write_text('{"version": 1, "voice": "en-US-AvaNeural"}', encoding="utf-8")
+    assert voice.load_tts_settings(saved_settings).voice == "en-US-AvaNeural"
+    saved_settings.write_text('{"version": 1, "voice": "not-a-safe-voice"}', encoding="utf-8")
+    assert voice.load_tts_settings(saved_settings).voice == voice.DEFAULT_TTS_VOICE
+
+    raw_path = root / "raw.wav"
     processed_path = Path(temp_dir) / "processed.wav"
     raw_duration = voice.write_wav(raw_path, pcm)
     metadata = voice.post_process_voiceover_wav(raw_path, processed_path)
@@ -59,4 +76,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_clarity_test_") as temp_dir:
     assert tail_duration == output_frames / int(cut.AAC_SAMPLE_RATE)
     assert tail_duration > round(tail_frames / voice.SAMPLE_RATE_HZ, 3)
 
-print("PASS: voiceover clarity pass and Stage B preserve exact final-WAV timing")
+print("PASS: Edge TTS catalog defaults, voiceover clarity pass, and Stage B preserve exact final-WAV timing")

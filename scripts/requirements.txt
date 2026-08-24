@@ -40,18 +40,11 @@ requests>=2.32,<3
 # Actions-only secrets supplied through GEMINI_API_KEYS.
 google-genai>=1.66,<2
 
-# --- Voiceover TTS (Gemini API) ---------------------------------------------
+# --- Voiceover TTS (Microsoft Edge online service) ---------------------------
 #
-# Stage B synthesizes voiceovers with Google's Gemini API TTS. The call is
-# a plain HTTPS POST implemented with urllib from the standard library —
-# no third-party SDK is required and, deliberately, no Gemini SDK is
-# pinned here. This keeps the install lean and lets stage-b.yml skip the
-# ~6 GB Chatterbox model cache and the setuptools<81 / pkuseg-from-sdist
-# workaround that Chatterbox previously needed.
-#
-# Gemini API keys are supplied at run time via the GEMINI_API_KEYS env
-# variable, populated by stage-b.yml from a GitHub Actions repository
-# secret managed by the site's Settings panel (Gemini TTS keys).
-# Voice character / model choice / directorial style prompt live in
-# scripts/generate_voiceover.py and were selected specifically to
-# reproduce a Jujutsu Kaisen / Hunter x Hunter narrator delivery.
+# Stage B synthesizes each voiceover using Edge TTS. It needs no API key;
+# the selected, non-secret narrator identifier is loaded from
+# branding/tts_settings.json by scripts/generate_voiceover.py. The module
+# returns MP3 transport audio which the script immediately normalizes and
+# masters into ClipForge's unchanged 24 kHz mono PCM WAV contract.
+edge-tts==7.2.8
