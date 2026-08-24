@@ -22,6 +22,7 @@ import mimetypes
 import os
 import re
 import tempfile
+import time
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,10 @@ DEFAULT_PRIMARY_MODEL = "gemini-3.7-flash"
 DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")
 MAX_TOOL_TURNS = 20
 MAX_CORRECTION_RETRIES = 1
+# Briefly pause before rotating after a transient per-key quota/rate failure.
+# The cap keeps the bounded workflow comfortably within its overall time budget.
+RATE_LIMIT_ROTATION_BACKOFF_BASE_S = 1.0
+RATE_LIMIT_ROTATION_BACKOFF_CAP_S = 4.0
 MAX_SEED_BYTES = 1024 * 1024
 MAX_JSON_ARTIFACT_BYTES = 5 * 1024 * 1024
 # Keep this in lockstep with generate_voiceover.py's configured Gemini TTS
@@ -62,6 +67,10 @@ class ToolProtocolError(AutomaticAnalysisError):
 
 class AllKeysExhausted(AutomaticAnalysisError):
     """Every configured API key reached an authentication or quota failure."""
+
+    def __init__(self, message: str, category: str = "rate_or_quota"):
+        self.category = category
+        super().__init__(message)
 
 
 class ProviderRequestError(AutomaticAnalysisError):
@@ -458,7 +467,20 @@ class GeminiGateway:
                     raise last_error from error
                 self.current_key_index = (index + 1) % len(self.keys)
                 self.key_rotations += 1
-        raise AllKeysExhausted("All configured Gemini API keys failed with authentication or quota errors.") from last_error
+                # A brief bounded pause can let a transient per-key rate spike
+                # clear. Skip it when no other key remains to try.
+                if category == "rate_or_quota" and len(attempted) < len(self.keys):
+                    delay = min(
+                        RATE_LIMIT_ROTATION_BACKOFF_BASE_S * (2 ** (len(attempted) - 1)),
+                        RATE_LIMIT_ROTATION_BACKOFF_CAP_S,
+                    )
+                    safe_log("Gemini rate/quota rotation backoff " + f"{delay:.1f}s before the next configured key.")
+                    time.sleep(delay)
+        exhausted_category = last_error.category if last_error is not None else "rate_or_quota"
+        raise AllKeysExhausted(
+            "All configured Gemini API keys failed with authentication or quota errors.",
+            exhausted_category,
+        ) from last_error
 
     def append_tool_results(self, history: list[Any], turn: NativeTurn, results: list[tuple[NativeToolCall, ToolResult]]) -> None:
         history.append(turn.model_content)
@@ -633,7 +655,12 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
                 "Your proposed production.json failed ClipForge validation. Return one corrected JSON object only. "
                 "Do not call tools, do not add commentary, and do not broaden the story. Validation errors:\n- " + "\n- ".join(errors),
             )
-            corrected = gateway.generate(model, history, tools_enabled=False)
+            try:
+                corrected = gateway.generate(model, history, tools_enabled=False)
+            except (ProviderRequestError, AllKeysExhausted):
+                # Preserve provider/quota failures so run_analysis can route to
+                # a fallback model instead of misreporting a schema failure.
+                raise
             if corrected.calls:
                 raise AutomaticAnalysisError("Automatic analysis ignored the bounded correction rule by requesting more tools.")
             corrected_document, corrected_canonical = extract_json_object(corrected.text)

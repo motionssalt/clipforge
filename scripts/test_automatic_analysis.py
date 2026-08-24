@@ -206,6 +206,27 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     assert opened[1].response["coverage_start_seconds"] == 8.0
     assert opened[2].response["coverage_end_seconds"] == 22.0
 
+    correction_exhausted_gateway = ScriptedGateway({
+        "gemini-3.7-flash": [
+            native_call("quota-1", "read_transcript"),
+            native_call("quota-2", "read_scene_index"),
+            native_call("quota-3", "read_key_moments"),
+            native_call("quota-4", "open_composite", filename="frame_000000.jpg"),
+            native_call("quota-5", "open_composite", filename="event_000010000.jpg"),
+            native_call("quota-6", "open_composite", filename="event_000020000.jpg"),
+            plain_turn(PRODUCTION_PLAN),
+            AllKeysExhausted("all configured keys exhausted during correction"),
+        ]
+    })
+    try:
+        run_analysis(root, "unused-by-fake", gateway=correction_exhausted_gateway, fallback_models=[])
+        raise AssertionError("correction-time key exhaustion was not propagated")
+    except AllKeysExhausted as error:
+        assert "during correction" in str(error)
+    assert correction_exhausted_gateway.calls[-1] == ("gemini-3.7-flash", False), (
+        "correction-time provider exhaustion must propagate before plan validation"
+    )
+
     fallback_gateway = ScriptedGateway({
         "gemini-3.7-flash": [ProviderRequestError(503, "provider_server")],
         "gemini-3.6-flash": [
@@ -230,4 +251,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     except AllKeysExhausted:
         pass
 
-print("PASS: Automatic Mode enforces chronological native evidence retrieval, per-cut visual grounding, bounded correction, provider fallback, and secure key-failover semantics")
+print("PASS: Automatic Mode enforces chronological native evidence retrieval, per-cut visual grounding, correction-time provider-failure propagation, bounded fallback, and secure key-failover semantics")

@@ -542,6 +542,71 @@ Settings — ClipForge
       </div>
     </section>
 
+    <!-- ===== ACT 02 — SHADOW CLONE ===== -->
+    <section id="clone-section" class="act" aria-labelledby="clone-heading">
+      <button type="button" id="clone-toggle" class="act-bar" aria-expanded="true" aria-controls="clone-body">
+        <span class="act-index" aria-hidden="true">02</span>
+        <span class="act-titles">
+          <span class="act-eyebrow">Independent copy</span>
+          <h2 id="clone-heading">Shadow Clone</h2>
+        </span>
+        <span class="act-tail">
+          <span id="clone-state" class="pill">not set up</span>
+          <span class="chevron" aria-hidden="true"></span>
+        </span>
+      </button>
+
+      <div id="clone-body" class="act-body">
+        <p class="lead-note">Create and maintain your own public copy of ClipForge. Your personal access token stays in this browser and is sent only to <code>api.github.com</code>.</p>
+
+        <form id="clone-form" autocomplete="off">
+          <div class="grid-2">
+            <div class="field">
+              <label for="clone-owner-input">Target GitHub owner</label>
+              <input type="text" id="clone-owner-input" name="clone_owner" placeholder="your-account-or-org" spellcheck="false" autocapitalize="off" required>
+            </div>
+            <div class="field">
+              <label for="clone-repo-input">Target repository name</label>
+              <input type="text" id="clone-repo-input" name="clone_repo" placeholder="my-clipforge" spellcheck="false" autocapitalize="off" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="clone-token-input">Your GitHub personal access token</label>
+            <div class="with-reveal">
+              <input type="password" id="clone-token-input" name="clone_token" placeholder="ghp_… / github_pat_…" spellcheck="false" autocapitalize="off" autocomplete="off" required>
+              <button type="button" id="clone-token-reveal" class="btn btn-quiet btn-sm" aria-pressed="false">Show</button>
+            </div>
+            <p class="hint">Classic tokens need <code>repo</code>. Fine-grained tokens need <code>Administration: write</code> to create the repository and <code>Contents: write</code> to commit files; use all-repository access when the target does not exist yet.</p>
+          </div>
+
+          <p id="clone-repo-note" class="hint" aria-live="polite"></p>
+          <label id="clone-overwrite-row" class="check-row is-hidden"><input type="checkbox" id="clone-overwrite-input"> <span>This repo already has files — cloning may overwrite them.</span></label>
+
+          <div class="row-actions">
+            <button type="submit" id="clone-start" class="btn btn-primary" disabled>Clone ClipForge</button>
+          </div>
+        </form>
+        <span id="clone-msg" class="inline-msg" aria-live="polite"></span>
+
+        <div id="clone-summary" class="mini-panel is-hidden">
+          <div class="fold-eyebrow">Shadow clone</div>
+          <p><a id="clone-repo-link" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+          <p id="clone-last-synced" class="hint">Last synced: —</p>
+          <div class="row-actions">
+            <button type="button" id="clone-check-updates" class="btn btn-secondary">Check for updates</button>
+            <label class="check-row"><input type="checkbox" id="clone-auto-check-input"> <span>Check automatically when I open this page</span></label>
+          </div>
+          <div id="clone-updates" class="is-hidden">
+            <ul id="clone-update-list" class="clone-update-list" aria-live="polite"></ul>
+            <div class="row-actions">
+              <button type="button" id="clone-apply-updates" class="btn btn-primary">Apply update</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
 </main>
 
 <!-- ============================================================= DIALOG -->
@@ -576,5 +641,6 @@ Settings — ClipForge
 <script src="torrent_metadata.js" defer></script>
 <script src="production-plan-contract.js" defer></script>
 <script src="app.js" defer></script>
+<script src="shadow-clone.js" defer></script>
 </body>
 </html>
