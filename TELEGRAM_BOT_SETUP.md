@@ -133,21 +133,22 @@ The result should show the `/webhook` URL and no persistent `last_error_message`
 5. Select **Settings** → **Gemini API key** only when you deliberately want to replace the existing Actions secret with a new key set. The replacement confirmation is explicit because GitHub Actions secrets cannot be read back.
 6. Select **Settings** → **Narrator**. The bot offers all ten Edge TTS narrators, a **Preview** button for each committed MP3 sample, and a **Use** button that saves the selected narrator for future Stage B work.
 7. Optionally set the creator watermark.
+8. Select **Settings** → **Zernio publishing** to operate the clone’s complete publishing configuration in Telegram. Save or replace the Zernio API key, refresh connected TikTok and YouTube accounts, select active target accounts, enable or disable publishing controls, enable or disable automatic Stage B publication, choose immediate or smart-scheduled automatic publication, and configure timezone, cadence, preferred local time, queue depth, and either the next available or a custom first schedule slot. The bot writes the same `branding/zernio_settings.json` schema used by the website and never commits or displays `ZERNIO_API_KEY`.
 
 Use a PAT that can create a private repository in the user’s own GitHub account, read and write the clone’s contents, manage the `GEMINI_API_KEYS` GitHub Actions secret, dispatch and cancel Actions workflows, and access workflow files. A classic token should use `repo` plus `workflow`; for a fine-grained token, grant the equivalent repository **Contents**, **Actions**, and **Workflows** write capabilities and ensure it can create the selected personal repository. Existing-clone connection does not need repository-creation permission.
 
-The bot best-effort deletes successful PAT and Gemini-key messages from the private chat. Delete the local message yourself as well if it remains visible. Never send credentials in a group.
+The bot best-effort deletes successful PAT, Gemini-key, and Zernio-key messages from the private chat. Delete the local message yourself as well if it remains visible. Never send credentials in a group.
 
 ## 8. Operator workflow
 
 | Telegram action | Existing ClipForge contract reused |
 | --- | --- |
-| `/manual` | Collects a public source URL, magnet URI, or an uploaded non-empty `.torrent` manifest up to 1 MB, then optional focus, duration, and music. It writes `stage-a-request.json` and dispatches `stage-a.yml` with `automatic_mode=false`. At **Awaiting production plan**, its task view provides **Get agent prompt**, which sends the exact released `00_READ_THIS_FIRST.txt` as a text document before the production-plan upload step. |
+| `/manual` | Collects a public source URL, magnet URI, or an uploaded non-empty `.torrent` manifest up to 1 MB, then optional focus, duration, and music. It writes `stage-a-request.json` and dispatches `stage-a.yml` with `automatic_mode=false`. At **Awaiting production plan**, **Get agent prompt** supplies a concise, copyable instruction containing the exact GitHub Release URL; the external agent reads `00_READ_THIS_FIRST.txt` and the remaining release assets there before returning `production.json`. |
 | `/automatic` | Collects the same URL, magnet, or `.torrent` source inputs, focus, duration, and music; writes the compatible `automatic_music.json` selection when needed; dispatches `stage-a.yml` with `automatic_mode=true`. Existing masked Gemini-key metadata counts as configured Automatic Mode credentials unless the operator explicitly replaces the secret. |
 | `/tasks` / `/status` | Reads the authoritative `jobs/<job-id>/status.json`; labels tasks locally as `A`, `B`, and so on for short inline buttons. Manual Stage A tasks also expose the exact agent-prompt text file when ready. When a torrent manifest reaches `awaiting_torrent_selection`, **Choose torrent video** reads the workflow-generated candidate manifest and starts Stage A only for the selected 1-based video entry. |
 | Upload production plan | Validates the existing production-plan contract, writes `jobs/<job-id>/production.json`, then dispatches unchanged `stage-b.yml` |
 | Retry/cancel controls | Reuse saved Stage A input documents, current default-branch `code_ref`, and the workflow run ID saved in `status.json` |
-| `/done` | Sends the final MP4 and ZIP URLs recorded in the task status document |
+| `/done` | Sends the final MP4 and ZIP URLs recorded in the task status document and exposes **Zernio publishing** for each completed task. The Telegram flow supports publish now, manual local-date scheduling, smart scheduling, failed/partial post retry, existing-post publish-now update, rescheduling, and cancellation through the unchanged `zernio-publish.yml` workflow. |
 
 ## 9. Updating the bot
 

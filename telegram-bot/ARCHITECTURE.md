@@ -26,6 +26,8 @@ The `KV_ENCRYPTION_KEY` Worker secret must be a base64-encoded random 32-byte ke
 
 Raw Gemini keys exist only in request-local variables during a user’s settings flow and in the decrypted per-user credential record. To update `GEMINI_API_KEYS`, the Worker retrieves the repository Actions public key, creates a GitHub-compatible libsodium sealed-box ciphertext, and sends only that ciphertext to GitHub. The plain key is not committed to the clone; `branding/gemini_keys.json` continues to contain only masked fingerprints, matching the existing application contract. When an existing clone contains those fingerprints but the bot has no raw key copy, the fingerprints count as an existing site-managed Automatic Mode configuration. The Worker neither prompts for replacement nor overwrites the opaque Actions secret unless the operator explicitly starts and confirms a replacement flow.
 
+Zernio follows the same sealed Actions-secret boundary. The raw API key exists only while the operator supplies it and while the Worker encrypts it for `ZERNIO_API_KEY`; it is then removed from the incoming private Telegram message and is never committed, displayed, retained in KV, or included in account snapshots. The Worker persists only the existing non-secret `branding/zernio_settings.json` schema and the workflow-created `branding/zernio_accounts.json` snapshot in the connected clone. Target toggles filter out disabled, inactive, and reconnect-required accounts before they can be sent to `zernio-publish.yml`.
+
 An uploaded torrent is accepted only while the current chat is collecting a new Manual or Automatic source. The Worker requires a non-empty `.torrent` filename at or below 1 MB, downloads it as bounded raw bytes, checks the bencoded dictionary prefix, and writes it through the authenticated clone’s GitHub Contents API only to `jobs/<job-id>/source.torrent`. It never stores the torrent bytes in KV. Stage A’s established preflight validates the manifest, writes the authoritative `torrent-selection.json`, and changes the job state to `awaiting_torrent_selection`. Candidate-selection callbacks resolve the chat-local task label, re-read that manifest, validate the requested 1-based index, and dispatch Stage A using the existing `torrent_file_index` contract.
 
 ## Per-user state
@@ -48,12 +50,12 @@ Each incoming message reloads the state record before it is interpreted, which m
 | Command | Behavior |
 | --- | --- |
 | `/start` | For an unconfigured chat, offers **Create private Shadow Clone** or **Connect existing clone**; otherwise shows the user’s isolated operator menu without exposing credentials. |
-| `/settings` | Lets the user switch or connect their own clone, shows safe existing Gemini metadata plus narrator, watermark, and music defaults, explicitly replaces Gemini keys when requested, selects and previews an Edge TTS narrator, and saves a creator watermark. |
+| `/settings` | Lets the user switch or connect their own clone, shows safe existing Gemini metadata plus narrator, watermark, music defaults, and Zernio state; explicitly replaces Gemini keys when requested; selects and previews an Edge TTS narrator; saves a creator watermark; and exposes every existing Zernio preference. |
 | `/tasks` | Lists the current user clone’s tasks as short labels, statuses, and inline buttons. |
 | `/status` | Lists task labels, then lets the operator choose a task for the latest `status.json` and workflow link. |
 | `/manual` | Collects a source URL, magnet URI, or bounded `.torrent` manifest, then optional focus, target duration, and optional music choice; writes a manual Stage A request and dispatches unchanged `stage-a.yml`. |
 | `/automatic` | Collects the same source types, focus, target duration, and optional music choice; writes the compatible automatic music selection and dispatches unchanged `stage-a.yml` with `automatic_mode=true`. |
-| `/done` | Shows completed tasks and provides the existing final video and ZIP release URLs. |
+| `/done` | Shows completed tasks, provides the existing final video and ZIP release URLs, and exposes Zernio publish-now, manual scheduling, smart scheduling, retry, existing-post update/reschedule, and cancellation controls. |
 
 Callback data stays short enough for Telegram by using small action prefixes and per-chat letter labels rather than raw job ids. Destructive or expensive actions have an explicit confirmation callback. The bot uses Telegram’s `answerCallbackQuery` before updating the message thread.
 
@@ -67,6 +69,7 @@ The implementation calls GitHub REST endpoints to dispatch the workflows with th
 - Manual handoff: the bot validates a submitted `production.json` against `schemas/production_plan_contract.json`, commits it to `jobs/<job-id>/production.json`, then dispatches `stage-b.yml`.
 - Automatic music: an explicit empty selection, a safe library selection, or the same job’s `music.mp3` path is written in the existing `automatic_music.json` format expected by `scripts/read_automatic_music.py`.
 - Torrent uploads: the manifest path is exactly `jobs/<job-id>/source.torrent`, Stage A first runs its persistent torrent-selection substage with blank `torrent_file_index`, and the bot resumes only by dispatching a candidate index present in `jobs/<job-id>/torrent-selection.json`.
+- Zernio settings: the Worker writes the established `branding/zernio_settings.json` document, supports `enabled`, `auto_publish`, `automatic_mode`, TikTok/YouTube account targets, IANA timezone, cadence, preferred time, queue depth, and next-available or custom first smart-schedule slot. Account discovery and all completed-job actions dispatch the unchanged `zernio-publish.yml` contract (`discover`, `publish`, `retry`, `update`, and `cancel`).
 
 ## Operational boundaries
 

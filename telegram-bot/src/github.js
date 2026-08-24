@@ -9,7 +9,10 @@ import {
   STATUS_PATH,
   STAGE_A_REQUEST_PATH,
   TTS_SETTINGS_PATH,
-  WATERMARK_PATH
+  WATERMARK_PATH,
+  ZERNIO_ACCOUNTS_PATH,
+  ZERNIO_SECRET_NAME,
+  ZERNIO_SETTINGS_PATH
 } from './constants.js';
 
 const encoder = new TextEncoder();
@@ -348,13 +351,45 @@ function sealForGitHub(value, publicKeyBase64) {
   return b64FromBytes(sealed);
 }
 
-export async function updateGeminiSecret(credentials, repo, geminiKeys) {
+export async function updateActionsSecret(credentials, repo, secretName, value) {
   const { owner, name } = parseRepo(repo);
   const publicKey = await getActionsPublicKey(credentials, repo);
-  const encryptedValue = sealForGitHub(geminiKeys.join('\n'), publicKey.key);
-  await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/secrets/${encodeURIComponent(GEMINI_SECRET_NAME)}`, {
+  const encryptedValue = sealForGitHub(String(value || ''), publicKey.key);
+  await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/secrets/${encodeURIComponent(secretName)}`, {
     method: 'PUT', body: { encrypted_value: encryptedValue, key_id: publicKey.key_id }
   });
+}
+
+export async function actionsSecretExists(credentials, repo, secretName) {
+  const { owner, name } = parseRepo(repo);
+  try {
+    await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/secrets/${encodeURIComponent(secretName)}`);
+    return true;
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return false;
+    throw error;
+  }
+}
+
+export async function deleteActionsSecret(credentials, repo, secretName) {
+  const { owner, name } = parseRepo(repo);
+  try {
+    await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/secrets/${encodeURIComponent(secretName)}`, { method: 'DELETE' });
+  } catch (error) {
+    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+  }
+}
+
+export async function updateZernioSecret(credentials, repo, value) {
+  return updateActionsSecret(credentials, repo, ZERNIO_SECRET_NAME, value);
+}
+
+export async function deleteZernioSecret(credentials, repo) {
+  return deleteActionsSecret(credentials, repo, ZERNIO_SECRET_NAME);
+}
+
+export async function updateGeminiSecret(credentials, repo, geminiKeys) {
+  return updateActionsSecret(credentials, repo, GEMINI_SECRET_NAME, geminiKeys.join('\n'));
 }
 
 export async function readGeminiMetadata(credentials, repo) {
@@ -370,6 +405,25 @@ export async function writeGeminiMetadata(credentials, repo, metaEntries) {
     updated_at_epoch: Math.floor(Date.now() / 1000)
   };
   return putTextFile(credentials, repo, GEMINI_KEYS_META_PATH, `${JSON.stringify(document, null, 2)}\n`, 'clipforge: update Gemini API key metadata (masked fingerprints only)');
+}
+
+export async function readZernioSettings(credentials, repo) {
+  const result = await tryGetJsonFile(credentials, repo, ZERNIO_SETTINGS_PATH);
+  return result ? result.document : null;
+}
+
+export async function readZernioAccounts(credentials, repo) {
+  const result = await tryGetJsonFile(credentials, repo, ZERNIO_ACCOUNTS_PATH);
+  return result && Array.isArray(result.document.accounts) ? result.document.accounts : [];
+}
+
+export async function saveZernioSettings(credentials, repo, document) {
+  return putTextFile(credentials, repo, ZERNIO_SETTINGS_PATH, `${JSON.stringify(document, null, 2)}\n`, 'clipforge: update Zernio publishing settings');
+}
+
+export function zernioFingerprint(value) {
+  const raw = String(value || '').trim();
+  return raw.length >= 9 ? `${raw.slice(0, 4)}…${raw.slice(-4)}` : 'invalid';
 }
 
 export async function saveNarrator(credentials, repo, voice, label) {

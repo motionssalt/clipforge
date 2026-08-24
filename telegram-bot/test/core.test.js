@@ -189,6 +189,28 @@ test('the copied agent handoff contains the exact release URL', () => {
   assert.ok(new TextEncoder().encode(prompt).length <= 256);
 });
 
+test('Zernio settings preserve the site schema and only target active selected accounts', () => {
+  const defaults = __test.defaultZernioSettings();
+  assert.equal(defaults.automatic_mode, 'smart_schedule');
+  assert.equal(defaults.smart_schedule.timezone, 'UTC');
+  assert.equal(__test.validZernioTimezone('America/New_York'), true);
+  assert.equal(__test.validZernioTimezone('bad timezone'), false);
+  assert.equal(__test.validZernioTime('19:30'), true);
+  assert.equal(__test.validZernioTime('25:99'), false);
+  assert.equal(__test.validZernioDateTime('2026-08-25T19:30'), true);
+  assert.equal(__test.validZernioDateTime('2026/08/25 19:30'), false);
+  const accounts = [
+    { id: 'tik-active', platform: 'tiktok', displayName: 'TikTok active', isActive: true, enabled: true },
+    { id: 'yt-active', platform: 'youtube', username: 'youtube-active', isActive: true, enabled: true },
+    { id: 'tik-reconnect', platform: 'tiktok', needsReconnection: true }
+  ];
+  const settings = __test.zernioSettingsOrDefault({ enabled: true, auto_publish: true, automatic_mode: 'publish_now', target_accounts: { tiktok: ['tik-active', 'tik-reconnect'], youtube: ['yt-active'] }, smart_schedule: { timezone: 'Europe/London', interval_days: 3, preferred_time: '08:15', queue_depth: 7 } });
+  assert.deepEqual(__test.activeZernioAccounts(accounts).tiktok.map((account) => account.id), ['tik-active']);
+  assert.deepEqual(__test.zernioTargets(settings, accounts), [{ platform: 'tiktok', account_ids: ['tik-active'] }, { platform: 'youtube', account_ids: ['yt-active'] }]);
+  const callbacks = __test.zernioSettingsMenu({ settings, secretConfigured: true }).inline_keyboard.flat().map((button) => button.callback_data);
+  for (const callback of ['set:zernio_key', 'zernio:refresh', 'zernio:targets', 'zernio:schedule', 'zernio:clear_prompt']) assert.ok(callbacks.includes(callback));
+});
+
 test('manual Stage A status exposes the agent-prompt control before production upload', () => {
   const markup = __test.taskButtons('A', { stage: 'awaiting_json_upload' });
   const callbacks = markup.inline_keyboard.flat().map((button) => button.callback_data);

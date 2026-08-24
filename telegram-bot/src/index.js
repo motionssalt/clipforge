@@ -1,13 +1,13 @@
 import {
   COMMANDS, DEFAULT_VOICE, GEMINI_KEYS_META_PATH, MUSIC_DEFAULT_PATH, PRODUCTION_PATH, STAGE_LABELS, TARGET_DURATIONS, TTS_SETTINGS_PATH, WATERMARK_PATH,
-  VOICES, WHISPER_MODELS, isTerminalStage, stageLabel
+  VOICES, WHISPER_MODELS, ZERNIO_SECRET_NAME, ZERNIO_WORKFLOW, isTerminalStage, stageLabel
 } from './constants.js';
 import { maskSecret } from './crypto.js';
 import {
-  GitHubError, cancelWorkflowRun, createPrivateShadowClone, currentBranchSha, dispatchWorkflow, geminiFingerprint, getJsonFile,
-  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readStageARequest, readStatus, saveAutomaticMusicChoice,
-  putBinaryFile, saveNarrator, saveProductionPlan, saveStageARequest, saveWatermark, tryGetJsonFile, updateGeminiSecret, validateConnection,
-  writeGeminiMetadata
+  GitHubError, actionsSecretExists, cancelWorkflowRun, createPrivateShadowClone, currentBranchSha, deleteZernioSecret, dispatchWorkflow, geminiFingerprint, getJsonFile,
+  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
+  putBinaryFile, saveNarrator, saveProductionPlan, saveStageARequest, saveWatermark, saveZernioSettings, tryGetJsonFile, updateGeminiSecret, updateZernioSecret, validateConnection,
+  writeGeminiMetadata, zernioFingerprint
 } from './github.js';
 import { validateProductionPlan } from './production.js';
 import {
@@ -113,9 +113,75 @@ function settingsMenu() {
   return buttons([
     [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini API key', callback_data: 'set:gemini' }],
     [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music default', callback_data: 'set:music_default' }],
-    [{ text: 'Watermark', callback_data: 'set:watermark' }],
+    [{ text: 'Watermark', callback_data: 'set:watermark' }, { text: 'Zernio publishing', callback_data: 'set:zernio' }],
     [{ text: 'Back to menu', callback_data: 'menu:home' }]
   ]);
+}
+
+function defaultZernioSettings() {
+  return {
+    version: 1,
+    enabled: false,
+    auto_publish: false,
+    automatic_mode: 'smart_schedule',
+    target_accounts: { tiktok: [], youtube: [] },
+    smart_schedule: { timezone: 'UTC', interval_days: 1, preferred_time: '19:30', queue_depth: 4, start_mode: 'next_available', custom_start: '' }
+  };
+}
+
+function zernioSettingsOrDefault(value) {
+  const current = value && typeof value === 'object' ? value : {};
+  const smart = current.smart_schedule && typeof current.smart_schedule === 'object' ? current.smart_schedule : {};
+  return {
+    version: 1,
+    enabled: current.enabled === true,
+    auto_publish: current.auto_publish === true,
+    automatic_mode: current.automatic_mode === 'publish_now' ? 'publish_now' : 'smart_schedule',
+    target_accounts: {
+      tiktok: Array.isArray(current.target_accounts && current.target_accounts.tiktok) ? current.target_accounts.tiktok.map(String) : [],
+      youtube: Array.isArray(current.target_accounts && current.target_accounts.youtube) ? current.target_accounts.youtube.map(String) : []
+    },
+    smart_schedule: {
+      timezone: String(smart.timezone || 'UTC'),
+      interval_days: Number.isInteger(Number(smart.interval_days)) ? Number(smart.interval_days) : 1,
+      preferred_time: /^\d\d:\d\d$/.test(String(smart.preferred_time || '')) ? String(smart.preferred_time) : '19:30',
+      queue_depth: Number.isInteger(Number(smart.queue_depth)) ? Number(smart.queue_depth) : 4,
+      start_mode: smart.start_mode === 'custom' ? 'custom' : 'next_available',
+      custom_start: String(smart.custom_start || '')
+    }
+  };
+}
+
+function validZernioTimezone(value) {
+  return /^(?:UTC|[A-Za-z_]+(?:\/[A-Za-z_+\-]+)+)$/.test(String(value || '').trim());
+}
+
+function validZernioTime(value) {
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value || '').trim());
+}
+
+function validZernioDateTime(value) {
+  return /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(String(value || '').trim());
+}
+
+function activeZernioAccounts(accounts) {
+  const out = { tiktok: [], youtube: [] };
+  for (const account of Array.isArray(accounts) ? accounts : []) {
+    const platform = String(account && account.platform || '').toLowerCase();
+    const id = String(account && (account.id || account._id) || '').trim();
+    if (!out[platform] || !id || account.isActive === false || account.enabled === false || account.needsReconnection === true) continue;
+    out[platform].push({ id, platform, username: String(account.username || ''), displayName: String(account.displayName || '') });
+  }
+  return out;
+}
+
+function zernioTargets(settings, accounts) {
+  const active = activeZernioAccounts(accounts);
+  return ['tiktok', 'youtube'].flatMap((platform) => {
+    const selected = new Set(settings.target_accounts[platform] || []);
+    const accountIds = active[platform].filter((account) => selected.has(account.id)).map((account) => account.id);
+    return accountIds.length ? [{ platform, account_ids: accountIds }] : [];
+  });
 }
 
 function cloneOnboardingMenu() {
@@ -200,6 +266,7 @@ function existingGeminiLabel(localKeys, metadata) {
 async function showSettings(env, chatId) {
   const credentials = await getCredentials(env, chatId);
   const existing = await readExistingSettings(credentials);
+  const zernio = credentials && credentials.repo ? await loadZernioConfig(credentials).catch(() => null) : null;
   const lines = ['<b>Settings</b>'];
   lines.push(credentials && credentials.repo ? `GitHub clone: <code>${escapeHtml(credentials.repo)}</code>` : 'GitHub clone: not connected');
   lines.push(existingGeminiLabel(credentials && credentials.geminiKeys, existing.geminiMeta));
@@ -207,8 +274,103 @@ async function showSettings(env, chatId) {
   lines.push(`Narrator: ${escapeHtml(VOICES[voice].label)} (Edge TTS)`);
   lines.push(`Watermark: ${existing.watermark && existing.watermark.creator_name ? escapeHtml(existing.watermark.creator_name) : 'not set'}`);
   lines.push(`Music default: ${existing.musicDefault && existing.musicDefault.library_track_path ? escapeHtml(String(existing.musicDefault.library_track_path).replace(/^audio-library\//, '')) : 'not set'}`);
-  lines.push('Existing Gemini secrets remain opaque: the bot can use them but will never display or copy their raw values.');
+  if (zernio) lines.push(`Zernio: ${zernio.secretConfigured ? zernio.settings.enabled ? zernio.settings.auto_publish ? `enabled · automatic ${zernio.settings.automatic_mode === 'publish_now' ? 'publish now' : 'smart schedule'}` : 'enabled · automatic off' : 'controls disabled' : 'API key not configured'}`);
+  lines.push('Existing Gemini and Zernio secrets remain opaque: the bot can use them but will never display or copy raw values.');
   await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: settingsMenu() });
+}
+
+async function loadZernioConfig(credentials) {
+  const [rawSettings, accounts, secretConfigured] = await Promise.all([
+    readZernioSettings(credentials, credentials.repo).catch(() => null),
+    readZernioAccounts(credentials, credentials.repo).catch(() => []),
+    actionsSecretExists(credentials, credentials.repo, ZERNIO_SECRET_NAME).catch(() => false)
+  ]);
+  return { settings: zernioSettingsOrDefault(rawSettings), accounts, secretConfigured };
+}
+
+async function persistZernioSettings(credentials, settings) {
+  const document = { ...settings, version: 1, updated_at_epoch: Math.floor(Date.now() / 1000) };
+  await saveZernioSettings(credentials, credentials.repo, document);
+  return document;
+}
+
+function zernioSettingsMenu(config) {
+  const settings = config.settings;
+  return buttons([
+    [{ text: config.secretConfigured ? 'Replace Zernio API key' : 'Save Zernio API key', callback_data: 'set:zernio_key' }, { text: 'Refresh accounts', callback_data: 'zernio:refresh' }],
+    [{ text: settings.enabled ? 'Disable publishing controls' : 'Enable publishing controls', callback_data: 'zernio:toggle_enabled' }, { text: settings.auto_publish ? 'Turn automatic publish off' : 'Turn automatic publish on', callback_data: 'zernio:toggle_auto' }],
+    [{ text: settings.automatic_mode === 'publish_now' ? 'Automatic: publish now' : 'Automatic: smart schedule', callback_data: 'zernio:mode' }, { text: 'Select target accounts', callback_data: 'zernio:targets' }],
+    [{ text: 'Smart schedule', callback_data: 'zernio:schedule' }, { text: 'Remove API key', callback_data: 'zernio:clear_prompt' }],
+    [{ text: 'Back to settings', callback_data: 'menu:settings' }]
+  ]);
+}
+
+function zernioScheduleMenu(settings) {
+  const smart = settings.smart_schedule;
+  return buttons([
+    [{ text: `Timezone: ${telegramButtonText(smart.timezone, 42)}`, callback_data: 'zsch:timezone' }, { text: `Cadence: ${smart.interval_days} day(s)`, callback_data: 'zsch:interval' }],
+    [{ text: `Preferred time: ${smart.preferred_time}`, callback_data: 'zsch:time' }, { text: `Queue depth: ${smart.queue_depth}`, callback_data: 'zsch:depth' }],
+    [{ text: smart.start_mode === 'custom' ? `Custom start: ${telegramButtonText(smart.custom_start || 'missing', 40)}` : 'Start: next available', callback_data: 'zsch:start' }],
+    [{ text: 'Back to Zernio settings', callback_data: 'set:zernio' }]
+  ]);
+}
+
+async function showZernioSettings(env, chatId) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const config = await loadZernioConfig(credentials);
+  const settings = config.settings;
+  const active = activeZernioAccounts(config.accounts);
+  const selected = zernioTargets(settings, config.accounts);
+  const lines = ['<b>Zernio publishing</b>'];
+  lines.push(`API key: ${config.secretConfigured ? 'secured in GitHub Actions (opaque)' : 'not configured'}`);
+  lines.push(`Controls: ${settings.enabled ? 'enabled' : 'disabled'}`);
+  lines.push(`Automatic publishing: ${settings.auto_publish ? settings.automatic_mode === 'publish_now' ? 'publish now' : 'smart schedule' : 'off'}`);
+  lines.push(`Targets: ${selected.length ? selected.map((group) => `${group.platform}: ${group.account_ids.length}`).join(' · ') : 'none selected'}`);
+  lines.push(`Accounts: ${active.tiktok.length} TikTok · ${active.youtube.length} YouTube active`);
+  lines.push(`Smart schedule: ${escapeHtml(settings.smart_schedule.timezone)} · every ${settings.smart_schedule.interval_days} day(s) at ${settings.smart_schedule.preferred_time} · queue ${settings.smart_schedule.queue_depth}`);
+  if (settings.smart_schedule.start_mode === 'custom') lines.push(`First slot: ${escapeHtml(settings.smart_schedule.custom_start || 'missing')}`);
+  lines.push('The API key is encrypted into <code>ZERNIO_API_KEY</code>, never committed or displayed. Preferences and account snapshots stay inside this clone.');
+  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: zernioSettingsMenu(config) });
+}
+
+async function showZernioTargets(env, chatId) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const config = await loadZernioConfig(credentials);
+  const settings = config.settings;
+  const rows = [];
+  for (const account of config.accounts) {
+    const platform = String(account && account.platform || '').toLowerCase();
+    const id = String(account && (account.id || account._id) || '').trim();
+    if (!['tiktok', 'youtube'].includes(platform) || !id) continue;
+    const usable = account.isActive !== false && account.enabled !== false && account.needsReconnection !== true;
+    const selected = (settings.target_accounts[platform] || []).includes(id);
+    const title = `${platform === 'tiktok' ? 'TikTok' : 'YouTube'} · ${account.displayName || account.username || id}`;
+    rows.push([{ text: `${selected ? '✓ ' : ''}${telegramButtonText(title, 50)}${usable ? '' : ' (unavailable)'}`, callback_data: usable ? `ztarget:${platform}:${id}` : 'noop:account' }]);
+  }
+  if (!rows.length) rows.push([{ text: 'No saved accounts — refresh first', callback_data: 'zernio:refresh' }]);
+  rows.push([{ text: 'Refresh accounts', callback_data: 'zernio:refresh' }, { text: 'Back to Zernio settings', callback_data: 'set:zernio' }]);
+  await sendMessage(env, chatId, '<b>Zernio target accounts</b>\n\nSelect active TikTok and YouTube accounts. Changes save immediately. Unavailable, disabled, or reconnect-required accounts cannot be selected.', { replyMarkup: buttons(rows) });
+}
+
+async function updateZernioSetting(env, chatId, mutate) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return null;
+  const config = await loadZernioConfig(credentials);
+  const settings = config.settings;
+  mutate(settings, config.accounts);
+  const saved = await persistZernioSettings(credentials, settings);
+  return { credentials, config: { ...config, settings: saved } };
+}
+
+async function refreshZernioAccounts(env, chatId) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const configured = await actionsSecretExists(credentials, credentials.repo, ZERNIO_SECRET_NAME);
+  if (!configured) throw new Error('Save a Zernio API key before refreshing accounts.');
+  await dispatchWorkflow(credentials, credentials.repo, ZERNIO_WORKFLOW, { action: 'discover' });
+  await sendMessage(env, chatId, 'Account refresh was dispatched. Zernio will save the active TikTok and YouTube snapshot to this clone. Reopen Zernio settings after the workflow finishes.');
 }
 
 function normalizeFocus(value) {
@@ -287,6 +449,89 @@ async function showTaskStatus(env, chatId, label) {
   await sendMessage(env, chatId, formatStatus(label, jobId, status), { replyMarkup: taskButtons(label, status) });
 }
 
+function zernioPostId(post) {
+  return String(post && (post.id || post.post_id || post._id) || '').trim();
+}
+
+function zernioPublishingSummary(publishing) {
+  const status = String(publishing && publishing.status || 'not_requested').toLowerCase();
+  const label = status === 'published' ? 'published' : status === 'scheduled' ? 'scheduled' : ['publishing', 'requested'].includes(status) ? 'publishing' : status === 'partial' ? 'partial' : ['failed', 'error'].includes(status) ? 'failed' : status === 'cancelled' ? 'cancelled' : 'not requested';
+  const posts = Array.isArray(publishing && publishing.posts) ? publishing.posts : [];
+  return `Zernio: ${label}${posts.length ? ` · ${posts.length} post record(s)` : ''}`;
+}
+
+function zernioRequestId(jobId, publishing) {
+  const prior = String(publishing && publishing.status || '').toLowerCase() === 'error' ? String(publishing.idempotency_key || '') : '';
+  if (/^[A-Za-z0-9._:-]{8,200}$/.test(prior)) return prior;
+  return `clipforge-${jobId}-${Date.now().toString(36)}`;
+}
+
+async function showZernioPublishMenu(env, chatId, label) {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  const status = await readStatus(credentials, credentials.repo, jobId);
+  if (!status || status.stage !== 'complete') throw new Error('Zernio publishing is available after Stage B completes.');
+  const config = await loadZernioConfig(credentials);
+  const targets = zernioTargets(config.settings, config.accounts);
+  const publishing = status.publishing && typeof status.publishing === 'object' ? status.publishing : {};
+  const lines = [`<b>Task ${escapeHtml(label)} — Zernio publishing</b>`, `<code>${escapeHtml(jobId)}</code>`, zernioPublishingSummary(publishing)];
+  if (!config.secretConfigured) lines.push('Save a Zernio API key in settings before submitting a request.');
+  else if (!config.settings.enabled) lines.push('Enable Zernio publishing controls in settings before submitting a request.');
+  else if (!targets.length) lines.push('Select at least one active TikTok or YouTube target account in settings.');
+  else lines.push(`Targets: ${targets.map((group) => `${group.platform} (${group.account_ids.length})`).join(' · ')}\nTimezone: ${escapeHtml(config.settings.smart_schedule.timezone)}`);
+  const rows = [];
+  if (config.secretConfigured && config.settings.enabled && targets.length) {
+    rows.push([{ text: 'Publish now', callback_data: `zpub:now:${label}` }, { text: 'Smart schedule', callback_data: `zpub:smart:${label}` }]);
+    rows.push([{ text: 'Choose date and time', callback_data: `zpub:manual:${label}` }]);
+  }
+  const posts = Array.isArray(publishing.posts) ? publishing.posts : [];
+  for (const post of posts.slice(0, 6)) {
+    const postId = zernioPostId(post);
+    if (!/^[A-Za-z0-9._-]{3,200}$/.test(postId)) continue;
+    const state = String(post.status || post.state || '').toLowerCase();
+    const platform = String(post.platform || 'post');
+    if (['failed', 'error', 'partial'].includes(state)) rows.push([{ text: `Retry ${telegramButtonText(platform, 20)}`, callback_data: `zpost:retry:${label}:${postId}` }]);
+    if (['scheduled', 'requested', 'publishing', 'partial', 'failed', 'error'].includes(state)) {
+      rows.push([{ text: `Publish ${telegramButtonText(platform, 16)} now`, callback_data: `zpost:now:${label}:${postId}` }, { text: `Reschedule ${telegramButtonText(platform, 16)}`, callback_data: `zpost:manual:${label}:${postId}` }]);
+      rows.push([{ text: `Cancel ${telegramButtonText(platform, 20)}`, callback_data: `zpost:cancel:${label}:${postId}` }]);
+    }
+  }
+  rows.push([{ text: 'Zernio settings', callback_data: 'set:zernio' }, { text: 'Back to completed task', callback_data: `done:${label}` }]);
+  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: buttons(rows) });
+}
+
+async function dispatchZernioPublish(env, chatId, label, mode, scheduledFor = '') {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  const [status, config] = await Promise.all([readStatus(credentials, credentials.repo, jobId), loadZernioConfig(credentials)]);
+  if (!status || status.stage !== 'complete') throw new Error('Zernio publishing is available after Stage B completes.');
+  if (!config.secretConfigured) throw new Error('Save a Zernio API key in settings before publishing.');
+  if (!config.settings.enabled) throw new Error('Enable Zernio publishing controls in settings before publishing.');
+  const targets = zernioTargets(config.settings, config.accounts);
+  if (!targets.length) throw new Error('Select at least one active TikTok or YouTube account in Zernio settings.');
+  if (!['publish_now', 'smart_schedule', 'manual_schedule'].includes(mode)) throw new Error('That publishing mode is unavailable.');
+  if (mode === 'manual_schedule' && !validZernioDateTime(scheduledFor)) throw new Error('Send a local time in YYYY-MM-DDTHH:MM format.');
+  await dispatchWorkflow(credentials, credentials.repo, ZERNIO_WORKFLOW, {
+    action: 'publish', job_id: jobId, mode, scheduled_for: scheduledFor, timezone: config.settings.smart_schedule.timezone,
+    targets_json: JSON.stringify(targets), request_id: zernioRequestId(jobId, status.publishing)
+  });
+  await sendMessage(env, chatId, `Zernio ${mode === 'publish_now' ? 'publish-now' : mode === 'smart_schedule' ? 'smart-schedule' : 'scheduled'} request dispatched for task <b>${escapeHtml(label)}</b>. Stage B remains complete while Zernio processes the request.`);
+}
+
+async function dispatchZernioPostAction(env, chatId, label, postId, action, mode = '', scheduledFor = '') {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  if (!/^[A-Za-z0-9._-]{3,200}$/.test(postId) || !['retry', 'update', 'cancel'].includes(action)) throw new Error('That Zernio post action is invalid.');
+  const config = await loadZernioConfig(credentials);
+  if (!config.secretConfigured) throw new Error('Save a Zernio API key in settings before managing posts.');
+  if (action === 'update' && mode === 'manual_schedule' && !validZernioDateTime(scheduledFor)) throw new Error('Send a local time in YYYY-MM-DDTHH:MM format.');
+  await dispatchWorkflow(credentials, credentials.repo, ZERNIO_WORKFLOW, { action, job_id: jobId, post_id: postId, mode, scheduled_for: scheduledFor, timezone: config.settings.smart_schedule.timezone });
+  await sendMessage(env, chatId, `Zernio ${action} request dispatched for task <b>${escapeHtml(label)}</b>. Refresh the completed task after the workflow finishes.`);
+}
+
 async function showCompleted(env, chatId, label) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
@@ -298,7 +543,8 @@ async function showCompleted(env, chatId, label) {
   if (assets.final_mp4) lines.push(`<a href="${escapeHtml(assets.final_mp4)}">Download final.mp4</a>`);
   if (assets.final_zip) lines.push(`<a href="${escapeHtml(assets.final_zip)}">Download final ZIP</a>`);
   if (!assets.final_mp4 && !assets.final_zip) lines.push('The completion status has no final asset URL. Open the release from /status.');
-  await sendMessage(env, chatId, lines.join('\n'));
+  if (status.publishing) lines.push(zernioPublishingSummary(status.publishing));
+  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: buttons([[{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }]]) });
 }
 
 async function resumePendingTask(env, chatId) {
@@ -519,6 +765,50 @@ async function handleFlowText(env, chatId, text) {
     const key = String(text || '').trim();
     if (key.length < 20 || /\s/.test(key)) throw new Error('That does not look like a Gemini API key. Send it again without spaces.');
     await saveGeminiKey(env, chatId, key, Boolean(state.pending && state.pending.replaceExisting));
+    return true;
+  }
+  if (state.flow === 'settings_zernio_key') {
+    const key = String(text || '').trim();
+    if (key.length < 20 || /\s/.test(key)) throw new Error('Enter a valid Zernio API key with no whitespace.');
+    const credentials = await requireCredentials(env, chatId);
+    if (!credentials) return true;
+    await updateZernioSecret(credentials, credentials.repo, key);
+    await clearFlow(env, chatId);
+    await sendMessage(env, chatId, `Zernio API key ${escapeHtml(zernioFingerprint(key))} was encrypted and saved as a GitHub Actions secret.`);
+    return true;
+  }
+  if (['settings_zernio_timezone', 'settings_zernio_interval', 'settings_zernio_time', 'settings_zernio_depth', 'settings_zernio_custom_start'].includes(state.flow)) {
+    const value = String(text || '').trim();
+    const saved = await updateZernioSetting(env, chatId, (settings) => {
+      const smart = settings.smart_schedule;
+      if (state.flow === 'settings_zernio_timezone') {
+        if (!validZernioTimezone(value)) throw new Error('Enter a safe IANA timezone such as Europe/London, America/New_York, or UTC.');
+        smart.timezone = value;
+      } else if (state.flow === 'settings_zernio_interval') {
+        const number = Number(value); if (!Number.isInteger(number) || number < 1 || number > 365) throw new Error('Cadence must be a whole number from 1 to 365 days.');
+        smart.interval_days = number;
+      } else if (state.flow === 'settings_zernio_time') {
+        if (!validZernioTime(value)) throw new Error('Preferred time must use HH:MM in 24-hour format.');
+        smart.preferred_time = value;
+      } else if (state.flow === 'settings_zernio_depth') {
+        const number = Number(value); if (!Number.isInteger(number) || number < 1 || number > 100) throw new Error('Queue depth must be a whole number from 1 to 100.');
+        smart.queue_depth = number;
+      } else {
+        if (!validZernioDateTime(value)) throw new Error('Send the first local slot as YYYY-MM-DDTHH:MM.');
+        smart.start_mode = 'custom'; smart.custom_start = value;
+      }
+    });
+    await clearFlow(env, chatId);
+    await sendMessage(env, chatId, 'Zernio smart-schedule preference saved.', { replyMarkup: zernioScheduleMenu(saved.config.settings) });
+    return true;
+  }
+  if (state.flow === 'zernio_manual_schedule' || state.flow === 'zernio_post_schedule') {
+    const value = String(text || '').trim();
+    if (!validZernioDateTime(value)) throw new Error('Send a local scheduled time as YYYY-MM-DDTHH:MM.');
+    const pending = state.pending || {};
+    await clearFlow(env, chatId);
+    if (state.flow === 'zernio_manual_schedule') await dispatchZernioPublish(env, chatId, pending.label, 'manual_schedule', value);
+    else await dispatchZernioPostAction(env, chatId, pending.label, pending.postId, 'update', 'manual_schedule', value);
     return true;
   }
   if (state.flow === 'settings_watermark') {
@@ -791,6 +1081,81 @@ async function handleCallback(env, callback) {
       const state = await getState(env, chatId); state.flow = 'settings_watermark'; state.pending = {}; await putState(env, chatId, state);
       return sendMessage(env, chatId, 'Send the creator watermark text (up to 64 characters), or send <code>clear</code> to remove it.');
     }
+    if (value === 'zernio') return showZernioSettings(env, chatId);
+    if (value === 'zernio_key') {
+      if (!await requireCredentials(env, chatId)) return;
+      const state = await getState(env, chatId); state.flow = 'settings_zernio_key'; state.pending = {}; await putState(env, chatId, state);
+      return sendMessage(env, chatId, 'Send the Zernio API key. It will be encrypted into the <code>ZERNIO_API_KEY</code> GitHub Actions secret, never committed, and never shown again.');
+    }
+  }
+  if (kind === 'zernio') {
+    if (value === 'refresh') return refreshZernioAccounts(env, chatId);
+    if (value === 'targets') return showZernioTargets(env, chatId);
+    if (value === 'schedule') {
+      const credentials = await requireCredentials(env, chatId); if (!credentials) return;
+      const config = await loadZernioConfig(credentials);
+      return sendMessage(env, chatId, '<b>Zernio smart schedule</b>\nSet the account timezone, posting cadence, preferred local time, maximum queue depth, and first-slot policy. Every change saves to this clone.', { replyMarkup: zernioScheduleMenu(config.settings) });
+    }
+    if (value === 'toggle_enabled' || value === 'toggle_auto' || value === 'mode') {
+      const saved = await updateZernioSetting(env, chatId, (settings) => {
+        if (value === 'toggle_enabled') settings.enabled = !settings.enabled;
+        else if (value === 'toggle_auto') settings.auto_publish = !settings.auto_publish;
+        else settings.automatic_mode = settings.automatic_mode === 'publish_now' ? 'smart_schedule' : 'publish_now';
+      });
+      return sendMessage(env, chatId, 'Zernio publishing preference saved.', { replyMarkup: zernioSettingsMenu(saved.config) });
+    }
+    if (value === 'clear_prompt') return sendMessage(env, chatId, 'Remove the stored <code>ZERNIO_API_KEY</code>? Existing Zernio post records remain, but new requests will fail until another key is saved.', { replyMarkup: buttons([[{ text: 'Remove API key', callback_data: 'zernio:clear_confirm' }, { text: 'Keep API key', callback_data: 'set:zernio' }]]) });
+    if (value === 'clear_confirm') {
+      const credentials = await requireCredentials(env, chatId); if (!credentials) return;
+      await deleteZernioSecret(credentials, credentials.repo);
+      return sendMessage(env, chatId, 'The stored Zernio API key was removed. Publishing preferences and records were not changed.');
+    }
+  }
+  if (kind === 'ztarget') {
+    const [platform, accountId] = value.split(':');
+    if (!['tiktok', 'youtube'].includes(platform) || !/^[A-Za-z0-9._-]{3,200}$/.test(accountId || '')) throw new Error('That Zernio account selection is invalid.');
+    const saved = await updateZernioSetting(env, chatId, (settings, accounts) => {
+      const active = activeZernioAccounts(accounts)[platform];
+      if (!active.some((account) => account.id === accountId)) throw new Error('That Zernio account is unavailable or requires reconnection.');
+      const selected = new Set(settings.target_accounts[platform] || []);
+      if (selected.has(accountId)) selected.delete(accountId); else selected.add(accountId);
+      settings.target_accounts[platform] = [...selected];
+    });
+    return showZernioTargets(env, chatId);
+  }
+  if (kind === 'zsch') {
+    const credentials = await requireCredentials(env, chatId); if (!credentials) return;
+    const config = await loadZernioConfig(credentials);
+    if (value === 'start') return sendMessage(env, chatId, 'Choose when the smart schedule should begin.', { replyMarkup: buttons([[{ text: 'Next available slot', callback_data: 'zsch:startnext' }, { text: 'Custom local date', callback_data: 'zsch:startcustom' }], [{ text: 'Back', callback_data: 'zernio:schedule' }]]) });
+    if (value === 'startnext') {
+      const saved = await updateZernioSetting(env, chatId, (settings) => { settings.smart_schedule.start_mode = 'next_available'; settings.smart_schedule.custom_start = ''; });
+      return sendMessage(env, chatId, 'Smart scheduling will use the next available slot.', { replyMarkup: zernioScheduleMenu(saved.config.settings) });
+    }
+    const field = { timezone: 'settings_zernio_timezone', interval: 'settings_zernio_interval', time: 'settings_zernio_time', depth: 'settings_zernio_depth', startcustom: 'settings_zernio_custom_start' }[value];
+    if (!field) return;
+    const state = await getState(env, chatId); state.flow = field; state.pending = {}; await putState(env, chatId, state);
+    const instruction = value === 'timezone' ? 'Send an IANA timezone, for example <code>Europe/London</code>, <code>America/New_York</code>, or <code>UTC</code>.' : value === 'interval' ? 'Send the smart-schedule cadence in days (1–365).' : value === 'time' ? 'Send the preferred local posting time in <code>HH:MM</code> 24-hour format.' : value === 'depth' ? 'Send the maximum active Zernio queue depth (1–100).' : 'Send the first local smart-schedule slot as <code>YYYY-MM-DDTHH:MM</code>.';
+    return sendMessage(env, chatId, instruction);
+  }
+  if (kind === 'zpub') {
+    const [action, label] = value.split(':');
+    if (action === 'menu') return showZernioPublishMenu(env, chatId, label);
+    if (action === 'now') return dispatchZernioPublish(env, chatId, label, 'publish_now');
+    if (action === 'smart') return dispatchZernioPublish(env, chatId, label, 'smart_schedule');
+    if (action === 'manual') {
+      const state = await getState(env, chatId); state.flow = 'zernio_manual_schedule'; state.pending = { label }; await putState(env, chatId, state);
+      return sendMessage(env, chatId, 'Send the local scheduled time as <code>YYYY-MM-DDTHH:MM</code>. The configured Zernio timezone will be used.');
+    }
+  }
+  if (kind === 'zpost') {
+    const [action, label, postId] = value.split(':');
+    if (action === 'retry') return dispatchZernioPostAction(env, chatId, label, postId, 'retry');
+    if (action === 'now') return dispatchZernioPostAction(env, chatId, label, postId, 'update', 'publish_now');
+    if (action === 'cancel') return dispatchZernioPostAction(env, chatId, label, postId, 'cancel');
+    if (action === 'manual') {
+      const state = await getState(env, chatId); state.flow = 'zernio_post_schedule'; state.pending = { label, postId }; await putState(env, chatId, state);
+      return sendMessage(env, chatId, 'Send the new local scheduled time as <code>YYYY-MM-DDTHH:MM</code>. The configured Zernio timezone will be used.');
+    }
   }
   if (kind === 'clone') {
     const state = await getState(env, chatId);
@@ -845,7 +1210,7 @@ async function handleUpdate(env, update) {
   if (message.document) return handleDocument(env, chatId, message.document);
   const priorState = await getState(env, chatId);
   if (message.text && await handleFlowText(env, chatId, message.text)) {
-    if (['settings_github_pat', 'settings_shadow_pat', 'settings_gemini'].includes(priorState.flow)) {
+    if (['settings_github_pat', 'settings_shadow_pat', 'settings_gemini', 'settings_zernio_key'].includes(priorState.flow)) {
       await deleteMessage(env, chatId, message.message_id).catch(() => undefined);
     }
     return;
@@ -875,4 +1240,4 @@ export default {
   }
 };
 
-export const __test = { buildAgentHandoffPrompt, cloneOnboardingMenu, commandOf, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, torrentCandidateButtonText, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
