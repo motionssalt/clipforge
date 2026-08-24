@@ -1,16 +1,24 @@
 {
   "job_id": "gemini-flash-retry-1787531316",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence.",
   "release_tag": "clipforge-gemini-flash-retry-1787531316",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-gemini-flash-retry-1787531316",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-flash-retry-1787531316/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-flash-retry-1787531316/key_moments.json",
+    "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-flash-retry-1787531316/original.mp4",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-flash-retry-1787531316/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-flash-retry-1787531316/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-flash-retry-1787531316/transcript.json"
+  },
   "created_at_epoch": 1787531450,
-  "updated_at_epoch": 1787531450,
+  "updated_at_epoch": 1787531468,
   "expires_at_epoch": 1787574650,
   "extra": {
     "workflow_run_id": "32676805215",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32676805215",
-    "automatic_mode": "true"
+    "automatic_mode": "true",
+    "automatic_analysis_result": "jobs/gemini-flash-retry-1787531316/automatic_analysis.json"
   }
 }
