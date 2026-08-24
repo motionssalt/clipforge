@@ -603,7 +603,7 @@ async function handleDocument(env, chatId, document) {
   await submitPlan(env, chatId, content);
 }
 
-async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
+async function showTorrentCandidates(env, chatId, label, pageValue = '0', messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
@@ -619,7 +619,7 @@ async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
     const name = torrentCandidateButtonText(candidate.path || `Video ${index}`);
     return [
       { text: `${index}. ${name}`, callback_data: `torrentpick:${label}:${index}` },
-      { text: 'Details', callback_data: `torrentdetail:${label}:${index}` }
+      { text: 'Details', callback_data: `torrentdetail:${label}:${index}:${page}` }
     ];
   }).filter(Boolean);
   if (totalPages > 1) {
@@ -629,10 +629,13 @@ async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
     if (page < totalPages - 1) navigation.push({ text: 'Next', callback_data: `torrentpage:${label}:${page + 1}` });
     rows.push(navigation);
   }
-  await sendMessage(env, chatId, `Choose the video file inside this torrent (page ${page + 1} of ${totalPages}). This starts Stage A for the selected file only.`, { replyMarkup: buttons(rows) });
+  const text = `Choose the video file inside this torrent (page ${page + 1} of ${totalPages}). This starts Stage A for the selected file only.`;
+  const options = { replyMarkup: buttons(rows) };
+  if (messageId) return editMessage(env, chatId, messageId, text, options);
+  return sendMessage(env, chatId, text, options);
 }
 
-async function showTorrentCandidateDetails(env, chatId, label, indexValue) {
+async function showTorrentCandidateDetails(env, chatId, label, indexValue, pageValue = '0', messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   const index = Number(indexValue);
@@ -644,7 +647,10 @@ async function showTorrentCandidateDetails(env, chatId, label, indexValue) {
   if (!candidate) throw new Error('That torrent video is no longer available. Refresh the task status.');
   const filename = normalizedButtonText(candidate.path, 'Unnamed video');
   const details = `<b>Torrent video ${index}</b>\n\n<b>Full filename</b>\n<code>${escapeHtml(filename)}</code>\n\n<b>Size</b>\n${escapeHtml(formatBytes(candidate.length))}\n\nTap the numbered filename button when this is the video you want Stage A to process.`;
-  if (details.length <= 3500) return sendMessage(env, chatId, details);
+  const page = Number.isInteger(Number(pageValue)) ? Math.max(0, Number(pageValue)) : 0;
+  const detailMarkup = buttons([[{ text: `Select video ${index}`, callback_data: `torrentpick:${label}:${index}` }], [{ text: 'Back to video list', callback_data: `torrentpage:${label}:${page}` }]]);
+  if (details.length <= 3500 && messageId) return editMessage(env, chatId, messageId, details, { replyMarkup: detailMarkup });
+  if (details.length <= 3500) return sendMessage(env, chatId, details, { replyMarkup: detailMarkup });
   return sendDocumentBytes(env, chatId, new TextEncoder().encode(`Torrent video ${index}\n\nFull filename:\n${filename}\n\nSize: ${formatBytes(candidate.length)}\n`), `torrent-video-${index}-details.txt`, 'Full torrent candidate details');
 }
 
@@ -810,9 +816,9 @@ async function handleCallback(env, callback) {
   }
   if (kind === 'status') return showTaskStatus(env, chatId, value);
   if (kind === 'done') return showCompleted(env, chatId, value);
-  if (kind === 'torrent') return showTorrentCandidates(env, chatId, value);
-  if (kind === 'torrentpage') { const [label, page] = value.split(':'); return showTorrentCandidates(env, chatId, label, page); }
-  if (kind === 'torrentdetail') { const [label, index] = value.split(':'); return showTorrentCandidateDetails(env, chatId, label, index); }
+  if (kind === 'torrent') return showTorrentCandidates(env, chatId, value, '0', callback.message.message_id);
+  if (kind === 'torrentpage') { const [label, page] = value.split(':'); return showTorrentCandidates(env, chatId, label, page, callback.message.message_id); }
+  if (kind === 'torrentdetail') { const [label, index, page] = value.split(':'); return showTorrentCandidateDetails(env, chatId, label, index, page, callback.message.message_id); }
   if (kind === 'torrentpick') { const [label, index] = value.split(':'); return chooseTorrentCandidate(env, chatId, label, index); }
   if (kind === 'agent') return sendManualAgentPrompt(env, chatId, value);
   if (kind === 'plan') return startPlanFlow(env, chatId, value);
