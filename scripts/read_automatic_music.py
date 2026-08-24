@@ -16,6 +16,7 @@ from pathlib import Path
 
 
 LIBRARY_REF_PREFIX = "path:audio-library/"
+DEFAULT_MUSIC_PATH = Path("branding/music_default.json")
 
 
 def is_safe_library_ref(value: str) -> bool:
@@ -56,6 +57,28 @@ def load_selection(path: Path) -> dict[str, object]:
     return data
 
 
+def load_persistent_default_music(path: Path) -> str:
+    """Return a safe library ref from the shared default, or an empty ref.
+
+    A default is intentionally limited to a repository audio-library basename;
+    job-local uploads are one-off and must never become a cross-job fallback.
+    Invalid or unavailable settings fail closed to no music.
+    """
+    if not path.exists():
+        return ""
+    try:
+        data = load_selection(path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return ""
+    if data.get("version") != 1:
+        return ""
+    raw_path = data.get("library_track_path")
+    if not isinstance(raw_path, str):
+        return ""
+    music_ref = "path:" + raw_path
+    return music_ref if is_safe_library_ref(music_ref) else ""
+
+
 def valid_music_ref(value: object, job_id: str) -> str:
     if value in (None, ""):
         return ""
@@ -72,11 +95,15 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("job_id")
     parser.add_argument("selection_path", type=Path)
+    parser.add_argument("--default-music-path", type=Path,
+                        default=DEFAULT_MUSIC_PATH)
     args = parser.parse_args()
 
     music_ref = ""
     source = "none"
     if args.selection_path.exists():
+        # A present selection is deliberate, including an explicit empty choice.
+        # Do not silently override it with the shared default.
         data = load_selection(args.selection_path)
         if data.get("version") != 1:
             raise ValueError("automatic music selection has an unsupported format")
@@ -86,6 +113,10 @@ def main() -> None:
             "explicit_library", "saved_library_default", "one_off_upload", "none"
         }:
             source = raw_source
+    else:
+        music_ref = load_persistent_default_music(args.default_music_path)
+        if music_ref:
+            source = "saved_library_default"
 
     output = os.environ.get("GITHUB_OUTPUT")
     if output:

@@ -5,10 +5,17 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
-from read_automatic_music import is_safe_library_ref, load_selection, valid_music_ref
+from read_automatic_music import (
+    is_safe_library_ref,
+    load_persistent_default_music,
+    load_selection,
+    valid_music_ref,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,6 +88,29 @@ with tempfile.TemporaryDirectory() as temp_dir:
 assert "JSON.stringify(selection, null, 2) + '\\n'" in APP
 assert "JSON.stringify(selection, null, 2) + '\\\\n'" not in APP
 assert "function parseJsonWithLegacyTrailingNewline(raw)" in APP
+
+# A missing per-job Automatic Mode selection is the normal fallback path: it
+# must resolve to the persisted library default, while an invalid shared file
+# must still fail closed rather than accept a job-external path.
+assert load_persistent_default_music(ROOT / "branding" / "music_default.json") == "path:" + stored_default
+with tempfile.TemporaryDirectory() as temp_dir:
+    root = Path(temp_dir)
+    selection = root / "missing_automatic_music.json"
+    default_path = root / "music_default.json"
+    output_path = root / "github_output.txt"
+    default_path.write_text(json.dumps({"version": 1, "library_track_path": unicode_track.removeprefix("path:")}), encoding="utf-8")
+    env = os.environ.copy()
+    env["GITHUB_OUTPUT"] = str(output_path)
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "read_automatic_music.py"), "job-without-selection", str(selection), "--default-music-path", str(default_path)],
+        check=True,
+        env=env,
+    )
+    resolved = output_path.read_text(encoding="utf-8")
+    assert "music_ref=" + unicode_track in resolved
+    assert "music_source=saved_library_default" in resolved
+    default_path.write_text(json.dumps({"version": 1, "library_track_path": "audio-library/../unsafe.mp3"}), encoding="utf-8")
+    assert load_persistent_default_music(default_path) == ""
 # Manual and automatic UI each show the current default. Automatic Mode has
 # one (and only one) forward picker in its launch form, not a later handoff.
 assert AUTO.count('id="audio-library-list"') == 1
@@ -95,8 +125,9 @@ for required in (
     "python scripts/read_automatic_music.py",
     '"jobs/${{ steps.jid.outputs.job_id }}/automatic_music.json"',
     '--extra "music_ref=${{ steps.automatic_music.outputs.music_ref }}"',
-    '-f "music_ref=${{ steps.automatic_music.outputs.music_ref }}"',
+    '-f "music_ref=${{ steps.automatic_music.outputs.music_ref }}',
+    '--extra "music_source=${{ steps.automatic_music.outputs.music_source }}"',
 ):
     assert required in WORKFLOW, f"Automatic Mode workflow does not forward music: {required}"
 
-print("PASS: manual and Automatic Mode use visible persisted library defaults while one-off uploads remain job-scoped")
+print("PASS: manual and Automatic Mode use visible persisted library defaults, including no-selection backend fallback, while one-off uploads remain job-scoped")

@@ -1036,6 +1036,19 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
   "target_total_duration_seconds": {target_duration}
 }}
 
+NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
+  Gemini TTS is currently configured at about 188 words per minute (3.133
+  spoken words per second). Before returning JSON, calculate EACH cut's
+  voiceover word budget as `(end_seconds - start_seconds) * (188 / 60)`.
+  Write enough final spoken words to cover that full budget. A cut MUST NOT
+  fall below 90% of this budget (2.82 words per second), so narration covers
+  at least 90% of the planned cut duration at the real TTS pace. This is a
+  hard delivery requirement, not a suggestion: do not return a sparse summary
+  for a long cut. For example, a 75-second cut targets about 235 words and
+  requires at least 212 spoken words. Count the actual words in every
+  `voiceover_text` before returning the plan; add source-grounded chronological
+  beats, reactions, and connective detail until every cut meets its minimum.
+
 CONSTRAINTS
   - `start_seconds` and `end_seconds` are integers, in seconds since the
     start of the video. `end_seconds > start_seconds`. Both must lie
@@ -1062,11 +1075,15 @@ CONSTRAINTS
     500 characters. See the POSTING PACKAGE METADATA section above.
   - `voiceover_text` is the final spoken line for its cut: engaging
     prose meant to be READ ALOUD, not a flat matter-of-fact summary.
-    No markdown, no timestamps inside it, no brackets, no
+    Its word count is REQUIRED to meet the NARRATION DURATION CONTRACT above:
+    target `(end_seconds - start_seconds) * (188 / 60)` spoken words and never
+    return fewer than 90% of that target. Long cuts need correspondingly rich,
+    source-grounded narration; do not compress a long cut into a one-sentence
+    summary. No markdown, no timestamps inside it, no brackets, no
     parentheticals, no directions or commentary ABOUT the video —
-    everything in it is heard by the viewer verbatim. Its spoken
-    length should roughly fit the cut's duration (about 2.5 words per
-    second); keep it tight rather than breathless. Write in a crisp,
+    everything in it is heard by the viewer verbatim. Meet the hard
+    word-budget floor above while keeping the delivery content-rich rather
+    than padded or breathless. Write in a crisp,
     declarative commentary style: concrete source-backed facts, direct
     action verbs, minimal filler, and steady forward momentum. Favor
     several short sentences over one long compound sentence — short

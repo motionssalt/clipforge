@@ -60,6 +60,11 @@ for required_phrase in (
     "Tease a visible choice, plan, or consequence",
     "LANGUAGE-ONLY instruction",
     "Do not change narration pace, delivery, or audio direction",
+    "NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT",
+    "188 words per minute (3.133\n  spoken words per second)",
+    "(end_seconds - start_seconds) * (188 / 60)",
+    "fall below 90% of this budget (2.82 words per second)",
+    "Count the actual words in every\n  `voiceover_text` before returning the plan",
 ):
     assert required_phrase in rendered, f"missing narration-style guidance: {required_phrase}"
 
@@ -68,6 +73,7 @@ for required_phrase in (
 sample = 'write: "For a second,\n    it looks like he has lost. Then the result changes. He is stunned — and\n    triumphant."'
 assert sample in rendered
 assert "He misses,\n    looks at the result, and lifts the trophy" in rendered
+assert "about 2.5 words per\n    second" not in rendered, "obsolete soft pacing guidance must not conflict with the hard TTS contract"
 
 # A missing focus is deliberately not historic whole-video mode. It must issue
 # an independent, evidence-first editorial constraint before any screenshots
@@ -107,4 +113,4 @@ for required_phrase in (
 
 assert "FOCUS DIRECTIVE — READ AND OBEY BEFORE ANYTHING ELSE BELOW" not in no_focus_rendered
 assert "(none — whole video considered)" not in no_focus_rendered
-print("PASS: analysis prompt preserves emotion-first guidance and requires one self-selected thread in no-focus mode")
+print("PASS: analysis prompt preserves emotion-first guidance, enforces a 188-WPM narration budget, and requires one self-selected thread in no-focus mode")
