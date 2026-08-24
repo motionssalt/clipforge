@@ -575,7 +575,15 @@ def run_tool_agent(gateway: PuterBrowserGateway, model: str, tools: EvidenceTool
         for call in calls:
             function = call["function"]
             name = function["name"]
-            result = tools.call(name, parse_tool_arguments(function.get("arguments", "{}")))
+            try:
+                result = tools.call(name, parse_tool_arguments(function.get("arguments", "{}")))
+            except ToolProtocolError as exc:
+                # Preserve all local policy gates, but expose a safe, bounded
+                # correction signal to the browser model. This is essential
+                # when a provider emits an empty optional-argument object for
+                # a valid tool call; the model gets another of the fixed turns
+                # to select an allowed composite by its exact basename.
+                result = json.dumps({"error": str(exc), "retry_within_remaining_tool_turns": True})
             messages.append({
                 "role": "tool",
                 "tool_call_id": call["id"],

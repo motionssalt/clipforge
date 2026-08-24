@@ -137,11 +137,13 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
         if nonlocal_index == 3:
             return tool_message("call-3", "read_key_moments")
         if nonlocal_index == 4:
-            return tool_message("call-4", "open_composite", '{"filename":"scene-000.png"}')
+            return tool_message("call-4", "open_composite", "{}")
         if nonlocal_index == 5:
+            return tool_message("call-5", "open_composite", '{"filename":"scene-000.png"}')
+        if nonlocal_index == 6:
             invalid = {**VALID_PLAN, "cuts": [{"start_seconds": 10, "end_seconds": 0, "voiceover_text": "Bad order"}]}
             return {"ok": True, "message": {"content": json.dumps(invalid)}}
-        assert nonlocal_index == 6, "only one bounded correction request is allowed"
+        assert nonlocal_index == 7, "only one bounded correction request is allowed"
         return {"ok": True, "message": {"content": json.dumps(VALID_PLAN)}}
 
     primary_bridge = FakeBrowserBridge(primary_handler)
@@ -157,6 +159,7 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     assert summary["validation_corrections"] == 1
     browser_payloads = json.dumps([payload for operation, _, payload in primary_bridge.calls if operation == "chat"])
     assert "data:image/png;base64," in browser_payloads, "image tool results must use data content, not hosted URLs"
+    assert "open_composite requires one safe composite basename" in browser_payloads, "safe tool-argument errors must be returned for bounded retry"
     assert "http://" not in browser_payloads and "https://" not in browser_payloads
     assert primary_bridge.calls[0][0] == "list_models", "catalog must be read through the browser bridge first"
 
@@ -207,4 +210,4 @@ except ProviderRequestError as exc:
     assert exc.category == "payment_or_spend_limit"
 assert [token for operation, token, _ in payment_bridge.calls if operation == "chat"] == ["test-token-index-zero", "test-token-index-one"]
 
-print("PASS: Automatic Mode enforces the Chromium Puter.js bridge, tool order, data-image results, bounded correction, 402 fallback, and token-index failover")
+print("PASS: Automatic Mode enforces the Chromium Puter.js bridge, tool order, safe argument retry, data-image results, bounded correction, 402 fallback, and token-index failover")
