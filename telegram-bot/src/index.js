@@ -5,7 +5,7 @@ import {
 import { maskSecret } from './crypto.js';
 import {
   GitHubError, cancelWorkflowRun, createPrivateShadowClone, currentBranchSha, dispatchWorkflow, geminiFingerprint, getJsonFile,
-  getReleaseTextAsset, getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readStageARequest, readStatus, saveAutomaticMusicChoice,
+  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readStageARequest, readStatus, saveAutomaticMusicChoice,
   putBinaryFile, saveNarrator, saveProductionPlan, saveStageARequest, saveWatermark, tryGetJsonFile, updateGeminiSecret, validateConnection,
   writeGeminiMetadata
 } from './github.js';
@@ -407,22 +407,18 @@ async function sendManualAgentPrompt(env, chatId, label) {
     await sendMessage(env, chatId, 'The agent prompt is available only after a manual Stage A task reaches “Awaiting production plan”.');
     return;
   }
-  const assetUrl = status.assets && status.assets['00_READ_THIS_FIRST.txt'];
-  if (typeof assetUrl !== 'string' || !assetUrl.startsWith('https://')) throw new Error('The Stage A release did not publish its agent prompt asset. Open the release from this task’s status and retry after the release completes.');
-  const prompt = await getReleaseTextAsset(credentials, assetUrl);
-  const content = new TextEncoder().encode(prompt);
-  const copyText = String(prompt).slice(0, 256);
-  const replyMarkup = { inline_keyboard: [[{
-    text: prompt.length <= 256 ? 'Copy full agent prompt' : 'Copy prompt opening',
-    copy_text: { text: copyText }
-  }]] };
-  await sendDocumentBytes(
+  const releaseUrl = status.release_url;
+  if (typeof releaseUrl !== 'string' || !releaseUrl.startsWith('https://')) throw new Error('The Stage A release link is unavailable. Open the release from this task’s status and retry after the release completes.');
+  const prompt = `Open the GitHub Release link below. Read 00_READ_THIS_FIRST.txt first, then inspect transcript.json, scene_index.json, key_moments.json, screenshots.zip, and the original video. Create production.json and return only that file.`;
+  const replyMarkup = { inline_keyboard: [[
+    { text: 'Open GitHub Release', url: releaseUrl },
+    { text: 'Copy agent prompt', copy_text: { text: prompt } }
+  ]] };
+  await sendMessage(
     env,
     chatId,
-    content,
-    `${jobId}-agent-prompt.txt`,
-    `<b>Task ${escapeHtml(label)} agent prompt</b>\nThis is the exact Stage A release prompt. Use the copy button for the opening section, or open the attached text file to select and copy the complete prompt, then upload the returned production.json.`,
-    replyMarkup
+    `<b>Task ${escapeHtml(label)} agent handoff</b>\n\n${escapeHtml(prompt)}\n\nUse <b>Open GitHub Release</b> to give your agent the complete Stage A files and instructions. Then use <b>Upload production.json</b> here to start Stage B.`,
+    { replyMarkup }
   );
 }
 
