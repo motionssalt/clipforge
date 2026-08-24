@@ -24,6 +24,9 @@ assert "if: ${{ github.event.inputs.automatic_mode != 'true' }}" in WORKFLOW
 assert "if: ${{ github.event.inputs.automatic_mode == 'true' }}" in WORKFLOW
 assert "PUTER_AUTH_TOKENS: ${{ secrets.PUTER_AUTH_TOKENS }}" in WORKFLOW
 assert "Download released analysis assets for Automatic Mode" in WORKFLOW
+assert "Install headless Chromium for Puter.js Automatic Mode" in WORKFLOW
+assert "npm install --no-save --no-package-lock playwright" in WORKFLOW
+assert "npx playwright install --with-deps chromium" in WORKFLOW
 assert "Run bounded Puter Automatic Mode analysis" in WORKFLOW
 assert "--output \"jobs/${{ steps.jid.outputs.job_id }}/production.json\"" in WORKFLOW
 assert "--result-path \"jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json\"" in WORKFLOW
@@ -57,11 +60,15 @@ for required in (
     "data:",
     "All configured Puter tokens failed",
     "discover_compatible_models",
+    "PuterBrowserGateway",
+    "SubprocessBrowserBridge",
+    "scripts/puter_browser_bridge.mjs",
     "tool_call",
     "modalities",
     "production_plan_contract",
 ):
     assert required in RUNNER, f"runner missing required safety/protocol element: {required}"
 
+assert "api.puter.com/puterai/openai/v1" not in RUNNER
 assert "automatic_analysis_running" in STATUS_WRITER
-print("PASS: Automatic Mode is opt-in, validated, bounded, status-visible, and dispatches only the existing Stage B path")
+print("PASS: Automatic Mode is opt-in, browser-transported, validated, bounded, status-visible, and dispatches only the existing Stage B path")

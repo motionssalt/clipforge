@@ -881,6 +881,17 @@ jobs:
             test -s "work/automatic-release/$required"
           done
 
+      - name: Install headless Chromium for Puter.js Automatic Mode
+        if: ${{ github.event.inputs.automatic_mode == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This is intentionally local to the ephemeral Actions runner. The
+          # bridge loads the real Puter.js CDN client inside Chromium; it does
+          # not use Puter's REST/OpenAI endpoint for Automatic Mode analysis.
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
       - name: Run bounded Puter Automatic Mode analysis
         if: ${{ github.event.inputs.automatic_mode == 'true' }}
         shell: bash
@@ -888,9 +899,10 @@ jobs:
           PUTER_AUTH_TOKENS: ${{ secrets.PUTER_AUTH_TOKENS }}
         run: |
           set -euo pipefail
-          # automatic_analysis.py deliberately emits no secret values. It uses
-          # only token indexes in safe failover messages and writes production
-          # JSON only after the shared browser/runner contract validates it.
+          # automatic_analysis.py sends tokens only through the local bridge's
+          # stdin. The bridge evaluates real Puter.js inside Chromium; it logs
+          # token indexes only and writes production JSON only after the shared
+          # browser/runner contract validates it.
           python scripts/automatic_analysis.py \
             --artifacts-dir work/automatic-release \
             --output "jobs/${{ steps.jid.outputs.job_id }}/production.json" \

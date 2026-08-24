@@ -27,20 +27,19 @@ import json
 import mimetypes
 import os
 import re
+import select
+import subprocess
 import sys
 import tempfile
+import uuid
 import zipfile
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from typing import Any, Iterable, Protocol
 
 from production_plan_contract import parse_and_validate_production_plan
 
 
-MODEL_CATALOG_ENDPOINT = "https://api.puter.com/puterai/chat/models/details"
-OPENAI_BASE_URL = "https://api.puter.com/puterai/openai/v1/"
+DEFAULT_BROWSER_BRIDGE = "scripts/puter_browser_bridge.mjs"
 # Gemini 3.6 Flash is the cost-conscious primary. The runner still proves
 # image-input and function-calling capability from Puter's live catalog before
 # any analysis begins; the non-Opus GPT route remains a bounded fallback.
@@ -78,37 +77,6 @@ class ProviderRequestError(AutomaticAnalysisError):
         self.category = category
         status_text = str(status) if status is not None else "network"
         super().__init__(f"Puter provider request failed ({status_text}; {category}).")
-
-
-@dataclass(frozen=True)
-class HttpResponse:
-    status: int
-    payload: dict[str, Any]
-
-
-Transport = Callable[[str, str, dict[str, str], dict[str, Any] | None], HttpResponse]
-
-
-def safe_json_payload(raw: bytes) -> dict[str, Any]:
-    """Parse JSON only when it is object-shaped; do not return raw provider text."""
-    try:
-        value = json.loads(raw.decode("utf-8", errors="replace"))
-    except json.JSONDecodeError:
-        return {}
-    return value if isinstance(value, dict) else {}
-
-
-def default_transport(method: str, url: str, headers: dict[str, str], body: dict[str, Any] | None) -> HttpResponse:
-    """Make a JSON request without ever including headers/body in raised errors."""
-    encoded = None if body is None else json.dumps(body).encode("utf-8")
-    request = Request(url, data=encoded, headers=headers, method=method)
-    try:
-        with urlopen(request, timeout=90) as response:  # nosec B310: user-configurable trusted provider endpoint
-            return HttpResponse(int(response.status), safe_json_payload(response.read()))
-    except HTTPError as exc:
-        return HttpResponse(int(exc.code), safe_json_payload(exc.read()))
-    except URLError as exc:
-        raise ProviderRequestError(None, "network") from exc
 
 
 def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
@@ -194,13 +162,6 @@ def discover_compatible_models(
             "No configured Puter model is currently available with both image input and function calling."
         )
     return compatible
-
-
-def fetch_model_catalog(transport: Transport, endpoint: str) -> dict[str, Any]:
-    response = transport("GET", endpoint, {"Accept": "application/json"}, None)
-    if response.status < 200 or response.status >= 300:
-        raise AutomaticAnalysisError(f"Could not load Puter model capabilities (HTTP {response.status}).")
-    return response.payload
 
 
 def strict_artifact_path(root: Path, filename: str, maximum: int) -> Path:
@@ -404,52 +365,119 @@ def extract_json_object(content: Any) -> tuple[dict[str, Any] | None, str]:
     return None, ""
 
 
-class PuterGateway:
-    """Puter OpenAI-compatible gateway with bounded token-index rotation."""
+class BrowserBridge(Protocol):
+    """Minimal JSONL boundary used by the Chromium-backed Puter gateway."""
 
-    def __init__(self, tokens: list[str], transport: Transport = default_transport, base_url: str = OPENAI_BASE_URL):
+    def request(self, operation: str, token: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        ...
+
+    def close(self) -> None:
+        ...
+
+
+class SubprocessBrowserBridge:
+    """Persistent Node/Playwright process; tokens are written only to its stdin."""
+
+    def __init__(self, bridge_path: str, timeout_seconds: int = 120):
+        path = Path(bridge_path)
+        if not path.is_file():
+            raise AutomaticAnalysisError("Puter Chromium bridge script is unavailable.")
+        self.timeout_seconds = timeout_seconds
+        try:
+            self.process = subprocess.Popen(
+                ["node", str(path)],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                bufsize=1,
+            )
+        except OSError as exc:
+            raise AutomaticAnalysisError("Could not start the headless Puter.js bridge.") from exc
+
+    def request(self, operation: str, token: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        if self.process.poll() is not None or self.process.stdin is None or self.process.stdout is None:
+            raise ProviderRequestError(None, "browser_bridge_unavailable")
+        request_id = uuid.uuid4().hex
+        self.process.stdin.write(json.dumps({
+            "id": request_id,
+            "op": operation,
+            "token": token,
+            "payload": payload or {},
+        }) + "\\n")
+        self.process.stdin.flush()
+        ready, _, _ = select.select([self.process.stdout], [], [], self.timeout_seconds)
+        if not ready:
+            raise ProviderRequestError(None, "browser_bridge_timeout")
+        line = self.process.stdout.readline()
+        try:
+            response = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ProviderRequestError(None, "browser_bridge_malformed_response") from exc
+        if not isinstance(response, dict) or response.get("id") != request_id:
+            raise ProviderRequestError(None, "browser_bridge_protocol")
+        return response
+
+    def close(self) -> None:
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+
+
+class PuterBrowserGateway:
+    """Real Puter.js-in-Chromium gateway with bounded token-index rotation."""
+
+    def __init__(self, tokens: list[str], bridge: BrowserBridge):
         if not tokens:
             raise AutomaticAnalysisError("No Puter auth tokens are configured. Add one in Settings first.")
         self.tokens = tokens
-        self.transport = transport
-        self.base_url = base_url.rstrip("/") + "/"
+        self.bridge = bridge
         self.current_token_index = 0
 
-    def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def _call(self, operation: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         last_error: ProviderRequestError | None = None
         attempted_indices: set[int] = set()
         while len(attempted_indices) < len(self.tokens):
             index = self.current_token_index
             attempted_indices.add(index)
-            headers = {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + self.tokens[index],
-            }
-            response = self.transport("POST", self.base_url + "chat/completions", headers, payload)
-            if 200 <= response.status < 300:
-                choices = response.payload.get("choices")
-                if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-                    raise ProviderRequestError(response.status, "malformed_response")
-                message = choices[0].get("message")
-                if not isinstance(message, dict):
-                    raise ProviderRequestError(response.status, "malformed_response")
-                return message
-            category = provider_error_category(response.status, response.payload)
-            error = ProviderRequestError(response.status, category)
-            if not token_failure_should_rotate(response.status, category):
+            response = self.bridge.request(operation, self.tokens[index], payload)
+            if response.get("ok") is True:
+                return response
+            raw_error = response.get("error")
+            error_payload = raw_error if isinstance(raw_error, dict) else {}
+            status = error_payload.get("status")
+            status = status if isinstance(status, int) else None
+            category = provider_error_category(status, error_payload)
+            error = ProviderRequestError(status, category)
+            if not token_failure_should_rotate(status, category):
                 raise error
             last_error = error
             safe_log("Puter token index " + str(index) + " hit " + category + "; rotating token index.")
             self.current_token_index = (index + 1) % len(self.tokens)
-        # A payment/spend-limit response may be specific to the selected model.
-        # Return it to run_analysis after bounded token rotation so the cheaper
-        # configured fallback model gets one controlled attempt.
         if last_error is not None and last_error.category == "payment_or_spend_limit":
             raise last_error
         raise AllTokensExhausted(
             "All configured Puter tokens failed with authentication, rate-limit, or quota errors."
         ) from last_error
+
+    def list_models(self) -> dict[str, Any]:
+        response = self._call("list_models")
+        models = response.get("models")
+        if isinstance(models, dict) and isinstance(models.get("models"), list):
+            return {"models": models["models"]}
+        if isinstance(models, list):
+            return {"models": models}
+        raise AutomaticAnalysisError("Puter.js browser client did not return a model list.")
+
+    def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
+        response = self._call("chat", payload)
+        message = response.get("message")
+        if not isinstance(message, dict):
+            raise ProviderRequestError(None, "malformed_response")
+        return message
 
 
 def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
@@ -469,7 +497,7 @@ def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
     )
 
 
-def run_tool_agent(gateway: PuterGateway, model: str, tools: EvidenceTools, seed: str) -> tuple[dict[str, Any], str, int, int]:
+def run_tool_agent(gateway: PuterBrowserGateway, model: str, tools: EvidenceTools, seed: str) -> tuple[dict[str, Any], str, int, int]:
     """Run one model with strict tool protocol and at most one validation correction."""
     messages: list[dict[str, Any]] = [
         {
@@ -561,48 +589,52 @@ def run_analysis(
     artifact_dir: Path,
     token_secret: str | None,
     *,
-    transport: Transport = default_transport,
-    catalog_endpoint: str = MODEL_CATALOG_ENDPOINT,
-    base_url: str = OPENAI_BASE_URL,
+    bridge: BrowserBridge | None = None,
+    bridge_path: str = DEFAULT_BROWSER_BRIDGE,
     primary_model: str = DEFAULT_PRIMARY_MODEL,
     fallback_model: str = DEFAULT_FALLBACK_MODEL,
 ) -> tuple[dict[str, Any], str, dict[str, Any]]:
-    """Run Automatic Mode from local release assets and return plan, text, safe summary."""
+    """Run Automatic Mode through real Puter.js in headless Chromium only."""
     artifact_dir = artifact_dir.resolve()
     seed = read_text_artifact(artifact_dir, "00_READ_THIS_FIRST.txt", MAX_SEED_BYTES)
-    tokens = parse_tokens(token_secret)
-    catalog = fetch_model_catalog(transport, catalog_endpoint)
-    models = discover_compatible_models(catalog, primary_model, fallback_model)
-    gateway = PuterGateway(tokens, transport=transport, base_url=base_url)
-
-    with tempfile.TemporaryDirectory(prefix="clipforge_auto_screenshots_") as temp_dir:
-        screenshot_dir = Path(temp_dir).resolve()
-        zip_path = strict_artifact_path(artifact_dir, "screenshots.zip", MAX_ZIP_TOTAL_BYTES)
-        composites = safe_extract_screenshots(zip_path, screenshot_dir)
-        last_model_error: Exception | None = None
-        for model_index, model in enumerate(models):
-            tools = EvidenceTools(artifact_dir, screenshot_dir, composites)
-            try:
-                document, text, turns, corrections = run_tool_agent(gateway, model, tools, seed)
-                return document, text, {
-                    "version": 1,
-                    "model": model,
-                    "model_route": "primary" if model_index == 0 else "fallback",
-                    "tool_turns": turns,
-                    "opened_composites": len(tools.opened),
-                    "validation_corrections": corrections,
-                }
-            except AllTokensExhausted:
-                raise
-            except ProviderRequestError as exc:
-                last_model_error = exc
-                if model_index + 1 < len(models) and exc.category in {
-                    "model_or_request", "provider_server", "network", "payment_or_spend_limit"
-                }:
-                    safe_log("Puter model route failed safely; trying configured fallback model.")
-                    continue
-                raise
-        raise AutomaticAnalysisError("All compatible Puter model routes failed.") from last_model_error
+    owned_bridge = bridge is None
+    bridge = bridge or SubprocessBrowserBridge(bridge_path)
+    gateway = PuterBrowserGateway(parse_tokens(token_secret), bridge)
+    try:
+        # listModels() is evaluated inside the same authenticated Chromium page
+        # as chat(), never fetched from Puter's REST/OpenAI endpoint.
+        models = discover_compatible_models(gateway.list_models(), primary_model, fallback_model)
+        with tempfile.TemporaryDirectory(prefix="clipforge_auto_screenshots_") as temp_dir:
+            screenshot_dir = Path(temp_dir).resolve()
+            zip_path = strict_artifact_path(artifact_dir, "screenshots.zip", MAX_ZIP_TOTAL_BYTES)
+            composites = safe_extract_screenshots(zip_path, screenshot_dir)
+            last_model_error: Exception | None = None
+            for model_index, model in enumerate(models):
+                tools = EvidenceTools(artifact_dir, screenshot_dir, composites)
+                try:
+                    document, text, turns, corrections = run_tool_agent(gateway, model, tools, seed)
+                    return document, text, {
+                        "version": 1,
+                        "model": model,
+                        "model_route": "primary" if model_index == 0 else "fallback",
+                        "tool_turns": turns,
+                        "opened_composites": len(tools.opened),
+                        "validation_corrections": corrections,
+                    }
+                except AllTokensExhausted:
+                    raise
+                except ProviderRequestError as exc:
+                    last_model_error = exc
+                    if model_index + 1 < len(models) and exc.category in {
+                        "model_or_request", "provider_server", "network", "payment_or_spend_limit"
+                    }:
+                        safe_log("Puter model route failed safely; trying configured fallback model.")
+                        continue
+                    raise
+            raise AutomaticAnalysisError("All compatible Puter model routes failed.") from last_model_error
+    finally:
+        if owned_bridge:
+            bridge.close()
 
 
 def main() -> int:
@@ -611,8 +643,7 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path, help="Validated production.json output path")
     parser.add_argument("--result-path", required=True, type=Path, help="Non-secret run summary JSON output path")
     parser.add_argument("--token-env", default="PUTER_AUTH_TOKENS")
-    parser.add_argument("--catalog-endpoint", default=os.environ.get("PUTER_MODELS_ENDPOINT", MODEL_CATALOG_ENDPOINT))
-    parser.add_argument("--base-url", default=os.environ.get("PUTER_OPENAI_BASE_URL", OPENAI_BASE_URL))
+    parser.add_argument("--browser-bridge", default=os.environ.get("PUTER_BROWSER_BRIDGE", DEFAULT_BROWSER_BRIDGE))
     parser.add_argument("--primary-model", default=os.environ.get("PUTER_PRIMARY_MODEL", DEFAULT_PRIMARY_MODEL))
     parser.add_argument("--fallback-model", default=os.environ.get("PUTER_FALLBACK_MODEL", DEFAULT_FALLBACK_MODEL))
     args = parser.parse_args()
@@ -621,8 +652,7 @@ def main() -> int:
         document, canonical, summary = run_analysis(
             args.artifacts_dir,
             os.environ.get(args.token_env),
-            catalog_endpoint=args.catalog_endpoint,
-            base_url=args.base_url,
+            bridge_path=args.browser_bridge,
             primary_model=args.primary_model,
             fallback_model=args.fallback_model,
         )

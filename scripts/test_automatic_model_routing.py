@@ -18,7 +18,8 @@ assert "PUTER_FALLBACK_MODEL" not in WORKFLOW
 # Dynamic catalog proof remains required; a hard-coded route alone is never
 # enough to run the tool-and-image Automatic Mode loop.
 for required in (
-    "fetch_model_catalog",
+    "gateway.list_models()",
+    "PuterBrowserGateway",
     "discover_compatible_models",
     "supports_tools_and_images",
     'entry.get("tool_call") is True',
@@ -31,4 +32,6 @@ for page in ("index.html", "new-task.html", "settings.html", "task.html", "autom
     assert "Claude-first" not in text
     assert "Gemini Flash" in text
 
-print("PASS: Automatic Mode defaults to Gemini 3.6 Flash with a non-Opus fallback and live capability gating")
+assert "api.puter.com/puterai/openai/v1" not in RUNNER
+assert "urlopen(" not in RUNNER
+print("PASS: Automatic Mode defaults to Gemini 3.6 Flash with a non-Opus fallback, browser-side capability gating, and no direct HTTP transport")
