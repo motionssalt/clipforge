@@ -2,7 +2,7 @@
   "version": 1,
   "enabled": true,
   "auto_publish": true,
-  "automatic_mode": "publish_now",
+  "automatic_mode": "smart_schedule",
   "target_accounts": {
     "tiktok": [
       "6a89d0da77555aae01674321"
@@ -19,5 +19,5 @@
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1787437348
+  "updated_at_epoch": 1787611970
 }
