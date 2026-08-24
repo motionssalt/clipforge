@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract checks for the opt-in Automatic Mode Stage A workflow branch."""
+"""Static contract checks for the opt-in direct-Gemini Automatic Mode branch."""
 
 from __future__ import annotations
 
@@ -17,17 +17,17 @@ assert len(STEP_NAMES) == len(set(STEP_NAMES)), "Stage A workflow contains dupli
 RUNNER = (ROOT / "scripts" / "automatic_analysis.py").read_text(encoding="utf-8")
 STATUS_WRITER = (ROOT / "scripts" / "write_status.py").read_text(encoding="utf-8")
 
-
 assert "automatic_mode:" in WORKFLOW
 assert 'default: "false"' in WORKFLOW
 assert "if: ${{ github.event.inputs.automatic_mode != 'true' }}" in WORKFLOW
 assert "if: ${{ github.event.inputs.automatic_mode == 'true' }}" in WORKFLOW
-assert "PUTER_AUTH_TOKENS: ${{ secrets.PUTER_AUTH_TOKENS }}" in WORKFLOW
+assert "GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}" in WORKFLOW
 assert "Download released analysis assets for Automatic Mode" in WORKFLOW
-assert "Install headless Chromium for Puter.js Automatic Mode" in WORKFLOW
-assert "npm install --no-save --no-package-lock playwright" in WORKFLOW
-assert "npx playwright install --with-deps chromium" in WORKFLOW
-assert "Run bounded Puter Automatic Mode analysis" in WORKFLOW
+assert "Run bounded Gemini Automatic Mode analysis" in WORKFLOW
+assert "Install headless Chromium for Puter.js Automatic Mode" not in WORKFLOW
+assert "npm install --no-save --no-package-lock playwright" not in WORKFLOW
+assert "npx playwright install --with-deps chromium" not in WORKFLOW
+assert "PUTER_AUTH_TOKENS" not in WORKFLOW
 assert "--output \"jobs/${{ steps.jid.outputs.job_id }}/production.json\"" in WORKFLOW
 assert "--result-path \"jobs/${{ steps.jid.outputs.job_id }}/automatic_analysis.json\"" in WORKFLOW
 assert "Write automatic_analysis_running status" in WORKFLOW
@@ -46,7 +46,6 @@ assert "Stage A complete. Open the Release, hand it to your agent, then upload p
 assert "Write awaiting_json_upload status" in WORKFLOW
 assert WORKFLOW.count("- name: Write awaiting_json_upload status") == 1
 
-# Provider safety requirements are implementation-level, not just workflow copy.
 for required in (
     "MAX_TOOL_TURNS = 12",
     "MAX_CORRECTION_RETRIES = 1",
@@ -57,18 +56,17 @@ for required in (
     "read_scene_index",
     "read_key_moments",
     "open_composite",
-    "data:",
-    "All configured Puter tokens failed",
-    "discover_compatible_models",
-    "PuterBrowserGateway",
-    "SubprocessBrowserBridge",
-    "scripts/puter_browser_bridge.mjs",
-    "tool_call",
-    "modalities",
+    "from google import genai",
+    "FunctionDeclaration",
+    "FunctionResponseBlob",
+    "GEMINI_API_KEYS",
+    "All configured Gemini API keys failed",
     "production_plan_contract",
 ):
     assert required in RUNNER, f"runner missing required safety/protocol element: {required}"
 
-assert "api.puter.com/puterai/openai/v1" not in RUNNER
+for forbidden in ("Puter", "puter", "PUTER_AUTH_TOKENS", "SubprocessBrowserBridge", "playwright"):
+    assert forbidden not in RUNNER, f"runner retained superseded provider marker: {forbidden}"
+
 assert "automatic_analysis_running" in STATUS_WRITER
-print("PASS: Automatic Mode is opt-in, browser-transported, validated, bounded, status-visible, and dispatches only the existing Stage B path")
+print("PASS: Automatic Mode is opt-in, direct-Gemini-native, validated, bounded, status-visible, and dispatches only the existing Stage B path")

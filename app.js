@@ -64,14 +64,6 @@
   var GEMINI_KEYS_META_PATH = 'branding/gemini_keys.json';
   var GEMINI_KEY_MIN_LEN = 20;
 
-  /* Puter Automatic Mode tokens follow the same browser-to-GitHub sealed-box
-   * path as Gemini keys. `branding/puter_keys.json` contains masked
-   * fingerprints only; raw tokens exist only in browser memory and the
-   * encrypted `PUTER_AUTH_TOKENS` Actions secret. */
-  var PUTER_SECRET_NAME = 'PUTER_AUTH_TOKENS';
-  var PUTER_KEYS_META_PATH = 'branding/puter_keys.json';
-  var PUTER_TOKEN_MIN_LEN = 20;
-
   /* Last-selected background music. Only a safe repository path under
    * audio-library/ is persisted; one-off job uploads are intentionally never
    * written here. The setting lives outside jobs/ so expiry cleanup cannot
@@ -144,7 +136,7 @@
     'Write automatic_analysis_running status':                             'Starting Automatic Mode analysis',
     'Commit automatic analysis start status':                              'Committing Automatic Mode status',
     'Download released analysis assets for Automatic Mode':                'Loading analysis evidence',
-    'Run bounded Puter Automatic Mode analysis':                           'Analyzing selected story thread',
+    'Run bounded Gemini Automatic Mode analysis':                          'Analyzing selected story thread',
     'Write automatic Stage B queued status':                               'Queuing validated production plan',
     'Commit automatic production plan and status':                         'Committing automatic production plan',
     'Dispatch existing Stage B from validated automatic plan':             'Starting Stage B production',
@@ -242,14 +234,6 @@
     geminiKeyMeta: [],         // [{fingerprint, added_at_epoch}]
     geminiKeyMetaSha: null,    // blob sha of gemini_keys.json
 
-    /* Puter tokens use the same ephemeral-only plaintext policy as Gemini.
-     * GitHub never returns Actions secret values, therefore a reload retains
-     * only masked metadata and any new save warns before it replaces unknown
-     * tokens already held by GitHub. */
-    puterTokens: null,          // Array<string> | null (current browser session only)
-    puterKeyMeta: [],           // [{fingerprint, added_at_epoch}]
-    puterKeyMetaSha: null,      // blob sha of puter_keys.json
-
     /* Zernio state contains no raw API key. `zernioSettings` is persistent
      * repo configuration; `zernioAccounts` is a server-side discovery
      * snapshot, and `zernioQueue` is the durable ClipForge schedule ledger. */
@@ -338,8 +322,6 @@
     'watermark-form', 'watermark-name-input', 'watermark-save', 'watermark-msg', 'watermark-current',
     'gemini-keys-disclosure', 'gemini-key-form', 'gemini-key-input', 'gemini-key-reveal',
     'gemini-key-add', 'gemini-key-msg', 'gemini-keys-list', 'gemini-keys-empty',
-    'puter-keys-disclosure', 'puter-key-form', 'puter-key-input', 'puter-key-reveal',
-    'puter-key-add', 'puter-key-msg', 'puter-keys-list', 'puter-keys-empty',
     'zernio-settings-disclosure', 'zernio-settings-state', 'zernio-key-form', 'zernio-key-input', 'zernio-key-reveal', 'zernio-key-save', 'zernio-key-clear', 'zernio-key-msg',
     'zernio-settings-form', 'zernio-enabled-input', 'zernio-auto-publish-input', 'zernio-auto-mode-select', 'zernio-timezone-input', 'zernio-interval-input', 'zernio-time-input', 'zernio-queue-depth-input', 'zernio-start-mode-select', 'zernio-custom-start-field', 'zernio-custom-start-input', 'zernio-refresh-accounts', 'zernio-accounts-hint', 'zernio-accounts-list', 'zernio-accounts-msg', 'zernio-settings-save', 'zernio-settings-msg',
     'zernio-publish-panel', 'zernio-publishing-badge', 'zernio-publish-summary', 'zernio-publish-controls', 'zernio-job-mode-select', 'zernio-job-schedule-field', 'zernio-job-schedule-input', 'zernio-job-targets', 'zernio-publish-job', 'zernio-publish-msg', 'zernio-posts-list',
@@ -673,7 +655,6 @@
     probeRepo();
     loadWatermark();
     loadGeminiKeysMeta();
-    loadPuterKeysMeta();
     loadZernioSettings();
     loadMusicDefault();
     loadAudioLibrary();
@@ -1106,277 +1087,6 @@
     el['gemini-key-form'].addEventListener('submit', function (e) {
       e.preventDefault();
       addGeminiKey();
-    });
-  }
-
-  /* ------------------------------------------------ Puter Automatic Mode auth */
-
-  /* Log-safe masked identifier. Raw Puter auth tokens are never persisted in
-   * the repository or written to UI messages. */
-  function puterFingerprint(token) {
-    var s = String(token || '');
-    if (s.length <= 8) return '\u2026';
-    return s.slice(0, 4) + '\u2026' + s.slice(-4);
-  }
-
-  function validatePuterToken(token) {
-    var s = String(token || '').trim();
-    if (!s) return 'Enter a Puter auth token.';
-    if (s.length < PUTER_TOKEN_MIN_LEN) return 'That token looks too short to be a Puter auth token.';
-    if (/\s/.test(s)) return 'Puter auth tokens must not contain whitespace.';
-    return null;
-  }
-
-  async function loadPuterKeysMeta() {
-    if (!isConfigured()) return;
-    state.puterKeyMeta = [];
-    state.puterKeyMetaSha = null;
-    try {
-      var file = await gh('/repos/' + state.owner + '/' + state.repo +
-        '/contents/' + PUTER_KEYS_META_PATH + '?ref=' + REF + '&_=' + Date.now());
-      var parsed;
-      try {
-        parsed = JSON.parse(b64decodeUtf8(file.content));
-      } catch (e) {
-        setMsg(el['puter-key-msg'], PUTER_KEYS_META_PATH + ' is not valid JSON — add a token to repair it.', 'bad');
-        renderPuterKeys();
-        return;
-      }
-      state.puterKeyMetaSha = file.sha || null;
-      var list = Array.isArray(parsed.keys) ? parsed.keys : [];
-      state.puterKeyMeta = list.filter(function (entry) { return entry && entry.fingerprint; })
-        .map(function (entry) {
-          return {
-            fingerprint: String(entry.fingerprint),
-            added_at_epoch: Number(entry.added_at_epoch) || 0
-          };
-        });
-    } catch (err) {
-      if (err.status === 404) {
-        // No tokens have been saved yet.
-      } else if (err.name === 'AuthError' || err.name === 'RateLimitError') {
-        handleGlobalError(err);
-        return;
-      } else {
-        setMsg(el['puter-key-msg'], 'Could not load token list: ' + err.message, 'bad');
-      }
-    }
-    renderPuterKeys();
-  }
-
-  function renderPuterKeys() {
-    var list = el['puter-keys-list'];
-    var empty = el['puter-keys-empty'];
-    if (!list || !empty) return;
-    list.innerHTML = '';
-    if (!state.puterKeyMeta.length) {
-      show(empty);
-      return;
-    }
-    hide(empty);
-    state.puterKeyMeta.forEach(function (entry) {
-      var li = document.createElement('li');
-      li.className = 'gemini-key-row';
-      var fp = document.createElement('span');
-      fp.className = 'gemini-key-fp';
-      fp.textContent = entry.fingerprint;
-      var added = document.createElement('span');
-      added.className = 'gemini-key-added';
-      added.textContent = entry.added_at_epoch
-        ? 'added ' + new Date(entry.added_at_epoch * 1000).toLocaleDateString()
-        : '';
-      var del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'btn btn-small';
-      del.textContent = 'Delete';
-      del.addEventListener('click', function () { deletePuterToken(entry.fingerprint); });
-      li.appendChild(fp);
-      li.appendChild(added);
-      li.appendChild(del);
-      list.appendChild(li);
-    });
-  }
-
-  async function persistPuterTokens(rawTokens, metaEntries) {
-    var pk = await gh('/repos/' + state.owner + '/' + state.repo +
-      '/actions/secrets/public-key');
-    if (!pk || !pk.key || !pk.key_id) {
-      throw new Error('GitHub did not return an Actions public key for this repo.');
-    }
-    if (rawTokens.length === 0) {
-      try {
-        await gh('/repos/' + state.owner + '/' + state.repo +
-          '/actions/secrets/' + encodeURIComponent(PUTER_SECRET_NAME),
-          { method: 'DELETE' });
-      } catch (err) {
-        if (err.status !== 404) throw err;
-      }
-    } else {
-      var joined = rawTokens.join('\n');
-      var encrypted = await encryptForActionsSecret(joined, pk.key);
-      await gh('/repos/' + state.owner + '/' + state.repo +
-        '/actions/secrets/' + encodeURIComponent(PUTER_SECRET_NAME), {
-          method: 'PUT',
-          body: { encrypted_value: encrypted, key_id: pk.key_id }
-        });
-    }
-
-    var doc = {
-      version: 1,
-      note: 'Masked fingerprints only. Raw Puter auth tokens live in the PUTER_AUTH_TOKENS repo secret and are never committed.',
-      keys: metaEntries,
-      updated_at_epoch: Math.floor(Date.now() / 1000)
-    };
-    await putRepoFile(PUTER_KEYS_META_PATH,
-      b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
-      'clipforge: update Puter auth token metadata (masked fingerprints only)');
-    try {
-      var file = await gh('/repos/' + state.owner + '/' + state.repo +
-        '/contents/' + PUTER_KEYS_META_PATH + '?ref=' + REF + '&_=' + Date.now());
-      state.puterKeyMetaSha = file.sha || null;
-    } catch (_) { /* best effort */ }
-  }
-
-  async function addPuterToken() {
-    if (state.busy) return;
-    if (!isConfigured()) {
-      setMsg(el['puter-key-msg'], 'Save your GitHub settings above first.', 'bad');
-      return;
-    }
-    var raw = (el['puter-key-input'].value || '').trim();
-    var problem = validatePuterToken(raw);
-    if (problem) {
-      setMsg(el['puter-key-msg'], problem, 'bad');
-      return;
-    }
-    var fp = puterFingerprint(raw);
-    if (state.puterKeyMeta.some(function (entry) { return entry.fingerprint === fp; })) {
-      setMsg(el['puter-key-msg'], 'A token with that fingerprint is already configured.', 'bad');
-      return;
-    }
-
-    state.busy = true;
-    el['puter-key-add'].disabled = true;
-    setMsg(el['puter-key-msg'], 'Encrypting and uploading…', null);
-
-    try {
-      // GitHub secrets replace rather than append. Keep all plaintext only
-      // while this page is open; otherwise require explicit confirmation
-      // before unknown secret values could be overwritten.
-      var raws, metaEntries;
-      var knownFps = (state.puterTokens || []).map(puterFingerprint);
-      var haveAllKnown = state.puterKeyMeta.every(function (entry) {
-        return knownFps.indexOf(entry.fingerprint) !== -1;
-      });
-
-      if (state.puterKeyMeta.length === 0) {
-        raws = [raw];
-        metaEntries = [{ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) }];
-      } else if (haveAllKnown && state.puterTokens && state.puterTokens.length) {
-        raws = state.puterTokens.slice();
-        raws.push(raw);
-        metaEntries = state.puterKeyMeta.slice();
-        metaEntries.push({ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) });
-      } else {
-        var confirmed = window.confirm(
-          'Adding this token from a fresh browser session will OVERWRITE the existing PUTER_AUTH_TOKENS secret with only this new token.\n\n' +
-          'GitHub never returns secret values, so the site cannot combine the new token with previously saved tokens unless you enter them again in this session.\n\n' +
-          'Existing fingerprints that will be discarded:\n  • ' +
-          state.puterKeyMeta.map(function (entry) { return entry.fingerprint; }).join('\n  • ') +
-          '\n\nProceed?'
-        );
-        if (!confirmed) {
-          setMsg(el['puter-key-msg'], 'Cancelled.', null);
-          state.busy = false;
-          el['puter-key-add'].disabled = false;
-          return;
-        }
-        raws = [raw];
-        metaEntries = [{ fingerprint: fp, added_at_epoch: Math.floor(Date.now() / 1000) }];
-      }
-
-      await persistPuterTokens(raws, metaEntries);
-      state.puterTokens = raws;
-      state.puterKeyMeta = metaEntries;
-      el['puter-key-input'].value = '';
-      renderPuterKeys();
-      setMsg(el['puter-key-msg'], 'Token added. Automatic Mode will use it on the next analysis run.', 'ok');
-    } catch (err) {
-      setMsg(el['puter-key-msg'], 'Add failed: ' + err.message, 'bad');
-      handleGlobalError(err, 'puter-key');
-    }
-
-    state.busy = false;
-    el['puter-key-add'].disabled = false;
-  }
-
-  async function deletePuterToken(fingerprint) {
-    if (state.busy) return;
-    if (!isConfigured()) {
-      setMsg(el['puter-key-msg'], 'Save your GitHub settings above first.', 'bad');
-      return;
-    }
-
-    var known = state.puterTokens || [];
-    var knownFps = known.map(puterFingerprint);
-    var isTargetKnown = knownFps.indexOf(fingerprint) !== -1;
-    var otherUnknown = state.puterKeyMeta.filter(function (entry) {
-      return entry.fingerprint !== fingerprint && knownFps.indexOf(entry.fingerprint) === -1;
-    });
-
-    if (otherUnknown.length > 0) {
-      var ok = window.confirm(
-        'Deleting ' + fingerprint + ' now will REBUILD the PUTER_AUTH_TOKENS secret from the tokens this session still knows. ' +
-        'GitHub never returns secret values, so the following tokens will also be removed from the secret unless you re-enter them first:\n  • ' +
-        otherUnknown.map(function (entry) { return entry.fingerprint; }).join('\n  • ') +
-        '\n\nProceed?'
-      );
-      if (!ok) return;
-    }
-
-    state.busy = true;
-    setMsg(el['puter-key-msg'], 'Deleting ' + fingerprint + '…', null);
-
-    try {
-      var newRaws = known.filter(function (token) { return puterFingerprint(token) !== fingerprint; });
-      var newMeta;
-      if (otherUnknown.length > 0) {
-        newMeta = state.puterKeyMeta.filter(function (entry) {
-          return entry.fingerprint !== fingerprint && knownFps.indexOf(entry.fingerprint) !== -1;
-        });
-      } else {
-        newMeta = state.puterKeyMeta.filter(function (entry) { return entry.fingerprint !== fingerprint; });
-      }
-
-      await persistPuterTokens(newRaws, newMeta);
-      state.puterTokens = newRaws;
-      state.puterKeyMeta = newMeta;
-      renderPuterKeys();
-      setMsg(el['puter-key-msg'],
-        isTargetKnown
-          ? 'Deleted ' + fingerprint + '.'
-          : 'Deleted ' + fingerprint + ' from the fingerprint list.',
-        'ok');
-    } catch (err) {
-      setMsg(el['puter-key-msg'], 'Delete failed: ' + err.message, 'bad');
-      handleGlobalError(err, 'puter-key');
-    }
-
-    state.busy = false;
-  }
-
-  if (el['puter-key-reveal']) {
-    el['puter-key-reveal'].addEventListener('click', function () {
-      var revealed = el['puter-key-input'].type === 'text';
-      el['puter-key-input'].type = revealed ? 'password' : 'text';
-      el['puter-key-reveal'].textContent = revealed ? 'Show' : 'Hide';
-      el['puter-key-reveal'].setAttribute('aria-pressed', revealed ? 'false' : 'true');
-    });
-  }
-  if (el['puter-key-form']) {
-    el['puter-key-form'].addEventListener('submit', function (e) {
-      e.preventDefault();
-      addPuterToken();
     });
   }
 
@@ -2102,10 +1812,10 @@
         openSettings(true);
         return;
       }
-      if (PAGE === 'automatic' && !state.puterKeyMeta.length) {
-        setMsg(el['stage-a-msg'], 'Automatic Mode needs at least one Puter auth token. Add one in Repository settings first.', 'bad');
+      if (PAGE === 'automatic' && !state.geminiKeyMeta.length) {
+        setMsg(el['stage-a-msg'], 'Automatic Mode needs at least one Gemini API key. Add one in Repository settings first.', 'bad');
         openSettings(true);
-        if (el['puter-keys-disclosure']) el['puter-keys-disclosure'].open = true;
+        if (el['gemini-keys-disclosure']) el['gemini-keys-disclosure'].open = true;
         return;
       }
 
@@ -5411,7 +5121,6 @@
     probeRepo();
     loadWatermark();
     loadGeminiKeysMeta();
-    loadPuterKeysMeta();
     loadZernioSettings();
     loadMusicDefault();
     loadAudioLibrary();

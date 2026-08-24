@@ -158,6 +158,9 @@ def probe_key(key: ApiKey) -> dict[str, Any]:
                 result["native_function_calling"] = capability_probe(client, model)
                 result["inline_image_input"] = result["native_function_calling"]
                 result["success"] = result["native_function_calling"]
+                if result["success"]:
+                    result.pop("error", None)
+                    return result
                 if not result["success"]:
                     result["error"] = {
                         "status": None,

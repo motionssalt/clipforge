@@ -90,13 +90,13 @@ Task detail — ClipForge
         <details class="fold" id="gemini-keys-disclosure">
           <summary>
             <span class="fold-label">
-              <span class="fold-eyebrow">Voiceover credentials</span>
-              <strong>Gemini TTS keys</strong>
+              <span class="fold-eyebrow">Voiceover + Automatic Mode credentials</span>
+              <strong>Gemini API keys</strong>
             </span>
             <span class="fold-cue">Manage</span>
           </summary>
           <div class="fold-body">
-            <p class="hint">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the libsodium bundle ships with the site itself, so no third-party CDN request is made). Multiple keys are supported — Stage B fails over cleanly on quota, rate-limit, invalid-key, or transient API errors.</p>
+            <p class="hint">Stored as the <code>GEMINI_API_KEYS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the libsodium bundle ships with the site itself, so no third-party CDN request is made). The same key list powers Stage B voiceover and Automatic Mode’s direct Gemini analysis. Multiple keys are tried in order for authentication, quota, rate-limit, or transient API errors.</p>
             <form id="gemini-key-form" autocomplete="off">
               <div class="field">
                 <label for="gemini-key-input">Add a Gemini API key</label>
@@ -115,39 +115,6 @@ Task detail — ClipForge
               <div class="fold-eyebrow">Configured keys</div>
               <ul id="gemini-keys-list" class="gemini-keys-list" aria-live="polite"></ul>
               <p id="gemini-keys-empty" class="hint">No Gemini API keys configured yet.</p>
-            </div>
-          </div>
-        </details>
-
-        <!-- Puter Automatic Mode tokens -->
-        <details class="fold" id="puter-keys-disclosure">
-          <summary>
-            <span class="fold-label">
-              <span class="fold-eyebrow">Automatic Mode credentials</span>
-              <strong>Puter auth tokens</strong>
-            </span>
-            <span class="fold-cue">Manage</span>
-          </summary>
-          <div class="fold-body">
-            <p class="hint">Stored as the <code>PUTER_AUTH_TOKENS</code> repository secret (encrypted with a libsodium sealed box in this browser before upload; the bundled libsodium files are loaded locally). Multiple tokens are supported — Automatic Mode rotates to the next token only for authentication, rate-limit, or quota failures. The runner verifies Gemini Flash as its primary model and a non-Opus GPT fallback against Puter’s live capability catalog before it starts analysis.</p>
-            <form id="puter-key-form" autocomplete="off">
-              <div class="field">
-                <label for="puter-key-input">Add a Puter auth token</label>
-                <div class="with-reveal">
-                  <input type="password" id="puter-key-input" name="puter_auth_token" placeholder="Puter auth token…" spellcheck="false" autocapitalize="off" autocomplete="off">
-                  <button type="button" id="puter-key-reveal" class="btn btn-quiet btn-sm" aria-pressed="false">Show</button>
-                </div>
-                <p class="hint">The raw token never touches the repo, logs, or artifacts. Only a masked fingerprint (first 4 + last 4 characters) is committed for display.</p>
-              </div>
-              <div class="row-actions">
-                <button type="submit" id="puter-key-add" class="btn btn-secondary">Add token</button>
-                <span id="puter-key-msg" class="inline-msg" aria-live="polite"></span>
-              </div>
-            </form>
-            <div class="mini-panel">
-              <div class="fold-eyebrow">Configured tokens</div>
-              <ul id="puter-keys-list" class="gemini-keys-list" aria-live="polite"></ul>
-              <p id="puter-keys-empty" class="hint">No Puter auth tokens configured yet.</p>
             </div>
           </div>
         </details>

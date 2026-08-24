@@ -32,7 +32,7 @@ for required in (
     assert required in HTML, f"Automatic Mode page missing: {required}"
 
 for required in (
-    "if (PAGE === 'automatic' && !state.puterKeyMeta.length)",
+    "if (PAGE === 'automatic' && !state.geminiKeyMeta.length)",
     "var automaticMode = PAGE === 'automatic';",
     "automatic_mode: automaticMode ? 'true' : 'false'",
     "automatic_mode: settings.automatic_mode === 'true' ? 'true' : 'false'",
@@ -43,4 +43,6 @@ for required in (
 ):
     assert required in APP, f"Automatic Mode controller missing: {required}"
 
-print("PASS: Automatic Mode has a real source/focus launch form, Puter prerequisite, unattended dispatch flag, and continuous task-progress route")
+assert "state.puterKeyMeta" not in APP
+assert "Puter auth token" not in APP
+print("PASS: Automatic Mode has a real source/focus launch form, shared Gemini key prerequisite, unattended dispatch flag, and continuous task-progress route")

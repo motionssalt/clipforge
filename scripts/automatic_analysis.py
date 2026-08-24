@@ -1,50 +1,37 @@
 #!/usr/bin/env python3
-"""Unattended ClipForge analysis agent for the Automatic Mode handoff.
+"""Unattended ClipForge Automatic Mode analysis using the Gemini Developer API.
 
-The runner receives Stage A release assets locally, seeds a Puter OpenAI-
-compatible tool conversation with ``00_READ_THIS_FIRST.txt``, and permits the
-model to inspect evidence only in the required order:
-
-1. transcript; 2. scene index and key moments; 3. selectively chosen screenshot
-composites. It never sends the entire screenshot archive as one giant prompt.
+The runner receives Stage A release assets, uses Gemini's native function calling
+for bounded evidence retrieval, and writes ``production.json`` only after the
+same shared contract accepted by the manual-import flow validates it.
 
 Security properties:
-- Puter tokens are read only from the ``PUTER_AUTH_TOKENS`` Actions secret.
-- Tokens are never printed, committed, included in exceptions, or placed in
-  result artifacts. Runner logs may identify only a zero-based token index.
-- Screenshot zip paths, entry count, decompressed bytes, image bytes, number
-  of opens, and total data-url bytes are bounded before any image is supplied
-  to the provider.
-- production.json is written only after the same portable contract consumed by
-  the browser's manual-import flow accepts it.
+- API keys are read only from the ``GEMINI_API_KEYS`` Actions secret.
+- Raw keys are never printed, committed, written to result artifacts, or placed
+  in exceptions. Logs identify only a zero-based attempted key index.
+- Screenshot archives and each image response are bounded before bytes are
+  supplied to Gemini as a multimodal function response.
+- The model can use only four local, order-enforced evidence functions.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import mimetypes
 import os
 import re
-import select
-import subprocess
-import sys
 import tempfile
-import uuid
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Protocol
 
 from production_plan_contract import parse_and_validate_production_plan
 
 
-DEFAULT_BROWSER_BRIDGE = "scripts/puter_browser_bridge.mjs"
-# Gemini 3.6 Flash is the cost-conscious primary. The runner still proves
-# image-input and function-calling capability from Puter's live catalog before
-# any analysis begins; the non-Opus GPT route remains a bounded fallback.
-DEFAULT_PRIMARY_MODEL = "google/gemini-3.6-flash"
-DEFAULT_FALLBACK_MODEL = "openai/gpt-5.6-terra"
+DEFAULT_PRIMARY_MODEL = "gemini-3.7-flash"
+DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")
 MAX_TOOL_TURNS = 12
 MAX_CORRECTION_RETRIES = 1
 MAX_SEED_BYTES = 1024 * 1024
@@ -62,133 +49,92 @@ class AutomaticAnalysisError(RuntimeError):
 
 
 class ToolProtocolError(AutomaticAnalysisError):
-    """The model tried an unsupported or out-of-order evidence operation."""
+    """The model tried an unsupported or out-of-order local evidence operation."""
 
 
-class AllTokensExhausted(AutomaticAnalysisError):
-    """Every configured token failed on an auth/rate/quota category response."""
+class AllKeysExhausted(AutomaticAnalysisError):
+    """Every configured API key reached an authentication or quota failure."""
 
 
 class ProviderRequestError(AutomaticAnalysisError):
-    """Safe provider error metadata, intentionally without response body text."""
+    """Safe Gemini error metadata without any raw request or response body."""
 
     def __init__(self, status: int | None, category: str):
         self.status = status
         self.category = category
         status_text = str(status) if status is not None else "network"
-        super().__init__(f"Puter provider request failed ({status_text}; {category}).")
+        super().__init__(f"Gemini provider request failed ({status_text}; {category}).")
 
 
-def safe_browser_error_summary(payload: dict[str, Any], category: str) -> str:
-    """Return limited, redacted browser-failure metadata suitable for Actions logs."""
-    status = payload.get("status")
-    status_text = str(status) if isinstance(status, int) else "none"
-    code = re.sub(r"[^A-Za-z0-9_.-]", "", str(payload.get("code") or "none"))[:80] or "none"
-    stage = re.sub(r"[^A-Za-z0-9_.-]", "", str(payload.get("stage") or "browser_call"))[:80] or "browser_call"
-    message = str(payload.get("message") or "")[:320]
-    message = re.sub(r"(?i)bearer\\s+[^\\s\"',}]+", "Bearer [REDACTED]", message)
-    message = re.sub(
-        r"(?i)((?:token|authorization|secret|password|api[_-]?key|cookie|session)\\s*[=:]\\s*)[^,\\s}]+",
-        r"\\1[REDACTED]",
-        message,
-    )
-    return "Puter.js browser failure: status=" + status_text + " category=" + category + " stage=" + stage + " code=" + code + " message=" + (message or "[none]")
+@dataclass(frozen=True)
+class ApiKey:
+    raw: str
 
 
-def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
-    """Classify failures from status and generic error labels, never log payload."""
-    error_value = payload.get("error", "")
-    if isinstance(error_value, dict):
-        error_value = " ".join(str(error_value.get(key, "")) for key in ("code", "type", "message"))
-    haystack = " ".join(str(payload.get(key, "")) for key in ("code", "message", "stage", "error"))
-    if isinstance(error_value, str):
-        haystack += " " + error_value
-    haystack = haystack.lower()
-    if status in (401, 403) or "auth" in haystack or "invalid token" in haystack or "unauthor" in haystack:
-        return "authentication"
-    # Puter can return 402 for a model-specific payment/spend threshold even
-    # when the account-wide credit display is not empty. It is neither a bad
-    # token nor a malformed request: rotate any additional token first, then
-    # let the orchestration attempt the configured cheaper model route.
-    if status == 402 or "payment required" in haystack or "payment" in haystack or "spend" in haystack:
-        return "payment_or_spend_limit"
-    if status == 429 or "rate" in haystack or "quota" in haystack or "credit" in haystack or "limit" in haystack:
-        return "rate_or_quota"
-    if "upstream_failed" in haystack or "all ai providers failed" in haystack:
-        return "provider_server"
-    if status in (400, 404, 422) or "model" in haystack:
-        return "model_or_request"
-    if "network" in haystack or "failed to fetch" in haystack or "timed out" in haystack:
-        return "network"
-    if status is not None and status >= 500:
-        return "provider_server"
-    return "provider_request"
+@dataclass(frozen=True)
+class NativeToolCall:
+    id: str
+    name: str
+    args: dict[str, Any]
 
 
-def token_failure_should_rotate(status: int | None, category: str) -> bool:
-    return status in (401, 402, 403, 429) or category in {
-        "authentication", "rate_or_quota", "payment_or_spend_limit"
-    }
+@dataclass(frozen=True)
+class NativeTurn:
+    calls: list[NativeToolCall]
+    text: str
+    model_content: Any
 
 
-def parse_tokens(raw: str | None) -> list[str]:
-    """Accept newline/comma separated secrets, preserving order and removing duplicates."""
-    pieces = re.split(r"[\r\n,]+", raw or "")
-    tokens: list[str] = []
-    seen: set[str] = set()
-    for piece in pieces:
-        token = piece.strip()
-        if token and token not in seen:
-            tokens.append(token)
-            seen.add(token)
-    return tokens
+@dataclass(frozen=True)
+class ToolResult:
+    response: dict[str, Any]
+    image_bytes: bytes | None = None
+    mime_type: str | None = None
+    display_name: str | None = None
 
 
 def safe_log(message: str) -> None:
-    """Emit only static/safe telemetry. Callers must never pass provider bodies or tokens."""
+    """Emit only static, secret-free telemetry."""
     print(message, flush=True)
 
 
-def model_values(entry: dict[str, Any]) -> set[str]:
-    values = {str(entry.get("id", "")).strip(), str(entry.get("puterId", "")).strip()}
-    aliases = entry.get("aliases")
-    if isinstance(aliases, list):
-        values.update(str(alias).strip() for alias in aliases)
-    return {value for value in values if value}
+def parse_api_keys(raw: str | None) -> list[ApiKey]:
+    """Parse a comma/newline-delimited secret without logging any key values."""
+    seen: set[str] = set()
+    keys: list[ApiKey] = []
+    for value in re.split(r"[\r\n,]+", raw or ""):
+        key = value.strip()
+        if key and key not in seen:
+            seen.add(key)
+            keys.append(ApiKey(raw=key))
+    return keys
 
 
-def supports_tools_and_images(entry: dict[str, Any]) -> bool:
-    modalities = entry.get("modalities")
-    inputs = modalities.get("input", []) if isinstance(modalities, dict) else []
-    normalized_inputs = {str(item).lower() for item in inputs} if isinstance(inputs, list) else set()
-    return entry.get("tool_call") is True and "image" in normalized_inputs
+def provider_error_status(error: Exception) -> int | None:
+    value = getattr(error, "code", None) or getattr(error, "status_code", None)
+    return value if isinstance(value, int) else None
 
 
-def discover_compatible_models(
-    catalog: dict[str, Any],
-    primary: str,
-    fallback: str,
-) -> list[str]:
-    """Return ordered configured candidates proven by live catalog metadata."""
-    entries = catalog.get("models")
-    if not isinstance(entries, list):
-        raise AutomaticAnalysisError("Puter model catalog did not return a models list.")
-    compatible: list[str] = []
-    for candidate in (primary, fallback):
-        matched = [entry for entry in entries if isinstance(entry, dict) and candidate in model_values(entry)]
-        if any(supports_tools_and_images(entry) for entry in matched):
-            compatible.append(candidate)
-        else:
-            safe_log("Puter model candidate unavailable or missing required image/tool capability: " + candidate)
-    if not compatible:
-        raise AutomaticAnalysisError(
-            "No configured Puter model is currently available with both image input and function calling."
-        )
-    return compatible
+def provider_error_category(status: int | None, error: Exception | None = None) -> str:
+    message = str(error or "").lower()
+    if status in (401, 403) or "api_key_invalid" in message or "unauth" in message:
+        return "authentication"
+    if status == 429 or "resource_exhausted" in message or "quota" in message or "rate" in message:
+        return "rate_or_quota"
+    if status in (400, 404, 422) or "not found" in message or "invalid argument" in message:
+        return "model_or_request"
+    if status is not None and status >= 500:
+        return "provider_server"
+    if "timeout" in message or "connection" in message or "network" in message:
+        return "network"
+    return "provider_request"
+
+
+def key_failure_should_rotate(status: int | None, category: str) -> bool:
+    return status in (401, 403, 429) or category in {"authentication", "rate_or_quota"}
 
 
 def strict_artifact_path(root: Path, filename: str, maximum: int) -> Path:
-    """Resolve a named Stage A JSON file without traversal or oversized reads."""
     target = (root / filename).resolve()
     if target.parent != root.resolve() or not target.is_file():
         raise AutomaticAnalysisError(f"Required Stage A artifact is unavailable: {filename}.")
@@ -202,7 +148,6 @@ def read_text_artifact(root: Path, filename: str, maximum: int) -> str:
 
 
 def safe_extract_screenshots(zip_path: Path, destination: Path) -> dict[str, Path]:
-    """Extract bounded image-only screenshot composites with traversal protection."""
     if not zip_path.is_file():
         raise AutomaticAnalysisError("Stage A screenshots.zip is unavailable.")
     extracted: dict[str, Path] = {}
@@ -219,8 +164,7 @@ def safe_extract_screenshots(zip_path: Path, destination: Path) -> dict[str, Pat
             member = Path(info.filename)
             if member.is_absolute() or ".." in member.parts or not member.name:
                 raise AutomaticAnalysisError("Stage A screenshot archive contains an unsafe path.")
-            suffix = member.suffix.lower()
-            if suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
+            if member.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
                 continue
             if info.file_size > MAX_ZIP_MEMBER_BYTES:
                 raise AutomaticAnalysisError("A Stage A screenshot composite exceeds the safe image size limit.")
@@ -240,31 +184,27 @@ def safe_extract_screenshots(zip_path: Path, destination: Path) -> dict[str, Pat
     return extracted
 
 
-def tool_specs() -> list[dict[str, Any]]:
-    """OpenAI-compatible function definitions exposed to the analysis model."""
+def function_schemas() -> list[dict[str, Any]]:
     no_args = {"type": "object", "properties": {}, "additionalProperties": False}
     return [
-        {"type": "function", "function": {"name": "read_transcript", "description": "Read the timestamped transcript.json artifact first.", "parameters": no_args}},
-        {"type": "function", "function": {"name": "read_scene_index", "description": "Read scene_index.json only after transcript.json.", "parameters": no_args}},
-        {"type": "function", "function": {"name": "read_key_moments", "description": "Read key_moments.json only after transcript.json.", "parameters": no_args}},
+        {"name": "read_transcript", "description": "Read the timestamped transcript.json artifact first.", "parameters_json_schema": no_args},
+        {"name": "read_scene_index", "description": "Read scene_index.json only after transcript.json.", "parameters_json_schema": no_args},
+        {"name": "read_key_moments", "description": "Read key_moments.json only after transcript.json.", "parameters_json_schema": no_args},
         {
-            "type": "function",
-            "function": {
-                "name": "open_composite",
-                "description": "Open one selected local screenshot composite only after transcript, scene index, and key moments have been read.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"filename": {"type": "string", "description": "Exact basename of a selected composite image."}},
-                    "required": ["filename"],
-                    "additionalProperties": False,
-                },
+            "name": "open_composite",
+            "description": "Open exactly one selected screenshot composite only after transcript, scene index, and key moments are read.",
+            "parameters_json_schema": {
+                "type": "object",
+                "properties": {"filename": {"type": "string", "description": "Exact released composite basename."}},
+                "required": ["filename"],
+                "additionalProperties": False,
             },
         },
     ]
 
 
 class EvidenceTools:
-    """Strict, stateful implementation of the four allowed evidence tools."""
+    """Strict, stateful implementation of the four permitted evidence functions."""
 
     def __init__(self, artifact_dir: Path, screenshot_dir: Path, composites: dict[str, Path]):
         self.artifact_dir = artifact_dir
@@ -295,20 +235,19 @@ class EvidenceTools:
             return
         raise ToolProtocolError("Unsupported Automatic Mode tool: " + name + ".")
 
-    def call(self, name: str, arguments: dict[str, Any]) -> str:
+    def call(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         self._assert_order(name)
         if name == "read_transcript":
             self.transcript_read = True
-            return read_text_artifact(self.artifact_dir, "transcript.json", MAX_JSON_ARTIFACT_BYTES)
+            return ToolResult({"artifact": "transcript.json", "content": read_text_artifact(self.artifact_dir, "transcript.json", MAX_JSON_ARTIFACT_BYTES)})
         if name == "read_scene_index":
             self.scene_index_read = True
-            return read_text_artifact(self.artifact_dir, "scene_index.json", MAX_JSON_ARTIFACT_BYTES)
+            return ToolResult({"artifact": "scene_index.json", "content": read_text_artifact(self.artifact_dir, "scene_index.json", MAX_JSON_ARTIFACT_BYTES)})
         if name == "read_key_moments":
             self.key_moments_read = True
-            return read_text_artifact(self.artifact_dir, "key_moments.json", MAX_JSON_ARTIFACT_BYTES)
+            return ToolResult({"artifact": "key_moments.json", "content": read_text_artifact(self.artifact_dir, "key_moments.json", MAX_JSON_ARTIFACT_BYTES)})
         if name != "open_composite":
             raise ToolProtocolError("Unsupported Automatic Mode tool: " + name + ".")
-
         filename = arguments.get("filename")
         if not isinstance(filename, str) or not filename or Path(filename).name != filename:
             raise ToolProtocolError("open_composite requires one safe composite basename.")
@@ -326,51 +265,121 @@ class EvidenceTools:
             raise ToolProtocolError("Automatic Mode reached its total image byte limit.")
         self.opened.add(filename)
         self.total_image_bytes += len(raw)
-        media_type = mimetypes.guess_type(filename)[0] or "image/png"
-        data_url = "data:" + media_type + ";base64," + base64.b64encode(raw).decode("ascii")
-        # The content is a tool result (not a hosted URL); the data URL carries
-        # the exact image bytes so a vision-capable model can inspect it.
-        return json.dumps({"filename": filename, "mime_type": media_type, "image_data_url": data_url})
+        mime_type = mimetypes.guess_type(filename)[0] or "image/png"
+        return ToolResult(
+            {"filename": filename, "mime_type": mime_type, "instruction": "Inspect the attached released screenshot composite."},
+            image_bytes=raw,
+            mime_type=mime_type,
+            display_name=filename,
+        )
 
 
-def parse_tool_arguments(raw: Any) -> dict[str, Any]:
-    if isinstance(raw, dict):
-        return raw
-    if not isinstance(raw, str):
-        raise ToolProtocolError("Automatic Mode tool arguments were not JSON.")
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ToolProtocolError("Automatic Mode tool arguments were not valid JSON.") from exc
-    if not isinstance(parsed, dict):
-        raise ToolProtocolError("Automatic Mode tool arguments must be an object.")
-    return parsed
+class NativeGateway(Protocol):
+    key_rotations: int
+
+    def new_history(self, prompt: str) -> list[Any]: ...
+    def append_user_text(self, history: list[Any], text: str) -> None: ...
+    def generate(self, model: str, history: list[Any], *, tools_enabled: bool) -> NativeTurn: ...
+    def append_tool_results(self, history: list[Any], turn: NativeTurn, results: list[tuple[NativeToolCall, ToolResult]]) -> None: ...
 
 
-def normalize_tool_calls(message: dict[str, Any]) -> list[dict[str, Any]]:
-    calls = message.get("tool_calls")
-    if not calls:
-        return []
-    if not isinstance(calls, list):
-        raise ToolProtocolError("Provider returned malformed tool_calls.")
-    normalized: list[dict[str, Any]] = []
-    for call in calls:
-        if not isinstance(call, dict):
-            raise ToolProtocolError("Provider returned malformed tool call.")
-        function = call.get("function")
-        if not isinstance(function, dict) or not isinstance(function.get("name"), str):
-            raise ToolProtocolError("Provider returned a tool call without a function name.")
-        call_id = call.get("id")
-        if not isinstance(call_id, str) or not call_id:
-            raise ToolProtocolError("Provider returned a tool call without an id.")
-        normalized.append(call)
-    return normalized
+class GeminiGateway:
+    """Official Google Gen AI SDK gateway with bounded secret-safe key rotation."""
+
+    def __init__(self, keys: list[ApiKey], *, client_factory: Any | None = None, types_module: Any | None = None):
+        if not keys:
+            raise AutomaticAnalysisError("No Gemini API keys are configured. Add one in Repository settings first.")
+        if types_module is None or client_factory is None:
+            try:
+                from google import genai
+                from google.genai import types
+            except ImportError as exc:
+                raise AutomaticAnalysisError("The official google-genai package is unavailable on this runner.") from exc
+            types_module = types_module or types
+            client_factory = client_factory or (lambda key: genai.Client(api_key=key))
+        self.types = types_module
+        self.client_factory = client_factory
+        self.keys = keys
+        self.current_key_index = 0
+        self.key_rotations = 0
+
+    def _config(self, tools_enabled: bool) -> Any:
+        if not tools_enabled:
+            return self.types.GenerateContentConfig(max_output_tokens=6000, temperature=0.2)
+        declarations = [self.types.FunctionDeclaration(**schema) for schema in function_schemas()]
+        return self.types.GenerateContentConfig(
+            tools=[self.types.Tool(function_declarations=declarations)],
+            automatic_function_calling=self.types.AutomaticFunctionCallingConfig(disable=True),
+            max_output_tokens=6000,
+            temperature=0.2,
+        )
+
+    def new_history(self, prompt: str) -> list[Any]:
+        return [self.types.Content(role="user", parts=[self.types.Part.from_text(text=prompt)])]
+
+    def append_user_text(self, history: list[Any], text: str) -> None:
+        history.append(self.types.Content(role="user", parts=[self.types.Part.from_text(text=text)]))
+
+    def _native_turn(self, response: Any) -> NativeTurn:
+        candidates = getattr(response, "candidates", None) or []
+        if not candidates or not getattr(candidates[0], "content", None):
+            raise ProviderRequestError(None, "malformed_response")
+        calls: list[NativeToolCall] = []
+        for call in getattr(response, "function_calls", None) or []:
+            name = getattr(call, "name", None)
+            call_id = getattr(call, "id", None)
+            args = getattr(call, "args", None)
+            if not isinstance(name, str) or not name or not isinstance(call_id, str) or not call_id or not isinstance(args, dict):
+                raise ProviderRequestError(None, "malformed_function_call")
+            calls.append(NativeToolCall(id=call_id, name=name, args=dict(args)))
+        return NativeTurn(calls=calls, text=str(getattr(response, "text", "") or ""), model_content=candidates[0].content)
+
+    def generate(self, model: str, history: list[Any], *, tools_enabled: bool) -> NativeTurn:
+        attempted: set[int] = set()
+        last_error: ProviderRequestError | None = None
+        while len(attempted) < len(self.keys):
+            index = self.current_key_index
+            attempted.add(index)
+            try:
+                response = self.client_factory(self.keys[index].raw).models.generate_content(
+                    model=model, contents=history, config=self._config(tools_enabled)
+                )
+                return self._native_turn(response)
+            except ProviderRequestError:
+                raise
+            except Exception as error:
+                status = provider_error_status(error)
+                category = provider_error_category(status, error)
+                safe_log("Gemini key index " + str(index) + " failed with " + category + " (status=" + str(status or "none") + ").")
+                last_error = ProviderRequestError(status, category)
+                if not key_failure_should_rotate(status, category):
+                    raise last_error from error
+                self.current_key_index = (index + 1) % len(self.keys)
+                self.key_rotations += 1
+        raise AllKeysExhausted("All configured Gemini API keys failed with authentication or quota errors.") from last_error
+
+    def append_tool_results(self, history: list[Any], turn: NativeTurn, results: list[tuple[NativeToolCall, ToolResult]]) -> None:
+        history.append(turn.model_content)
+        parts: list[Any] = []
+        for call, result in results:
+            multimodal_parts: list[Any] = []
+            if result.image_bytes is not None:
+                multimodal_parts.append(self.types.FunctionResponsePart(
+                    inline_data=self.types.FunctionResponseBlob(
+                        mime_type=result.mime_type,
+                        display_name=result.display_name,
+                        data=result.image_bytes,
+                    )
+                ))
+            parts.append(self.types.Part.from_function_response(
+                name=call.name,
+                response={"result": result.response},
+                parts=multimodal_parts or None,
+            ))
+        history.append(self.types.Content(role="user", parts=parts))
 
 
 def extract_json_object(content: Any) -> tuple[dict[str, Any] | None, str]:
-    """Extract the first valid object from plain or fenced model text."""
-    if isinstance(content, list):
-        content = "".join(str(part.get("text", "")) if isinstance(part, dict) else str(part) for part in content)
     text = str(content or "").strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
@@ -388,294 +397,114 @@ def extract_json_object(content: Any) -> tuple[dict[str, Any] | None, str]:
     return None, ""
 
 
-class BrowserBridge(Protocol):
-    """Minimal JSONL boundary used by the Chromium-backed Puter gateway."""
-
-    def request(self, operation: str, token: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        ...
-
-    def close(self) -> None:
-        ...
-
-
-class SubprocessBrowserBridge:
-    """Persistent Node/Playwright process; tokens are written only to its stdin."""
-
-    def __init__(self, bridge_path: str, timeout_seconds: int = 150):
-        path = Path(bridge_path)
-        if not path.is_file():
-            raise AutomaticAnalysisError("Puter Chromium bridge script is unavailable.")
-        self.timeout_seconds = timeout_seconds
-        try:
-            self.process = subprocess.Popen(
-                ["node", str(path)],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                bufsize=1,
-            )
-        except OSError as exc:
-            raise AutomaticAnalysisError("Could not start the headless Puter.js bridge.") from exc
-
-    def request(self, operation: str, token: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self.process.poll() is not None or self.process.stdin is None or self.process.stdout is None:
-            raise ProviderRequestError(None, "browser_bridge_unavailable")
-        request_id = uuid.uuid4().hex
-        self.process.stdin.write(json.dumps({
-            "id": request_id,
-            "op": operation,
-            "token": token,
-            "payload": payload or {},
-        }) + "\n")
-        self.process.stdin.flush()
-        ready, _, _ = select.select([self.process.stdout], [], [], self.timeout_seconds)
-        if not ready:
-            raise ProviderRequestError(None, "browser_bridge_timeout")
-        line = self.process.stdout.readline()
-        try:
-            response = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise ProviderRequestError(None, "browser_bridge_malformed_response") from exc
-        if not isinstance(response, dict) or response.get("id") != request_id:
-            raise ProviderRequestError(None, "browser_bridge_protocol")
-        return response
-
-    def close(self) -> None:
-        if self.process.poll() is None:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-
-
-class PuterBrowserGateway:
-    """Real Puter.js-in-Chromium gateway with bounded token-index rotation."""
-
-    def __init__(self, tokens: list[str], bridge: BrowserBridge):
-        if not tokens:
-            raise AutomaticAnalysisError("No Puter auth tokens are configured. Add one in Settings first.")
-        self.tokens = tokens
-        self.bridge = bridge
-        self.current_token_index = 0
-
-    def _call(self, operation: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        last_error: ProviderRequestError | None = None
-        attempted_indices: set[int] = set()
-        while len(attempted_indices) < len(self.tokens):
-            index = self.current_token_index
-            attempted_indices.add(index)
-            response = self.bridge.request(operation, self.tokens[index], payload)
-            if response.get("ok") is True:
-                return response
-            raw_error = response.get("error")
-            error_payload = raw_error if isinstance(raw_error, dict) else {}
-            status = error_payload.get("status")
-            status = status if isinstance(status, int) else None
-            category = provider_error_category(status, error_payload)
-            error = ProviderRequestError(status, category)
-            safe_log(safe_browser_error_summary(error_payload, category))
-            if not token_failure_should_rotate(status, category):
-                raise error
-            last_error = error
-            safe_log("Puter token index " + str(index) + " hit " + category + "; rotating token index.")
-            self.current_token_index = (index + 1) % len(self.tokens)
-        if last_error is not None and last_error.category == "payment_or_spend_limit":
-            raise last_error
-        raise AllTokensExhausted(
-            "All configured Puter tokens failed with authentication, rate-limit, or quota errors."
-        ) from last_error
-
-    def list_models(self) -> dict[str, Any]:
-        response = self._call("list_models")
-        models = response.get("models")
-        if isinstance(models, dict) and isinstance(models.get("models"), list):
-            return {"models": models["models"]}
-        if isinstance(models, list):
-            return {"models": models}
-        raise AutomaticAnalysisError("Puter.js browser client did not return a model list.")
-
-    def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
-        response = self._call("chat", payload)
-        message = response.get("message")
-        if not isinstance(message, dict):
-            raise ProviderRequestError(None, "malformed_response")
-        return message
-
-
 def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
-    # Listing filenames is text-only catalog data. No image is attached until the
-    # model selectively calls open_composite after it has read both indexes.
-    names = sorted(composite_names)
-    listing = "\n".join("- " + name for name in names[:MAX_ZIP_ENTRIES])
+    listing = "\n".join("- " + name for name in sorted(composite_names)[:MAX_ZIP_ENTRIES])
     return (
-        "You are ClipForge Automatic Mode. The text below is the complete Stage A "
-        "instruction seed. Follow its editorial rules exactly. You must use tools in "
-        "this non-negotiable order: read_transcript first; then read_scene_index and "
-        "read_key_moments; only then selectively call open_composite. Never request "
-        "all composites. Once evidence is sufficient, return a valid production.json "
-        "object and no unsupported claims.\n\n"
+        "You are ClipForge Automatic Mode. The text below is the complete Stage A instruction seed. "
+        "Follow its editorial rules exactly. Use only the supplied native functions in this non-negotiable order: "
+        "read_transcript first; then read_scene_index and read_key_moments; only then selectively call open_composite. "
+        "Never request all composites. After sufficient evidence, return one valid production.json object as plain JSON. "
+        "Do not invent facts or use unsupported evidence.\n\n"
         "===== 00_READ_THIS_FIRST.txt =====\n" + seed +
         "\n===== Released composite basenames (text catalog only) =====\n" + listing
     )
 
 
-def model_supports_temperature(model: str) -> bool:
-    """Puter's GPT-5.6 Terra route rejects OpenAI-style temperature controls."""
-    return not model.startswith("openai/gpt-5.6")
-
-
-def run_tool_agent(gateway: PuterBrowserGateway, model: str, tools: EvidenceTools, seed: str) -> tuple[dict[str, Any], str, int, int]:
-    """Run one model with strict tool protocol and at most one validation correction."""
-    messages: list[dict[str, Any]] = [
-        {
-            "role": "system",
-            "content": "You are a careful video editor. Use only supplied tool evidence; do not invent facts. "
-            "You must return a JSON production plan after the allowed tool sequence.",
-        },
-        {"role": "user", "content": agent_seed(seed, tools.composites.keys())},
-    ]
-    for turn in range(1, MAX_TOOL_TURNS + 1):
-        request = {
-            "model": model,
-            "messages": messages,
-            "tools": tool_specs(),
-            "tool_choice": "auto",
-            "max_tokens": 6000,
-        }
-        if model_supports_temperature(model):
-            request["temperature"] = 0.2
-        message = gateway.chat(request)
-        calls = normalize_tool_calls(message)
-        messages.append({
-            "role": "assistant",
-            "content": message.get("content") or "",
-            "tool_calls": calls,
-        })
-        if not calls:
+def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, seed: str) -> tuple[dict[str, Any], str, int, int]:
+    history = gateway.new_history(agent_seed(seed, tools.composites.keys()))
+    for turn_number in range(1, MAX_TOOL_TURNS + 1):
+        turn = gateway.generate(model, history, tools_enabled=True)
+        if not turn.calls:
             if not (tools.transcript_read and tools.scene_index_read and tools.key_moments_read):
-                raise AutomaticAnalysisError(
-                    "Automatic analysis attempted to return a plan before reading transcript, scene index, and key moments."
-                )
+                raise AutomaticAnalysisError("Automatic analysis attempted a plan before reading transcript, scene index, and key moments.")
             if not tools.opened:
-                raise AutomaticAnalysisError(
-                    "Automatic analysis attempted to return a plan without selectively opening any screenshot composite."
-                )
-            document, canonical = extract_json_object(message.get("content"))
+                raise AutomaticAnalysisError("Automatic analysis attempted a plan without selectively opening a screenshot composite.")
+            document, canonical = extract_json_object(turn.text)
             if document is None:
                 raise AutomaticAnalysisError("Automatic analysis did not return a JSON production plan.")
             errors = parse_and_validate_production_plan(canonical)[1]
             if not errors:
-                return document, canonical, turn, 0
-            correction_prompt = (
-                "Your proposed production.json failed the shared ClipForge validation contract. "
-                "Return one corrected JSON object only. Do not call tools, do not broaden the story, and do not add commentary. "
-                "Validation errors:\n- " + "\n- ".join(errors)
+                return document, canonical, turn_number, 0
+            gateway.append_tool_results(history, turn, [])
+            gateway.append_user_text(
+                history,
+                "Your proposed production.json failed the shared ClipForge validation contract. Return one corrected JSON object only. "
+                "Do not call tools, do not add commentary, and do not broaden the story. Validation errors:\n- " + "\n- ".join(errors),
             )
-            messages.append({"role": "user", "content": correction_prompt})
-            correction_request = {
-                "model": model,
-                "messages": messages,
-                "tool_choice": "none",
-                "max_tokens": 6000,
-            }
-            if model_supports_temperature(model):
-                correction_request["temperature"] = 0
-            corrected = gateway.chat(correction_request)
-            if normalize_tool_calls(corrected):
+            corrected = gateway.generate(model, history, tools_enabled=False)
+            if corrected.calls:
                 raise AutomaticAnalysisError("Automatic analysis ignored the bounded correction rule by requesting more tools.")
-            corrected_document, corrected_canonical = extract_json_object(corrected.get("content"))
+            corrected_document, corrected_canonical = extract_json_object(corrected.text)
             if corrected_document is None:
                 raise AutomaticAnalysisError("Automatic analysis correction did not return JSON.")
             correction_errors = parse_and_validate_production_plan(corrected_canonical)[1]
             if correction_errors:
-                raise AutomaticAnalysisError(
-                    "Automatic analysis returned an invalid production plan after its one correction retry: " +
-                    "; ".join(correction_errors[:3])
-                )
-            return corrected_document, corrected_canonical, turn, MAX_CORRECTION_RETRIES
+                raise AutomaticAnalysisError("Automatic analysis returned an invalid production plan after its one correction retry: " + "; ".join(correction_errors[:3]))
+            return corrected_document, corrected_canonical, turn_number, MAX_CORRECTION_RETRIES
 
-        # The sequence must be genuinely multi-turn: a model cannot bundle
-        # transcript + indexes or indexes + image opens into one response and
-        # pretend it had already considered the prior tool result.
-        call_names = [call["function"]["name"] for call in calls]
-        if not tools.transcript_read and (len(call_names) != 1 or call_names[0] != "read_transcript"):
+        names = [call.name for call in turn.calls]
+        if not tools.transcript_read and (len(names) != 1 or names[0] != "read_transcript"):
             raise ToolProtocolError("The first agent turn must call only read_transcript.")
-        if "open_composite" in call_names and not (tools.scene_index_read and tools.key_moments_read):
-            raise ToolProtocolError("open_composite must occur in a later turn after both index tools return.")
-
-        for call in calls:
-            function = call["function"]
-            name = function["name"]
+        if "open_composite" in names and not (tools.scene_index_read and tools.key_moments_read):
+            raise ToolProtocolError("open_composite must occur only after both index tools returned in an earlier turn.")
+        results: list[tuple[NativeToolCall, ToolResult]] = []
+        for call in turn.calls:
             try:
-                result = tools.call(name, parse_tool_arguments(function.get("arguments", "{}")))
-            except ToolProtocolError as exc:
-                # Preserve all local policy gates, but expose a safe, bounded
-                # correction signal to the browser model. This is essential
-                # when a provider emits an empty optional-argument object for
-                # a valid tool call; the model gets another of the fixed turns
-                # to select an allowed composite by its exact basename.
-                result = json.dumps({"error": str(exc), "retry_within_remaining_tool_turns": True})
-            messages.append({
-                "role": "tool",
-                "tool_call_id": call["id"],
-                "name": name,
-                "content": result,
-            })
+                result = tools.call(call.name, call.args)
+            except ToolProtocolError as error:
+                result = ToolResult({"error": str(error), "retry_within_remaining_tool_turns": True})
+            results.append((call, result))
+        gateway.append_tool_results(history, turn, results)
     raise AutomaticAnalysisError("Automatic analysis exceeded its bounded tool-turn limit.")
+
+
+def model_candidates(primary: str, fallbacks: Iterable[str]) -> list[str]:
+    values = [primary, *fallbacks]
+    return list(dict.fromkeys(value.strip() for value in values if value and value.strip()))
 
 
 def run_analysis(
     artifact_dir: Path,
-    token_secret: str | None,
+    key_secret: str | None,
     *,
-    bridge: BrowserBridge | None = None,
-    bridge_path: str = DEFAULT_BROWSER_BRIDGE,
+    gateway: NativeGateway | None = None,
     primary_model: str = DEFAULT_PRIMARY_MODEL,
-    fallback_model: str = DEFAULT_FALLBACK_MODEL,
+    fallback_models: Iterable[str] = DEFAULT_FALLBACK_MODELS,
 ) -> tuple[dict[str, Any], str, dict[str, Any]]:
-    """Run Automatic Mode through real Puter.js in headless Chromium only."""
+    """Run direct Gemini API Automatic Mode with native functions and images only."""
     artifact_dir = artifact_dir.resolve()
     seed = read_text_artifact(artifact_dir, "00_READ_THIS_FIRST.txt", MAX_SEED_BYTES)
-    owned_bridge = bridge is None
-    bridge = bridge or SubprocessBrowserBridge(bridge_path)
-    gateway = PuterBrowserGateway(parse_tokens(token_secret), bridge)
-    try:
-        # listModels() is evaluated inside the same authenticated Chromium page
-        # as chat(), never fetched from Puter's REST/OpenAI endpoint.
-        models = discover_compatible_models(gateway.list_models(), primary_model, fallback_model)
-        with tempfile.TemporaryDirectory(prefix="clipforge_auto_screenshots_") as temp_dir:
-            screenshot_dir = Path(temp_dir).resolve()
-            zip_path = strict_artifact_path(artifact_dir, "screenshots.zip", MAX_ZIP_TOTAL_BYTES)
-            composites = safe_extract_screenshots(zip_path, screenshot_dir)
-            last_model_error: Exception | None = None
-            for model_index, model in enumerate(models):
-                tools = EvidenceTools(artifact_dir, screenshot_dir, composites)
-                try:
-                    document, text, turns, corrections = run_tool_agent(gateway, model, tools, seed)
-                    return document, text, {
-                        "version": 1,
-                        "model": model,
-                        "model_route": "primary" if model_index == 0 else "fallback",
-                        "tool_turns": turns,
-                        "opened_composites": len(tools.opened),
-                        "validation_corrections": corrections,
-                    }
-                except AllTokensExhausted:
-                    raise
-                except ProviderRequestError as exc:
-                    last_model_error = exc
-                    if model_index + 1 < len(models) and exc.category in {
-                        "model_or_request", "provider_server", "network", "payment_or_spend_limit"
-                    }:
-                        safe_log("Puter model route failed safely; trying configured fallback model.")
-                        continue
-                    raise
-            raise AutomaticAnalysisError("All compatible Puter model routes failed.") from last_model_error
-    finally:
-        if owned_bridge:
-            bridge.close()
+    active_gateway = gateway or GeminiGateway(parse_api_keys(key_secret))
+    with tempfile.TemporaryDirectory(prefix="clipforge_auto_screenshots_") as temp_dir:
+        screenshot_dir = Path(temp_dir).resolve()
+        composites = safe_extract_screenshots(
+            strict_artifact_path(artifact_dir, "screenshots.zip", MAX_ZIP_TOTAL_BYTES), screenshot_dir
+        )
+        last_error: Exception | None = None
+        candidates = model_candidates(primary_model, fallback_models)
+        for model_index, model in enumerate(candidates):
+            tools = EvidenceTools(artifact_dir, screenshot_dir, composites)
+            try:
+                document, text, turns, corrections = run_tool_agent(active_gateway, model, tools, seed)
+                return document, text, {
+                    "version": 2,
+                    "provider": "gemini-developer-api",
+                    "model": model,
+                    "model_route": "primary" if model_index == 0 else "fallback",
+                    "tool_turns": turns,
+                    "opened_composites": len(tools.opened),
+                    "validation_corrections": corrections,
+                    "key_rotations": int(getattr(active_gateway, "key_rotations", 0)),
+                }
+            except (ProviderRequestError, AllKeysExhausted) as error:
+                last_error = error
+                if model_index + 1 < len(candidates) and getattr(error, "category", "") in {
+                    "model_or_request", "provider_server", "network", "rate_or_quota"
+                }:
+                    safe_log("Gemini model route failed safely; trying configured fallback model.")
+                    continue
+                raise
+        raise AutomaticAnalysisError("All configured Gemini model routes failed.") from last_error
 
 
 def main() -> int:
@@ -683,22 +512,17 @@ def main() -> int:
     parser.add_argument("--artifacts-dir", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path, help="Validated production.json output path")
     parser.add_argument("--result-path", required=True, type=Path, help="Non-secret run summary JSON output path")
-    parser.add_argument("--token-env", default="PUTER_AUTH_TOKENS")
-    parser.add_argument("--browser-bridge", default=os.environ.get("PUTER_BROWSER_BRIDGE", DEFAULT_BROWSER_BRIDGE))
-    parser.add_argument("--primary-model", default=os.environ.get("PUTER_PRIMARY_MODEL", DEFAULT_PRIMARY_MODEL))
-    parser.add_argument("--fallback-model", default=os.environ.get("PUTER_FALLBACK_MODEL", DEFAULT_FALLBACK_MODEL))
+    parser.add_argument("--key-env", default="GEMINI_API_KEYS")
+    parser.add_argument("--primary-model", default=os.environ.get("GEMINI_ANALYSIS_PRIMARY_MODEL", DEFAULT_PRIMARY_MODEL))
+    parser.add_argument("--fallback-models", default=os.environ.get("GEMINI_ANALYSIS_FALLBACK_MODELS", ",".join(DEFAULT_FALLBACK_MODELS)))
     args = parser.parse_args()
-
     try:
         document, canonical, summary = run_analysis(
             args.artifacts_dir,
-            os.environ.get(args.token_env),
-            bridge_path=args.browser_bridge,
+            os.environ.get(args.key_env),
             primary_model=args.primary_model,
-            fallback_model=args.fallback_model,
+            fallback_models=args.fallback_models.split(","),
         )
-        # Canonical text has been validated immediately before this write; the
-        # parsed object is retained only to make accidental format drift obvious.
         if document != json.loads(canonical):
             raise AutomaticAnalysisError("Validated production-plan serialization changed unexpectedly.")
         args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -707,8 +531,8 @@ def main() -> int:
         args.result_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         safe_log("Automatic analysis completed with " + summary["model_route"] + " model route after " + str(summary["tool_turns"]) + " tool turns.")
         return 0
-    except AutomaticAnalysisError as exc:
-        print("Automatic analysis failed: " + str(exc), file=sys.stderr, flush=True)
+    except AutomaticAnalysisError as error:
+        print("Automatic analysis failed: " + str(error), file=os.sys.stderr, flush=True)
         return 1
 
 

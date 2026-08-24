@@ -819,7 +819,7 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "automatic_analysis_running" \
-            --message "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence." \
+            --message "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools." \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
             --release-url "${{ steps.assets.outputs.release_url }}" \
             --extra "automatic_mode=true" \
@@ -881,28 +881,20 @@ jobs:
             test -s "work/automatic-release/$required"
           done
 
-      - name: Install headless Chromium for Puter.js Automatic Mode
-        if: ${{ github.event.inputs.automatic_mode == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # This is intentionally local to the ephemeral Actions runner. The
-          # bridge loads the real Puter.js CDN client inside Chromium; it does
-          # not use Puter's REST/OpenAI endpoint for Automatic Mode analysis.
-          npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
-
-      - name: Run bounded Puter Automatic Mode analysis
+      - name: Run bounded Gemini Automatic Mode analysis
         if: ${{ github.event.inputs.automatic_mode == 'true' }}
         shell: bash
         env:
-          PUTER_AUTH_TOKENS: ${{ secrets.PUTER_AUTH_TOKENS }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           set -euo pipefail
-          # automatic_analysis.py sends tokens only through the local bridge's
-          # stdin. The bridge evaluates real Puter.js inside Chromium; it logs
-          # token indexes only and writes production JSON only after the shared
-          # browser/runner contract validates it.
+          if [ -z "${GEMINI_API_KEYS:-}" ]; then
+            echo "FATAL: GEMINI_API_KEYS is empty. Add a Gemini API key in Repository settings first." >&2
+            exit 2
+          fi
+          # automatic_analysis.py calls the official Google Gen AI SDK directly.
+          # It logs only key indexes, enforces the local evidence-tool policy,
+          # and writes production.json only after the shared contract validates it.
           python scripts/automatic_analysis.py \
             --artifacts-dir work/automatic-release \
             --output "jobs/${{ steps.jid.outputs.job_id }}/production.json" \
