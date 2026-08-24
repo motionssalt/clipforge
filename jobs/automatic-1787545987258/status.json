@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787545987258",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-automatic-1787545987258",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787545987258",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/clipforge-automatic-1787545987258-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/final.mp4"
   },
   "created_at_epoch": 1787546108,
-  "updated_at_epoch": 1787569120,
+  "updated_at_epoch": 1787569359,
   "expires_at_epoch": 1787589308,
   "extra": {
     "workflow_run_id": "32719380932",
@@ -24,6 +26,9 @@
     "production_ref": "path:jobs/automatic-1787545987258/production.json",
     "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a",
     "music_source": "explicit_library",
-    "original_asset_name": "original.mkv"
+    "original_asset_name": "original.mkv",
+    "title": "An Omnipotent King Surrenders For Love",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
