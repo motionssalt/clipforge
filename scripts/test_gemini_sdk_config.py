@@ -14,4 +14,31 @@ assert config.automatic_function_calling is not None
 assert config.automatic_function_calling.disable is True
 assert gateway._config(tools_enabled=False).tools is None
 assert function_schemas()[-1]["parameters_json_schema"]["required"] == ["filename"]
-print("PASS: official Gemini SDK accepts the native ClipForge function declarations and manual tool-call configuration")
+
+class FakeResponse:
+    function_calls = []
+    text = "{}"
+    candidates = [type("Candidate", (), {"content": {"role": "model"}})()]
+
+class FakeModels:
+    def __init__(self, client):
+        self.client = client
+
+    def generate_content(self, **_kwargs):
+        assert self.client is not None, "gateway must retain the client during request execution"
+        return FakeResponse()
+
+class FakeClient:
+    def __init__(self):
+        self.models = FakeModels(self)
+
+created = []
+def factory(_key):
+    client = FakeClient()
+    created.append(client)
+    return client
+
+gateway = GeminiGateway([ApiKey("offline-test-key")], client_factory=factory, types_module=gateway.types)
+turn = gateway.generate("gemini-3.7-flash", gateway.new_history("probe"), tools_enabled=True)
+assert turn.calls == [] and len(created) == 1
+print("PASS: official Gemini SDK accepts native ClipForge function declarations, multimodal tool configuration, and a retained client lifecycle")

@@ -357,8 +357,13 @@ class GeminiGateway:
         while len(attempted) < len(self.keys):
             index = self.current_key_index
             attempted.add(index)
+            client = self.client_factory(self.keys[index].raw)
             try:
-                response = self.client_factory(self.keys[index].raw).models.generate_content(
+                # Keep a strong client reference until the SDK completes the request.
+                # Chaining ``Client(...).models.generate_content(...)`` permits the
+                # temporary client to be finalized and closed before its models proxy
+                # actually sends the request.
+                response = client.models.generate_content(
                     model=model, contents=history, config=self._config(tools_enabled)
                 )
                 return self._native_turn(response)
