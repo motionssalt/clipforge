@@ -20,7 +20,8 @@ DEFAULT = json.loads((ROOT / "branding" / "music_default.json").read_text(encodi
 
 
 assert DEFAULT["version"] == 1
-assert DEFAULT["library_track_path"] is None
+stored_default = DEFAULT["library_track_path"]
+assert stored_default is None or is_safe_library_ref("path:" + stored_default)
 assert "One-off job uploads" in DEFAULT["note"]
 
 # The only persistent path allowed is an audio-library basename. Traversal,
