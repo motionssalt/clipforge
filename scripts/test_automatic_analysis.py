@@ -246,6 +246,23 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
         "correction-time provider exhaustion must propagate before plan validation"
     )
 
+    malformed_provider_gateway = ScriptedGateway({
+        "gemini-3.7-flash": [ProviderRequestError(None, "provider_malformed")],
+        "gemini-3.6-flash": [
+            native_call("malformed-fallback-1", "read_transcript"),
+            native_call("malformed-fallback-2", "read_scene_index"),
+            native_call("malformed-fallback-3", "read_key_moments"),
+            native_call("malformed-fallback-4", "open_composite", filename="frame_000000.jpg"),
+            native_call("malformed-fallback-5", "open_composite", filename="event_000010000.jpg"),
+            native_call("malformed-fallback-6", "open_composite", filename="event_000020000.jpg"),
+            plain_turn(GROUNDED_PLAN),
+        ],
+    })
+    malformed_plan, _, malformed_summary = run_analysis(root, "unused-by-fake", gateway=malformed_provider_gateway)
+    assert malformed_plan == PRODUCTION_PLAN
+    assert malformed_summary["model"] == "gemini-3.6-flash"
+    assert malformed_summary["model_route"] == "fallback"
+
     fallback_gateway = ScriptedGateway({
         "gemini-3.7-flash": [ProviderRequestError(503, "provider_server")],
         "gemini-3.6-flash": [
@@ -270,4 +287,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     except AllKeysExhausted:
         pass
 
-print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, per-cut visual grounding, correction-time provider-failure propagation, bounded fallback, and secure key-failover semantics")
+print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, per-cut visual grounding, correction-time provider-failure propagation, malformed-provider fallback, bounded fallback, and secure key-failover semantics")

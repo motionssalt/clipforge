@@ -79,7 +79,9 @@ class ProviderRequestError(AutomaticAnalysisError):
     def __init__(self, status: int | None, category: str):
         self.status = status
         self.category = category
-        status_text = str(status) if status is not None else "network"
+        status_text = str(status) if status is not None else (
+            "provider_response" if category == "provider_malformed" else "network"
+        )
         super().__init__(f"Gemini provider request failed ({status_text}; {category}).")
 
 
@@ -407,14 +409,14 @@ class GeminiGateway:
     def _native_turn(self, response: Any) -> NativeTurn:
         candidates = getattr(response, "candidates", None) or []
         if not candidates or not getattr(candidates[0], "content", None):
-            raise ProviderRequestError(None, "malformed_response")
+            raise ProviderRequestError(None, "provider_malformed")
         calls: list[NativeToolCall] = []
         for call in getattr(response, "function_calls", None) or []:
             name = getattr(call, "name", None)
             call_id = getattr(call, "id", None)
             args = getattr(call, "args", None)
             if not isinstance(name, str) or not name or not isinstance(call_id, str) or not call_id or not isinstance(args, dict):
-                raise ProviderRequestError(None, "malformed_function_call")
+                raise ProviderRequestError(None, "provider_malformed")
             calls.append(NativeToolCall(id=call_id, name=name, args=dict(args)))
         metadata = getattr(response, "usage_metadata", None)
         usage: dict[str, int] = {}
@@ -742,7 +744,7 @@ def run_analysis(
             except (ProviderRequestError, AllKeysExhausted) as error:
                 last_error = error
                 if model_index + 1 < len(candidates) and getattr(error, "category", "") in {
-                    "model_or_request", "provider_server", "network", "rate_or_quota"
+                    "model_or_request", "provider_server", "network", "rate_or_quota", "provider_malformed"
                 }:
                     safe_log("Gemini model route failed safely; trying configured fallback model.")
                     continue
