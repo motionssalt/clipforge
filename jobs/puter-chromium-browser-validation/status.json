@@ -1,16 +1,24 @@
 {
   "job_id": "puter-chromium-browser-validation",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence.",
   "release_tag": "clipforge-puter-chromium-browser-validation",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-puter-chromium-browser-validation",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-browser-validation/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-browser-validation/key_moments.json",
+    "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-browser-validation/original.mp4",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-browser-validation/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-browser-validation/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-browser-validation/transcript.json"
+  },
   "created_at_epoch": 1787534936,
-  "updated_at_epoch": 1787534936,
+  "updated_at_epoch": 1787534956,
   "expires_at_epoch": 1787578136,
   "extra": {
     "workflow_run_id": "32679803913",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32679803913",
-    "automatic_mode": "true"
+    "automatic_mode": "true",
+    "automatic_analysis_result": "jobs/puter-chromium-browser-validation/automatic_analysis.json"
   }
 }
