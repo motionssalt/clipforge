@@ -1,7 +1,7 @@
 {
   "job_id": "puter-chromium-fallback-validation",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is verifying Puter models and analyzing the released evidence.",
+  "stage": "error",
+  "message": "Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category.",
   "release_tag": "clipforge-puter-chromium-fallback-validation",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-puter-chromium-fallback-validation",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-puter-chromium-fallback-validation/transcript.json"
   },
   "created_at_epoch": 1787538327,
-  "updated_at_epoch": 1787538343,
+  "updated_at_epoch": 1787538407,
   "expires_at_epoch": 1787581527,
   "extra": {
     "workflow_run_id": "32682899686",
