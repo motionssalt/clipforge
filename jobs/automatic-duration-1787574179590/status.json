@@ -1,0 +1,17 @@
+{
+  "job_id": "automatic-duration-1787574179590",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-automatic-duration-1787574179590",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787574293,
+  "updated_at_epoch": 1787574293,
+  "expires_at_epoch": 1787617493,
+  "extra": {
+    "workflow_run_id": "32726800600",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32726800600",
+    "automatic_mode": "true",
+    "workflow_phase": "stage_a"
+  }
+}
