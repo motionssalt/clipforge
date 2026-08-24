@@ -24,7 +24,9 @@ The Worker stores GitHub PATs and raw Gemini keys in a single per-chat credentia
 
 The `KV_ENCRYPTION_KEY` Worker secret must be a base64-encoded random 32-byte key. It is never committed, returned in a Telegram response, sent to GitHub, or logged. The Worker never logs inbound update bodies, GitHub Authorization headers, raw PATs, Gemini keys, encrypted payloads, or Telegram file URLs.
 
-Raw Gemini keys exist only in request-local variables during a user’s settings flow and in the decrypted per-user credential record. To update `GEMINI_API_KEYS`, the Worker retrieves the repository Actions public key, creates a GitHub-compatible libsodium sealed-box ciphertext, and sends only that ciphertext to GitHub. The plain key is not committed to the clone; `branding/gemini_keys.json` continues to contain only masked fingerprints, matching the existing application contract.
+Raw Gemini keys exist only in request-local variables during a user’s settings flow and in the decrypted per-user credential record. To update `GEMINI_API_KEYS`, the Worker retrieves the repository Actions public key, creates a GitHub-compatible libsodium sealed-box ciphertext, and sends only that ciphertext to GitHub. The plain key is not committed to the clone; `branding/gemini_keys.json` continues to contain only masked fingerprints, matching the existing application contract. When an existing clone contains those fingerprints but the bot has no raw key copy, the fingerprints count as an existing site-managed Automatic Mode configuration. The Worker neither prompts for replacement nor overwrites the opaque Actions secret unless the operator explicitly starts and confirms a replacement flow.
+
+An uploaded torrent is accepted only while the current chat is collecting a new Manual or Automatic source. The Worker requires a non-empty `.torrent` filename at or below 1 MB, downloads it as bounded raw bytes, checks the bencoded dictionary prefix, and writes it through the authenticated clone’s GitHub Contents API only to `jobs/<job-id>/source.torrent`. It never stores the torrent bytes in KV. Stage A’s established preflight validates the manifest, writes the authoritative `torrent-selection.json`, and changes the job state to `awaiting_torrent_selection`. Candidate-selection callbacks resolve the chat-local task label, re-read that manifest, validate the requested 1-based index, and dispatch Stage A using the existing `torrent_file_index` contract.
 
 ## Per-user state
 
@@ -46,11 +48,11 @@ Each incoming message reloads the state record before it is interpreted, which m
 | Command | Behavior |
 | --- | --- |
 | `/start` | For an unconfigured chat, offers **Create private Shadow Clone** or **Connect existing clone**; otherwise shows the user’s isolated operator menu without exposing credentials. |
-| `/settings` | Lets the user switch or connect their own clone, adds Gemini keys, selects and previews an Edge TTS narrator, and saves a creator watermark. |
+| `/settings` | Lets the user switch or connect their own clone, shows safe existing Gemini metadata plus narrator, watermark, and music defaults, explicitly replaces Gemini keys when requested, selects and previews an Edge TTS narrator, and saves a creator watermark. |
 | `/tasks` | Lists the current user clone’s tasks as short labels, statuses, and inline buttons. |
 | `/status` | Lists task labels, then lets the operator choose a task for the latest `status.json` and workflow link. |
-| `/manual` | Collects source URL, optional focus, target duration, and optional music choice; writes a manual Stage A request and dispatches unchanged `stage-a.yml`. |
-| `/automatic` | Collects source URL, optional focus, target duration, and optional music choice; writes the compatible automatic music selection and dispatches unchanged `stage-a.yml` with `automatic_mode=true`. |
+| `/manual` | Collects a source URL, magnet URI, or bounded `.torrent` manifest, then optional focus, target duration, and optional music choice; writes a manual Stage A request and dispatches unchanged `stage-a.yml`. |
+| `/automatic` | Collects the same source types, focus, target duration, and optional music choice; writes the compatible automatic music selection and dispatches unchanged `stage-a.yml` with `automatic_mode=true`. |
 | `/done` | Shows completed tasks and provides the existing final video and ZIP release URLs. |
 
 Callback data stays short enough for Telegram by using small action prefixes and per-chat letter labels rather than raw job ids. Destructive or expensive actions have an explicit confirmation callback. The bot uses Telegram’s `answerCallbackQuery` before updating the message thread.
@@ -64,6 +66,7 @@ The implementation calls GitHub REST endpoints to dispatch the workflows with th
 - Status: `jobs/<job-id>/status.json` remains authoritative, with the existing stage vocabulary from `scripts/write_status.py`.
 - Manual handoff: the bot validates a submitted `production.json` against `schemas/production_plan_contract.json`, commits it to `jobs/<job-id>/production.json`, then dispatches `stage-b.yml`.
 - Automatic music: an explicit empty selection, a safe library selection, or the same job’s `music.mp3` path is written in the existing `automatic_music.json` format expected by `scripts/read_automatic_music.py`.
+- Torrent uploads: the manifest path is exactly `jobs/<job-id>/source.torrent`, Stage A first runs its persistent torrent-selection substage with blank `torrent_file_index`, and the bot resumes only by dispatching a candidate index present in `jobs/<job-id>/torrent-selection.json`.
 
 ## Operational boundaries
 

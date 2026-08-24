@@ -4,6 +4,7 @@ export const GEMINI_SECRET_NAME = 'GEMINI_API_KEYS';
 export const GEMINI_KEYS_META_PATH = 'branding/gemini_keys.json';
 export const WATERMARK_PATH = 'branding/creator_watermark.json';
 export const TTS_SETTINGS_PATH = 'branding/tts_settings.json';
+export const MUSIC_DEFAULT_PATH = 'branding/music_default.json';
 export const AUTOMATIC_MUSIC_PATH = (jobId) => `jobs/${jobId}/automatic_music.json`;
 export const PRODUCTION_PATH = (jobId) => `jobs/${jobId}/production.json`;
 export const STATUS_PATH = (jobId) => `jobs/${jobId}/status.json`;

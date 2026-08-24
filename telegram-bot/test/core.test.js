@@ -6,8 +6,8 @@ import { ensureTaskLabel, getJobIdForLabel, getTasks, getState, putState } from 
 import worker, { __test } from '../src/index.js';
 import nacl from 'tweetnacl';
 import sealedbox from 'tweetnacl-sealedbox-js';
-import { sendAudioBytes, sendDocumentBytes } from '../src/telegram.js';
-import { cloneRepositoryName, createPrivateShadowClone, sourcePathAllowed } from '../src/github.js';
+import { downloadTelegramFileBytes, sendAudioBytes, sendDocumentBytes } from '../src/telegram.js';
+import { cloneRepositoryName, createPrivateShadowClone, putBinaryFile, sourcePathAllowed } from '../src/github.js';
 
 class MemoryKv {
   constructor() { this.values = new Map(); }
@@ -145,12 +145,51 @@ test('source and command helpers retain the intended operator contract', () => {
   assert.equal(__test.normalizeFocus('-'), '');
 });
 
+test('existing masked Gemini metadata is recognised without materialising an opaque site secret', () => {
+  assert.equal(__test.existingGeminiLabel([], [{ fingerprint: 'masked-one' }, { fingerprint: 'masked-two' }]), 'Gemini keys: 2 existing site keys already configured in GitHub Actions');
+  assert.match(__test.existingGeminiLabel(['AIza-local-secret'], [{ fingerprint: 'masked-one' }]), /stored in this bot chat/);
+  assert.equal(__test.existingGeminiLabel([], []), 'Gemini keys: not configured');
+});
+
 test('manual Stage A status exposes the agent-prompt control before production upload', () => {
   const markup = __test.taskButtons('A', { stage: 'awaiting_json_upload' });
   const callbacks = markup.inline_keyboard.flat().map((button) => button.callback_data);
   assert.ok(callbacks.includes('agent:A'));
   assert.ok(callbacks.includes('plan:A'));
   assert.equal(__test.taskButtons('A', { stage: 'stage_a_running' }).inline_keyboard.flat().some((button) => button.callback_data === 'agent:A'), false);
+  assert.ok(__test.taskButtons('B', { stage: 'awaiting_torrent_selection' }).inline_keyboard.flat().some((button) => button.callback_data === 'torrent:B'));
+});
+
+test('torrent manifest downloads are bounded and retained as raw bytes', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(new Uint8Array([0x64, 0x33, 0x3a, 0x66, 0x6f, 0x6f]), { headers: { 'content-length': '6' } });
+  try {
+    const bytes = await downloadTelegramFileBytes({ TELEGRAM_BOT_TOKEN: 'test-token' }, 'documents/example.torrent', 6);
+    assert.deepEqual([...bytes], [0x64, 0x33, 0x3a, 0x66, 0x6f, 0x6f]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('torrent manifest uploads use only the selected job source.torrent path and base64 bytes', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const parsed = new URL(String(url));
+    calls.push({ path: `${parsed.pathname}${parsed.search}`, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    if ((init.method || 'GET') === 'GET') return new Response(JSON.stringify({ message: 'Not Found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify({ content: { path: 'jobs/manual-safe/source.torrent' } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    await putBinaryFile({ githubPat: 'test-token' }, 'owner/repo', 'jobs/manual-safe/source.torrent', new Uint8Array([0x64, 0x33, 0x3a]), 'upload manifest');
+    const put = calls.find((call) => call.method === 'PUT');
+    assert.equal(put.path, '/repos/owner/repo/contents/jobs/manual-safe/source.torrent');
+    assert.equal(calls[0].path, '/repos/owner/repo/contents/jobs/manual-safe/source.torrent?ref=main');
+    assert.equal(put.body.content, 'ZDM6');
+    assert.equal(put.body.branch, 'main');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('manual production-plan validation preserves ClipForge’s timing and narration contract', () => {

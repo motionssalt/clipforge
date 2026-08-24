@@ -129,9 +129,10 @@ The result should show the `/webhook` URL and no persistent `last_error_message`
 1. Open the bot’s direct message thread in Telegram and send `/start`.
 2. Select **Settings** → **GitHub connection**.
 3. Send a GitHub PAT, then send your clone as `owner/repository`.
-4. Select **Settings** → **Gemini API key** to add the key(s) used by Automatic Mode.
-5. Select **Settings** → **Narrator**. The bot offers all ten Edge TTS narrators, a **Preview** button for each committed MP3 sample, and a **Use** button that saves the selected narrator for future Stage B work.
-6. Optionally set the creator watermark.
+4. Open **Settings** to review the current Clone’s narrator, watermark, music default, and Automatic Mode key status. If the Clone was previously configured through the ClipForge site, the bot reads the non-secret `branding/gemini_keys.json` fingerprints and recognises the existing opaque `GEMINI_API_KEYS` Actions secret without attempting to reveal, duplicate, or overwrite it.
+5. Select **Settings** → **Gemini API key** only when you deliberately want to replace the existing Actions secret with a new key set. The replacement confirmation is explicit because GitHub Actions secrets cannot be read back.
+6. Select **Settings** → **Narrator**. The bot offers all ten Edge TTS narrators, a **Preview** button for each committed MP3 sample, and a **Use** button that saves the selected narrator for future Stage B work.
+7. Optionally set the creator watermark.
 
 Use a PAT that can create a private repository in the user’s own GitHub account, read and write the clone’s contents, manage the `GEMINI_API_KEYS` GitHub Actions secret, dispatch and cancel Actions workflows, and access workflow files. A classic token should use `repo` plus `workflow`; for a fine-grained token, grant the equivalent repository **Contents**, **Actions**, and **Workflows** write capabilities and ensure it can create the selected personal repository. Existing-clone connection does not need repository-creation permission.
 
@@ -141,9 +142,9 @@ The bot best-effort deletes successful PAT and Gemini-key messages from the priv
 
 | Telegram action | Existing ClipForge contract reused |
 | --- | --- |
-| `/manual` | Collects a public source URL, optional focus, duration, and optional music; writes `stage-a-request.json`; dispatches `stage-a.yml` with `automatic_mode=false`. At **Awaiting production plan**, its task view provides **Get agent prompt**, which sends the exact released `00_READ_THIS_FIRST.txt` as a text document before the production-plan upload step. |
-| `/automatic` | Collects source, focus, duration, and music; writes the compatible `automatic_music.json` selection when needed; dispatches `stage-a.yml` with `automatic_mode=true` |
-| `/tasks` / `/status` | Reads the authoritative `jobs/<job-id>/status.json`; labels tasks locally as `A`, `B`, and so on for short inline buttons. Manual Stage A tasks also expose the exact agent-prompt text file when ready. |
+| `/manual` | Collects a public source URL, magnet URI, or an uploaded non-empty `.torrent` manifest up to 1 MB, then optional focus, duration, and music. It writes `stage-a-request.json` and dispatches `stage-a.yml` with `automatic_mode=false`. At **Awaiting production plan**, its task view provides **Get agent prompt**, which sends the exact released `00_READ_THIS_FIRST.txt` as a text document before the production-plan upload step. |
+| `/automatic` | Collects the same URL, magnet, or `.torrent` source inputs, focus, duration, and music; writes the compatible `automatic_music.json` selection when needed; dispatches `stage-a.yml` with `automatic_mode=true`. Existing masked Gemini-key metadata counts as configured Automatic Mode credentials unless the operator explicitly replaces the secret. |
+| `/tasks` / `/status` | Reads the authoritative `jobs/<job-id>/status.json`; labels tasks locally as `A`, `B`, and so on for short inline buttons. Manual Stage A tasks also expose the exact agent-prompt text file when ready. When a torrent manifest reaches `awaiting_torrent_selection`, **Choose torrent video** reads the workflow-generated candidate manifest and starts Stage A only for the selected 1-based video entry. |
 | Upload production plan | Validates the existing production-plan contract, writes `jobs/<job-id>/production.json`, then dispatches unchanged `stage-b.yml` |
 | Retry/cancel controls | Reuse saved Stage A input documents, current default-branch `code_ref`, and the workflow run ID saved in `status.json` |
 | `/done` | Sends the final MP4 and ZIP URLs recorded in the task status document |
@@ -151,6 +152,8 @@ The bot best-effort deletes successful PAT and Gemini-key messages from the priv
 ## 9. Updating the bot
 
 Push changes under `telegram-bot/` to the connected repository. The Cloudflare Git integration rebuilds and redeploys the Worker automatically. [1] Secrets and the KV namespace are independent of code pushes and should remain configured.
+
+A Telegram `.torrent` document is downloaded as raw bytes only after the bot verifies the `.torrent` filename, non-empty size, 1 MB limit, and bencoded dictionary prefix. It is written only to `jobs/<job-id>/source.torrent`; the unchanged Stage A preflight validates the manifest and persists the authoritative candidate list before any selected video is started.
 
 Before a production change, run the local checks from the bot directory:
 

@@ -64,6 +64,12 @@ function b64encode(value) {
   return btoa(binary);
 }
 
+function b64FromBytes(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
 function b64decode(value) {
   const binary = atob(String(value || '').replace(/\n/g, ''));
   const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
@@ -91,12 +97,6 @@ async function downloadPrivateAsset(credentials, url, maximumBytes, description)
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (!bytes.length || bytes.length > maximumBytes) throw new Error(`${description} is missing or too large to send through Telegram.`);
   return bytes;
-}
-
-function b64FromBytes(bytes) {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(binary);
 }
 
 export async function githubRequest(credentials, path, options = {}) {
@@ -227,6 +227,22 @@ export async function getJsonFile(credentials, repo, path) {
 export async function tryGetJsonFile(credentials, repo, path) {
   try { return await getJsonFile(credentials, repo, path); }
   catch (error) { if (error instanceof GitHubError && error.status === 404) return null; throw error; }
+}
+
+export async function putBinaryFile(credentials, repo, path, bytes, message) {
+  const { owner, name } = parseRepo(repo);
+  if (!(bytes instanceof Uint8Array) || !bytes.length) throw new Error('The binary upload is empty.');
+  let sha = null;
+  try {
+    const existing = await getContent(credentials, repo, path);
+    sha = existing && existing.sha ? existing.sha : null;
+  } catch (error) {
+    if (!(error instanceof GitHubError) || error.status !== 404) throw error;
+  }
+  return githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodePath(path)}`, {
+    method: 'PUT',
+    body: { message, content: b64FromBytes(bytes), branch: DEFAULT_BRANCH, ...(sha ? { sha } : {}) }
+  });
 }
 
 export async function putTextFile(credentials, repo, path, text, message) {

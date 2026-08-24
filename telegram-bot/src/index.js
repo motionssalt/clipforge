@@ -1,12 +1,12 @@
 import {
-  COMMANDS, DEFAULT_VOICE, GEMINI_KEYS_META_PATH, PRODUCTION_PATH, STAGE_LABELS, TARGET_DURATIONS,
+  COMMANDS, DEFAULT_VOICE, GEMINI_KEYS_META_PATH, MUSIC_DEFAULT_PATH, PRODUCTION_PATH, STAGE_LABELS, TARGET_DURATIONS, TTS_SETTINGS_PATH, WATERMARK_PATH,
   VOICES, WHISPER_MODELS, isTerminalStage, stageLabel
 } from './constants.js';
 import { maskSecret } from './crypto.js';
 import {
   GitHubError, cancelWorkflowRun, createPrivateShadowClone, currentBranchSha, dispatchWorkflow, geminiFingerprint, getJsonFile,
   getReleaseTextAsset, getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readStageARequest, readStatus, saveAutomaticMusicChoice,
-  saveNarrator, saveProductionPlan, saveStageARequest, saveWatermark, updateGeminiSecret, validateConnection,
+  putBinaryFile, saveNarrator, saveProductionPlan, saveStageARequest, saveWatermark, tryGetJsonFile, updateGeminiSecret, validateConnection,
   writeGeminiMetadata
 } from './github.js';
 import { validateProductionPlan } from './production.js';
@@ -14,11 +14,13 @@ import {
   clearFlow, ensureTaskLabel, getCredentials, getJobIdForLabel, getState, getTaskOptions, markUpdateSeen,
   putCredentials, putState, setTaskOptions, taskLabels
 } from './storage.js';
-import { answerCallback, buttons, deleteMessage, downloadTelegramFile, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage } from './telegram.js';
+import { answerCallback, buttons, deleteMessage, downloadTelegramFile, downloadTelegramFileBytes, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage } from './telegram.js';
 
 const SOURCE_RE = /^(https?:\/\/|magnet:\?)/i;
 const SAFE_JOB_RE = /^[A-Za-z0-9._-]+$/;
 const MAX_TASKS = 12;
+const MAX_TORRENT_BYTES = 1024 * 1024;
+const TORRENT_CANDIDATES_PER_PAGE = 8;
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -50,7 +52,8 @@ function mainMenu() {
 function settingsMenu() {
   return buttons([
     [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini API key', callback_data: 'set:gemini' }],
-    [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Watermark', callback_data: 'set:watermark' }],
+    [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music default', callback_data: 'set:music_default' }],
+    [{ text: 'Watermark', callback_data: 'set:watermark' }],
     [{ text: 'Back to menu', callback_data: 'menu:home' }]
   ]);
 }
@@ -96,6 +99,7 @@ async function requireCredentials(env, chatId) {
 async function showHome(env, chatId) {
   const credentials = await getCredentials(env, chatId);
   const configured = credentials && credentials.githubPat && credentials.repo;
+  const existing = await readExistingSettings(credentials);
   const gemini = credentials && credentials.geminiKeys && credentials.geminiKeys.length;
   if (!configured) {
     await sendMessage(env, chatId,
@@ -104,16 +108,42 @@ async function showHome(env, chatId) {
     return;
   }
   await sendMessage(env, chatId,
-    `<b>ClipForge Telegram operator</b>\n\nConnected to <code>${escapeHtml(credentials.repo)}</code>. This shared bot keeps tasks and credentials isolated to this chat.\nAutomatic Mode Gemini keys: ${gemini ? `${gemini} stored` : 'not configured'}.`,
+    `<b>ClipForge Telegram operator</b>\n\nConnected to <code>${escapeHtml(credentials.repo)}</code>. This shared bot keeps tasks and credentials isolated to this chat.\n${existingGeminiLabel(gemini ? credentials.geminiKeys : [], existing.geminiMeta)}.`,
     { replyMarkup: mainMenu() });
+}
+
+async function readExistingSettings(credentials) {
+  if (!credentials || !credentials.repo) return { geminiMeta: [], narrator: null, watermark: null, musicDefault: null };
+  const safeJson = async (path) => {
+    try { return await tryGetJsonFile(credentials, credentials.repo, path); }
+    catch { return null; }
+  };
+  const [geminiMeta, narrator, watermark, musicDefault] = await Promise.all([
+    readGeminiMetadata(credentials, credentials.repo).catch(() => []),
+    safeJson(TTS_SETTINGS_PATH),
+    safeJson(WATERMARK_PATH),
+    safeJson(MUSIC_DEFAULT_PATH)
+  ]);
+  return { geminiMeta, narrator: narrator && narrator.document, watermark: watermark && watermark.document, musicDefault: musicDefault && musicDefault.document };
+}
+
+function existingGeminiLabel(localKeys, metadata) {
+  if (localKeys && localKeys.length) return `Gemini keys: ${localKeys.map(maskSecret).join(', ')} stored in this bot chat`;
+  if (metadata && metadata.length) return `Gemini keys: ${metadata.length} existing site key${metadata.length === 1 ? '' : 's'} already configured in GitHub Actions`;
+  return 'Gemini keys: not configured';
 }
 
 async function showSettings(env, chatId) {
   const credentials = await getCredentials(env, chatId);
+  const existing = await readExistingSettings(credentials);
   const lines = ['<b>Settings</b>'];
   lines.push(credentials && credentials.repo ? `GitHub clone: <code>${escapeHtml(credentials.repo)}</code>` : 'GitHub clone: not connected');
-  lines.push(credentials && credentials.geminiKeys && credentials.geminiKeys.length ? `Gemini keys: ${credentials.geminiKeys.map(maskSecret).join(', ')}` : 'Gemini keys: not configured');
-  lines.push('Credentials are encrypted before they are stored and are never shown again in full.');
+  lines.push(existingGeminiLabel(credentials && credentials.geminiKeys, existing.geminiMeta));
+  const voice = existing.narrator && VOICES[existing.narrator.voice] ? existing.narrator.voice : DEFAULT_VOICE;
+  lines.push(`Narrator: ${escapeHtml(VOICES[voice].label)} (Edge TTS)`);
+  lines.push(`Watermark: ${existing.watermark && existing.watermark.creator_name ? escapeHtml(existing.watermark.creator_name) : 'not set'}`);
+  lines.push(`Music default: ${existing.musicDefault && existing.musicDefault.library_track_path ? escapeHtml(String(existing.musicDefault.library_track_path).replace(/^audio-library\//, '')) : 'not set'}`);
+  lines.push('Existing Gemini secrets remain opaque: the bot can use them but will never display or copy their raw values.');
   await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: settingsMenu() });
 }
 
@@ -150,6 +180,7 @@ function taskButtons(label, status) {
   const rows = [[{ text: 'Refresh', callback_data: `status:${label}` }]];
   if (!status) return buttons(rows);
   if (['error', 'cancelled'].includes(status.stage)) rows.push([{ text: 'Restart Stage A', callback_data: `retry:a:${label}` }]);
+  if (status.stage === 'awaiting_torrent_selection') rows.push([{ text: 'Choose torrent video', callback_data: `torrent:${label}` }]);
   if (status.stage === 'awaiting_json_upload') rows.push([{ text: 'Get agent prompt', callback_data: `agent:${label}` }, { text: 'Upload production.json', callback_data: `plan:${label}` }]);
   if (['error', 'cancelled', 'complete'].includes(status.stage)) rows.push([{ text: 'Restart Stage B', callback_data: `retry:b:${label}` }]);
   if (['stage_b_queued', 'stage_b_running'].includes(status.stage)) rows.push([{ text: 'Cancel Stage B', callback_data: `cancel:${label}` }]);
@@ -203,14 +234,17 @@ async function beginTask(env, chatId, mode) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   if (mode === 'automatic' && !(credentials.geminiKeys || []).length) {
-    await sendMessage(env, chatId, 'Automatic Mode needs at least one Gemini API key. Add it from /settings before starting.');
-    return;
+    const metadata = await readGeminiMetadata(credentials, credentials.repo).catch(() => []);
+    if (!metadata.length) {
+      await sendMessage(env, chatId, 'Automatic Mode needs at least one Gemini API key. Add it from /settings before starting.');
+      return;
+    }
   }
   const state = await getState(env, chatId);
   state.flow = `${mode}_source`;
   state.pending = { mode };
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend the public video URL, Google Drive anyone-with-link URL, or magnet URI. Send /cancel to stop.`);
+  await sendMessage(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`);
 }
 
 async function finishTaskLaunch(env, chatId) {
@@ -218,7 +252,7 @@ async function finishTaskLaunch(env, chatId) {
   const pending = state.pending || {};
   const credentials = await requireCredentials(env, chatId);
   if (!credentials || !pending.mode || !pending.source || !TARGET_DURATIONS.includes(Number(pending.duration))) return;
-  const jobId = startTaskJobId(pending.mode);
+  const jobId = pending.jobId || startTaskJobId(pending.mode);
   const inputs = {
     video_url: pending.source,
     torrent_file_index: '',
@@ -399,7 +433,7 @@ async function handleFlowText(env, chatId, text) {
   if (state.flow === 'settings_gemini') {
     const key = String(text || '').trim();
     if (key.length < 20 || /\s/.test(key)) throw new Error('That does not look like a Gemini API key. Send it again without spaces.');
-    await saveGeminiKey(env, chatId, key, false);
+    await saveGeminiKey(env, chatId, key, Boolean(state.pending && state.pending.replaceExisting));
     return true;
   }
   if (state.flow === 'settings_watermark') {
@@ -456,9 +490,33 @@ async function saveGeminiKey(env, chatId, key, replacingLegacy) {
   await sendMessage(env, chatId, `Gemini key ${escapeHtml(fingerprint)} was encrypted and saved to the GitHub Actions secret.`);
 }
 
+async function handleTorrentUpload(env, chatId, document, state) {
+  const filename = String(document && document.file_name || '');
+  if (!/\.torrent$/i.test(filename) || !document.file_size || document.file_size > MAX_TORRENT_BYTES) {
+    throw new Error('Upload a non-empty .torrent file no larger than 1 MB.');
+  }
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const file = await getTelegramFile(env, document.file_id);
+  if (!file || !file.file_path) throw new Error('Telegram did not return the uploaded torrent.');
+  const bytes = await downloadTelegramFileBytes(env, file.file_path, MAX_TORRENT_BYTES);
+  if (bytes[0] !== 0x64) throw new Error('The uploaded file is not a valid bencoded torrent manifest.');
+  const jobId = startTaskJobId(state.pending.mode);
+  await putBinaryFile(credentials, credentials.repo, `jobs/${jobId}/source.torrent`, bytes, `clipforge: upload source.torrent for job ${jobId}`);
+  state.pending.source = `path:jobs/${jobId}/source.torrent`;
+  state.pending.jobId = jobId;
+  state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
+  await putState(env, chatId, state);
+  await sendMessage(env, chatId, `Torrent manifest uploaded for <code>${escapeHtml(jobId)}</code>. Send an optional editorial focus, or send <code>-</code> to consider the whole video. After Stage A starts, the bot will ask you to choose the video file inside the torrent.`);
+}
+
 async function handleDocument(env, chatId, document) {
   const state = await getState(env, chatId);
-  if (state.flow !== 'manual_plan') { await sendMessage(env, chatId, 'This document was not expected. Use /status, choose a task awaiting production.json, then tap Upload production.json.'); return; }
+  if (state.flow === 'manual_source' || state.flow === 'automatic_source') {
+    await handleTorrentUpload(env, chatId, document, state);
+    return;
+  }
+  if (state.flow !== 'manual_plan') { await sendMessage(env, chatId, 'This document was not expected. Start Manual or Automatic Mode first to upload a .torrent file, or choose a task awaiting production.json before uploading a production plan.'); return; }
   if (!document || document.file_size > 1024 * 1024) throw new Error('production.json must be 1 MB or smaller.');
   const file = await getTelegramFile(env, document.file_id);
   if (!file || !file.file_path) throw new Error('Telegram did not return the uploaded file.');
@@ -466,12 +524,59 @@ async function handleDocument(env, chatId, document) {
   await submitPlan(env, chatId, content);
 }
 
+async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  const selection = await tryGetJsonFile(credentials, credentials.repo, `jobs/${jobId}/torrent-selection.json`);
+  const candidates = selection && selection.document && Array.isArray(selection.document.video_candidates) ? selection.document.video_candidates : [];
+  if (!candidates.length) throw new Error('The torrent video choices are not available yet. Refresh the task status in a moment.');
+  const totalPages = Math.ceil(candidates.length / TORRENT_CANDIDATES_PER_PAGE);
+  const requestedPage = Number(pageValue);
+  const page = Number.isInteger(requestedPage) ? Math.min(Math.max(requestedPage, 0), totalPages - 1) : 0;
+  const rows = candidates.slice(page * TORRENT_CANDIDATES_PER_PAGE, (page + 1) * TORRENT_CANDIDATES_PER_PAGE).map((candidate) => {
+    const index = Number(candidate && candidate.index);
+    if (!Number.isInteger(index) || index < 1) return null;
+    const name = String(candidate.path || `Video ${index}`).replace(/\s+/g, ' ').slice(0, 40);
+    return [{ text: `${index}. ${name}`, callback_data: `torrentpick:${label}:${index}` }];
+  }).filter(Boolean);
+  if (totalPages > 1) {
+    const navigation = [];
+    if (page > 0) navigation.push({ text: 'Previous', callback_data: `torrentpage:${label}:${page - 1}` });
+    navigation.push({ text: `Page ${page + 1}/${totalPages}`, callback_data: `torrentpage:${label}:${page}` });
+    if (page < totalPages - 1) navigation.push({ text: 'Next', callback_data: `torrentpage:${label}:${page + 1}` });
+    rows.push(navigation);
+  }
+  await sendMessage(env, chatId, `Choose the video file inside this torrent (page ${page + 1} of ${totalPages}). This starts Stage A for the selected file only.`, { replyMarkup: buttons(rows) });
+}
+
+async function chooseTorrentCandidate(env, chatId, label, indexValue) {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  const index = Number(indexValue);
+  if (!credentials || !jobId) return;
+  if (!Number.isInteger(index) || index < 1) throw new Error('That torrent video choice is invalid.');
+  const selection = await tryGetJsonFile(credentials, credentials.repo, `jobs/${jobId}/torrent-selection.json`);
+  const candidates = selection && selection.document && Array.isArray(selection.document.video_candidates) ? selection.document.video_candidates : [];
+  if (!candidates.some((candidate) => Number(candidate && candidate.index) === index)) throw new Error('That torrent video is no longer available. Refresh the task status.');
+  const inputs = await readStageARequest(credentials, credentials.repo, jobId);
+  await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', {
+    video_url: String(inputs.video_url || `path:jobs/${jobId}/source.torrent`), torrent_file_index: String(index), job_id: jobId,
+    whisper_model: WHISPER_MODELS.has(inputs.whisper_model) ? inputs.whisper_model : 'base', language: String(inputs.language || 'auto'),
+    target_duration_seconds: String(inputs.target_duration_seconds || '120'), focus: String(inputs.focus || ''), automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false'
+  });
+  await sendMessage(env, chatId, `Selected torrent video ${index}. Stage A has started for task <b>${escapeHtml(label)}</b>.`);
+}
+
 async function restartStageA(env, chatId, label) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
   const inputs = await readStageARequest(credentials, credentials.repo, jobId);
-  if (inputs.automatic_mode === 'true' && !(credentials.geminiKeys || []).length) throw new Error('Automatic Mode needs a stored Gemini API key before Stage A can restart.');
+  if (inputs.automatic_mode === 'true' && !(credentials.geminiKeys || []).length) {
+    const metadata = await readGeminiMetadata(credentials, credentials.repo).catch(() => []);
+    if (!metadata.length) throw new Error('Automatic Mode needs a stored Gemini API key before Stage A can restart.');
+  }
   await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', {
     video_url: String(inputs.video_url || ''), torrent_file_index: String(inputs.torrent_file_index || ''), job_id: jobId,
     whisper_model: WHISPER_MODELS.has(inputs.whisper_model) ? inputs.whisper_model : 'base', language: String(inputs.language || 'auto'),
@@ -534,9 +639,20 @@ async function handleCallback(env, callback) {
       return sendMessage(env, chatId, 'This shared bot can operate an existing ClipForge clone or create a separate private Shadow Clone for this chat. Choose one option.', { replyMarkup: cloneOnboardingMenu() });
     }
     if (value === 'gemini') {
-      if (!await requireCredentials(env, chatId)) return;
+      const credentials = await requireCredentials(env, chatId);
+      if (!credentials) return;
+      const metadata = await readGeminiMetadata(credentials, credentials.repo).catch(() => []);
+      if (!(credentials.geminiKeys || []).length && metadata.length) {
+        return sendMessage(env, chatId, `This clone already has ${metadata.length} Gemini key${metadata.length === 1 ? '' : 's'} configured by the ClipForge site. Automatic Mode will use that existing GitHub Actions secret. You do not need to add the key again.`, { replyMarkup: buttons([[{ text: 'Replace existing key set', callback_data: 'set:gemini_replace_start' }], [{ text: 'Keep existing settings', callback_data: 'flow:cancel' }]]) });
+      }
       const state = await getState(env, chatId); state.flow = 'settings_gemini'; state.pending = {}; await putState(env, chatId, state);
       return sendMessage(env, chatId, 'Send one Gemini API key. It will be encrypted, stored in GitHub Actions as <code>GEMINI_API_KEYS</code>, and never committed to the repository.');
+    }
+    if (value === 'gemini_replace_start') {
+      const credentials = await requireCredentials(env, chatId);
+      if (!credentials) return;
+      const state = await getState(env, chatId); state.flow = 'settings_gemini'; state.pending = { replaceExisting: true }; await putState(env, chatId, state);
+      return sendMessage(env, chatId, 'You are about to replace the existing site-managed Gemini key set. Send the replacement Gemini API key. This cannot recover or merge the opaque existing key set.');
     }
     if (value === 'gemini_replace') {
       const credentials = await requireCredentials(env, chatId);
@@ -549,6 +665,15 @@ async function handleCallback(env, callback) {
         { text: `Preview ${meta.label}`, callback_data: `preview:${id}` }
       ]);
       return sendMessage(env, chatId, 'Choose the Edge TTS default narrator for future Stage B jobs, or preview any of the ten committed voice samples first.', { replyMarkup: buttons(rows) });
+    }
+    if (value === 'music_default') {
+      const credentials = await requireCredentials(env, chatId);
+      if (!credentials) return;
+      const existing = await readExistingSettings(credentials);
+      const track = existing.musicDefault && existing.musicDefault.library_track_path;
+      return sendMessage(env, chatId, track
+        ? `The ClipForge site default is <code>${escapeHtml(String(track).replace(/^audio-library\//, ''))}</code>. Automatic Mode uses it when you choose <b>Use saved default</b> during task setup.`
+        : 'No persistent music default is saved in this clone. You can choose no music, use a library track, or set a default from the ClipForge site.');
     }
     if (value === 'watermark') {
       if (!await requireCredentials(env, chatId)) return;
@@ -586,6 +711,9 @@ async function handleCallback(env, callback) {
   }
   if (kind === 'status') return showTaskStatus(env, chatId, value);
   if (kind === 'done') return showCompleted(env, chatId, value);
+  if (kind === 'torrent') return showTorrentCandidates(env, chatId, value);
+  if (kind === 'torrentpage') { const [label, page] = value.split(':'); return showTorrentCandidates(env, chatId, label, page); }
+  if (kind === 'torrentpick') { const [label, index] = value.split(':'); return chooseTorrentCandidate(env, chatId, label, index); }
   if (kind === 'agent') return sendManualAgentPrompt(env, chatId, value);
   if (kind === 'plan') return startPlanFlow(env, chatId, value);
   if (kind === 'retry') { const [stage, label] = value.split(':'); return stage === 'a' ? restartStageA(env, chatId, label) : restartStageB(env, chatId, label); }
@@ -635,4 +763,4 @@ export default {
   }
 };
 
-export const __test = { cloneOnboardingMenu, commandOf, formatStatus, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
+export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatStatus, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };

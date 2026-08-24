@@ -82,6 +82,16 @@ export async function downloadTelegramFile(env, filePath) {
   return response.text();
 }
 
+export async function downloadTelegramFileBytes(env, filePath, maximumBytes) {
+  const response = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${filePath}`);
+  if (!response.ok) throw new Error('Telegram could not provide the uploaded file.');
+  const headerLength = Number(response.headers.get('content-length') || '0');
+  if (headerLength && headerLength > maximumBytes) throw new Error('The uploaded torrent exceeds the 1 MB limit.');
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > maximumBytes) throw new Error('The uploaded torrent must be non-empty and no larger than 1 MB.');
+  return bytes;
+}
+
 export function buttons(rows) {
   return { inline_keyboard: rows };
 }

@@ -2,7 +2,7 @@
 
 **Author:** Manus AI  
 **Scope:** A new Cloudflare Workers Telegram operator interface for ClipForge.  
-**Implementation commit:** `9597e44` — `Add Cloudflare Telegram operator bot`
+**Implementation status:** The shared bot was previously published and deployed; the legacy-settings and torrent-routing update is pending publication and deployment validation.
 
 ## Outcome
 
@@ -12,11 +12,11 @@ A self-contained Cloudflare Worker project now lives at [`telegram-bot/`](telegr
 | --- | --- |
 | Private-chat control plane | The bot accepts only direct/private Telegram chats, preventing a group chat from sharing an operator’s repository controls. |
 | Repository setup | An unconfigured `/start` offers **Create private Shadow Clone** or **Connect existing clone**. The first path creates a private repository in the authenticated user’s account, copies only shared ClipForge source files, and excludes jobs, branding, audio-library content, and key/account/queue paths. The second validates an existing `owner/repository`. Both paths encrypt the per-chat credential record before KV storage. |
-| Gemini setup | The bot appends its encrypted Gemini-key list to the existing GitHub Actions secret `GEMINI_API_KEYS` through GitHub’s Actions public-key and sealed-box protocol. It writes only masked fingerprints to `branding/gemini_keys.json`. |
+| Gemini setup and migration | The bot recognises existing masked fingerprints in `branding/gemini_keys.json` as an already configured opaque `GEMINI_API_KEYS` Actions secret. It does not reveal or silently replace the existing secret. A deliberately confirmed replacement uploads a new encrypted key set through GitHub’s Actions public-key and sealed-box protocol, while the repository retains only masked fingerprints. |
 | Existing user isolation | Task labels and state are namespace-scoped by Telegram chat id; each chat operates only the repository configured for that chat. A newly created Shadow Clone is private, belongs to the authenticated user, and contains no other user’s job, branding, media-library, credential, or queue state. |
-| Task operations | `/manual`, `/automatic`, `/tasks`, `/status`, and `/done` use existing GitHub status files, workflow inputs, releases, and final asset URLs. |
+| Task operations | `/manual`, `/automatic`, `/tasks`, `/status`, and `/done` use existing GitHub status files, workflow inputs, releases, and final asset URLs. Manual and Automatic source collection accepts public URLs, magnets, or a bounded `.torrent` manifest. |
 | Manual handoff | Production plans are validated against the existing `production_plan_contract.json` rules before `jobs/<id>/production.json` is committed and Stage B is dispatched. |
-| Workflow controls | Status views provide refresh, Stage A retry, Stage B retry, production-plan upload, and confirmed Stage B cancellation controls when the current status permits them. |
+| Workflow controls | Status views provide refresh, Stage A retry, Stage B retry, production-plan upload, confirmed Stage B cancellation, and persistent torrent-video selection controls when the current status permits them. |
 | Deployment documentation | [`TELEGRAM_BOT_SETUP.md`](TELEGRAM_BOT_SETUP.md) explains Cloudflare Workers Git deployment, KV binding, secrets, BotFather, webhook registration, testing, and recovery. |
 
 ## Files read before implementation
@@ -65,15 +65,15 @@ The final operator-facing deployment guide is [`TELEGRAM_BOT_SETUP.md`](TELEGRAM
 | --- | --- |
 | Existing static console | Retained instead of deleted, as explicitly permitted and safer for transition. |
 | Bot access scope | Restricted to private chats; this is a security hardening measure for credential and clone isolation. |
-| Torrent manifest upload | The bot accepts public video URLs and magnet URIs, which are the source forms specified for the Telegram flows. Direct `.torrent` document ingestion is not in this first Worker version; the existing web console retains its complete persistent torrent-selection interface. |
+| Torrent manifest upload | The bot accepts a non-empty `.torrent` document up to 1 MB only while a new Manual or Automatic source is expected. It uploads raw bytes only to `jobs/<job-id>/source.torrent`, starts the existing Stage A selection substage with no file index, reads `torrent-selection.json`, and dispatches a user-selected, workflow-validated 1-based index. It does not parse torrent metadata or download media in the Worker. |
 | Automatic Mode backend | Remains the current direct-Gemini Action path. The earlier FreeLLMAPI experiment remains removed and is not referenced by this bot. |
-| Cloudflare deployment | Not performed. The operator requested a setup guide and must personally create/connect the Cloudflare Worker, KV namespace, BotFather bot, and deployment secrets. |
+| Cloudflare deployment | The shared Worker, production KV binding, webhook, and command menu were previously configured and validated. This update requires a fresh scoped deployment token because earlier credentials were exposed and have been removed from the workspace. |
 
 ## Validation
 
 | Validation | Result |
 | --- | --- |
-| Worker unit tests | **7 passed.** Tests cover AES-GCM encryption/chat binding, sealed-box compatibility, task-label isolation, conversation isolation, webhook-secret enforcement, source-command validation, and production-plan validation. |
+| Worker unit tests | **14 passed.** Tests cover AES-GCM encryption/chat binding, sealed-box compatibility, task-label isolation, conversation isolation, webhook-secret enforcement, existing masked-Gemini recognition, torrent-selection controls, bounded raw torrent downloads, isolated GitHub binary uploads, source-command validation, and production-plan validation. |
 | Worker bundle | **Passed.** `wrangler deploy --dry-run` bundled the project and recognized the `CLIPFORGE_BOT_KV` binding without publishing it. |
 | Automatic Mode regression | **Passed.** Existing regression confirms chronological evidence retrieval, correction handling, bounded temporary-failure retry, key failover, and fallback behavior. |
 | Automatic workflow contract | **Passed.** Existing regression confirms Automatic Mode is opt-in, direct-Gemini-native, bounded, validated, status-visible, and dispatches only the current Stage B path. |
@@ -82,7 +82,7 @@ The final operator-facing deployment guide is [`TELEGRAM_BOT_SETUP.md`](TELEGRAM
 
 ## Publication status
 
-The implementation is committed locally at `9597e44`. Publishing to `motionssalt/clipforge` was attempted, but GitHub rejected the push with HTTP 403 (`Permission to motionssalt/clipforge.git denied to motionssalt`). Therefore the remote repository has **not** changed and Cloudflare cannot deploy from the new commit until the connected GitHub account receives write access or the commit is pushed by an authorized maintainer.
+The shared-bot baseline was published to `motionssalt/clipforge` and deployed successfully by authenticated GitHub REST updates and a Cloudflare Worker code deployment. The current legacy-settings and torrent-routing update remains local until it is committed, published using a newly rotated GitHub token, and deployed with a newly rotated scoped Cloudflare token. A code-only deployment preserves the Worker’s existing secret bindings; it must be followed by `/health` and protected-webhook validation.
 
 ## References
 
