@@ -1,16 +1,24 @@
 {
   "job_id": "gemini-direct-capped-validation",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
   "release_tag": "clipforge-gemini-direct-capped-validation",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-gemini-direct-capped-validation",
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/00_READ_THIS_FIRST.txt",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/key_moments.json",
+    "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/original.mp4",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/screenshots.zip",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/transcript.json"
+  },
   "created_at_epoch": 1787543342,
-  "updated_at_epoch": 1787543342,
+  "updated_at_epoch": 1787543358,
   "expires_at_epoch": 1787586542,
   "extra": {
     "workflow_run_id": "32687648780",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32687648780",
-    "automatic_mode": "true"
+    "automatic_mode": "true",
+    "automatic_analysis_result": "jobs/gemini-direct-capped-validation/automatic_analysis.json"
   }
 }
