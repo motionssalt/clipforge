@@ -1,0 +1,87 @@
+{
+  "video_duration_seconds": 1426,
+  "title": "The Tragic Final Moments of King Meruem",
+  "hashtags": [
+    "#hunterxhunter",
+    "#meruem",
+    "#komugi",
+    "#anime",
+    "#animedeath",
+    "#hunterxhunter2011"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "meruem death",
+    "meruem and komugi",
+    "meruem vs netero",
+    "chimera ant arc",
+    "meruem tragedy",
+    "komugi hunter x hunter",
+    "meruem final moments",
+    "anime sad moments",
+    "hunter x hunter episode 135"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 145,
+      "end_seconds": 182,
+      "voiceover_text": "Instead of seeking world domination, the Chimera Ant King surrenders for one heartbreaking reason. King Meruem admits defeat, confessing his only desire is to spend his final remaining hours with the human girl Komugi.",
+      "keywords": [
+        {
+          "word": "surrenders",
+          "color": "#FFCC00"
+        },
+        {
+          "word": "heartbreaking",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 275,
+      "end_seconds": 310,
+      "voiceover_text": "Knowing his time is limited by poison, Meruem humbles himself to ask for help locating her. Palm watches in shock, overwhelmed by the realization that this ruthless king genuinely loves a human.",
+      "keywords": [
+        {
+          "word": "poison",
+          "color": "#D0021B"
+        },
+        {
+          "word": "loves",
+          "color": "#FF69B4"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1070,
+      "end_seconds": 1110,
+      "voiceover_text": "During their Goongi match, Meruem reveals the tragic truth: his poison is contagious and will kill her if she stays. Komugi weepingly smiles, declaring she was born for this exact moment and choosing to die by his side.",
+      "keywords": [
+        {
+          "word": "contagious",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "born",
+          "color": "#BD10E0"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1320,
+      "end_seconds": 1395,
+      "voiceover_text": "As darkness and death overtake Meruem, he repeatedly calls out to confirm Komugi is still there. Holding his hand tightly, Komugi reassures him until he peacefully passes away in her arms.",
+      "keywords": [
+        {
+          "word": "darkness",
+          "color": "#4A4A4A"
+        },
+        {
+          "word": "peacefully",
+          "color": "#7ED321"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 180
+}
