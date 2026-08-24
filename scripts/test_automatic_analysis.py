@@ -206,6 +206,25 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     assert opened[1].response["coverage_start_seconds"] == 8.0
     assert opened[2].response["coverage_end_seconds"] == 22.0
 
+    non_json_retry_gateway = ScriptedGateway({
+        "gemini-3.7-flash": [
+            native_call("non-json-1", "read_transcript"),
+            native_call("non-json-2", "read_scene_index"),
+            native_call("non-json-3", "read_key_moments"),
+            native_call("non-json-4", "open_composite", filename="frame_000000.jpg"),
+            native_call("non-json-5", "open_composite", filename="event_000010000.jpg"),
+            native_call("non-json-6", "open_composite", filename="event_000020000.jpg"),
+            NativeTurn(calls=[], text="I need more time to prepare the plan.", model_content={"role": "model", "text": "non-json"}),
+            plain_turn(GROUNDED_PLAN),
+        ]
+    })
+    non_json_plan, _, non_json_summary = run_analysis(root, "unused-by-fake", gateway=non_json_retry_gateway)
+    assert non_json_plan == PRODUCTION_PLAN
+    assert non_json_summary["validation_corrections"] == 1
+    assert non_json_retry_gateway.calls[-1] == ("gemini-3.7-flash", False), (
+        "a non-JSON terminal response must receive exactly one no-tool correction retry"
+    )
+
     correction_exhausted_gateway = ScriptedGateway({
         "gemini-3.7-flash": [
             native_call("quota-1", "read_transcript"),
@@ -251,4 +270,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     except AllKeysExhausted:
         pass
 
-print("PASS: Automatic Mode enforces chronological native evidence retrieval, per-cut visual grounding, correction-time provider-failure propagation, bounded fallback, and secure key-failover semantics")
+print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, per-cut visual grounding, correction-time provider-failure propagation, bounded fallback, and secure key-failover semantics")

@@ -642,17 +642,19 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
             if not tools.opened:
                 raise AutomaticAnalysisError("Automatic analysis attempted a plan without selectively opening a screenshot composite.")
             document, canonical = extract_json_object(turn.text)
-            if document is None:
-                raise AutomaticAnalysisError("Automatic analysis did not return a JSON production plan.")
-            errors = automatic_plan_errors(document, canonical, tools)
-            if not errors:
+            errors = (
+                automatic_plan_errors(document, canonical, tools)
+                if document is not None
+                else ["The response did not contain a JSON production plan."]
+            )
+            if not errors and document is not None:
                 production_document = production_document_without_visual_evidence(document)
                 production_canonical = json.dumps(production_document, ensure_ascii=False, indent=2) + "\n"
                 return production_document, production_canonical, turn_number, 0
             gateway.append_tool_results(history, turn, [])
             gateway.append_user_text(
                 history,
-                "Your proposed production.json failed ClipForge validation. Return one corrected JSON object only. "
+                "Your proposed production.json failed ClipForge validation or was not valid JSON. Return one corrected JSON object only. "
                 "Do not call tools, do not add commentary, and do not broaden the story. Validation errors:\n- " + "\n- ".join(errors),
             )
             try:
