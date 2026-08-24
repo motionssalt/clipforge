@@ -392,7 +392,7 @@ jobs:
 
       # -------------------------------------------------------------------
       # New one-pass pipeline: voiceover -> cut+mix+merge -> subtitles.
-      # generate_voiceover.py    : Gemini TTS per cut + manifest.
+      # generate_voiceover.py    : Edge TTS per cut + manifest.
       # cut_and_produce.py       : timing reconciliation, mute source audio,
       #                            mix voiceover (+ optional music), ONE
       #                            merged mobile-safe MP4 + merged voiceover.

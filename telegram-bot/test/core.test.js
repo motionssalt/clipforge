@@ -1,0 +1,168 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { decryptCredentials, encryptCredentials } from '../src/crypto.js';
+import { validateProductionPlan } from '../src/production.js';
+import { ensureTaskLabel, getJobIdForLabel, getTasks, getState, putState } from '../src/storage.js';
+import worker, { __test } from '../src/index.js';
+import nacl from 'tweetnacl';
+import sealedbox from 'tweetnacl-sealedbox-js';
+import { sendAudioBytes, sendDocumentBytes } from '../src/telegram.js';
+import { cloneRepositoryName, createPrivateShadowClone, sourcePathAllowed } from '../src/github.js';
+
+class MemoryKv {
+  constructor() { this.values = new Map(); }
+  async get(key) { return this.values.get(key) ?? null; }
+  async put(key, value) { this.values.set(key, value); }
+  async delete(key) { this.values.delete(key); }
+}
+
+const keyBytes = new Uint8Array(32);
+for (let i = 0; i < keyBytes.length; i += 1) keyBytes[i] = i + 1;
+const encryptionSecret = btoa(String.fromCharCode(...keyBytes));
+
+function env() { return { CLIPFORGE_BOT_KV: new MemoryKv(), KV_ENCRYPTION_KEY: encryptionSecret }; }
+
+test('sealed-box dependency produces a GitHub-secret compatible ciphertext envelope', () => {
+  const pair = nacl.box.keyPair();
+  const message = new TextEncoder().encode('gemini-key-material');
+  const sealed = sealedbox.seal(message, pair.publicKey);
+  assert.equal(sealed.length, message.length + sealedbox.overheadLength);
+  assert.deepEqual(sealedbox.open(sealed, pair.publicKey, pair.secretKey), message);
+});
+
+test('credentials are encrypted, bound to a chat, and round-trip without plaintext KV storage', async () => {
+  const value = { githubPat: 'github_pat_example_123456789', repo: 'owner/repo', geminiKeys: ['AIza-example-key-123456'] };
+  const encrypted = await encryptCredentials(value, 101, encryptionSecret);
+  assert.equal(encrypted.includes(value.githubPat), false);
+  assert.deepEqual(await decryptCredentials(encrypted, 101, encryptionSecret), value);
+  await assert.rejects(() => decryptCredentials(encrypted, 102, encryptionSecret));
+});
+
+test('task labels are stable and isolated per Telegram chat', async () => {
+  const workerEnv = env();
+  assert.equal(await ensureTaskLabel(workerEnv, 1, 'manual-1'), 'A');
+  assert.equal(await ensureTaskLabel(workerEnv, 1, 'automatic-2'), 'B');
+  assert.equal(await ensureTaskLabel(workerEnv, 1, 'manual-1'), 'A');
+  assert.equal(await ensureTaskLabel(workerEnv, 2, 'other-user-job'), 'A');
+  assert.equal(await getJobIdForLabel(workerEnv, 1, 'A'), 'manual-1');
+  assert.equal(await getJobIdForLabel(workerEnv, 2, 'B'), null);
+  assert.equal((await getTasks(workerEnv, 1)).labels.B, 'automatic-2');
+});
+
+test('conversation state never adopts another chat state', async () => {
+  const workerEnv = env();
+  await putState(workerEnv, 1, { flow: 'manual_source', pending: { mode: 'manual' }, currentTask: 'manual-1' });
+  assert.equal((await getState(workerEnv, 1)).currentTask, 'manual-1');
+  assert.equal((await getState(workerEnv, 2)).currentTask, null);
+});
+
+test('health is public but webhook updates require the configured Telegram secret', async () => {
+  const workerEnv = { ...env(), TELEGRAM_WEBHOOK_SECRET: 'expected-secret', TELEGRAM_BOT_TOKEN: 'test-token' };
+  const health = await worker.fetch(new Request('https://worker.example/health'), workerEnv);
+  assert.equal(health.status, 200);
+  const rejected = await worker.fetch(new Request('https://worker.example/webhook', { method: 'POST', body: '{}' }), workerEnv);
+  assert.equal(rejected.status, 401);
+});
+
+test('voice previews and full agent prompts are delivered as safe multipart Telegram files', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: init.body });
+    return new Response(JSON.stringify({ ok: true, result: { message_id: calls.length } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const workerEnv = { TELEGRAM_BOT_TOKEN: 'test-token' };
+    await sendAudioBytes(workerEnv, 9, new Uint8Array([1, 2, 3]), 'en-US-AvaNeural.mp3', 'Preview');
+    await sendDocumentBytes(workerEnv, 9, new TextEncoder().encode('full agent prompt'), 'manual-1-agent-prompt.txt', 'Prompt');
+    assert.equal(calls[0].url.endsWith('/sendAudio'), true);
+    assert.equal(calls[0].body.get('audio').name, 'en-US-AvaNeural.mp3');
+    assert.equal(calls[1].url.endsWith('/sendDocument'), true);
+    assert.equal(calls[1].body.get('document').name, 'manual-1-agent-prompt.txt');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('shared-bot onboarding offers private Shadow Clone creation or existing-clone connection', () => {
+  const callbacks = __test.cloneOnboardingMenu().inline_keyboard.flat().map((button) => button.callback_data);
+  assert.ok(callbacks.includes('clone:new'));
+  assert.ok(callbacks.includes('clone:connect'));
+  assert.equal(cloneRepositoryName('my-clipforge_2026'), 'my-clipforge_2026');
+  assert.throws(() => cloneRepositoryName('../unsafe'), /Shadow Clone repository name/);
+  assert.equal(sourcePathAllowed('scripts/generate_voiceover.py'), true);
+  assert.equal(sourcePathAllowed('jobs/other-user/status.json'), false);
+  assert.equal(sourcePathAllowed('branding/gemini_keys.json'), false);
+  assert.equal(sourcePathAllowed('audio-library/private-track.mp3'), false);
+});
+
+test('private Shadow Clone creation copies shared source while excluding all user state', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const parsed = new URL(String(url));
+    const path = `${parsed.pathname}${parsed.search}`;
+    calls.push({ path, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    const reply = (value) => new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
+    if (path === '/user') return reply({ login: 'alice' });
+    if (path === '/repos/motionssalt/clipforge/git/ref/heads/main') return reply({ object: { sha: 'source-commit' } });
+    if (path === '/repos/motionssalt/clipforge/git/commits/source-commit') return reply({ tree: { sha: 'source-tree' } });
+    if (path === '/repos/motionssalt/clipforge/git/trees/source-tree?recursive=1') return reply({ truncated: false, tree: [
+      { type: 'blob', path: 'README.md', sha: 'readme-blob', mode: '100644' },
+      { type: 'blob', path: 'jobs/another-user/status.json', sha: 'job-blob', mode: '100644' },
+      { type: 'blob', path: 'branding/tts_settings.json', sha: 'brand-blob', mode: '100644' }
+    ] });
+    if (path === '/user/repos' && init.method === 'POST') return reply({ full_name: 'alice/my-clipforge' });
+    if (path === '/repos/motionssalt/clipforge/git/blobs/readme-blob') return reply({ encoding: 'base64', content: 'cmVhZG1l' });
+    if (path === '/repos/alice/my-clipforge/git/blobs' && init.method === 'POST') return reply({ sha: calls.filter((call) => call.path === path && call.method === 'POST').length === 1 ? 'copied-readme' : 'sync-blob' });
+    if (path === '/repos/alice/my-clipforge/git/trees' && init.method === 'POST') return reply({ sha: 'target-tree' });
+    if (path === '/repos/alice/my-clipforge/git/commits' && init.method === 'POST') return reply({ sha: 'target-commit' });
+    if (path === '/repos/alice/my-clipforge/git/refs' && init.method === 'POST') return reply({ ref: 'refs/heads/main' });
+    throw new Error(`Unexpected GitHub request: ${init.method || 'GET'} ${path}`);
+  };
+  try {
+    const result = await createPrivateShadowClone('token-value', 'my-clipforge');
+    assert.deepEqual(result.repo, 'alice/my-clipforge');
+    assert.equal(result.copiedFiles, 1);
+    const treeRequest = calls.find((call) => call.path === '/repos/alice/my-clipforge/git/trees');
+    assert.deepEqual(treeRequest.body.tree.map((entry) => entry.path).sort(), ['.clipforge-sync.json', 'README.md']);
+    assert.equal(calls.some((call) => call.path.includes('job-blob')), false);
+    assert.equal(calls.some((call) => call.path.includes('brand-blob')), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('source and command helpers retain the intended operator contract', () => {
+  assert.equal(__test.commandOf('/automatic'), '/automatic');
+  assert.equal(__test.commandOf('/automatic@ClipForgeBot'), '/automatic');
+  assert.equal(__test.commandOf('/unknown'), null);
+  assert.equal(__test.validateSource('https://example.com/video.mp4'), 'https://example.com/video.mp4');
+  assert.equal(__test.validateSource('magnet:?xt=urn:btih:abcdef'), 'magnet:?xt=urn:btih:abcdef');
+  assert.throws(() => __test.validateSource('file:///etc/passwd'));
+  assert.equal(__test.normalizeFocus('  the  opening scene  '), 'the opening scene');
+  assert.equal(__test.normalizeFocus('-'), '');
+});
+
+test('manual Stage A status exposes the agent-prompt control before production upload', () => {
+  const markup = __test.taskButtons('A', { stage: 'awaiting_json_upload' });
+  const callbacks = markup.inline_keyboard.flat().map((button) => button.callback_data);
+  assert.ok(callbacks.includes('agent:A'));
+  assert.ok(callbacks.includes('plan:A'));
+  assert.equal(__test.taskButtons('A', { stage: 'stage_a_running' }).inline_keyboard.flat().some((button) => button.callback_data === 'agent:A'), false);
+});
+
+test('manual production-plan validation preserves ClipForge’s timing and narration contract', () => {
+  const valid = {
+    video_duration_seconds: 90,
+    target_total_duration_seconds: 30,
+    cuts: [{ start_seconds: 0, end_seconds: 30, voiceover_text: 'A supported narration.' }]
+  };
+  assert.deepEqual(validateProductionPlan(valid), []);
+  const invalid = {
+    video_duration_seconds: 10,
+    target_total_duration_seconds: 30,
+    cuts: [{ start_seconds: 8, end_seconds: 7, raw_narration: '' }]
+  };
+  assert.ok(validateProductionPlan(invalid).length >= 2);
+});

@@ -11,12 +11,17 @@ from __future__ import annotations
 import json
 import tempfile
 import zipfile
+from types import SimpleNamespace
+
+import automatic_analysis as automatic_analysis
 from pathlib import Path
 from typing import Any
 
 from automatic_analysis import (
     AllKeysExhausted,
+    ApiKey,
     EvidenceTools,
+    GeminiGateway,
     NativeToolCall,
     NativeTurn,
     ProviderRequestError,
@@ -27,7 +32,9 @@ from automatic_analysis import (
     narration_duration_errors,
     parse_api_keys,
     provider_error_category,
+    provider_error_should_retry,
     run_analysis,
+    transient_provider_retry_delay,
     safe_provider_error_summary,
 )
 from google.genai import types
@@ -139,6 +146,12 @@ assert provider_error_category(503) == "provider_server"
 assert provider_error_category(401) == "authentication"
 assert key_failure_should_rotate(429, "rate_or_quota") is True
 assert key_failure_should_rotate(503, "provider_server") is False
+assert provider_error_should_retry("provider_server") is True
+assert provider_error_should_retry("provider_malformed") is True
+assert provider_error_should_retry("rate_or_quota") is False
+assert transient_provider_retry_delay(1) == 2.0
+assert transient_provider_retry_delay(2) == 4.0
+assert transient_provider_retry_delay(4) == 8.0
 redacted = safe_provider_error_summary(RuntimeError("AIzaLiveSensitiveKey bearer secret-value"), None, "provider_request")
 assert "AIza[REDACTED]" in redacted and "secret-value" not in redacted
 sdk_probe_part = types.Part.from_function_response(
@@ -149,6 +162,97 @@ sdk_probe_part = types.Part.from_function_response(
     ))],
 )
 assert sdk_probe_part.function_response is not None, "official SDK must construct a multimodal function response"
+
+class RetryProbeTypes:
+    class FunctionDeclaration:
+        def __init__(self, **kwargs: Any):
+            self.kwargs = kwargs
+
+    class Tool:
+        def __init__(self, **kwargs: Any):
+            self.kwargs = kwargs
+
+    class AutomaticFunctionCallingConfig:
+        def __init__(self, **kwargs: Any):
+            self.kwargs = kwargs
+
+    class GenerateContentConfig:
+        def __init__(self, **kwargs: Any):
+            self.kwargs = kwargs
+
+
+class RetryProbeClient:
+    def __init__(self, outcomes: list[Any]):
+        self.outcomes = outcomes
+        self.models = self
+
+    def generate_content(self, **kwargs: Any) -> Any:
+        del kwargs
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+
+class TemporaryGeminiFailure(Exception):
+    status_code = 503
+
+
+class QuotaGeminiFailure(Exception):
+    status_code = 429
+
+
+def usable_response() -> Any:
+    return SimpleNamespace(
+        candidates=[SimpleNamespace(content={"role": "model"})],
+        function_calls=[],
+        usage_metadata=None,
+        text="{}",
+    )
+
+
+sleep_delays: list[float] = []
+original_sleep = automatic_analysis.time.sleep
+automatic_analysis.time.sleep = sleep_delays.append
+try:
+    server_outcomes: list[Any] = [TemporaryGeminiFailure("UNAVAILABLE"), usable_response()]
+    server_gateway = GeminiGateway(
+        [ApiKey(raw="test-key")],
+        client_factory=lambda key: RetryProbeClient(server_outcomes),
+        types_module=RetryProbeTypes,
+    )
+    server_turn = server_gateway.generate("gemini-test", [], tools_enabled=True)
+    assert server_turn.text == "{}"
+    assert sleep_delays == [2.0], "a 503 must retry once after a bounded delay"
+
+    sleep_delays.clear()
+    malformed_outcomes: list[Any] = [
+        SimpleNamespace(candidates=[], function_calls=[], usage_metadata=None, text=""),
+        usable_response(),
+    ]
+    malformed_gateway = GeminiGateway(
+        [ApiKey(raw="test-key")],
+        client_factory=lambda key: RetryProbeClient(malformed_outcomes),
+        types_module=RetryProbeTypes,
+    )
+    assert malformed_gateway.generate("gemini-test", [], tools_enabled=True).text == "{}"
+    assert sleep_delays == [2.0], "an incomplete temporary provider response must retry once"
+
+    sleep_delays.clear()
+    quota_outcomes: list[Any] = [QuotaGeminiFailure("RESOURCE_EXHAUSTED")]
+    quota_gateway = GeminiGateway(
+        [ApiKey(raw="test-key")],
+        client_factory=lambda key: RetryProbeClient(quota_outcomes),
+        types_module=RetryProbeTypes,
+    )
+    try:
+        quota_gateway.generate("gemini-test", [], tools_enabled=True)
+        raise AssertionError("a quota error was retried instead of failing or rotating")
+    except AllKeysExhausted as error:
+        assert error.category == "rate_or_quota"
+    assert sleep_delays == [], "a 429 must not use transient provider retries"
+finally:
+    automatic_analysis.time.sleep = original_sleep
 
 with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     root = Path(temp_dir)
@@ -287,4 +391,4 @@ with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:
     except AllKeysExhausted:
         pass
 
-print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, per-cut visual grounding, correction-time provider-failure propagation, malformed-provider fallback, bounded fallback, and secure key-failover semantics")
+print("PASS: Automatic Mode enforces chronological native evidence retrieval, non-JSON correction retry, per-cut visual grounding, correction-time provider-failure propagation, bounded temporary-provider retries, malformed-provider fallback, bounded fallback, and secure key-failover semantics")

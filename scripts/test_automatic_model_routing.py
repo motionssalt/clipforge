@@ -9,7 +9,8 @@ RUNNER = (ROOT / "scripts" / "automatic_analysis.py").read_text(encoding="utf-8"
 WORKFLOW = (ROOT / ".github" / "workflows" / "stage-a.yml").read_text(encoding="utf-8")
 
 assert 'DEFAULT_PRIMARY_MODEL = "gemini-3.7-flash"' in RUNNER
-assert 'DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")' in RUNNER
+assert 'DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash",)' in RUNNER
+assert '"gemini-2.5-flash"' not in RUNNER, "retired Gemini 2.5 Flash fallback must not be routed"
 assert "claude-opus" not in RUNNER.lower()
 assert "anthropic/claude" not in RUNNER.lower()
 assert "from google import genai" in RUNNER

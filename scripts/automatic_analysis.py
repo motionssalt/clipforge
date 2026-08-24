@@ -32,17 +32,27 @@ from production_plan_contract import parse_and_validate_production_plan
 
 
 DEFAULT_PRIMARY_MODEL = "gemini-3.7-flash"
-DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash", "gemini-2.5-flash")
+# Gemini explicitly reported in the supplied production run that 2.5 Flash is
+# retired for new users. Keep the supported 3.6 Flash fallback only; routing to
+# a known-retired model turns a recoverable capacity error into a terminal 404.
+DEFAULT_FALLBACK_MODELS = ("gemini-3.6-flash",)
 MAX_TOOL_TURNS = 20
 MAX_CORRECTION_RETRIES = 1
 # Briefly pause before rotating after a transient per-key quota/rate failure.
 # The cap keeps the bounded workflow comfortably within its overall time budget.
 RATE_LIMIT_ROTATION_BACKOFF_BASE_S = 1.0
 RATE_LIMIT_ROTATION_BACKOFF_CAP_S = 4.0
+# Transient upstream capacity/network failures are not key failures. Retry the
+# exact request a small, bounded number of times before falling back to a model.
+# This avoids failing a long Stage A run merely because Gemini briefly returns
+# 503 UNAVAILABLE or an incomplete response during a capacity spike.
+MAX_TRANSIENT_PROVIDER_RETRIES = 2
+TRANSIENT_PROVIDER_RETRY_BACKOFF_BASE_S = 2.0
+TRANSIENT_PROVIDER_RETRY_BACKOFF_CAP_S = 8.0
 MAX_SEED_BYTES = 1024 * 1024
 MAX_JSON_ARTIFACT_BYTES = 5 * 1024 * 1024
-# Keep this in lockstep with generate_voiceover.py's configured Gemini TTS
-# style prompt: 188 WPM is 3.133 spoken words per second.
+# Keep this in lockstep with generate_voiceover.py's configured Edge TTS
+# pacing: 188 WPM is 3.133 spoken words per second.
 NARRATION_WORDS_PER_MINUTE = 188.0
 MIN_NARRATION_DURATION_COVERAGE = 0.90
 MAX_ZIP_ENTRIES = 800
@@ -152,6 +162,23 @@ def provider_error_category(status: int | None, error: Exception | None = None) 
 
 def key_failure_should_rotate(status: int | None, category: str) -> bool:
     return status in (401, 403, 429) or category in {"authentication", "rate_or_quota"}
+
+
+def provider_error_should_retry(category: str) -> bool:
+    """Return whether retrying the same request can resolve this class safely.
+
+    Quota and authentication failures are deliberately excluded: waiting a few
+    seconds does not restore a depleted project quota or a bad credential.
+    """
+    return category in {"provider_server", "network", "provider_malformed"}
+
+
+def transient_provider_retry_delay(retry_number: int) -> float:
+    """Return a bounded exponential delay for one-based transient retries."""
+    return min(
+        TRANSIENT_PROVIDER_RETRY_BACKOFF_BASE_S * (2 ** (retry_number - 1)),
+        TRANSIENT_PROVIDER_RETRY_BACKOFF_CAP_S,
+    )
 
 
 def safe_provider_error_summary(error: Exception, status: int | None, category: str) -> str:
@@ -445,39 +472,55 @@ class GeminiGateway:
         while len(attempted) < len(self.keys):
             index = self.current_key_index
             attempted.add(index)
-            client = self.client_factory(self.keys[index].raw)
-            try:
-                # Keep a strong client reference until the SDK completes the request.
-                # Chaining ``Client(...).models.generate_content(...)`` permits the
-                # temporary client to be finalized and closed before its models proxy
-                # actually sends the request.
-                response = client.models.generate_content(
-                    model=model, contents=history, config=self._config(tools_enabled)
-                )
-                turn = self._native_turn(response)
-                self._record_usage(turn.usage)
-                return turn
-            except ProviderRequestError:
-                raise
-            except Exception as error:
-                status = provider_error_status(error)
-                category = provider_error_category(status, error)
-                safe_log("Gemini key index " + str(index) + " failed with " + category + " (status=" + str(status or "none") + ").")
-                safe_log(safe_provider_error_summary(error, status, category))
-                last_error = ProviderRequestError(status, category)
-                if not key_failure_should_rotate(status, category):
-                    raise last_error from error
-                self.current_key_index = (index + 1) % len(self.keys)
-                self.key_rotations += 1
-                # A brief bounded pause can let a transient per-key rate spike
-                # clear. Skip it when no other key remains to try.
-                if category == "rate_or_quota" and len(attempted) < len(self.keys):
-                    delay = min(
-                        RATE_LIMIT_ROTATION_BACKOFF_BASE_S * (2 ** (len(attempted) - 1)),
-                        RATE_LIMIT_ROTATION_BACKOFF_CAP_S,
+            for retry_number in range(MAX_TRANSIENT_PROVIDER_RETRIES + 1):
+                client = self.client_factory(self.keys[index].raw)
+                try:
+                    # Keep a strong client reference until the SDK completes the request.
+                    # Chaining ``Client(...).models.generate_content(...)`` permits the
+                    # temporary client to be finalized and closed before its models proxy
+                    # actually sends the request.
+                    response = client.models.generate_content(
+                        model=model, contents=history, config=self._config(tools_enabled)
                     )
-                    safe_log("Gemini rate/quota rotation backoff " + f"{delay:.1f}s before the next configured key.")
+                    turn = self._native_turn(response)
+                    self._record_usage(turn.usage)
+                    return turn
+                except ProviderRequestError as error:
+                    status = error.status
+                    category = error.category
+                    original_error: Exception = error
+                except Exception as error:
+                    status = provider_error_status(error)
+                    category = provider_error_category(status, error)
+                    original_error = error
+
+                safe_log("Gemini key index " + str(index) + " failed with " + category + " (status=" + str(status or "none") + ").")
+                safe_log(safe_provider_error_summary(original_error, status, category))
+                last_error = ProviderRequestError(status, category)
+                if provider_error_should_retry(category) and retry_number < MAX_TRANSIENT_PROVIDER_RETRIES:
+                    retry_count = retry_number + 1
+                    delay = transient_provider_retry_delay(retry_count)
+                    safe_log(
+                        "Gemini temporary provider retry " + str(retry_count) + "/" + str(MAX_TRANSIENT_PROVIDER_RETRIES)
+                        + " for key index " + str(index) + " after " + f"{delay:.1f}s."
+                    )
                     time.sleep(delay)
+                    continue
+                break
+
+            if not key_failure_should_rotate(status, category):
+                raise last_error from original_error
+            self.current_key_index = (index + 1) % len(self.keys)
+            self.key_rotations += 1
+            # A brief bounded pause can let a transient per-key rate spike
+            # clear. Skip it when no other key remains to try.
+            if category == "rate_or_quota" and len(attempted) < len(self.keys):
+                delay = min(
+                    RATE_LIMIT_ROTATION_BACKOFF_BASE_S * (2 ** (len(attempted) - 1)),
+                    RATE_LIMIT_ROTATION_BACKOFF_CAP_S,
+                )
+                safe_log("Gemini rate/quota rotation backoff " + f"{delay:.1f}s before the next configured key.")
+                time.sleep(delay)
         exhausted_category = last_error.category if last_error is not None else "rate_or_quota"
         raise AllKeysExhausted(
             "All configured Gemini API keys failed with authentication or quota errors.",

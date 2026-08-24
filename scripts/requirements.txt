@@ -28,12 +28,11 @@ numpy>=1.24,<3
 
 # --- HTTP --------------------------------------------------------------------
 # `requests` is used by the drive downloader and by a couple of GitHub
-# helpers on the runner side. The Gemini TTS voiceover script deliberately
-# uses only urllib from the stdlib so it never depends on this being
-# importable, but keeping requests here matches the rest of the pipeline.
+# helpers on the runner side. Edge TTS uses its own supported client library,
+# while keeping requests here matches the rest of the pipeline.
 requests>=2.32,<3
 
-# --- Gemini API (native analysis + TTS) --------------------------------------
+# --- Gemini API (native Automatic Mode analysis) -----------------------------
 #
 # Automatic Mode uses the official Google Gen AI SDK for direct Gemini
 # Developer API function calling and inline image input. API keys remain

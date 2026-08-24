@@ -51,7 +51,7 @@
    * deletes the name used by future Stage B renders. */
   var WATERMARK_JSON_PATH = 'branding/creator_watermark.json';
 
-  /* Gemini TTS keys.
+  /* Gemini Automatic Mode API keys.
    *
    * The RAW keys live only in the GitHub Actions repository secret
    * `GEMINI_API_KEYS`, written from this browser using the Actions Secrets
@@ -132,7 +132,6 @@
     'Verify ffmpeg installation':                                           'Verifying ffmpeg',
     'Install Python deps':                                                  'Installing Python dependencies',
     'Verify onnxruntime + faster-whisper VAD stack':                        'Verifying whisper/onnxruntime stack',
-    'Restore Chatterbox model cache':                                       'Restoring TTS model cache',
 
     // ---- Stage A pipeline ----
     'Write initial status (stage_a_running)':                               'Publishing initial status',
@@ -168,7 +167,7 @@
     'Resolve production.json':                                              'Resolving production.json',
     'Resolve optional background music':                                    'Resolving background music',
     'Load creator watermark (branding/creator_watermark.json)':             'Loading creator watermark',
-    'Generate voiceover (Chatterbox TTS, one clip per cut)':                'Generating voiceover',
+    'Generate voiceover (Edge TTS, one clip per cut)':                      'Generating voiceover',
     'Cut, reconcile timing, mix voiceover (+music), merge to ONE MP4':      'Cutting, mixing, merging video',
     'Quality enhancement (denoise + color grade + sharpen)':                'Enhancing video quality',
     'Burn cinematic subtitles into the final video':                         'Burning in subtitles',
@@ -247,7 +246,7 @@
     watermark: null,       // parsed creator_watermark.json, or null when none is saved
     watermarkSha: null,    // blob sha of creator_watermark.json (needed to update it)
 
-    /* Gemini TTS keys. `geminiKeys` holds the plaintext keys IN MEMORY ONLY
+    /* Gemini Automatic Mode keys. `geminiKeys` holds the plaintext keys IN MEMORY ONLY
      * for the current browser session so that adding a second key does not
      * require re-typing every prior key. It is populated by keys the user
      * types in this session, never from any GitHub response (GitHub never
@@ -935,7 +934,7 @@
     refreshWatermarkValidity();
   }
 
-  /* -------------------------------------------------------- Gemini TTS keys */
+  /* ---------------------------------------------- Gemini Automatic Mode keys */
 
   /* SECURITY MODEL
    *   - Raw keys are transmitted only:
@@ -1169,7 +1168,7 @@
       state.geminiKeyMeta = metaEntries;
       el['gemini-key-input'].value = '';
       renderGeminiKeys();
-      setMsg(el['gemini-key-msg'], 'Key added. Stage B will use it on the next voiceover run.', 'ok');
+      setMsg(el['gemini-key-msg'], 'Key added. Automatic Mode will use it on the next analysis run.', 'ok');
     } catch (err) {
       setMsg(el['gemini-key-msg'], 'Add failed: ' + err.message, 'bad');
       handleGlobalError(err, 'gemini-key');

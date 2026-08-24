@@ -1037,7 +1037,7 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
 }}
 
 NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
-  Gemini TTS is currently configured at about 188 words per minute (3.133
+  Edge TTS is currently configured for about 188 words per minute (3.133
   spoken words per second). Before returning JSON, calculate EACH cut's
   voiceover word budget as `(end_seconds - start_seconds) * (188 / 60)`.
   Write enough final spoken words to cover that full budget. A cut MUST NOT

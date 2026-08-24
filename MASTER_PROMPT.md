@@ -10,7 +10,7 @@ That step no longer exists. The analysis agent that writes
 the FINAL, ready-to-speak voiceover line for each cut directly
 (`voiceover_text`), absorbing everything this prompt used to do
 (script cleaning, continuity bridging, per-cut chunking). Stage B then
-synthesizes that text with Chatterbox TTS (`scripts/generate_voiceover.py`)
+synthesizes that text with Edge TTS (`scripts/generate_voiceover.py`)
 and mixes it into the video automatically — no external agent, no manual
 copy-paste, no `output.txt`.
 
