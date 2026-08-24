@@ -52,9 +52,53 @@ test('task labels are stable and isolated per Telegram chat', async () => {
 
 test('conversation state never adopts another chat state', async () => {
   const workerEnv = env();
-  await putState(workerEnv, 1, { flow: 'manual_source', pending: { mode: 'manual' }, currentTask: 'manual-1' });
+  await putState(workerEnv, 1, { flow: 'manual_source', pending: { mode: 'manual' }, currentTask: 'manual-1', activeViewId: 77 });
   assert.equal((await getState(workerEnv, 1)).currentTask, 'manual-1');
+  assert.equal((await getState(workerEnv, 1)).activeViewId, 77);
   assert.equal((await getState(workerEnv, 2)).currentTask, null);
+  assert.equal((await getState(workerEnv, 2)).activeViewId, null);
+});
+
+test('interactive views edit the chat-scoped active message before creating a new one', async () => {
+  const workerEnv = { ...env(), TELEGRAM_BOT_TOKEN: 'test-token' };
+  await putState(workerEnv, 19, { activeViewId: 84 });
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 84 } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const result = await __test.renderInteractiveView(workerEnv, 19, '<b>Updated</b>', { replyMarkup: __test.mainMenu() });
+    assert.equal(result.edited, true);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /\/editMessageText$/);
+    assert.equal(calls[0].body.message_id, 84);
+    assert.equal(calls[0].body.chat_id, 19);
+    assert.equal(calls[0].body.text, '<b>Updated</b>');
+    assert.equal(calls[0].body.reply_markup.inline_keyboard.length > 0, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('interactive views safely create a new view only when no editable message exists', async () => {
+  const workerEnv = { ...env(), TELEGRAM_BOT_TOKEN: 'test-token' };
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 101 } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const result = await __test.renderInteractiveView(workerEnv, 20, 'First control view');
+    assert.equal(result.message_id, 101);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /\/sendMessage$/);
+    assert.equal((await getState(workerEnv, 20)).activeViewId, 101);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('health is public but webhook updates require the configured Telegram secret', async () => {

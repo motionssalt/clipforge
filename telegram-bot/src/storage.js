@@ -9,7 +9,7 @@ function key(chatId, suffix) {
 
 export async function getState(env, chatId) {
   const raw = await env.CLIPFORGE_BOT_KV.get(key(chatId, 'state'));
-  if (!raw) return { version: 1, flow: null, pending: {}, currentTask: null };
+  if (!raw) return { version: 1, flow: null, pending: {}, currentTask: null, activeViewId: null };
   try {
     const state = JSON.parse(raw);
     if (!state || state.version !== 1 || typeof state !== 'object') throw new Error('bad state');
@@ -17,10 +17,11 @@ export async function getState(env, chatId) {
       version: 1,
       flow: typeof state.flow === 'string' ? state.flow : null,
       pending: state.pending && typeof state.pending === 'object' ? state.pending : {},
-      currentTask: typeof state.currentTask === 'string' ? state.currentTask : null
+      currentTask: typeof state.currentTask === 'string' ? state.currentTask : null,
+      activeViewId: Number.isInteger(Number(state.activeViewId)) && Number(state.activeViewId) > 0 ? Number(state.activeViewId) : null
     };
   } catch {
-    return { version: 1, flow: null, pending: {}, currentTask: null };
+    return { version: 1, flow: null, pending: {}, currentTask: null, activeViewId: null };
   }
 }
 
@@ -29,7 +30,8 @@ export async function putState(env, chatId, state) {
     version: 1,
     flow: state.flow || null,
     pending: state.pending || {},
-    currentTask: state.currentTask || null
+    currentTask: state.currentTask || null,
+    activeViewId: Number.isInteger(Number(state.activeViewId)) && Number(state.activeViewId) > 0 ? Number(state.activeViewId) : null
   }), { expirationTtl: STATE_TTL_SECONDS });
 }
 

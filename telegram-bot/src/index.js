@@ -216,30 +216,54 @@ function commandOf(text) {
 async function requireCredentials(env, chatId) {
   const credentials = await getCredentials(env, chatId);
   if (!credentials || !credentials.githubPat || !credentials.repo) {
-    await sendMessage(env, chatId, 'Set up your private GitHub clone first. Send <b>/start</b> and choose <b>Create private Shadow Clone</b> or <b>Connect existing clone</b>.');
+    await renderInteractiveView(env, chatId, 'Set up your private GitHub clone first. Send <b>/start</b> and choose <b>Create private Shadow Clone</b> or <b>Connect existing clone</b>.', { replyMarkup: cloneOnboardingMenu() });
     return null;
   }
   return credentials;
 }
 
-async function showHome(env, chatId) {
+async function renderInteractiveView(env, chatId, text, options = {}, messageId = null) {
+  const state = await getState(env, chatId);
+  const targetId = Number(messageId || state.activeViewId || 0);
+  if (targetId > 0) {
+    try {
+      await editMessage(env, chatId, targetId, text, options);
+      state.activeViewId = targetId;
+      await putState(env, chatId, state);
+      return { message_id: targetId, edited: true };
+    } catch (error) {
+      if (/message is not modified/i.test(String(error && error.message || ''))) return { message_id: targetId, edited: true };
+    }
+  }
+  const sent = await sendMessage(env, chatId, text, options);
+  state.activeViewId = Number(sent && sent.message_id) || null;
+  await putState(env, chatId, state);
+  return sent;
+}
+
+function callbackMessageId(callback) {
+  const value = callback && callback.message && callback.message.message_id;
+  return Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
+}
+
+async function showHome(env, chatId, messageId = null) {
   const credentials = await getCredentials(env, chatId);
   const configured = credentials && credentials.githubPat && credentials.repo;
   const existing = await readExistingSettings(credentials);
   const gemini = credentials && credentials.geminiKeys && credentials.geminiKeys.length;
   if (!configured) {
-    await sendMessage(env, chatId,
+    await renderInteractiveView(env, chatId,
       '<b>ClipForge Telegram operator</b>\n\nThis is one shared bot. Your private Telegram chat operates only the GitHub clone connected to your chat. Create your own private Shadow Clone, or connect a clone you already have.',
-      { replyMarkup: cloneOnboardingMenu() });
+      { replyMarkup: cloneOnboardingMenu() }, messageId);
     return;
   }
   const state = await getState(env, chatId);
   const pendingNotice = hasResumablePendingTask(state)
     ? `\n\n<b>Pending task setup:</b> the source is staged but Stage A has not been dispatched. Resume it to choose focus, duration, and music.`
     : '';
-  await sendMessage(env, chatId,
+  await renderInteractiveView(env, chatId,
     `<b>ClipForge Telegram operator</b>\n\nConnected to <code>${escapeHtml(credentials.repo)}</code>. This shared bot keeps tasks and credentials isolated to this chat.\n${existingGeminiLabel(gemini ? credentials.geminiKeys : [], existing.geminiMeta)}.${pendingNotice}`,
-    { replyMarkup: homeMenu(state) });
+    { replyMarkup: homeMenu(state) }, messageId);
 }
 
 async function readExistingSettings(credentials) {
@@ -263,7 +287,7 @@ function existingGeminiLabel(localKeys, metadata) {
   return 'Gemini keys: not configured';
 }
 
-async function showSettings(env, chatId) {
+async function showSettings(env, chatId, messageId = null) {
   const credentials = await getCredentials(env, chatId);
   const existing = await readExistingSettings(credentials);
   const zernio = credentials && credentials.repo ? await loadZernioConfig(credentials).catch(() => null) : null;
@@ -276,7 +300,7 @@ async function showSettings(env, chatId) {
   lines.push(`Music default: ${existing.musicDefault && existing.musicDefault.library_track_path ? escapeHtml(String(existing.musicDefault.library_track_path).replace(/^audio-library\//, '')) : 'not set'}`);
   if (zernio) lines.push(`Zernio: ${zernio.secretConfigured ? zernio.settings.enabled ? zernio.settings.auto_publish ? `enabled · automatic ${zernio.settings.automatic_mode === 'publish_now' ? 'publish now' : 'smart schedule'}` : 'enabled · automatic off' : 'controls disabled' : 'API key not configured'}`);
   lines.push('Existing Gemini and Zernio secrets remain opaque: the bot can use them but will never display or copy raw values.');
-  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: settingsMenu() });
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: settingsMenu() }, messageId);
 }
 
 async function loadZernioConfig(credentials) {
@@ -315,7 +339,7 @@ function zernioScheduleMenu(settings) {
   ]);
 }
 
-async function showZernioSettings(env, chatId) {
+async function showZernioSettings(env, chatId, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const config = await loadZernioConfig(credentials);
@@ -331,10 +355,10 @@ async function showZernioSettings(env, chatId) {
   lines.push(`Smart schedule: ${escapeHtml(settings.smart_schedule.timezone)} · every ${settings.smart_schedule.interval_days} day(s) at ${settings.smart_schedule.preferred_time} · queue ${settings.smart_schedule.queue_depth}`);
   if (settings.smart_schedule.start_mode === 'custom') lines.push(`First slot: ${escapeHtml(settings.smart_schedule.custom_start || 'missing')}`);
   lines.push('The API key is encrypted into <code>ZERNIO_API_KEY</code>, never committed or displayed. Preferences and account snapshots stay inside this clone.');
-  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: zernioSettingsMenu(config) });
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: zernioSettingsMenu(config) }, messageId);
 }
 
-async function showZernioTargets(env, chatId) {
+async function showZernioTargets(env, chatId, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const config = await loadZernioConfig(credentials);
@@ -351,7 +375,7 @@ async function showZernioTargets(env, chatId) {
   }
   if (!rows.length) rows.push([{ text: 'No saved accounts — refresh first', callback_data: 'zernio:refresh' }]);
   rows.push([{ text: 'Refresh accounts', callback_data: 'zernio:refresh' }, { text: 'Back to Zernio settings', callback_data: 'set:zernio' }]);
-  await sendMessage(env, chatId, '<b>Zernio target accounts</b>\n\nSelect active TikTok and YouTube accounts. Changes save immediately. Unavailable, disabled, or reconnect-required accounts cannot be selected.', { replyMarkup: buttons(rows) });
+  await renderInteractiveView(env, chatId, '<b>Zernio target accounts</b>\n\nSelect active TikTok and YouTube accounts. Changes save immediately. Unavailable, disabled, or reconnect-required accounts cannot be selected.', { replyMarkup: buttons(rows) }, messageId);
 }
 
 async function updateZernioSetting(env, chatId, mutate) {
@@ -364,13 +388,13 @@ async function updateZernioSetting(env, chatId, mutate) {
   return { credentials, config: { ...config, settings: saved } };
 }
 
-async function refreshZernioAccounts(env, chatId) {
+async function refreshZernioAccounts(env, chatId, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const configured = await actionsSecretExists(credentials, credentials.repo, ZERNIO_SECRET_NAME);
   if (!configured) throw new Error('Save a Zernio API key before refreshing accounts.');
   await dispatchWorkflow(credentials, credentials.repo, ZERNIO_WORKFLOW, { action: 'discover' });
-  await sendMessage(env, chatId, 'Account refresh was dispatched. Zernio will save the active TikTok and YouTube snapshot to this clone. Reopen Zernio settings after the workflow finishes.');
+  await renderInteractiveView(env, chatId, 'Account refresh was dispatched. Zernio will save the active TikTok and YouTube snapshot to this clone. Use Refresh accounts again after the workflow finishes.', { replyMarkup: buttons([[{ text: 'Refresh accounts', callback_data: 'zernio:refresh' }, { text: 'Back to Zernio settings', callback_data: 'set:zernio' }]]) }, messageId);
 }
 
 function normalizeFocus(value) {
@@ -413,11 +437,11 @@ function taskButtons(label, status) {
   return buttons(rows);
 }
 
-async function listTasks(env, chatId, completedOnly = false) {
+async function listTasks(env, chatId, completedOnly = false, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const ids = await listJobIds(credentials, credentials.repo);
-  if (!ids.length) { await sendMessage(env, chatId, 'No ClipForge tasks exist in this clone yet.'); return; }
+  if (!ids.length) { await renderInteractiveView(env, chatId, 'No ClipForge tasks exist in this clone yet.', { replyMarkup: mainMenu() }, messageId); return; }
   const entries = [];
   for (const jobId of ids) {
     const status = await readStatus(credentials, credentials.repo, jobId);
@@ -432,21 +456,21 @@ async function listTasks(env, chatId, completedOnly = false) {
     entries.push({ label, jobId, status });
     if (entries.length >= MAX_TASKS) break;
   }
-  if (!entries.length) { await sendMessage(env, chatId, completedOnly ? 'No completed tasks were found.' : 'No dispatched tasks were found.'); return; }
+  if (!entries.length) { await renderInteractiveView(env, chatId, completedOnly ? 'No completed tasks were found.' : 'No dispatched tasks were found.', { replyMarkup: mainMenu() }, messageId); return; }
   const text = entries.map(({ label, jobId, status }) => `<b>${label}</b> · ${escapeHtml(stageLabel(status ? status.stage : 'starting'))}\n<code>${escapeHtml(jobId)}</code>`).join('\n\n');
   const rows = entries.map(({ label }) => [{ text: `Task ${label}`, callback_data: completedOnly ? `done:${label}` : `status:${label}` }]);
-  await sendMessage(env, chatId, `<b>${completedOnly ? 'Completed tasks' : 'Tasks'}</b>\n\n${text}`, { replyMarkup: buttons(rows) });
+  await renderInteractiveView(env, chatId, `<b>${completedOnly ? 'Completed tasks' : 'Tasks'}</b>\n\n${text}`, { replyMarkup: buttons(rows) }, messageId);
 }
 
-async function showTaskStatus(env, chatId, label) {
+async function showTaskStatus(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
-  if (!credentials || !jobId) { if (!jobId) await sendMessage(env, chatId, 'That task label is no longer available. Use /tasks to refresh it.'); return; }
+  if (!credentials || !jobId) { if (!jobId) await renderInteractiveView(env, chatId, 'That task label is no longer available. Use /tasks to refresh it.', { replyMarkup: mainMenu() }, messageId); return; }
   const status = await readStatus(credentials, credentials.repo, jobId);
   const state = await getState(env, chatId);
   state.currentTask = jobId;
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, formatStatus(label, jobId, status), { replyMarkup: taskButtons(label, status) });
+  await renderInteractiveView(env, chatId, formatStatus(label, jobId, status), { replyMarkup: taskButtons(label, status) }, messageId);
 }
 
 function zernioPostId(post) {
@@ -466,7 +490,7 @@ function zernioRequestId(jobId, publishing) {
   return `clipforge-${jobId}-${Date.now().toString(36)}`;
 }
 
-async function showZernioPublishMenu(env, chatId, label) {
+async function showZernioPublishMenu(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
@@ -498,10 +522,10 @@ async function showZernioPublishMenu(env, chatId, label) {
     }
   }
   rows.push([{ text: 'Zernio settings', callback_data: 'set:zernio' }, { text: 'Back to completed task', callback_data: `done:${label}` }]);
-  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: buttons(rows) });
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: buttons(rows) }, messageId);
 }
 
-async function dispatchZernioPublish(env, chatId, label, mode, scheduledFor = '') {
+async function dispatchZernioPublish(env, chatId, label, mode, scheduledFor = '', messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
@@ -517,10 +541,10 @@ async function dispatchZernioPublish(env, chatId, label, mode, scheduledFor = ''
     action: 'publish', job_id: jobId, mode, scheduled_for: scheduledFor, timezone: config.settings.smart_schedule.timezone,
     targets_json: JSON.stringify(targets), request_id: zernioRequestId(jobId, status.publishing)
   });
-  await sendMessage(env, chatId, `Zernio ${mode === 'publish_now' ? 'publish-now' : mode === 'smart_schedule' ? 'smart-schedule' : 'scheduled'} request dispatched for task <b>${escapeHtml(label)}</b>. Stage B remains complete while Zernio processes the request.`);
+  await renderInteractiveView(env, chatId, `Zernio ${mode === 'publish_now' ? 'publish-now' : mode === 'smart_schedule' ? 'smart-schedule' : 'scheduled'} request dispatched for task <b>${escapeHtml(label)}</b>. Stage B remains complete while Zernio processes the request.`, { replyMarkup: buttons([[{ text: 'Refresh completed task', callback_data: `done:${label}` }]]) }, messageId);
 }
 
-async function dispatchZernioPostAction(env, chatId, label, postId, action, mode = '', scheduledFor = '') {
+async function dispatchZernioPostAction(env, chatId, label, postId, action, mode = '', scheduledFor = '', messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
@@ -529,39 +553,39 @@ async function dispatchZernioPostAction(env, chatId, label, postId, action, mode
   if (!config.secretConfigured) throw new Error('Save a Zernio API key in settings before managing posts.');
   if (action === 'update' && mode === 'manual_schedule' && !validZernioDateTime(scheduledFor)) throw new Error('Send a local time in YYYY-MM-DDTHH:MM format.');
   await dispatchWorkflow(credentials, credentials.repo, ZERNIO_WORKFLOW, { action, job_id: jobId, post_id: postId, mode, scheduled_for: scheduledFor, timezone: config.settings.smart_schedule.timezone });
-  await sendMessage(env, chatId, `Zernio ${action} request dispatched for task <b>${escapeHtml(label)}</b>. Refresh the completed task after the workflow finishes.`);
+  await renderInteractiveView(env, chatId, `Zernio ${action} request dispatched for task <b>${escapeHtml(label)}</b>. Refresh the completed task after the workflow finishes.`, { replyMarkup: buttons([[{ text: 'Refresh completed task', callback_data: `done:${label}` }]]) }, messageId);
 }
 
-async function showCompleted(env, chatId, label) {
+async function showCompleted(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
   const status = await readStatus(credentials, credentials.repo, jobId);
-  if (!status || status.stage !== 'complete') { await sendMessage(env, chatId, 'That task is not complete yet.'); return; }
+  if (!status || status.stage !== 'complete') { await renderInteractiveView(env, chatId, 'That task is not complete yet.', { replyMarkup: mainMenu() }, messageId); return; }
   const assets = status.assets || {};
   const lines = [`<b>Task ${escapeHtml(label)} is complete.</b>`, `<code>${escapeHtml(jobId)}</code>`];
   if (assets.final_mp4) lines.push(`<a href="${escapeHtml(assets.final_mp4)}">Download final.mp4</a>`);
   if (assets.final_zip) lines.push(`<a href="${escapeHtml(assets.final_zip)}">Download final ZIP</a>`);
   if (!assets.final_mp4 && !assets.final_zip) lines.push('The completion status has no final asset URL. Open the release from /status.');
   if (status.publishing) lines.push(zernioPublishingSummary(status.publishing));
-  await sendMessage(env, chatId, lines.join('\n'), { replyMarkup: buttons([[{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }]]) });
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: buttons([[{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }, { text: 'Refresh', callback_data: `done:${label}` }]]) }, messageId);
 }
 
-async function resumePendingTask(env, chatId) {
+async function resumePendingTask(env, chatId, messageId = null) {
   const state = await getState(env, chatId);
-  if (!hasResumablePendingTask(state)) { await sendMessage(env, chatId, 'There is no staged task setup to resume.'); return; }
-  if (state.flow.endsWith('_focus')) return sendMessage(env, chatId, 'Resume task setup: send an optional editorial focus, or send <code>-</code> to consider the whole video.');
-  if (state.flow.endsWith('_duration')) return sendMessage(env, chatId, 'Resume task setup: choose the target output length.', { replyMarkup: durationMenu() });
-  return sendMessage(env, chatId, 'Resume task setup: choose optional background music.', { replyMarkup: musicMenu() });
+  if (!hasResumablePendingTask(state)) { await renderInteractiveView(env, chatId, 'There is no staged task setup to resume.', { replyMarkup: mainMenu() }, messageId); return; }
+  if (state.flow.endsWith('_focus')) return renderInteractiveView(env, chatId, 'Resume task setup: send an optional editorial focus, or send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  if (state.flow.endsWith('_duration')) return renderInteractiveView(env, chatId, 'Resume task setup: choose the target output length.', { replyMarkup: durationMenu() }, messageId);
+  return renderInteractiveView(env, chatId, 'Resume task setup: choose optional background music.', { replyMarkup: musicMenu() }, messageId);
 }
 
-async function beginTask(env, chatId, mode) {
+async function beginTask(env, chatId, mode, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   if (mode === 'automatic' && !(credentials.geminiKeys || []).length) {
     const metadata = await readGeminiMetadata(credentials, credentials.repo).catch(() => []);
     if (!metadata.length) {
-      await sendMessage(env, chatId, 'Automatic Mode needs at least one Gemini API key. Add it from /settings before starting.');
+      await renderInteractiveView(env, chatId, 'Automatic Mode needs at least one Gemini API key. Add it from /settings before starting.', { replyMarkup: buttons([[{ text: 'Open settings', callback_data: 'menu:settings' }]]) }, messageId);
       return;
     }
   }
@@ -569,10 +593,10 @@ async function beginTask(env, chatId, mode) {
   state.flow = `${mode}_source`;
   state.pending = { mode };
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`);
+  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
 
-async function finishTaskLaunch(env, chatId) {
+async function finishTaskLaunch(env, chatId, messageId = null) {
   const state = await getState(env, chatId);
   const pending = state.pending || {};
   const credentials = await requireCredentials(env, chatId);
@@ -599,23 +623,23 @@ async function finishTaskLaunch(env, chatId) {
   state.pending = {};
   state.currentTask = jobId;
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `Task <b>${label}</b> was dispatched.\n<code>${escapeHtml(jobId)}</code>\nUse /status or the button below for progress.`, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }]]) });
+  await renderInteractiveView(env, chatId, `Task <b>${label}</b> was dispatched.\n<code>${escapeHtml(jobId)}</code>\nUse the button below for progress.`, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }, { text: 'Main menu', callback_data: 'menu:home' }]]) }, messageId);
 }
 
-async function chooseLibrary(env, chatId) {
+async function chooseLibrary(env, chatId, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const tracks = (await listAudioLibrary(credentials, credentials.repo)).slice(0, 10);
-  if (!tracks.length) { await sendMessage(env, chatId, 'No saved audio-library tracks exist in this clone. Choose no music or the saved default.'); return; }
+  if (!tracks.length) { await renderInteractiveView(env, chatId, 'No saved audio-library tracks exist in this clone. Choose no music or the saved default.', { replyMarkup: musicMenu() }, messageId); return; }
   const state = await getState(env, chatId);
   state.pending.musicOptions = tracks;
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, 'Choose a library track for this task.', { replyMarkup: buttons(tracks.map((track, index) => [{ text: telegramButtonText(track.name), callback_data: `music:track:${index}` }])) });
+  await renderInteractiveView(env, chatId, 'Choose a library track for this task.', { replyMarkup: buttons([...tracks.map((track, index) => [{ text: telegramButtonText(track.name), callback_data: `music:track:${index}` }]), [{ text: 'Back to music options', callback_data: 'music:back' }]]) }, messageId);
 }
 
-async function selectMusic(env, chatId, choice) {
+async function selectMusic(env, chatId, choice, messageId = null) {
   const state = await getState(env, chatId);
-  if (!state.pending || !state.pending.mode) { await sendMessage(env, chatId, 'Start a new task with /manual or /automatic first.'); return; }
+  if (!state.pending || !state.pending.mode) { await renderInteractiveView(env, chatId, 'Start a new task with /manual or /automatic first.', { replyMarkup: mainMenu() }, messageId); return; }
   if (choice === 'none') { state.pending.musicRef = ''; state.pending.musicSource = 'none'; }
   else if (choice === 'default') {
     state.pending.musicRef = '';
@@ -641,20 +665,20 @@ async function selectMusic(env, chatId, choice) {
   } else return;
   delete state.pending.musicOptions;
   await putState(env, chatId, state);
-  await finishTaskLaunch(env, chatId);
+  await finishTaskLaunch(env, chatId, messageId);
 }
 
 function buildAgentHandoffPrompt(releaseUrl) {
   return `Open this GitHub Release: ${releaseUrl}\nRead 00_READ_THIS_FIRST.txt first, inspect the release assets and original video, create production.json, and return only that file.`;
 }
 
-async function sendManualAgentPrompt(env, chatId, label) {
+async function sendManualAgentPrompt(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
   const status = await readStatus(credentials, credentials.repo, jobId);
   if (!status || status.stage !== 'awaiting_json_upload') {
-    await sendMessage(env, chatId, 'The agent prompt is available only after a manual Stage A task reaches “Awaiting production plan”.');
+    await renderInteractiveView(env, chatId, 'The agent prompt is available only after a manual Stage A task reaches “Awaiting production plan”.', { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
     return;
   }
   const releaseUrl = status.release_url;
@@ -664,11 +688,12 @@ async function sendManualAgentPrompt(env, chatId, label) {
     { text: 'Open GitHub Release', url: releaseUrl },
     { text: 'Copy agent prompt', copy_text: { text: prompt } }
   ]] };
-  await sendMessage(
+  await renderInteractiveView(
     env,
     chatId,
     `<b>Task ${escapeHtml(label)} agent handoff</b>\n\n${escapeHtml(prompt)}\n\nUse <b>Open GitHub Release</b> to give your agent the complete Stage A files and instructions. Then use <b>Upload production.json</b> here to start Stage B.`,
-    { replyMarkup }
+    { replyMarkup: { inline_keyboard: [...replyMarkup.inline_keyboard, [{ text: 'Upload production.json', callback_data: `plan:${label}` }, { text: 'Back to task', callback_data: `status:${label}` }]] } },
+    messageId
   );
 }
 
@@ -681,14 +706,14 @@ async function sendVoicePreview(env, chatId, voice) {
   await sendAudioBytes(env, chatId, bytes, `${voice}.mp3`, `<b>${escapeHtml(meta.label)}</b> — ${escapeHtml(meta.style)}\nThis is the committed Edge TTS preview for the same narrator available in Settings.`);
 }
 
-async function startPlanFlow(env, chatId, label) {
+async function startPlanFlow(env, chatId, label, messageId = null) {
   const jobId = await getJobIdForLabel(env, chatId, label);
-  if (!jobId) { await sendMessage(env, chatId, 'Use /tasks to refresh task labels.'); return; }
+  if (!jobId) { await renderInteractiveView(env, chatId, 'Use /tasks to refresh task labels.', { replyMarkup: mainMenu() }, messageId); return; }
   const state = await getState(env, chatId);
   state.flow = 'manual_plan';
   state.pending = { jobId, label };
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `Send the production.json document for task <b>${escapeHtml(label)}</b>, or paste the complete JSON as a message. It will be validated before anything is committed.`);
+  await renderInteractiveView(env, chatId, `Send the production.json document for task <b>${escapeHtml(label)}</b>, or paste the complete JSON as a message. It will be validated before anything is committed.`, { replyMarkup: buttons([[{ text: 'Back to task', callback_data: `status:${label}` }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
 
 async function submitPlan(env, chatId, jsonText) {
@@ -699,7 +724,7 @@ async function submitPlan(env, chatId, jsonText) {
   try { document = JSON.parse(jsonText); } catch { throw new Error('The submitted production plan is not valid JSON.'); }
   const errors = validateProductionPlan(document);
   if (errors.length) {
-    await sendMessage(env, chatId, `<b>Production plan not accepted</b>\n${errors.slice(0, 10).map(escapeHtml).join('\n')}`);
+    await renderInteractiveView(env, chatId, `<b>Production plan not accepted</b>\n${errors.slice(0, 10).map(escapeHtml).join('\n')}\n\nCorrect the plan and send it again.`, { replyMarkup: buttons([[{ text: 'Back to task', callback_data: `status:${label}` }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
     return;
   }
   const credentials = await requireCredentials(env, chatId);
@@ -713,7 +738,7 @@ async function submitPlan(env, chatId, jsonText) {
   state.flow = null;
   state.pending = {};
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `Validated production.json and dispatched Stage B for task <b>${escapeHtml(label)}</b>.`);
+  await renderInteractiveView(env, chatId, `Validated production.json and dispatched Stage B for task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }]]) });
 }
 
 async function handleFlowText(env, chatId, text) {
@@ -729,9 +754,9 @@ async function handleFlowText(env, chatId, text) {
     state.flow = creatingClone ? 'settings_shadow_name' : 'settings_github_repo';
     state.pending = {};
     await putState(env, chatId, state);
-    await sendMessage(env, chatId, creatingClone
+    await renderInteractiveView(env, chatId, creatingClone
       ? 'Now send a short name for your new <b>private</b> Shadow Clone, for example <code>my-clipforge</code>.'
-      : 'Now send the clone repository in the exact form <code>owner/repository</code>.');
+      : 'Now send the clone repository in the exact form <code>owner/repository</code>.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) });
     return true;
   }
   if (state.flow === 'settings_github_repo') {
@@ -744,7 +769,7 @@ async function handleFlowText(env, chatId, text) {
     state.flow = null;
     state.pending = {};
     await putState(env, chatId, state);
-    await sendMessage(env, chatId, `GitHub connection saved for <code>${escapeHtml(result.repo)}</code>.`);
+    await renderInteractiveView(env, chatId, `GitHub connection saved for <code>${escapeHtml(result.repo)}</code>.`, { replyMarkup: mainMenu() });
     return true;
   }
   if (state.flow === 'settings_shadow_name') {
@@ -752,13 +777,13 @@ async function handleFlowText(env, chatId, text) {
     const credentials = await getCredentials(env, chatId);
     const pat = credentials && credentials.pendingGithubPat;
     if (!pat) throw new Error('The pending GitHub token expired. Start clone setup again from /start.');
-    await sendMessage(env, chatId, 'Creating your isolated private Shadow Clone. This can take a moment.');
+    await renderInteractiveView(env, chatId, 'Creating your isolated private Shadow Clone. This can take a moment.');
     const result = await createPrivateShadowClone(pat, name);
     await putCredentials(env, chatId, { githubPat: pat, repo: result.repo, geminiKeys: [] });
     state.flow = null;
     state.pending = {};
     await putState(env, chatId, state);
-    await sendMessage(env, chatId, `Private Shadow Clone created: <code>${escapeHtml(result.repo)}</code>\n${result.copiedFiles} shared source files copied. Your tasks, settings, Gemini keys, voice selection, and future job artifacts stay in this clone only.`, { replyMarkup: mainMenu() });
+    await renderInteractiveView(env, chatId, `Private Shadow Clone created: <code>${escapeHtml(result.repo)}</code>\n${result.copiedFiles} shared source files copied. Your tasks, settings, Gemini keys, voice selection, and future job artifacts stay in this clone only.`, { replyMarkup: mainMenu() });
     return true;
   }
   if (state.flow === 'settings_gemini') {
@@ -774,7 +799,7 @@ async function handleFlowText(env, chatId, text) {
     if (!credentials) return true;
     await updateZernioSecret(credentials, credentials.repo, key);
     await clearFlow(env, chatId);
-    await sendMessage(env, chatId, `Zernio API key ${escapeHtml(zernioFingerprint(key))} was encrypted and saved as a GitHub Actions secret.`);
+    await renderInteractiveView(env, chatId, `Zernio API key ${escapeHtml(zernioFingerprint(key))} was encrypted and saved as a GitHub Actions secret.`, { replyMarkup: buttons([[{ text: 'Open Zernio settings', callback_data: 'set:zernio' }]]) });
     return true;
   }
   if (['settings_zernio_timezone', 'settings_zernio_interval', 'settings_zernio_time', 'settings_zernio_depth', 'settings_zernio_custom_start'].includes(state.flow)) {
@@ -799,7 +824,7 @@ async function handleFlowText(env, chatId, text) {
       }
     });
     await clearFlow(env, chatId);
-    await sendMessage(env, chatId, 'Zernio smart-schedule preference saved.', { replyMarkup: zernioScheduleMenu(saved.config.settings) });
+    await renderInteractiveView(env, chatId, 'Zernio smart-schedule preference saved.', { replyMarkup: zernioScheduleMenu(saved.config.settings) });
     return true;
   }
   if (state.flow === 'zernio_manual_schedule' || state.flow === 'zernio_post_schedule') {
@@ -818,28 +843,28 @@ async function handleFlowText(env, chatId, text) {
     if (!credentials) return true;
     await saveWatermark(credentials, credentials.repo, value.toLowerCase() === 'clear' ? '' : value);
     await clearFlow(env, chatId);
-    await sendMessage(env, chatId, value.toLowerCase() === 'clear' ? 'Creator watermark cleared.' : 'Creator watermark saved for future Stage B videos.');
+    await renderInteractiveView(env, chatId, value.toLowerCase() === 'clear' ? 'Creator watermark cleared.' : 'Creator watermark saved for future Stage B videos.', { replyMarkup: buttons([[{ text: 'Back to settings', callback_data: 'menu:settings' }]]) });
     return true;
   }
   if (state.flow === 'manual_source' || state.flow === 'automatic_source') {
     state.pending.source = validateSource(text);
     state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
     await putState(env, chatId, state);
-    await sendMessage(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.');
+    await renderInteractiveView(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) });
     return true;
   }
   if (state.flow === 'manual_focus' || state.flow === 'automatic_focus') {
     state.pending.focus = normalizeFocus(text);
     state.flow = `${state.pending.mode}_duration`;
     await putState(env, chatId, state);
-    await sendMessage(env, chatId, 'Choose the target output length.', { replyMarkup: durationMenu() });
+    await renderInteractiveView(env, chatId, 'Choose the target output length.', { replyMarkup: durationMenu() });
     return true;
   }
   if (state.flow === 'manual_plan') { await submitPlan(env, chatId, text); return true; }
   return false;
 }
 
-async function saveGeminiKey(env, chatId, key, replacingLegacy) {
+async function saveGeminiKey(env, chatId, key, replacingLegacy, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const existing = credentials.geminiKeys || [];
@@ -853,7 +878,7 @@ async function saveGeminiKey(env, chatId, key, replacingLegacy) {
     state.flow = 'settings_gemini_replace_confirm';
     state.pending = {};
     await putState(env, chatId, state);
-    await sendMessage(env, chatId, 'This clone has Gemini key fingerprints from another interface session. GitHub cannot reveal their raw values, so adding this key would replace that secret. Continue only if you want to replace it.', { replyMarkup: buttons([[{ text: 'Replace existing key set', callback_data: 'set:gemini_replace' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+    await renderInteractiveView(env, chatId, 'This clone has Gemini key fingerprints from another interface session. GitHub cannot reveal their raw values, so adding this key would replace that secret. Continue only if you want to replace it.', { replyMarkup: buttons([[{ text: 'Replace existing key set', callback_data: 'set:gemini_replace' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
     return;
   }
   const keys = [...existing, key];
@@ -862,7 +887,7 @@ async function saveGeminiKey(env, chatId, key, replacingLegacy) {
   await writeGeminiMetadata(credentials, credentials.repo, nextMetadata);
   await putCredentials(env, chatId, { ...credentials, geminiKeys: keys, pendingGeminiKey: '' });
   await clearFlow(env, chatId);
-  await sendMessage(env, chatId, `Gemini key ${escapeHtml(fingerprint)} was encrypted and saved to the GitHub Actions secret.`);
+  await renderInteractiveView(env, chatId, `Gemini key ${escapeHtml(fingerprint)} was encrypted and saved to the GitHub Actions secret.`, { replyMarkup: buttons([[{ text: 'Back to settings', callback_data: 'menu:settings' }]]) }, messageId);
 }
 
 async function handleTorrentUpload(env, chatId, document, state) {
@@ -882,7 +907,7 @@ async function handleTorrentUpload(env, chatId, document, state) {
   state.pending.jobId = jobId;
   state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`);
+  await renderInteractiveView(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) });
 }
 
 async function handleDocument(env, chatId, document) {
@@ -891,7 +916,7 @@ async function handleDocument(env, chatId, document) {
     await handleTorrentUpload(env, chatId, document, state);
     return;
   }
-  if (state.flow !== 'manual_plan') { await sendMessage(env, chatId, 'This document was not expected. Start Manual or Automatic Mode first to upload a .torrent file, or choose a task awaiting production.json before uploading a production plan.'); return; }
+  if (state.flow !== 'manual_plan') { await renderInteractiveView(env, chatId, 'This document was not expected. Start Manual or Automatic Mode first to upload a .torrent file, or choose a task awaiting production.json before uploading a production plan.', { replyMarkup: mainMenu() }); return; }
   if (!document || document.file_size > 1024 * 1024) throw new Error('production.json must be 1 MB or smaller.');
   const file = await getTelegramFile(env, document.file_id);
   if (!file || !file.file_path) throw new Error('Telegram did not return the uploaded file.');
@@ -927,8 +952,7 @@ async function showTorrentCandidates(env, chatId, label, pageValue = '0', messag
   }
   const text = `Choose the video file inside this torrent (page ${page + 1} of ${totalPages}). This starts Stage A for the selected file only.`;
   const options = { replyMarkup: buttons(rows) };
-  if (messageId) return editMessage(env, chatId, messageId, text, options);
-  return sendMessage(env, chatId, text, options);
+  return renderInteractiveView(env, chatId, text, options, messageId);
 }
 
 async function showTorrentCandidateDetails(env, chatId, label, indexValue, pageValue = '0', messageId = null) {
@@ -945,12 +969,11 @@ async function showTorrentCandidateDetails(env, chatId, label, indexValue, pageV
   const details = `<b>Torrent video ${index}</b>\n\n<b>Full filename</b>\n<code>${escapeHtml(filename)}</code>\n\n<b>Size</b>\n${escapeHtml(formatBytes(candidate.length))}\n\nTap the numbered filename button when this is the video you want Stage A to process.`;
   const page = Number.isInteger(Number(pageValue)) ? Math.max(0, Number(pageValue)) : 0;
   const detailMarkup = buttons([[{ text: `Select video ${index}`, callback_data: `torrentpick:${label}:${index}` }], [{ text: 'Back to video list', callback_data: `torrentpage:${label}:${page}` }]]);
-  if (details.length <= 3500 && messageId) return editMessage(env, chatId, messageId, details, { replyMarkup: detailMarkup });
-  if (details.length <= 3500) return sendMessage(env, chatId, details, { replyMarkup: detailMarkup });
+  if (details.length <= 3500) return renderInteractiveView(env, chatId, details, { replyMarkup: detailMarkup }, messageId);
   return sendDocumentBytes(env, chatId, new TextEncoder().encode(`Torrent video ${index}\n\nFull filename:\n${filename}\n\nSize: ${formatBytes(candidate.length)}\n`), `torrent-video-${index}-details.txt`, 'Full torrent candidate details');
 }
 
-async function chooseTorrentCandidate(env, chatId, label, indexValue) {
+async function chooseTorrentCandidate(env, chatId, label, indexValue, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   const index = Number(indexValue);
@@ -965,10 +988,10 @@ async function chooseTorrentCandidate(env, chatId, label, indexValue) {
     whisper_model: WHISPER_MODELS.has(inputs.whisper_model) ? inputs.whisper_model : 'base', language: String(inputs.language || 'auto'),
     target_duration_seconds: String(inputs.target_duration_seconds || '120'), focus: String(inputs.focus || ''), automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false'
   });
-  await sendMessage(env, chatId, `Selected torrent video ${index}. Stage A has started for task <b>${escapeHtml(label)}</b>.`);
+  await renderInteractiveView(env, chatId, `Selected torrent video ${index}. Stage A has started for task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
 }
 
-async function restartStageA(env, chatId, label) {
+async function restartStageA(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
@@ -982,24 +1005,24 @@ async function restartStageA(env, chatId, label) {
     whisper_model: WHISPER_MODELS.has(inputs.whisper_model) ? inputs.whisper_model : 'base', language: String(inputs.language || 'auto'),
     target_duration_seconds: String(inputs.target_duration_seconds || '120'), focus: String(inputs.focus || ''), automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false'
   });
-  await sendMessage(env, chatId, `Restarted Stage A for task <b>${escapeHtml(label)}</b>.`);
+  await renderInteractiveView(env, chatId, `Restarted Stage A for task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
 }
 
-async function restartStageB(env, chatId, label) {
+async function restartStageB(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
   const codeRef = await currentBranchSha(credentials, credentials.repo);
   const options = await getTaskOptions(env, chatId, jobId);
   await dispatchWorkflow(credentials, credentials.repo, 'stage-b.yml', { job_id: jobId, production_ref: `path:${PRODUCTION_PATH(jobId)}`, music_ref: options.musicRef || '', code_ref: codeRef });
-  await sendMessage(env, chatId, `Restarted Stage B for task <b>${escapeHtml(label)}</b> using the current default-branch code.`);
+  await renderInteractiveView(env, chatId, `Restarted Stage B for task <b>${escapeHtml(label)}</b> using the current default-branch code.`, { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
 }
 
-async function cancelStageBPrompt(env, chatId, label) {
-  await sendMessage(env, chatId, `Cancel Stage B for task <b>${escapeHtml(label)}</b>? The current GitHub Actions run will be cancelled.`, { replyMarkup: buttons([[{ text: 'Cancel Stage B', callback_data: `cancel:confirm:${label}` }, { text: 'Keep running', callback_data: 'cancel:abort' }]]) });
+async function cancelStageBPrompt(env, chatId, label, messageId = null) {
+  await renderInteractiveView(env, chatId, `Cancel Stage B for task <b>${escapeHtml(label)}</b>? The current GitHub Actions run will be cancelled.`, { replyMarkup: buttons([[{ text: 'Cancel Stage B', callback_data: `cancel:confirm:${label}` }, { text: 'Keep running', callback_data: `status:${label}` }]]) }, messageId);
 }
 
-async function cancelStageB(env, chatId, label) {
+async function cancelStageB(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) return;
@@ -1007,7 +1030,7 @@ async function cancelStageB(env, chatId, label) {
   const runId = status && status.extra && Number(status.extra.workflow_run_id);
   if (!['stage_b_queued', 'stage_b_running'].includes(status && status.stage) || !Number.isFinite(runId) || runId <= 0) throw new Error('This task does not currently expose an active Stage B run to cancel.');
   await cancelWorkflowRun(credentials, credentials.repo, runId);
-  await sendMessage(env, chatId, `Cancellation requested for Stage B task <b>${escapeHtml(label)}</b>.`);
+  await renderInteractiveView(env, chatId, `Cancellation requested for Stage B task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
 }
 
 async function handleCommand(env, chatId, command) {
@@ -1018,7 +1041,7 @@ async function handleCommand(env, chatId, command) {
   if (command === '/done') return listTasks(env, chatId, true);
   if (command === '/manual') return beginTask(env, chatId, 'manual');
   if (command === '/automatic') return beginTask(env, chatId, 'automatic');
-  if (command === '/cancel') { await clearFlow(env, chatId); return sendMessage(env, chatId, 'Current setup or task-input flow cancelled.', { replyMarkup: mainMenu() }); }
+  if (command === '/cancel') { await clearFlow(env, chatId); return renderInteractiveView(env, chatId, 'Current setup or task-input flow cancelled.', { replyMarkup: mainMenu() }); }
 }
 
 async function handleCallback(env, callback) {
@@ -1027,74 +1050,82 @@ async function handleCallback(env, callback) {
   await answerCallback(env, callback.id);
   const [kind, ...rest] = callback.data.split(':');
   const value = rest.join(':');
-  if (kind === 'resume' && value === 'task') return resumePendingTask(env, chatId);
+  const viewId = callbackMessageId(callback);
+  // Always bind the current callback to the exact view the user tapped. This
+  // also makes nested helpers and typed follow-up flows edit that same screen.
+  if (viewId) {
+    const state = await getState(env, chatId);
+    state.activeViewId = viewId;
+    await putState(env, chatId, state);
+  }
+  if (kind === 'resume' && value === 'task') return resumePendingTask(env, chatId, viewId);
   if (kind === 'menu') {
-    if (value === 'home') return showHome(env, chatId);
-    if (value === 'settings') return showSettings(env, chatId);
-    if (value === 'tasks' || value === 'status') return listTasks(env, chatId, false);
-    if (value === 'done') return listTasks(env, chatId, true);
-    if (value === 'manual' || value === 'auto') return beginTask(env, chatId, value === 'auto' ? 'automatic' : 'manual');
+    if (value === 'home') return showHome(env, chatId, viewId);
+    if (value === 'settings') return showSettings(env, chatId, viewId);
+    if (value === 'tasks' || value === 'status') return listTasks(env, chatId, false, viewId);
+    if (value === 'done') return listTasks(env, chatId, true, viewId);
+    if (value === 'manual' || value === 'auto') return beginTask(env, chatId, value === 'auto' ? 'automatic' : 'manual', viewId);
   }
   if (kind === 'set') {
     if (value === 'github') {
-      return sendMessage(env, chatId, 'This shared bot can operate an existing ClipForge clone or create a separate private Shadow Clone for this chat. Choose one option.', { replyMarkup: cloneOnboardingMenu() });
+      return renderInteractiveView(env, chatId, 'This shared bot can operate an existing ClipForge clone or create a separate private Shadow Clone for this chat. Choose one option.', { replyMarkup: cloneOnboardingMenu() }, viewId);
     }
     if (value === 'gemini') {
       const credentials = await requireCredentials(env, chatId);
       if (!credentials) return;
       const metadata = await readGeminiMetadata(credentials, credentials.repo).catch(() => []);
       if (!(credentials.geminiKeys || []).length && metadata.length) {
-        return sendMessage(env, chatId, `This clone already has ${metadata.length} Gemini key${metadata.length === 1 ? '' : 's'} configured by the ClipForge site. Automatic Mode will use that existing GitHub Actions secret. You do not need to add the key again.`, { replyMarkup: buttons([[{ text: 'Replace existing key set', callback_data: 'set:gemini_replace_start' }], [{ text: 'Keep existing settings', callback_data: 'flow:cancel' }]]) });
+        return renderInteractiveView(env, chatId, `This clone already has ${metadata.length} Gemini key${metadata.length === 1 ? '' : 's'} configured by the ClipForge site. Automatic Mode will use that existing GitHub Actions secret. You do not need to add the key again.`, { replyMarkup: buttons([[{ text: 'Replace existing key set', callback_data: 'set:gemini_replace_start' }], [{ text: 'Keep existing settings', callback_data: 'flow:cancel' }]]) }, viewId);
       }
       const state = await getState(env, chatId); state.flow = 'settings_gemini'; state.pending = {}; await putState(env, chatId, state);
-      return sendMessage(env, chatId, 'Send one Gemini API key. It will be encrypted, stored in GitHub Actions as <code>GEMINI_API_KEYS</code>, and never committed to the repository.');
+      return renderInteractiveView(env, chatId, 'Send one Gemini API key. It will be encrypted, stored in GitHub Actions as <code>GEMINI_API_KEYS</code>, and never committed to the repository.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
     if (value === 'gemini_replace_start') {
       const credentials = await requireCredentials(env, chatId);
       if (!credentials) return;
       const state = await getState(env, chatId); state.flow = 'settings_gemini'; state.pending = { replaceExisting: true }; await putState(env, chatId, state);
-      return sendMessage(env, chatId, 'You are about to replace the existing site-managed Gemini key set. Send the replacement Gemini API key. This cannot recover or merge the opaque existing key set.');
+      return renderInteractiveView(env, chatId, 'You are about to replace the existing site-managed Gemini key set. Send the replacement Gemini API key. This cannot recover or merge the opaque existing key set.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
     if (value === 'gemini_replace') {
       const credentials = await requireCredentials(env, chatId);
       if (!credentials || !credentials.pendingGeminiKey) throw new Error('No pending Gemini key was found. Start the Gemini setup flow again.');
-      return saveGeminiKey(env, chatId, credentials.pendingGeminiKey, true);
+      return saveGeminiKey(env, chatId, credentials.pendingGeminiKey, true, viewId);
     }
     if (value === 'voice') {
       const rows = Object.entries(VOICES).map(([id, meta]) => [
         { text: `Use ${meta.label} — ${meta.gender}`, callback_data: `voice:${id}` },
         { text: `Preview ${meta.label}`, callback_data: `preview:${id}` }
       ]);
-      return sendMessage(env, chatId, 'Choose the Edge TTS default narrator for future Stage B jobs, or preview any of the ten committed voice samples first.', { replyMarkup: buttons(rows) });
+      return renderInteractiveView(env, chatId, 'Choose the Edge TTS default narrator for future Stage B jobs, or preview any of the ten committed voice samples first.', { replyMarkup: buttons(rows) }, viewId);
     }
     if (value === 'music_default') {
       const credentials = await requireCredentials(env, chatId);
       if (!credentials) return;
       const existing = await readExistingSettings(credentials);
       const track = existing.musicDefault && existing.musicDefault.library_track_path;
-      return sendMessage(env, chatId, track
+      return renderInteractiveView(env, chatId, track
         ? `The ClipForge site default is <code>${escapeHtml(String(track).replace(/^audio-library\//, ''))}</code>. Automatic Mode uses it when you choose <b>Use saved default</b> during task setup.`
-        : 'No persistent music default is saved in this clone. You can choose no music, use a library track, or set a default from the ClipForge site.');
+        : 'No persistent music default is saved in this clone. You can choose no music, use a library track, or set a default from the ClipForge site.', { replyMarkup: buttons([[{ text: 'Back to settings', callback_data: 'menu:settings' }]]) }, viewId);
     }
     if (value === 'watermark') {
       if (!await requireCredentials(env, chatId)) return;
       const state = await getState(env, chatId); state.flow = 'settings_watermark'; state.pending = {}; await putState(env, chatId, state);
-      return sendMessage(env, chatId, 'Send the creator watermark text (up to 64 characters), or send <code>clear</code> to remove it.');
+      return renderInteractiveView(env, chatId, 'Send the creator watermark text (up to 64 characters), or send <code>clear</code> to remove it.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
-    if (value === 'zernio') return showZernioSettings(env, chatId);
+    if (value === 'zernio') return showZernioSettings(env, chatId, viewId);
     if (value === 'zernio_key') {
       if (!await requireCredentials(env, chatId)) return;
       const state = await getState(env, chatId); state.flow = 'settings_zernio_key'; state.pending = {}; await putState(env, chatId, state);
-      return sendMessage(env, chatId, 'Send the Zernio API key. It will be encrypted into the <code>ZERNIO_API_KEY</code> GitHub Actions secret, never committed, and never shown again.');
+      return renderInteractiveView(env, chatId, 'Send the Zernio API key. It will be encrypted into the <code>ZERNIO_API_KEY</code> GitHub Actions secret, never committed, and never shown again.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
   }
   if (kind === 'zernio') {
-    if (value === 'refresh') return refreshZernioAccounts(env, chatId);
-    if (value === 'targets') return showZernioTargets(env, chatId);
+    if (value === 'refresh') return refreshZernioAccounts(env, chatId, viewId);
+    if (value === 'targets') return showZernioTargets(env, chatId, viewId);
     if (value === 'schedule') {
       const credentials = await requireCredentials(env, chatId); if (!credentials) return;
       const config = await loadZernioConfig(credentials);
-      return sendMessage(env, chatId, '<b>Zernio smart schedule</b>\nSet the account timezone, posting cadence, preferred local time, maximum queue depth, and first-slot policy. Every change saves to this clone.', { replyMarkup: zernioScheduleMenu(config.settings) });
+      return renderInteractiveView(env, chatId, '<b>Zernio smart schedule</b>\nSet the account timezone, posting cadence, preferred local time, maximum queue depth, and first-slot policy. Every change saves to this clone.', { replyMarkup: zernioScheduleMenu(config.settings) }, viewId);
     }
     if (value === 'toggle_enabled' || value === 'toggle_auto' || value === 'mode') {
       const saved = await updateZernioSetting(env, chatId, (settings) => {
@@ -1102,13 +1133,13 @@ async function handleCallback(env, callback) {
         else if (value === 'toggle_auto') settings.auto_publish = !settings.auto_publish;
         else settings.automatic_mode = settings.automatic_mode === 'publish_now' ? 'smart_schedule' : 'publish_now';
       });
-      return sendMessage(env, chatId, 'Zernio publishing preference saved.', { replyMarkup: zernioSettingsMenu(saved.config) });
+      return renderInteractiveView(env, chatId, 'Zernio publishing preference saved.', { replyMarkup: zernioSettingsMenu(saved.config) }, viewId);
     }
-    if (value === 'clear_prompt') return sendMessage(env, chatId, 'Remove the stored <code>ZERNIO_API_KEY</code>? Existing Zernio post records remain, but new requests will fail until another key is saved.', { replyMarkup: buttons([[{ text: 'Remove API key', callback_data: 'zernio:clear_confirm' }, { text: 'Keep API key', callback_data: 'set:zernio' }]]) });
+    if (value === 'clear_prompt') return renderInteractiveView(env, chatId, 'Remove the stored <code>ZERNIO_API_KEY</code>? Existing Zernio post records remain, but new requests will fail until another key is saved.', { replyMarkup: buttons([[{ text: 'Remove API key', callback_data: 'zernio:clear_confirm' }, { text: 'Keep API key', callback_data: 'set:zernio' }]]) }, viewId);
     if (value === 'clear_confirm') {
       const credentials = await requireCredentials(env, chatId); if (!credentials) return;
       await deleteZernioSecret(credentials, credentials.repo);
-      return sendMessage(env, chatId, 'The stored Zernio API key was removed. Publishing preferences and records were not changed.');
+      return renderInteractiveView(env, chatId, 'The stored Zernio API key was removed. Publishing preferences and records were not changed.', { replyMarkup: buttons([[{ text: 'Open Zernio settings', callback_data: 'set:zernio' }]]) }, viewId);
     }
   }
   if (kind === 'ztarget') {
@@ -1121,40 +1152,40 @@ async function handleCallback(env, callback) {
       if (selected.has(accountId)) selected.delete(accountId); else selected.add(accountId);
       settings.target_accounts[platform] = [...selected];
     });
-    return showZernioTargets(env, chatId);
+    return showZernioTargets(env, chatId, viewId);
   }
   if (kind === 'zsch') {
     const credentials = await requireCredentials(env, chatId); if (!credentials) return;
     const config = await loadZernioConfig(credentials);
-    if (value === 'start') return sendMessage(env, chatId, 'Choose when the smart schedule should begin.', { replyMarkup: buttons([[{ text: 'Next available slot', callback_data: 'zsch:startnext' }, { text: 'Custom local date', callback_data: 'zsch:startcustom' }], [{ text: 'Back', callback_data: 'zernio:schedule' }]]) });
+    if (value === 'start') return renderInteractiveView(env, chatId, 'Choose when the smart schedule should begin.', { replyMarkup: buttons([[{ text: 'Next available slot', callback_data: 'zsch:startnext' }, { text: 'Custom local date', callback_data: 'zsch:startcustom' }], [{ text: 'Back', callback_data: 'zernio:schedule' }]]) }, viewId);
     if (value === 'startnext') {
       const saved = await updateZernioSetting(env, chatId, (settings) => { settings.smart_schedule.start_mode = 'next_available'; settings.smart_schedule.custom_start = ''; });
-      return sendMessage(env, chatId, 'Smart scheduling will use the next available slot.', { replyMarkup: zernioScheduleMenu(saved.config.settings) });
+      return renderInteractiveView(env, chatId, 'Smart scheduling will use the next available slot.', { replyMarkup: zernioScheduleMenu(saved.config.settings) }, viewId);
     }
     const field = { timezone: 'settings_zernio_timezone', interval: 'settings_zernio_interval', time: 'settings_zernio_time', depth: 'settings_zernio_depth', startcustom: 'settings_zernio_custom_start' }[value];
     if (!field) return;
     const state = await getState(env, chatId); state.flow = field; state.pending = {}; await putState(env, chatId, state);
     const instruction = value === 'timezone' ? 'Send an IANA timezone, for example <code>Europe/London</code>, <code>America/New_York</code>, or <code>UTC</code>.' : value === 'interval' ? 'Send the smart-schedule cadence in days (1–365).' : value === 'time' ? 'Send the preferred local posting time in <code>HH:MM</code> 24-hour format.' : value === 'depth' ? 'Send the maximum active Zernio queue depth (1–100).' : 'Send the first local smart-schedule slot as <code>YYYY-MM-DDTHH:MM</code>.';
-    return sendMessage(env, chatId, instruction);
+    return renderInteractiveView(env, chatId, instruction, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
   }
   if (kind === 'zpub') {
     const [action, label] = value.split(':');
-    if (action === 'menu') return showZernioPublishMenu(env, chatId, label);
-    if (action === 'now') return dispatchZernioPublish(env, chatId, label, 'publish_now');
-    if (action === 'smart') return dispatchZernioPublish(env, chatId, label, 'smart_schedule');
+    if (action === 'menu') return showZernioPublishMenu(env, chatId, label, viewId);
+    if (action === 'now') return dispatchZernioPublish(env, chatId, label, 'publish_now', '', viewId);
+    if (action === 'smart') return dispatchZernioPublish(env, chatId, label, 'smart_schedule', '', viewId);
     if (action === 'manual') {
       const state = await getState(env, chatId); state.flow = 'zernio_manual_schedule'; state.pending = { label }; await putState(env, chatId, state);
-      return sendMessage(env, chatId, 'Send the local scheduled time as <code>YYYY-MM-DDTHH:MM</code>. The configured Zernio timezone will be used.');
+      return renderInteractiveView(env, chatId, 'Send the local scheduled time as <code>YYYY-MM-DDTHH:MM</code>. The configured Zernio timezone will be used.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
   }
   if (kind === 'zpost') {
     const [action, label, postId] = value.split(':');
-    if (action === 'retry') return dispatchZernioPostAction(env, chatId, label, postId, 'retry');
-    if (action === 'now') return dispatchZernioPostAction(env, chatId, label, postId, 'update', 'publish_now');
-    if (action === 'cancel') return dispatchZernioPostAction(env, chatId, label, postId, 'cancel');
+    if (action === 'retry') return dispatchZernioPostAction(env, chatId, label, postId, 'retry', '', '', viewId);
+    if (action === 'now') return dispatchZernioPostAction(env, chatId, label, postId, 'update', 'publish_now', '', viewId);
+    if (action === 'cancel') return dispatchZernioPostAction(env, chatId, label, postId, 'cancel', '', '', viewId);
     if (action === 'manual') {
       const state = await getState(env, chatId); state.flow = 'zernio_post_schedule'; state.pending = { label, postId }; await putState(env, chatId, state);
-      return sendMessage(env, chatId, 'Send the new local scheduled time as <code>YYYY-MM-DDTHH:MM</code>. The configured Zernio timezone will be used.');
+      return renderInteractiveView(env, chatId, 'Send the new local scheduled time as <code>YYYY-MM-DDTHH:MM</code>. The configured Zernio timezone will be used.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
   }
   if (kind === 'clone') {
@@ -1162,9 +1193,9 @@ async function handleCallback(env, callback) {
     state.flow = value === 'new' ? 'settings_shadow_pat' : 'settings_github_pat';
     state.pending = {};
     await putState(env, chatId, state);
-    return sendMessage(env, chatId, value === 'new'
+    return renderInteractiveView(env, chatId, value === 'new'
       ? 'Send a GitHub PAT for your account. The bot will use it once to create and connect a new <b>private</b> Shadow Clone. It needs repository contents, Actions secrets, workflow-dispatch, and repository-creation permission. The token is encrypted before storage.'
-      : 'Send a GitHub PAT for the existing clone. It needs repository contents, Actions secrets, and workflow-dispatch permission. The token will be encrypted before storage.');
+      : 'Send a GitHub PAT for the existing clone. It needs repository contents, Actions secrets, and workflow-dispatch permission. The token will be encrypted before storage.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
   }
   if (kind === 'preview') return sendVoicePreview(env, chatId, value);
   if (kind === 'voice') {
@@ -1173,29 +1204,30 @@ async function handleCallback(env, callback) {
     if (!meta) throw new Error('That narrator choice is unavailable.');
     const credentials = await requireCredentials(env, chatId); if (!credentials) return;
     await saveNarrator(credentials, credentials.repo, voice, meta.label);
-    return sendMessage(env, chatId, `${escapeHtml(meta.label)} is now the default Edge TTS narrator.`);
+    return renderInteractiveView(env, chatId, `${escapeHtml(meta.label)} is now the default Edge TTS narrator.`, { replyMarkup: buttons([[{ text: 'Back to settings', callback_data: 'menu:settings' }]]) }, viewId);
   }
   if (kind === 'dur') {
     const duration = Number(value); if (!TARGET_DURATIONS.includes(duration)) throw new Error('That output length is unavailable.');
     const state = await getState(env, chatId); if (!state.flow || !state.flow.endsWith('_duration')) throw new Error('Start a new task first.');
     state.pending.duration = duration; state.flow = `${state.pending.mode}_music`; await putState(env, chatId, state);
-    return sendMessage(env, chatId, 'Choose optional background music.', { replyMarkup: musicMenu() });
+    return renderInteractiveView(env, chatId, 'Choose optional background music.', { replyMarkup: musicMenu() }, viewId);
   }
   if (kind === 'music') {
-    if (value === 'library') return chooseLibrary(env, chatId);
-    return selectMusic(env, chatId, value);
+    if (value === 'library') return chooseLibrary(env, chatId, viewId);
+    if (value === 'back') return renderInteractiveView(env, chatId, 'Choose optional background music.', { replyMarkup: musicMenu() }, viewId);
+    return selectMusic(env, chatId, value, viewId);
   }
-  if (kind === 'status') return showTaskStatus(env, chatId, value);
-  if (kind === 'done') return showCompleted(env, chatId, value);
-  if (kind === 'torrent') return showTorrentCandidates(env, chatId, value, '0', callback.message.message_id);
-  if (kind === 'torrentpage') { const [label, page] = value.split(':'); return showTorrentCandidates(env, chatId, label, page, callback.message.message_id); }
-  if (kind === 'torrentdetail') { const [label, index, page] = value.split(':'); return showTorrentCandidateDetails(env, chatId, label, index, page, callback.message.message_id); }
-  if (kind === 'torrentpick') { const [label, index] = value.split(':'); return chooseTorrentCandidate(env, chatId, label, index); }
-  if (kind === 'agent') return sendManualAgentPrompt(env, chatId, value);
-  if (kind === 'plan') return startPlanFlow(env, chatId, value);
-  if (kind === 'retry') { const [stage, label] = value.split(':'); return stage === 'a' ? restartStageA(env, chatId, label) : restartStageB(env, chatId, label); }
-  if (kind === 'cancel') { if (value === 'abort') return sendMessage(env, chatId, 'Stage B will continue.'); if (value.startsWith('confirm:')) return cancelStageB(env, chatId, value.slice('confirm:'.length)); return cancelStageBPrompt(env, chatId, value); }
-  if (kind === 'flow' && value === 'cancel') { await clearFlow(env, chatId); return sendMessage(env, chatId, 'Current flow cancelled.', { replyMarkup: mainMenu() }); }
+  if (kind === 'status') return showTaskStatus(env, chatId, value, viewId);
+  if (kind === 'done') return showCompleted(env, chatId, value, viewId);
+  if (kind === 'torrent') return showTorrentCandidates(env, chatId, value, '0', viewId);
+  if (kind === 'torrentpage') { const [label, page] = value.split(':'); return showTorrentCandidates(env, chatId, label, page, viewId); }
+  if (kind === 'torrentdetail') { const [label, index, page] = value.split(':'); return showTorrentCandidateDetails(env, chatId, label, index, page, viewId); }
+  if (kind === 'torrentpick') { const [label, index] = value.split(':'); return chooseTorrentCandidate(env, chatId, label, index, viewId); }
+  if (kind === 'agent') return sendManualAgentPrompt(env, chatId, value, viewId);
+  if (kind === 'plan') return startPlanFlow(env, chatId, value, viewId);
+  if (kind === 'retry') { const [stage, label] = value.split(':'); return stage === 'a' ? restartStageA(env, chatId, label, viewId) : restartStageB(env, chatId, label, viewId); }
+  if (kind === 'cancel') { if (value === 'abort') return renderInteractiveView(env, chatId, 'Stage B will continue.', { replyMarkup: mainMenu() }, viewId); if (value.startsWith('confirm:')) return cancelStageB(env, chatId, value.slice('confirm:'.length), viewId); return cancelStageBPrompt(env, chatId, value, viewId); }
+  if (kind === 'flow' && value === 'cancel') { await clearFlow(env, chatId); return renderInteractiveView(env, chatId, 'Current flow cancelled.', { replyMarkup: mainMenu() }, viewId); }
 }
 
 async function handleUpdate(env, update) {
@@ -1215,7 +1247,7 @@ async function handleUpdate(env, update) {
     }
     return;
   }
-  await sendMessage(env, chatId, 'Use /start to open the ClipForge menu, or /cancel to leave the current flow.');
+  await renderInteractiveView(env, chatId, 'Use /start to open the ClipForge menu, or /cancel to leave the current flow.', { replyMarkup: mainMenu() });
 }
 
 function validWebhook(request, env) {
@@ -1234,10 +1266,10 @@ export default {
     try { await handleUpdate(env, update); }
     catch (error) {
       const chatId = update && ((update.message && update.message.chat && update.message.chat.id) || (update.callback_query && update.callback_query.message && update.callback_query.message.chat && update.callback_query.message.chat.id));
-      if (chatId) await sendMessage(env, chatId, `<b>ClipForge could not complete that step.</b>\n${escapeHtml(userError(error))}`).catch(() => undefined);
+      if (chatId) await renderInteractiveView(env, chatId, `<b>ClipForge could not complete that step.</b>\n${escapeHtml(userError(error))}`, { replyMarkup: mainMenu() }).catch(() => undefined);
     }
     return new Response('ok', { status: 200 });
   }
 };
 
-export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, renderInteractiveView, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };

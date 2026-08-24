@@ -74,3 +74,41 @@ assert voice.TtsSettings("en-US-AndrewNeural").metadata == {
 }
 
 print("PASS: Edge TTS narrator catalog, persisted settings, 24 kHz PCM contract, and speech-clarity mastering configuration")
+
+# Stage B invokes cut_and_produce.py from the repository root. The manifest must
+# therefore contain the resolved `wav` path, not merely a display filename.
+with tempfile.TemporaryDirectory() as temp_dir:
+    workspace = Path(temp_dir)
+    production_path = workspace / "production.json"
+    output_dir = workspace / "voiceover"
+    production_path.write_text(json.dumps({
+        "cuts": [{"start_seconds": 0, "end_seconds": 1, "voiceover_text": "Contract check."}]
+    }), encoding="utf-8")
+    original_argv = sys.argv[:]
+    original_synthesize = voice.synthesize_edge_tts_to_wav
+    original_post_process = voice.post_process_voiceover_wav
+
+    def fake_synthesize(_text: str, _settings: object, destination: Path) -> None:
+        voice.write_wav(destination, b"\x00\x00" * voice.SAMPLE_RATE_HZ)
+
+    def fake_post_process(source: Path, destination: Path) -> dict[str, object]:
+        destination.write_bytes(source.read_bytes())
+        return {"preset": "test"}
+
+    try:
+        voice.synthesize_edge_tts_to_wav = fake_synthesize
+        voice.post_process_voiceover_wav = fake_post_process
+        sys.argv = ["generate_voiceover.py", str(production_path), str(output_dir)]
+        voice.main()
+    finally:
+        sys.argv = original_argv
+        voice.synthesize_edge_tts_to_wav = original_synthesize
+        voice.post_process_voiceover_wav = original_post_process
+
+    manifest = json.loads((output_dir / "voiceover_manifest.json").read_text(encoding="utf-8"))
+    entry = manifest["cuts"][0]
+    assert entry["wav"] == str((output_dir / "voiceover_01.wav").resolve())
+    assert Path(entry["wav"]).is_file()
+    assert entry["duration_frames"] == voice.SAMPLE_RATE_HZ
+
+print("PASS: generated manifests preserve the resolved `wav` path required by Stage B reconciliation")

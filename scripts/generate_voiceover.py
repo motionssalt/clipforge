@@ -352,9 +352,11 @@ def main() -> None:
         manifest["cuts"].append(
             {
                 "index": index,
-                "path": final_path.name,
+                # This resolved path is the stable Stage B contract consumed by
+                # cut_and_produce.py, which runs from the repository root.
+                "wav": str(final_path),
                 "duration_seconds": duration,
-                "sample_frames": frames,
+                "duration_frames": frames,
                 "voiceover_text": narration,
                 "mastering": mastering,
             }

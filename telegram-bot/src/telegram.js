@@ -8,7 +8,7 @@ export async function telegram(env, method, payload) {
   });
   const body = await response.json().catch(() => null);
   if (!response.ok || !body || body.ok !== true) {
-    throw new Error('Telegram could not complete that request.');
+    throw new Error(body && body.description ? `Telegram could not complete that request: ${body.description}` : 'Telegram could not complete that request.');
   }
   return body.result;
 }
