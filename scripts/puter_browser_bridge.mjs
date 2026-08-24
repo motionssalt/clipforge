@@ -14,6 +14,7 @@ import { chromium } from 'playwright';
 
 const PAGE_URL = process.env.PUTER_BROWSER_PAGE_URL || 'https://puter.com/';
 const SENSITIVE_KEY = /(?:token|authorization|secret|password|api[_-]?key|cookie|session)/i;
+const PAGE_SETUP_TIMEOUT_MS = Number(process.env.PUTER_BROWSER_PAGE_SETUP_TIMEOUT_MS || 20000);
 const CALL_TIMEOUT_MS = Number(process.env.PUTER_BROWSER_CALL_TIMEOUT_MS || 110000);
 let browser;
 let page;
@@ -65,12 +66,19 @@ async function ensurePage() {
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   page = await context.newPage();
-  await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  page.setDefaultTimeout(PAGE_SETUP_TIMEOUT_MS);
+  page.setDefaultNavigationTimeout(PAGE_SETUP_TIMEOUT_MS);
+  try {
+    await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
+  } catch {
+    // The official browser client is loaded directly below; a transient Puter
+    // landing-page failure must not consume the full analysis time budget.
+  }
   const available = await page.evaluate(() => typeof globalThis.puter !== 'undefined');
   if (!available) {
     await page.addScriptTag({ url: 'https://js.puter.com/v2/' });
   }
-  await page.waitForFunction(() => typeof globalThis.puter !== 'undefined', null, { timeout: 60000 });
+  await page.waitForFunction(() => typeof globalThis.puter !== 'undefined');
   const setter = await page.evaluate(() => typeof globalThis.puter?.setAuthToken === 'function');
   if (!setter) throw new Error('The real Puter.js browser client did not expose setAuthToken().');
 }
@@ -96,8 +104,8 @@ function messageShape(message) {
 }
 
 async function listModels(token) {
-  await setToken(token);
   try {
+    await setToken(token);
     const models = await withTimeout(page.evaluate(async () => {
       const result = await globalThis.puter.ai.listModels();
       return JSON.parse(JSON.stringify(result));
@@ -109,8 +117,8 @@ async function listModels(token) {
 }
 
 async function chat(token, payload) {
-  await setToken(token);
   try {
+    await setToken(token);
     const result = await withTimeout(page.evaluate(async (request) => {
       const options = {
         model: request.model,

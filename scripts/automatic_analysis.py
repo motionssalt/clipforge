@@ -378,7 +378,7 @@ class BrowserBridge(Protocol):
 class SubprocessBrowserBridge:
     """Persistent Node/Playwright process; tokens are written only to its stdin."""
 
-    def __init__(self, bridge_path: str, timeout_seconds: int = 120):
+    def __init__(self, bridge_path: str, timeout_seconds: int = 150):
         path = Path(bridge_path)
         if not path.is_file():
             raise AutomaticAnalysisError("Puter Chromium bridge script is unavailable.")
