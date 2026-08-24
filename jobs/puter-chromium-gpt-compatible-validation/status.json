@@ -1,0 +1,16 @@
+{
+  "job_id": "puter-chromium-gpt-compatible-validation",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-puter-chromium-gpt-compatible-validation",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787538732,
+  "updated_at_epoch": 1787538732,
+  "expires_at_epoch": 1787581932,
+  "extra": {
+    "workflow_run_id": "32683262833",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32683262833",
+    "automatic_mode": "true"
+  }
+}
