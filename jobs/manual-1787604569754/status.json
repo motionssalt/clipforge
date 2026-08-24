@@ -1,7 +1,7 @@
 {
   "job_id": "manual-1787604569754",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-manual-1787604569754",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787604569754",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mkv": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/original.mkv",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/clipforge-manual-1787604569754-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/final.mp4"
   },
   "created_at_epoch": 1787604646,
-  "updated_at_epoch": 1787613937,
+  "updated_at_epoch": 1787615255,
   "expires_at_epoch": 1787647846,
   "extra": {
     "torrent_selection_path": "jobs/manual-1787604569754/torrent-selection.json",
@@ -27,6 +29,9 @@
     "shot_count": "365",
     "key_moment_count": "60",
     "original_asset_name": "original.mkv",
-    "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a"
+    "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a",
+    "title": "The Date That Turned Kaneki Into a Ghoul",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
