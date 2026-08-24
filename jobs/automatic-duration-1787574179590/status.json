@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-duration-1787574179590",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-automatic-duration-1787574179590",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-duration-1787574179590",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/original.mp4",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/clipforge-automatic-duration-1787574179590-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-duration-1787574179590/final.mp4"
   },
   "created_at_epoch": 1787574293,
-  "updated_at_epoch": 1787575546,
+  "updated_at_epoch": 1787576238,
   "expires_at_epoch": 1787617493,
   "extra": {
     "workflow_run_id": "32728717136",
@@ -24,6 +26,9 @@
     "production_ref": "path:jobs/automatic-duration-1787574179590/production.json",
     "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a",
     "music_source": "saved_library_default",
-    "original_asset_name": "original.mp4"
+    "original_asset_name": "original.mp4",
+    "title": "Sintel's Quest Ends in Devastating Tragedy",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
