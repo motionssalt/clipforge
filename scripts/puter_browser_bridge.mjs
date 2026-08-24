@@ -63,23 +63,23 @@ function errorShape(error) {
 
 async function ensurePage() {
   if (page) return;
-  browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  page = await context.newPage();
+  browser = await chromium.launch({ headless: true, timeout: PAGE_SETUP_TIMEOUT_MS });
+  const context = await withTimeout(browser.newContext(), 'context initialization');
+  page = await withTimeout(context.newPage(), 'page initialization');
   page.setDefaultTimeout(PAGE_SETUP_TIMEOUT_MS);
   page.setDefaultNavigationTimeout(PAGE_SETUP_TIMEOUT_MS);
   try {
-    await page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' });
+    await withTimeout(page.goto(PAGE_URL, { waitUntil: 'domcontentloaded' }), 'landing-page load');
   } catch {
     // The official browser client is loaded directly below; a transient Puter
     // landing-page failure must not consume the full analysis time budget.
   }
   const available = await page.evaluate(() => typeof globalThis.puter !== 'undefined');
   if (!available) {
-    await page.addScriptTag({ url: 'https://js.puter.com/v2/' });
+    await withTimeout(page.addScriptTag({ url: 'https://js.puter.com/v2/' }), 'client-script load');
   }
-  await page.waitForFunction(() => typeof globalThis.puter !== 'undefined');
-  const setter = await page.evaluate(() => typeof globalThis.puter?.setAuthToken === 'function');
+  await withTimeout(page.waitForFunction(() => typeof globalThis.puter !== 'undefined'), 'client availability');
+  const setter = await withTimeout(page.evaluate(() => typeof globalThis.puter?.setAuthToken === 'function'), 'client capability check');
   if (!setter) throw new Error('The real Puter.js browser client did not expose setAuthToken().');
 }
 
