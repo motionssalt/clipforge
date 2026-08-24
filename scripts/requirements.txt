@@ -33,6 +33,13 @@ numpy>=1.24,<3
 # importable, but keeping requests here matches the rest of the pipeline.
 requests>=2.32,<3
 
+# --- Gemini API (native analysis + TTS) --------------------------------------
+#
+# Automatic Mode uses the official Google Gen AI SDK for direct Gemini
+# Developer API function calling and inline image input. API keys remain
+# Actions-only secrets supplied through GEMINI_API_KEYS.
+google-genai>=1.66,<2
+
 # --- Voiceover TTS (Gemini API) ---------------------------------------------
 #
 # Stage B synthesizes voiceovers with Google's Gemini API TTS. The call is
