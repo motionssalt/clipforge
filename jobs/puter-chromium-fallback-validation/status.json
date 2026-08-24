@@ -1,0 +1,16 @@
+{
+  "job_id": "puter-chromium-fallback-validation",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-puter-chromium-fallback-validation",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787538327,
+  "updated_at_epoch": 1787538327,
+  "expires_at_epoch": 1787581527,
+  "extra": {
+    "workflow_run_id": "32682899686",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32682899686",
+    "automatic_mode": "true"
+  }
+}
