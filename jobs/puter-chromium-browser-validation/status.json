@@ -1,0 +1,16 @@
+{
+  "job_id": "puter-chromium-browser-validation",
+  "stage": "stage_a_running",
+  "message": "Downloading source video",
+  "release_tag": "clipforge-puter-chromium-browser-validation",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787534936,
+  "updated_at_epoch": 1787534936,
+  "expires_at_epoch": 1787578136,
+  "extra": {
+    "workflow_run_id": "32679803913",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32679803913",
+    "automatic_mode": "true"
+  }
+}
