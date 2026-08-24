@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { decryptCredentials, encryptCredentials } from '../src/crypto.js';
 import { validateProductionPlan } from '../src/production.js';
+import { stageLabel } from '../src/constants.js';
 import { ensureTaskLabel, getJobIdForLabel, getTasks, getState, putState } from '../src/storage.js';
 import worker, { __test } from '../src/index.js';
 import nacl from 'tweetnacl';
@@ -143,6 +144,15 @@ test('source and command helpers retain the intended operator contract', () => {
   assert.throws(() => __test.validateSource('file:///etc/passwd'));
   assert.equal(__test.normalizeFocus('  the  opening scene  '), 'the opening scene');
   assert.equal(__test.normalizeFocus('-'), '');
+});
+
+test('a staged torrent task remains resumable after returning to the home menu and is not presented as dispatched', () => {
+  const staged = { flow: 'manual_focus', pending: { mode: 'manual', source: 'path:jobs/manual-example/source.torrent', jobId: 'manual-example' } };
+  assert.equal(__test.hasResumablePendingTask(staged), true);
+  assert.equal(__test.hasResumablePendingTask({ flow: 'manual_focus', pending: { mode: 'manual', source: 'path:jobs/manual-example/source.torrent' } }), false);
+  const callbacks = __test.homeMenu(staged).inline_keyboard.flat().map((button) => button.callback_data);
+  assert.ok(callbacks.includes('resume:task'));
+  assert.equal(stageLabel('starting'), 'Starting');
 });
 
 test('existing masked Gemini metadata is recognised without materialising an opaque site secret', () => {

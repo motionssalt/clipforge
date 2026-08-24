@@ -49,6 +49,19 @@ function mainMenu() {
   ]);
 }
 
+function hasResumablePendingTask(state) {
+  const pending = state && state.pending;
+  return Boolean(pending && pending.mode && pending.source && pending.jobId && [
+    'manual_focus', 'automatic_focus', 'manual_duration', 'automatic_duration', 'manual_music', 'automatic_music'
+  ].includes(state.flow));
+}
+
+function homeMenu(state) {
+  const rows = [...mainMenu().inline_keyboard];
+  if (hasResumablePendingTask(state)) rows.push([{ text: `Resume pending ${state.pending.mode} task`, callback_data: 'resume:task' }]);
+  return buttons(rows);
+}
+
 function settingsMenu() {
   return buttons([
     [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini API key', callback_data: 'set:gemini' }],
@@ -107,9 +120,13 @@ async function showHome(env, chatId) {
       { replyMarkup: cloneOnboardingMenu() });
     return;
   }
+  const state = await getState(env, chatId);
+  const pendingNotice = hasResumablePendingTask(state)
+    ? `\n\n<b>Pending task setup:</b> the source is staged but Stage A has not been dispatched. Resume it to choose focus, duration, and music.`
+    : '';
   await sendMessage(env, chatId,
-    `<b>ClipForge Telegram operator</b>\n\nConnected to <code>${escapeHtml(credentials.repo)}</code>. This shared bot keeps tasks and credentials isolated to this chat.\n${existingGeminiLabel(gemini ? credentials.geminiKeys : [], existing.geminiMeta)}.`,
-    { replyMarkup: mainMenu() });
+    `<b>ClipForge Telegram operator</b>\n\nConnected to <code>${escapeHtml(credentials.repo)}</code>. This shared bot keeps tasks and credentials isolated to this chat.\n${existingGeminiLabel(gemini ? credentials.geminiKeys : [], existing.geminiMeta)}.${pendingNotice}`,
+    { replyMarkup: homeMenu(state) });
 }
 
 async function readExistingSettings(credentials) {
@@ -190,17 +207,24 @@ function taskButtons(label, status) {
 async function listTasks(env, chatId, completedOnly = false) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
-  const ids = (await listJobIds(credentials, credentials.repo)).slice(0, MAX_TASKS);
+  const ids = await listJobIds(credentials, credentials.repo);
   if (!ids.length) { await sendMessage(env, chatId, 'No ClipForge tasks exist in this clone yet.'); return; }
   const entries = [];
   for (const jobId of ids) {
-    const label = await ensureTaskLabel(env, chatId, jobId);
-    const status = await readStatus(credentials, credentials.repo, jobId);
+    const status = await readStatus(credentials, credentials.repo);
+    let dispatched = Boolean(status);
+    if (!dispatched) {
+      try { await readStageARequest(credentials, credentials.repo, jobId); dispatched = true; }
+      catch (error) { if (!(error instanceof GitHubError && error.status === 404)) throw error; }
+    }
+    if (!dispatched) continue; // A source.torrent alone is staged task input, not a dispatched task.
     if (completedOnly && (!status || status.stage !== 'complete')) continue;
+    const label = await ensureTaskLabel(env, chatId, jobId);
     entries.push({ label, jobId, status });
+    if (entries.length >= MAX_TASKS) break;
   }
-  if (!entries.length) { await sendMessage(env, chatId, completedOnly ? 'No completed tasks were found.' : 'No tasks were found.'); return; }
-  const text = entries.map(({ label, jobId, status }) => `<b>${label}</b> · ${escapeHtml(stageLabel(status && status.stage))}\n<code>${escapeHtml(jobId)}</code>`).join('\n\n');
+  if (!entries.length) { await sendMessage(env, chatId, completedOnly ? 'No completed tasks were found.' : 'No dispatched tasks were found.'); return; }
+  const text = entries.map(({ label, jobId, status }) => `<b>${label}</b> · ${escapeHtml(stageLabel(status ? status.stage : 'starting'))}\n<code>${escapeHtml(jobId)}</code>`).join('\n\n');
   const rows = entries.map(({ label }) => [{ text: `Task ${label}`, callback_data: completedOnly ? `done:${label}` : `status:${label}` }]);
   await sendMessage(env, chatId, `<b>${completedOnly ? 'Completed tasks' : 'Tasks'}</b>\n\n${text}`, { replyMarkup: buttons(rows) });
 }
@@ -228,6 +252,14 @@ async function showCompleted(env, chatId, label) {
   if (assets.final_zip) lines.push(`<a href="${escapeHtml(assets.final_zip)}">Download final ZIP</a>`);
   if (!assets.final_mp4 && !assets.final_zip) lines.push('The completion status has no final asset URL. Open the release from /status.');
   await sendMessage(env, chatId, lines.join('\n'));
+}
+
+async function resumePendingTask(env, chatId) {
+  const state = await getState(env, chatId);
+  if (!hasResumablePendingTask(state)) { await sendMessage(env, chatId, 'There is no staged task setup to resume.'); return; }
+  if (state.flow.endsWith('_focus')) return sendMessage(env, chatId, 'Resume task setup: send an optional editorial focus, or send <code>-</code> to consider the whole video.');
+  if (state.flow.endsWith('_duration')) return sendMessage(env, chatId, 'Resume task setup: choose the target output length.', { replyMarkup: durationMenu() });
+  return sendMessage(env, chatId, 'Resume task setup: choose optional background music.', { replyMarkup: musicMenu() });
 }
 
 async function beginTask(env, chatId, mode) {
@@ -507,7 +539,7 @@ async function handleTorrentUpload(env, chatId, document, state) {
   state.pending.jobId = jobId;
   state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
   await putState(env, chatId, state);
-  await sendMessage(env, chatId, `Torrent manifest uploaded for <code>${escapeHtml(jobId)}</code>. Send an optional editorial focus, or send <code>-</code> to consider the whole video. After Stage A starts, the bot will ask you to choose the video file inside the torrent.`);
+  await sendMessage(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`);
 }
 
 async function handleDocument(env, chatId, document) {
@@ -627,6 +659,7 @@ async function handleCallback(env, callback) {
   await answerCallback(env, callback.id);
   const [kind, ...rest] = callback.data.split(':');
   const value = rest.join(':');
+  if (kind === 'resume' && value === 'task') return resumePendingTask(env, chatId);
   if (kind === 'menu') {
     if (value === 'home') return showHome(env, chatId);
     if (value === 'settings') return showSettings(env, chatId);
@@ -763,4 +796,4 @@ export default {
   }
 };
 
-export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatStatus, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
+export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatStatus, hasResumablePendingTask, homeMenu, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };

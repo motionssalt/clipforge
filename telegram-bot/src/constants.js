@@ -25,6 +25,7 @@ export const STAGES = new Set([
 ]);
 
 export const STAGE_LABELS = {
+  starting: 'Starting',
   queued: 'Queued',
   awaiting_torrent_selection: 'Needs torrent selection',
   stage_a_running: 'Stage A running',
