@@ -81,6 +81,7 @@ async function downloadPrivateAsset(credentials, url, maximumBytes, description)
     headers: {
       Accept: 'application/octet-stream',
       Authorization: `Bearer ${credentials.githubPat}`,
+      'User-Agent': 'ClipForge-Telegram-Bot/1.0',
       'X-GitHub-Api-Version': API_VERSION
     }
   });
@@ -105,6 +106,7 @@ export async function githubRequest(credentials, path, options = {}) {
     headers: {
       Accept: options.accept || 'application/vnd.github+json',
       Authorization: `Bearer ${credentials.githubPat}`,
+      'User-Agent': 'ClipForge-Telegram-Bot/1.0',
       'X-GitHub-Api-Version': API_VERSION,
       ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...(options.headers || {})
