@@ -1,7 +1,7 @@
 {
   "job_id": "gemini-direct-capped-validation",
-  "stage": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
+  "stage": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and subtitles).",
   "release_tag": "clipforge-gemini-direct-capped-validation",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-gemini-direct-capped-validation",
   "assets": {
@@ -10,10 +10,12 @@
     "original.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/original.mp4",
     "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/scene_index.json",
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/transcript.json"
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/transcript.json",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/clipforge-gemini-direct-capped-validation-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/final.mp4"
   },
   "created_at_epoch": 1787543342,
-  "updated_at_epoch": 1787543490,
+  "updated_at_epoch": 1787543614,
   "expires_at_epoch": 1787586542,
   "extra": {
     "workflow_run_id": "32687847895",
@@ -23,6 +25,9 @@
     "production_ref": "path:jobs/gemini-direct-capped-validation/production.json",
     "music_ref": "",
     "music_source": "none",
-    "original_asset_name": "original.mp4"
+    "original_asset_name": "original.mp4",
+    "title": "A Lonely Search Across Forbidden Lands",
+    "creator_watermark_applied": true,
+    "creator_watermark_name": "CHIMERAVFX"
   }
 }
