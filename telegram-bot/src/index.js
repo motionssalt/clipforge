@@ -258,7 +258,7 @@ async function listTasks(env, chatId, completedOnly = false) {
   if (!ids.length) { await sendMessage(env, chatId, 'No ClipForge tasks exist in this clone yet.'); return; }
   const entries = [];
   for (const jobId of ids) {
-    const status = await readStatus(credentials, credentials.repo);
+    const status = await readStatus(credentials, credentials.repo, jobId);
     let dispatched = Boolean(status);
     if (!dispatched) {
       try { await readStageARequest(credentials, credentials.repo, jobId); dispatched = true; }

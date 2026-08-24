@@ -217,11 +217,22 @@ export async function getContent(credentials, repo, path) {
   return githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodePath(path)}?ref=${encodeURIComponent(DEFAULT_BRANCH)}`);
 }
 
+function parseJsonDocument(text, path) {
+  try { return JSON.parse(text); }
+  catch (error) {
+    if (!/\/status\.json$/.test(String(path)) || !text.includes('<<<<<<<') || !text.includes('>>>>>>>')) {
+      throw new Error(`${path} is not valid JSON.`);
+    }
+    const cleaned = text.split('\n').filter((line) => !/^(<<<<<<<|=======|>>>>>>>)/.test(line.trim())).join('\n').replace(/,(\s*[}\]])/g, '$1');
+    try { return JSON.parse(cleaned); }
+    catch { throw new Error(`${path} is not valid JSON.`); }
+  }
+}
+
 export async function getJsonFile(credentials, repo, path) {
   const file = await getContent(credentials, repo, path);
   if (!file || typeof file.content !== 'string') throw new Error(`GitHub did not return ${path}.`);
-  try { return { document: JSON.parse(b64decode(file.content)), sha: file.sha || null }; }
-  catch { throw new Error(`${path} is not valid JSON.`); }
+  return { document: parseJsonDocument(b64decode(file.content), path), sha: file.sha || null };
 }
 
 export async function tryGetJsonFile(credentials, repo, path) {
@@ -404,4 +415,4 @@ export function makeJobId(mode, now = Date.now()) {
   return `${mode === 'automatic' ? 'automatic' : 'manual'}-${Number(now)}`;
 }
 
-export { b64decode, b64encode, cloneRepositoryName, parseRepo, sourcePathAllowed };
+export { b64decode, b64encode, cloneRepositoryName, parseJsonDocument, parseRepo, sourcePathAllowed };

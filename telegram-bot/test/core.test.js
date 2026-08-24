@@ -8,7 +8,7 @@ import worker, { __test } from '../src/index.js';
 import nacl from 'tweetnacl';
 import sealedbox from 'tweetnacl-sealedbox-js';
 import { downloadTelegramFileBytes, sendAudioBytes, sendDocumentBytes } from '../src/telegram.js';
-import { cloneRepositoryName, createPrivateShadowClone, putBinaryFile, sourcePathAllowed } from '../src/github.js';
+import { cloneRepositoryName, createPrivateShadowClone, parseJsonDocument, putBinaryFile, sourcePathAllowed } from '../src/github.js';
 
 class MemoryKv {
   constructor() { this.values = new Map(); }
@@ -155,6 +155,15 @@ test('music and torrent inline-button labels are bounded by UTF-8 bytes', () => 
   assert.ok(new TextEncoder().encode(video).length <= 48);
   assert.match(video, /1080p\.mkv$/);
   assert.equal(__test.formatBytes(2_097_152), '2.0 MiB');
+});
+
+test('status JSON with workflow merge markers is recovered for display without changing non-status JSON rules', () => {
+  const conflicted = '{\n  "job_id": "automatic-example",\n  "stage": "stage_a_running",\n<<<<<<< Updated upstream\n  "updated_at_epoch": 10,\n=======\n  "updated_at_epoch": 20,\n>>>>>>> Stashed changes\n}\n';
+  const parsed = parseJsonDocument(conflicted, 'jobs/automatic-example/status.json');
+  assert.equal(parsed.job_id, 'automatic-example');
+  assert.equal(parsed.stage, 'stage_a_running');
+  assert.equal(parsed.updated_at_epoch, 20);
+  assert.throws(() => parseJsonDocument(conflicted, 'jobs/automatic-example/production.json'), /not valid JSON/);
 });
 
 test('a staged torrent task remains resumable after returning to the home menu and is not presented as dispatched', () => {
