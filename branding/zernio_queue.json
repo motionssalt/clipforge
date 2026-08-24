@@ -37,6 +37,18 @@
         "6a8a58297fc64a12cf5570ba"
       ],
       "updated_at_epoch": 1787451439
+    },
+    {
+      "job_id": "gemini-direct-capped-validation",
+      "status": "publishing",
+      "mode": "publish_now",
+      "scheduled_for": null,
+      "timezone": "UTC",
+      "post_ids": [
+        "6a8bc04c7e2c880ff45f901d",
+        "6a8bc0897e2c880ff45fa82a"
+      ],
+      "updated_at_epoch": 1787543692
     }
   ]
 }

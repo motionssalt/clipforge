@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-capped-validation/final.mp4"
   },
   "created_at_epoch": 1787543342,
-  "updated_at_epoch": 1787543614,
+  "updated_at_epoch": 1787543692,
   "expires_at_epoch": 1787586542,
   "extra": {
     "workflow_run_id": "32687847895",
@@ -29,5 +29,100 @@
     "title": "A Lonely Search Across Forbidden Lands",
     "creator_watermark_applied": true,
     "creator_watermark_name": "CHIMERAVFX"
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "publishing",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-gemini-direct-capped-validation-32687847895",
+    "updated_at_epoch": 1787543692,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 6972351,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "A Lonely Search Across Forbidden Lands",
+      "caption": "A Lonely Search Across Forbidden Lands",
+      "hashtags": [
+        "#sintel",
+        "#fantasy",
+        "#animation",
+        "#quest",
+        "#cinematic",
+        "#shortfilm"
+      ],
+      "tags": [
+        "sintel",
+        "open movie",
+        "blender animation",
+        "sintel trailer",
+        "fantasy quest",
+        "gatekeepers",
+        "lonely journey",
+        "animated short film",
+        "searching for someone",
+        "desert journey"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8bc04c7e2c880ff45f901d",
+        "status": "publishing",
+        "scheduled_for": "2026-08-24T03:53:47.272Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "MOTIONSALT",
+              "isActive": true,
+              "profilePicture": "https://media.zernio.com/media/tiktok-avatars/1787477124009_wzjr6do4_tiktok-avatar--000SxU-aDh7k3BI3XoKgFISx1xLz0AUZcTw.jpg",
+              "username": "motionsalt"
+            },
+            "status": "processing"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-gemini-direct-capped-validation-32687847895-tiktok"
+      },
+      {
+        "post_id": "6a8bc0897e2c880ff45fa82a",
+        "status": "published",
+        "scheduled_for": "2026-08-24T03:54:48.602Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "GqbiVJ8d9nQ",
+            "platformPostUrl": "https://www.youtube.com/watch?v=GqbiVJ8d9nQ"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-gemini-direct-capped-validation-32687847895-youtube"
+      }
+    ],
+    "metadata_source": "jobs/gemini-direct-capped-validation/production.json"
   }
 }
