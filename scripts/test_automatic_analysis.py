@@ -24,6 +24,7 @@ from automatic_analysis import (
     ToolResult,
     key_failure_should_rotate,
     model_candidates,
+    narration_duration_errors,
     parse_api_keys,
     provider_error_category,
     run_analysis,
@@ -39,12 +40,21 @@ assert "FunctionResponseBlob" in RUNNER_SOURCE
 assert "Puter" not in RUNNER_SOURCE
 assert "puter_browser_bridge" not in RUNNER_SOURCE
 
+COVERED_LINE_ONE = (
+    "The frightened traveler reaches the broken gate, studies the warning marks, "
+    "and keeps moving because the path behind him has already vanished into darkness, leaving only a cold wind, distant bells, and one final warning to follow."
+)
+COVERED_LINE_TWO = (
+    "Inside the ruined hall, the same traveler sees the hidden answer, chooses "
+    "the narrow bridge, and finally understands why the silent guardian waited through the storm, guarding the answer until someone brave enough could listen."
+)
+
 VALID_PLAN = {
     "video_duration_seconds": 60,
     "target_total_duration_seconds": 20,
     "cuts": [
-        {"start_seconds": 0, "end_seconds": 10, "voiceover_text": "The confrontation begins."},
-        {"start_seconds": 10, "end_seconds": 20, "voiceover_text": "The choice changes everything."},
+        {"start_seconds": 0, "end_seconds": 10, "voiceover_text": COVERED_LINE_ONE},
+        {"start_seconds": 10, "end_seconds": 20, "voiceover_text": COVERED_LINE_TWO},
     ],
     "hashtags": ["#clip", "#story", "#moment", "#edit", "#video"],
     "youtube_tags": [
@@ -101,6 +111,13 @@ assert model_candidates("gemini-3.7-flash", ["gemini-3.6-flash", "gemini-3.7-fla
 ]
 assert validate_production_plan(VALID_PLAN) == []
 assert validate_production_plan({**VALID_PLAN, "cuts": []}) == ["`cuts` is empty — at least one cut is required."]
+assert narration_duration_errors(VALID_PLAN) == []
+short_but_schema_valid = {**VALID_PLAN, "cuts": [
+    {"start_seconds": 0, "end_seconds": 10, "voiceover_text": "Too short."},
+    {"start_seconds": 10, "end_seconds": 20, "voiceover_text": "Still too short."},
+]}
+short_errors = narration_duration_errors(short_but_schema_valid)
+assert len(short_errors) == 2 and "90%" in short_errors[0]
 assert provider_error_category(429) == "rate_or_quota"
 assert provider_error_category(503) == "provider_server"
 assert provider_error_category(401) == "authentication"

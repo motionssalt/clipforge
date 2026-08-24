@@ -36,6 +36,10 @@ MAX_TOOL_TURNS = 12
 MAX_CORRECTION_RETRIES = 1
 MAX_SEED_BYTES = 1024 * 1024
 MAX_JSON_ARTIFACT_BYTES = 5 * 1024 * 1024
+# Keep this in lockstep with generate_voiceover.py's configured Gemini TTS
+# style prompt: 188 WPM is 3.133 spoken words per second.
+NARRATION_WORDS_PER_MINUTE = 188.0
+MIN_NARRATION_DURATION_COVERAGE = 0.90
 MAX_ZIP_ENTRIES = 800
 MAX_ZIP_MEMBER_BYTES = 6 * 1024 * 1024
 MAX_ZIP_TOTAL_BYTES = 160 * 1024 * 1024
@@ -443,6 +447,45 @@ def extract_json_object(content: Any) -> tuple[dict[str, Any] | None, str]:
     return None, ""
 
 
+def narration_duration_errors(document: dict[str, Any]) -> list[str]:
+    """Return per-cut narration coverage failures for Automatic Mode only.
+
+    The shared production contract intentionally stays compatible with manual
+    workflows. Automatic Mode has a known TTS pace and a bounded correction
+    loop, so it can reject a schema-valid but sparse plan before Stage B's
+    independent reconciliation guard would refuse the final render.
+    """
+    errors: list[str] = []
+    cuts = document.get("cuts")
+    if not isinstance(cuts, list):
+        return errors
+    for index, cut in enumerate(cuts, start=1):
+        if not isinstance(cut, dict):
+            continue
+        try:
+            duration = float(cut.get("end_seconds")) - float(cut.get("start_seconds"))
+        except (TypeError, ValueError):
+            continue
+        text = cut.get("voiceover_text")
+        if duration <= 0 or not isinstance(text, str):
+            continue
+        words = len(re.findall(r"[^\W_]+(?:['’][^\W_]+)*", text, flags=re.UNICODE))
+        expected_words = duration * (NARRATION_WORDS_PER_MINUTE / 60.0)
+        minimum_words = expected_words * MIN_NARRATION_DURATION_COVERAGE
+        if words < minimum_words:
+            errors.append(
+                f"cut #{index} voiceover_text has {words} words for a {duration:.2f}s range; "
+                f"Automatic Mode requires at least {minimum_words:.1f} words (90% of "
+                f"{NARRATION_WORDS_PER_MINUTE:.0f} WPM coverage)"
+            )
+    return errors
+
+
+def automatic_plan_errors(document: dict[str, Any], canonical: str) -> list[str]:
+    shared_errors = parse_and_validate_production_plan(canonical)[1]
+    return shared_errors if shared_errors else narration_duration_errors(document)
+
+
 def agent_seed(seed: str, composite_names: Iterable[str]) -> str:
     listing = "\n".join("- " + name for name in sorted(composite_names)[:MAX_ZIP_ENTRIES])
     return (
@@ -468,13 +511,13 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
             document, canonical = extract_json_object(turn.text)
             if document is None:
                 raise AutomaticAnalysisError("Automatic analysis did not return a JSON production plan.")
-            errors = parse_and_validate_production_plan(canonical)[1]
+            errors = automatic_plan_errors(document, canonical)
             if not errors:
                 return document, canonical, turn_number, 0
             gateway.append_tool_results(history, turn, [])
             gateway.append_user_text(
                 history,
-                "Your proposed production.json failed the shared ClipForge validation contract. Return one corrected JSON object only. "
+                "Your proposed production.json failed ClipForge validation. Return one corrected JSON object only. "
                 "Do not call tools, do not add commentary, and do not broaden the story. Validation errors:\n- " + "\n- ".join(errors),
             )
             corrected = gateway.generate(model, history, tools_enabled=False)
@@ -483,7 +526,7 @@ def run_tool_agent(gateway: NativeGateway, model: str, tools: EvidenceTools, see
             corrected_document, corrected_canonical = extract_json_object(corrected.text)
             if corrected_document is None:
                 raise AutomaticAnalysisError("Automatic analysis correction did not return JSON.")
-            correction_errors = parse_and_validate_production_plan(corrected_canonical)[1]
+            correction_errors = automatic_plan_errors(corrected_document, corrected_canonical)
             if correction_errors:
                 raise AutomaticAnalysisError("Automatic analysis returned an invalid production plan after its one correction retry: " + "; ".join(correction_errors[:3]))
             return corrected_document, corrected_canonical, turn_number, MAX_CORRECTION_RETRIES
