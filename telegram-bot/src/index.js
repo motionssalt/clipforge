@@ -26,8 +26,12 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
+function normalizedButtonText(value, fallback = 'Unnamed track') {
+  return String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim() || fallback;
+}
+
 function telegramButtonText(value, maximumBytes = 60) {
-  const text = String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim() || 'Unnamed track';
+  const text = normalizedButtonText(value);
   const encoder = new TextEncoder();
   if (encoder.encode(text).length <= maximumBytes) return text;
   const suffix = '…';
@@ -37,6 +41,36 @@ function telegramButtonText(value, maximumBytes = 60) {
     output += character;
   }
   return `${output || 'Track'}${suffix}`;
+}
+
+function torrentCandidateButtonText(value, maximumBytes = 48) {
+  const text = normalizedButtonText(value, 'Unnamed video');
+  const encoder = new TextEncoder();
+  if (encoder.encode(text).length <= maximumBytes) return text;
+  const suffix = '…';
+  const contentBudget = maximumBytes - encoder.encode(suffix).length;
+  const prefixBudget = Math.floor(contentBudget / 2);
+  const suffixBudget = contentBudget - prefixBudget;
+  let prefix = '';
+  for (const character of text) {
+    if (encoder.encode(prefix + character).length > prefixBudget) break;
+    prefix += character;
+  }
+  let ending = '';
+  for (const character of Array.from(text).reverse()) {
+    if (encoder.encode(character + ending).length > suffixBudget) break;
+    ending = character + ending;
+  }
+  return `${prefix || 'Video'}${suffix}${ending}`;
+}
+
+function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return 'Unknown size';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
 }
 
 function redact(value) {
@@ -582,8 +616,11 @@ async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
   const rows = candidates.slice(page * TORRENT_CANDIDATES_PER_PAGE, (page + 1) * TORRENT_CANDIDATES_PER_PAGE).map((candidate) => {
     const index = Number(candidate && candidate.index);
     if (!Number.isInteger(index) || index < 1) return null;
-    const name = telegramButtonText(candidate.path || `Video ${index}`, 50);
-    return [{ text: `${index}. ${name}`, callback_data: `torrentpick:${label}:${index}` }];
+    const name = torrentCandidateButtonText(candidate.path || `Video ${index}`);
+    return [
+      { text: `${index}. ${name}`, callback_data: `torrentpick:${label}:${index}` },
+      { text: 'Details', callback_data: `torrentdetail:${label}:${index}` }
+    ];
   }).filter(Boolean);
   if (totalPages > 1) {
     const navigation = [];
@@ -593,6 +630,22 @@ async function showTorrentCandidates(env, chatId, label, pageValue = '0') {
     rows.push(navigation);
   }
   await sendMessage(env, chatId, `Choose the video file inside this torrent (page ${page + 1} of ${totalPages}). This starts Stage A for the selected file only.`, { replyMarkup: buttons(rows) });
+}
+
+async function showTorrentCandidateDetails(env, chatId, label, indexValue) {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  const index = Number(indexValue);
+  if (!credentials || !jobId) return;
+  if (!Number.isInteger(index) || index < 1) throw new Error('That torrent video choice is invalid.');
+  const selection = await tryGetJsonFile(credentials, credentials.repo, `jobs/${jobId}/torrent-selection.json`);
+  const candidates = selection && selection.document && Array.isArray(selection.document.video_candidates) ? selection.document.video_candidates : [];
+  const candidate = candidates.find((entry) => Number(entry && entry.index) === index);
+  if (!candidate) throw new Error('That torrent video is no longer available. Refresh the task status.');
+  const filename = normalizedButtonText(candidate.path, 'Unnamed video');
+  const details = `<b>Torrent video ${index}</b>\n\n<b>Full filename</b>\n<code>${escapeHtml(filename)}</code>\n\n<b>Size</b>\n${escapeHtml(formatBytes(candidate.length))}\n\nTap the numbered filename button when this is the video you want Stage A to process.`;
+  if (details.length <= 3500) return sendMessage(env, chatId, details);
+  return sendDocumentBytes(env, chatId, new TextEncoder().encode(`Torrent video ${index}\n\nFull filename:\n${filename}\n\nSize: ${formatBytes(candidate.length)}\n`), `torrent-video-${index}-details.txt`, 'Full torrent candidate details');
 }
 
 async function chooseTorrentCandidate(env, chatId, label, indexValue) {
@@ -759,6 +812,7 @@ async function handleCallback(env, callback) {
   if (kind === 'done') return showCompleted(env, chatId, value);
   if (kind === 'torrent') return showTorrentCandidates(env, chatId, value);
   if (kind === 'torrentpage') { const [label, page] = value.split(':'); return showTorrentCandidates(env, chatId, label, page); }
+  if (kind === 'torrentdetail') { const [label, index] = value.split(':'); return showTorrentCandidateDetails(env, chatId, label, index); }
   if (kind === 'torrentpick') { const [label, index] = value.split(':'); return chooseTorrentCandidate(env, chatId, label, index); }
   if (kind === 'agent') return sendManualAgentPrompt(env, chatId, value);
   if (kind === 'plan') return startPlanFlow(env, chatId, value);
@@ -809,4 +863,4 @@ export default {
   }
 };
 
-export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };
+export const __test = { cloneOnboardingMenu, commandOf, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, telegramButtonText, torrentCandidateButtonText, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError };

@@ -151,6 +151,10 @@ test('music and torrent inline-button labels are bounded by UTF-8 bytes', () => 
   assert.ok(new TextEncoder().encode(label).length <= 60);
   assert.match(label, /…$/);
   assert.equal(__test.telegramButtonText('CRY_FOR_ME_FUNK.m4a'), 'CRY_FOR_ME_FUNK.m4a');
+  const video = __test.torrentCandidateButtonText('[Anime Time] Tokyo Ghoul/[Anime Time] Tokyo Ghoul Episode 12 END 1080p.mkv');
+  assert.ok(new TextEncoder().encode(video).length <= 48);
+  assert.match(video, /1080p\.mkv$/);
+  assert.equal(__test.formatBytes(2_097_152), '2.0 MiB');
 });
 
 test('a staged torrent task remains resumable after returning to the home menu and is not presented as dispatched', () => {
