@@ -48,7 +48,7 @@ on:
         type: string
         default: "true"
       automatic_mode:
-        description: "When true, replace only the manual external-agent production.json handoff with bounded Puter Automatic Mode analysis and then dispatch Stage B. Default false preserves the manual flow."
+        description: "When true, replace only the manual external-agent production.json handoff with bounded direct Gemini API Automatic Mode analysis and then dispatch Stage B. Default false preserves the manual flow."
         required: false
         type: string
         default: "false"
