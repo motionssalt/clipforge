@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-grounding-verify-1787576400/final.mp4"
   },
   "created_at_epoch": 1787578899,
-  "updated_at_epoch": 1787579519,
+  "updated_at_epoch": 1787579552,
   "expires_at_epoch": 1787622099,
   "extra": {
     "workflow_run_id": "32734771006",
@@ -30,5 +30,104 @@
     "title": "Sintel Risked Everything to Save Her Dragon",
     "creator_watermark_applied": true,
     "creator_watermark_name": "CHIMERAVFX"
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "published",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-automatic-grounding-verify-1787576400-32734771006",
+    "updated_at_epoch": 1787579551,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 13034834,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "Sintel Risked Everything to Save Her Dragon",
+      "caption": "Sintel Risked Everything to Save Her Dragon",
+      "hashtags": [
+        "#sintel",
+        "#openmovie",
+        "#blender",
+        "#animation",
+        "#dragons",
+        "#fantasy"
+      ],
+      "tags": [
+        "sintel",
+        "blender animation",
+        "sintel dragon",
+        "open movie project",
+        "sintel story",
+        "animated short film",
+        "dragon rescue",
+        "fantasy animation",
+        "sintel desert scene",
+        "dragon snatch scene",
+        "sintel full story",
+        "cgi animated movie"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8c4c90f9cf953dbc90b6ac",
+        "status": "published",
+        "scheduled_for": "2026-08-24T13:52:15.065Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "MOTIONSALT",
+              "isActive": true,
+              "profilePicture": "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4df688dfaf37162e3a0f79b969d77fb2~tplv-tiktokx-cropcenter:168:168.jpeg?dr=9638&refresh_token=a10ba6f7&x-expires=1787720400&x-signature=uYBI7aVOit%2B3QlNJ0T7E9laVXqo%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=useast8",
+              "username": "motionsalt"
+            },
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7677594635808491551",
+            "platformPostUrl": ""
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-automatic-grounding-verify-1787576400-32734771006-tiktok"
+      },
+      {
+        "post_id": "6a8c4c9af9cf953dbc90ba25",
+        "status": "published",
+        "scheduled_for": "2026-08-24T13:52:25.032Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "DJwUSvRxawo",
+            "platformPostUrl": "https://www.youtube.com/watch?v=DJwUSvRxawo"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-automatic-grounding-verify-1787576400-32734771006-youtube"
+      }
+    ],
+    "metadata_source": "jobs/automatic-grounding-verify-1787576400/production.json"
   }
 }
