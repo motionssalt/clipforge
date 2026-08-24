@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787604569754/final.mp4"
   },
   "created_at_epoch": 1787604646,
-  "updated_at_epoch": 1787615255,
+  "updated_at_epoch": 1787615296,
   "expires_at_epoch": 1787647846,
   "extra": {
     "torrent_selection_path": "jobs/manual-1787604569754/torrent-selection.json",
@@ -33,5 +33,107 @@
     "title": "The Date That Turned Kaneki Into a Ghoul",
     "creator_watermark_applied": true,
     "creator_watermark_name": "CHIMERAVFX"
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "published",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-manual-1787604569754-32789191781",
+    "updated_at_epoch": 1787615295,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 63675548,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "The Date That Turned Kaneki Into a Ghoul",
+      "caption": "The Date That Turned Kaneki Into a Ghoul",
+      "hashtags": [
+        "#tokyoghoul",
+        "#kaneki",
+        "#rize",
+        "#ghoul",
+        "#anime",
+        "#animerecap",
+        "#tokyoghoulshorts"
+      ],
+      "tags": [
+        "tokyo ghoul",
+        "ken kaneki",
+        "kaneki becomes a ghoul",
+        "rize kamishiro",
+        "tokyo ghoul episode 1",
+        "kaneki red eye",
+        "touka kirishima",
+        "ghoul transformation",
+        "anime recap",
+        "tokyo ghoul explained",
+        "kaneki and rize date",
+        "anime shorts",
+        "kaneki refuses to eat",
+        "dark fantasy anime"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "6a8cd827a82a4d2a998c520e",
+        "status": "published",
+        "scheduled_for": "2026-08-24T23:47:49.296Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a89d0da77555aae01674321",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "platform": "tiktok",
+              "displayName": "MOTIONSALT",
+              "isActive": true,
+              "profilePicture": "https://p19-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4df688dfaf37162e3a0f79b969d77fb2~tplv-tiktokx-cropcenter:168:168.jpeg?dr=9638&refresh_token=a10ba6f7&x-expires=1787720400&x-signature=uYBI7aVOit%2B3QlNJ0T7E9laVXqo%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=useast8",
+              "username": "motionsalt"
+            },
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7677748001053509662",
+            "platformPostUrl": ""
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-manual-1787604569754-32789191781-tiktok"
+      },
+      {
+        "post_id": "6a8cd83ba82a4d2a998c5b9a",
+        "status": "published",
+        "scheduled_for": "2026-08-24T23:48:09.643Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a89d06a77555aae01671ca2",
+              "platform": "youtube",
+              "profileId": "6a89a19b7d5eb15abb21a01a",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "E_uXDJZrrr4",
+            "platformPostUrl": "https://www.youtube.com/watch?v=E_uXDJZrrr4"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-manual-1787604569754-32789191781-youtube"
+      }
+    ],
+    "metadata_source": "jobs/manual-1787604569754/production.json"
   }
 }
