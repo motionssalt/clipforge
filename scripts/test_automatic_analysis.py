@@ -19,6 +19,7 @@ from automatic_analysis import (
     ProviderRequestError,
     PuterBrowserGateway,
     ToolProtocolError,
+    provider_error_category,
     discover_compatible_models,
     parse_tokens,
     run_analysis,
@@ -100,6 +101,7 @@ assert discover_compatible_models(CATALOG, "google/gemini-3.6-flash", "openai/gp
 ]
 assert validate_production_plan(VALID_PLAN) == []
 assert validate_production_plan({**VALID_PLAN, "cuts": []}) == ["`cuts` is empty — at least one cut is required."]
+assert provider_error_category(None, {"code": "upstream_failed", "message": "All AI providers failed"}) == "provider_server"
 
 
 with tempfile.TemporaryDirectory(prefix="clipforge_auto_test_") as temp_dir:

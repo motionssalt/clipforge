@@ -114,6 +114,8 @@ def provider_error_category(status: int | None, payload: dict[str, Any]) -> str:
         return "payment_or_spend_limit"
     if status == 429 or "rate" in haystack or "quota" in haystack or "credit" in haystack or "limit" in haystack:
         return "rate_or_quota"
+    if "upstream_failed" in haystack or "all ai providers failed" in haystack:
+        return "provider_server"
     if status in (400, 404, 422) or "model" in haystack:
         return "model_or_request"
     if "network" in haystack or "failed to fetch" in haystack or "timed out" in haystack:
