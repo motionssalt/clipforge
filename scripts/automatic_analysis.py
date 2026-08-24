@@ -134,6 +134,23 @@ def key_failure_should_rotate(status: int | None, category: str) -> bool:
     return status in (401, 403, 429) or category in {"authentication", "rate_or_quota"}
 
 
+def safe_provider_error_summary(error: Exception, status: int | None, category: str) -> str:
+    """Bound provider diagnostics to safe metadata, never request content or credentials."""
+    message = str(error)[:360]
+    message = re.sub(r"(?i)(AIza)[A-Za-z0-9_-]+", r"\1[REDACTED]", message)
+    message = re.sub(r"(?i)bearer\s+[^\s\"',}]+", "Bearer [REDACTED]", message)
+    message = re.sub(
+        r"(?i)((?:api[_-]?key|authorization|token|secret|cookie|session)\s*[=:]\s*)[^,\s}]+",
+        r"\1[REDACTED]",
+        message,
+    )
+    return (
+        "Gemini key request failure: status=" + str(status if status is not None else "none")
+        + " category=" + category + " type=" + type(error).__name__
+        + " message=" + (message or "[none]")
+    )
+
+
 def strict_artifact_path(root: Path, filename: str, maximum: int) -> Path:
     target = (root / filename).resolve()
     if target.parent != root.resolve() or not target.is_file():
@@ -351,6 +368,7 @@ class GeminiGateway:
                 status = provider_error_status(error)
                 category = provider_error_category(status, error)
                 safe_log("Gemini key index " + str(index) + " failed with " + category + " (status=" + str(status or "none") + ").")
+                safe_log(safe_provider_error_summary(error, status, category))
                 last_error = ProviderRequestError(status, category)
                 if not key_failure_should_rotate(status, category):
                     raise last_error from error

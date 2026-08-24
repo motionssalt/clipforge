@@ -27,6 +27,7 @@ from automatic_analysis import (
     parse_api_keys,
     provider_error_category,
     run_analysis,
+    safe_provider_error_summary,
 )
 from google.genai import types
 from production_plan_contract import validate_production_plan
@@ -105,6 +106,8 @@ assert provider_error_category(503) == "provider_server"
 assert provider_error_category(401) == "authentication"
 assert key_failure_should_rotate(429, "rate_or_quota") is True
 assert key_failure_should_rotate(503, "provider_server") is False
+redacted = safe_provider_error_summary(RuntimeError("AIzaLiveSensitiveKey bearer secret-value"), None, "provider_request")
+assert "AIza[REDACTED]" in redacted and "secret-value" not in redacted
 sdk_probe_part = types.Part.from_function_response(
     name="open_composite",
     response={"result": {"filename": "probe.png"}},
