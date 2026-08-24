@@ -317,6 +317,7 @@
     'copy-agent-prompt',
     'cuts-path-hint', 'cuts-file-input', 'cuts-paste-toggle', 'cuts-paste-field', 'cuts-paste-input', 'cuts-paste-import', 'start-stage-b', 'cuts-validation', 'music-file-input', 'music-hint',
     'audio-library-list', 'audio-library-empty', 'audio-library-add-input', 'audio-library-add-hint',
+    'stage-a-controls', 'stage-a-controls-text', 'restart-stage-a',
     'stage-b-controls', 'stage-b-controls-text', 'restart-stage-b', 'cancel-stage-b',
     'complete-block', 'scene-list', 'scene-list-hint', 'final-zip-link', 'final-zip-hint', 'complete-ack',
     'watermark-form', 'watermark-name-input', 'watermark-save', 'watermark-msg', 'watermark-current',
@@ -1777,6 +1778,7 @@
           automatic_mode: settings.automatic_mode === 'true' ? 'true' : 'false'
 
       };
+      await persistStageARequest(state.jobId, inputs);
       var dispatchedAt = new Date();
       await gh('/repos/' + state.owner + '/' + state.repo +
         '/actions/workflows/stage-a.yml/dispatches', {
@@ -1803,6 +1805,55 @@
       this.disabled = true;
       dispatchPendingTorrentSelection();
     });
+  }
+
+  function stageARequestPath(jobId) {
+    return 'jobs/' + jobId + '/stage-a-request.json';
+  }
+
+  async function persistStageARequest(jobId, inputs) {
+    if (!jobId) throw new Error('Stage A needs a job id before its restart settings can be saved.');
+    var request = {
+      version: 1,
+      job_id: jobId,
+      video_url: String(inputs.video_url || ''),
+      torrent_file_index: String(inputs.torrent_file_index || ''),
+      whisper_model: String(inputs.whisper_model || 'base'),
+      language: String(inputs.language || 'auto'),
+      target_duration_seconds: String(inputs.target_duration_seconds || '120'),
+      focus: String(inputs.focus || ''),
+      automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false',
+      saved_at_epoch: Math.floor(Date.now() / 1000)
+    };
+    await putRepoFile(stageARequestPath(jobId),
+      b64encodeUtf8(JSON.stringify(request, null, 2) + '\n'),
+      'clipforge: save Stage A restart settings for job ' + jobId);
+  }
+
+  function restartableStageAInputs(raw, jobId) {
+    if (!raw || raw.version !== 1 || raw.job_id !== jobId) {
+      throw new Error('This job does not have valid saved Stage A restart settings.');
+    }
+    var inputs = {
+      video_url: typeof raw.video_url === 'string' ? raw.video_url : '',
+      torrent_file_index: typeof raw.torrent_file_index === 'string' ? raw.torrent_file_index : '',
+      job_id: jobId,
+      whisper_model: typeof raw.whisper_model === 'string' ? raw.whisper_model : 'base',
+      language: typeof raw.language === 'string' ? raw.language : 'auto',
+      target_duration_seconds: typeof raw.target_duration_seconds === 'string' ? raw.target_duration_seconds : '120',
+      focus: typeof raw.focus === 'string' ? raw.focus : '',
+      automatic_mode: raw.automatic_mode === 'true' ? 'true' : 'false'
+    };
+    if (!inputs.video_url) throw new Error('This job is missing its original Stage A source.');
+    if (inputs.video_url.slice(0, 5) === 'path:' &&
+        inputs.video_url !== 'path:jobs/' + jobId + '/source.torrent') {
+      throw new Error('This job has an invalid saved Stage A source path.');
+    }
+    if (!/^(tiny|base|small)$/.test(inputs.whisper_model) ||
+        !/^\d+$/.test(inputs.target_duration_seconds)) {
+      throw new Error('This job has invalid saved Stage A settings.');
+    }
+    return inputs;
   }
 
   async function startStageA() {
@@ -1835,8 +1886,8 @@
     var slug = el['job-slug-input'].value.trim();
     // Automatic Mode must know its job id before dispatch so an upfront music
     // choice can be committed safely for the unattended Stage B handoff.
-    if ((torrentFile || isMagnetLink || automaticMode) && !slug) {
-      slug = (automaticMode ? 'automatic-' : (torrentFile ? 'torrent-' : 'magnet-')) + Date.now();
+    if (!slug) {
+      slug = automaticMode ? 'automatic-' : (torrentFile ? 'torrent-' : (isMagnetLink ? 'magnet-' : 'manual-')) + Date.now();
       el['job-slug-input'].value = slug;
     }
     var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
@@ -1873,6 +1924,7 @@
           setMsg(el['stage-a-msg'], 'Saving Automatic Mode music choice…', null);
           await prepareAutomaticMusicChoice(slug);
         }
+        await persistStageARequest(slug, inputs);
         var pending = await createPendingTorrentSelection(slug, torrentFile, inputs);
         state.torrentSelection = pending.selection;
         state.status = pending.status;
@@ -1918,6 +1970,16 @@
         handleGlobalError(musicErr, 'automatic-music');
         return;
       }
+    }
+
+    try {
+      await persistStageARequest(slug, inputs);
+    } catch (requestErr) {
+      state.busy = false;
+      el['start-stage-a'].disabled = false;
+      setMsg(el['stage-a-msg'], 'Could not save Stage A restart settings: ' + requestErr.message, 'bad');
+      handleGlobalError(requestErr, 'stage-a-request');
+      return;
     }
 
     // Snapshot existing job folders so we can diff for the new one.
@@ -3335,8 +3397,11 @@
     if (!state.jobId || !isConfigured()) return;
     try {
       var stage = state.status && state.status.stage;
-      var inStageBPhase = ['stage_b_queued', 'stage_b_running',
-        'stage_b_cancelling', 'cancelled', 'complete', 'error'].indexOf(stage) !== -1;
+      var extra = (state.status && state.status.extra) || {};
+      var inStageBPhase = extra.workflow_phase === 'stage_b' ||
+        ['stage_b_queued', 'stage_b_running', 'stage_b_cancelling', 'complete'].indexOf(stage) !== -1 ||
+        ((stage === 'error' || stage === 'cancelled') &&
+          /^Stage B (failed|was cancelled|cancelled)/i.test(String((state.status && state.status.message) || '')));
       var id = state.status && state.status.extra && state.status.extra.workflow_run_id;
       var run = null;
       if (inStageBPhase && id) {
@@ -3534,6 +3599,7 @@
     renderProgress(s);
     renderActivity(s);
 
+    renderStageAControls(stage, s);
     renderStageBControls(stage);
 
     // Resume button appears when polling has stopped on a terminal-ish state.
@@ -3686,6 +3752,24 @@
     }
 
     show(block);
+  }
+
+  function isRestartableStageAFailure(stage, status) {
+    if (!status || ['error', 'cancelled'].indexOf(stage) === -1) return false;
+    var extra = status.extra || {};
+    if (extra.workflow_phase === 'stage_b') return false;
+    // Jobs created before workflow_phase existed retain a clear phase-specific
+    // status message; use it only as a backwards-compatible fallback.
+    return !/^Stage B (failed|was cancelled|cancelled)/i.test(String(status.message || ''));
+  }
+
+  function renderStageAControls(stage, status) {
+    var restartable = isRestartableStageAFailure(stage, status);
+    toggleHidden(el['stage-a-controls'], !restartable);
+    if (!restartable) return;
+    el['restart-stage-a'].disabled = state.busy;
+    text(el['stage-a-controls-text'],
+      'Stage A failed before a usable handoff. Restart it with this job\'s saved source and settings.');
   }
 
   function renderStageBControls(stage) {
@@ -4112,6 +4196,18 @@
       !/[\u0000-\u001F\u007F]/.test(basename);
   }
 
+  function parseJsonWithLegacyTrailingNewline(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch (err) {
+      // A legacy browser writer appended a literal "\\n" after valid JSON.
+      // Recover only that exact terminal suffix; all other malformed settings
+      // remain invalid and follow the caller's existing safe error path.
+      if (typeof raw !== 'string' || raw.slice(-2) !== '\\n') throw err;
+      return JSON.parse(raw.slice(0, -2));
+    }
+  }
+
   function musicDefaultLabel() {
     if (!state.audioLibraryDefault) return 'No saved default library track.';
     var name = state.audioLibraryDefault.slice((AUDIO_LIBRARY_DIR + '/').length);
@@ -4132,7 +4228,7 @@
     try {
       var file = await gh('/repos/' + state.owner + '/' + state.repo +
         '/contents/' + MUSIC_DEFAULT_PATH + '?ref=' + REF + '&_=' + Date.now());
-      var doc = JSON.parse(b64decodeUtf8(file.content));
+      var doc = parseJsonWithLegacyTrailingNewline(b64decodeUtf8(file.content));
       state.audioLibraryDefault = doc && doc.version === 1 &&
         isSafeAudioLibraryPath(doc.library_track_path) ? doc.library_track_path : null;
     } catch (err) {
@@ -4162,7 +4258,7 @@
     };
     try {
       await putRepoFile(MUSIC_DEFAULT_PATH,
-        b64encodeUtf8(JSON.stringify(doc, null, 2) + '\\n'),
+        b64encodeUtf8(JSON.stringify(doc, null, 2) + '\n'),
         'clipforge: save default background music');
     } catch (err) {
       state.audioLibraryDefault = prior;
@@ -4207,7 +4303,7 @@
       created_at_epoch: Math.floor(Date.now() / 1000)
     };
     await putRepoFile('jobs/' + jobId + '/automatic_music.json',
-      b64encodeUtf8(JSON.stringify(selection, null, 2) + '\\n'),
+      b64encodeUtf8(JSON.stringify(selection, null, 2) + '\n'),
       'clipforge: save automatic music choice for job ' + jobId);
     return musicRef;
   }
@@ -4765,6 +4861,53 @@
       jobId: state.jobId
     }));
     startPolling();
+  }
+
+  if (el['restart-stage-a']) {
+    el['restart-stage-a'].addEventListener('click', function () {
+      this.disabled = true;
+      restartStageA();
+    });
+  }
+
+  async function restartStageA() {
+    if (state.busy || !state.jobId || !isRestartableStageAFailure(
+      state.status && state.status.stage, state.status)) return;
+    state.busy = true;
+    renderStage();
+    try {
+      var path = '/repos/' + state.owner + '/' + state.repo +
+        '/contents/' + stageARequestPath(state.jobId) + '?ref=' + REF + '&_=' + Date.now();
+      var file = await gh(path);
+      var inputs = restartableStageAInputs(JSON.parse(b64decodeUtf8(file.content)), state.jobId);
+      if (inputs.automatic_mode === 'true' && !state.geminiKeyMeta.length) {
+        throw new Error('Automatic Mode needs at least one Gemini API key before Stage A can restart.');
+      }
+      var dispatchedAt = new Date();
+      await gh('/repos/' + state.owner + '/' + state.repo +
+        '/actions/workflows/stage-a.yml/dispatches', {
+          method: 'POST', body: { ref: REF, inputs: inputs }
+        });
+      state.status = null;
+      state.stageBRun = null;
+      state.stageBDispatched = false;
+      state.cancellingStageB = false;
+      state.runId = null;
+      state.runHtmlUrl = null;
+      hide(el['run-link']);
+      show(el['status-section']);
+      findWorkflowRun(pushWatch({
+        workflowFile: 'stage-a.yml', dispatchedAt: dispatchedAt,
+        jobId: state.jobId, slug: state.jobId, before: []
+      }));
+      startPolling();
+    } catch (err) {
+      banner('restart-stage-a', 'error', 'Could not restart Stage A: ' + err.message);
+      handleGlobalError(err, 'restart-stage-a');
+    } finally {
+      state.busy = false;
+      renderStage();
+    }
   }
 
   el['restart-stage-b'].addEventListener('click', function () {

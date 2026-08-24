@@ -8,7 +8,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from read_automatic_music import is_safe_library_ref, valid_music_ref
+from read_automatic_music import is_safe_library_ref, load_selection, valid_music_ref
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,7 +16,10 @@ APP = (ROOT / "app.js").read_text(encoding="utf-8")
 AUTO = (ROOT / "automatic.html").read_text(encoding="utf-8")
 TASK = (ROOT / "task.html").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github" / "workflows" / "stage-a.yml").read_text(encoding="utf-8")
-DEFAULT = json.loads((ROOT / "branding" / "music_default.json").read_text(encoding="utf-8"))
+default_raw = (ROOT / "branding" / "music_default.json").read_text(encoding="utf-8")
+if default_raw.endswith("\\n"):
+    default_raw = default_raw[:-2]
+DEFAULT = json.loads(default_raw)
 
 
 assert DEFAULT["version"] == 1
@@ -61,6 +64,23 @@ for required in (
     assert required in APP, f"missing music-default controller behavior: {required}"
 
 assert "[A-Za-z0-9._-]+" not in APP, "frontend library validation must not reject Unicode track filenames"
+# The legacy browser writer appended a literal backslash-n after otherwise
+# valid JSON. Recover only that exact suffix so old failed jobs can restart.
+with tempfile.TemporaryDirectory() as temp_dir:
+    path = Path(temp_dir) / "automatic_music.json"
+    payload = {"version": 1, "music_ref": unicode_track, "source": "explicit_library"}
+    valid = json.dumps(payload, ensure_ascii=False)
+    path.write_text(valid + "\\n", encoding="utf-8")
+    assert load_selection(path) == payload
+    path.write_text(valid + " extra", encoding="utf-8")
+    try:
+        load_selection(path)
+        raise AssertionError("arbitrary malformed automatic music JSON was accepted")
+    except json.JSONDecodeError:
+        pass
+assert "JSON.stringify(selection, null, 2) + '\\n'" in APP
+assert "JSON.stringify(selection, null, 2) + '\\\\n'" not in APP
+assert "function parseJsonWithLegacyTrailingNewline(raw)" in APP
 # Manual and automatic UI each show the current default. Automatic Mode has
 # one (and only one) forward picker in its launch form, not a later handoff.
 assert AUTO.count('id="audio-library-list"') == 1

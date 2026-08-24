@@ -184,7 +184,8 @@ jobs:
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
             --extra "music_ref=${{ github.event.inputs.music_ref }}" \
             --extra "workflow_run_id=${{ github.run_id }}" \
-            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --extra "workflow_phase=stage_b"
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true
@@ -838,7 +839,8 @@ jobs:
           set -euo pipefail
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "error" \
             --message "Stage B failed. See workflow run for logs." \
-            --release-tag "${{ steps.jid.outputs.release_tag }}" || true
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --extra "workflow_phase=stage_b" || true
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true

@@ -37,6 +37,25 @@ def is_safe_library_ref(value: str) -> bool:
     )
 
 
+def load_selection(path: Path) -> dict[str, object]:
+    """Load the job selection and repair only the known legacy suffix.
+
+    An early browser writer appended the two literal characters ``\\n`` after
+    otherwise valid JSON. Accept that exact, terminal legacy form so a Stage A
+    restart can recover; all other malformed documents still fail closed.
+    """
+    raw = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        if not raw.endswith("\\n"):
+            raise
+        data = json.loads(raw[:-2])
+    if not isinstance(data, dict):
+        raise ValueError("automatic music selection must be a JSON object")
+    return data
+
+
 def valid_music_ref(value: object, job_id: str) -> str:
     if value in (None, ""):
         return ""
@@ -58,8 +77,8 @@ def main() -> None:
     music_ref = ""
     source = "none"
     if args.selection_path.exists():
-        data = json.loads(args.selection_path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict) or data.get("version") != 1:
+        data = load_selection(args.selection_path)
+        if data.get("version") != 1:
             raise ValueError("automatic music selection has an unsupported format")
         music_ref = valid_music_ref(data.get("music_ref"), args.job_id)
         raw_source = data.get("source")

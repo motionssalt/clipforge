@@ -363,7 +363,8 @@ jobs:
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
             --extra "workflow_run_id=${{ github.run_id }}" \
             --extra "workflow_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --extra "automatic_mode=${{ github.event.inputs.automatic_mode }}"
+            --extra "automatic_mode=${{ github.event.inputs.automatic_mode }}" \
+            --extra "workflow_phase=stage_a"
 
       - name: Commit initial status
         shell: bash
@@ -1008,7 +1009,8 @@ jobs:
           python scripts/write_status.py "${{ steps.jid.outputs.job_id }}" "error" \
             --message "$message" \
             --release-tag "${{ steps.jid.outputs.release_tag }}" \
-            --extra "automatic_mode=${AUTOMATIC_MODE_INPUT}" || true
+            --extra "automatic_mode=${AUTOMATIC_MODE_INPUT}" \
+            --extra "workflow_phase=stage_a" || true
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true
