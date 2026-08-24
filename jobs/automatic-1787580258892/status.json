@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787580258892",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
   "release_tag": "clipforge-automatic-1787580258892",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787580258892",
   "assets": {
@@ -12,18 +12,11 @@
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787580258892/screenshots.zip",
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787580258892/transcript.json"
   },
-  "created_at_epoch": 1787598785,
-<<<<<<< Updated upstream
-  "updated_at_epoch": 1787604946,
-=======
-  "updated_at_epoch": 1787605229,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1787641985,
+  "created_at_epoch": 1787605864,
+  "updated_at_epoch": 1787605864,
+  "expires_at_epoch": 1787649064,
   "extra": {
     "automatic_mode": "true",
-    "automatic_analysis_result": "jobs/automatic-1787580258892/automatic_analysis.json",
-    "workflow_phase": "stage_a",
-    "workflow_run_id": "32775053812",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32775053812"
+    "automatic_analysis_result": "jobs/automatic-1787580258892/automatic_analysis.json"
   }
 }
