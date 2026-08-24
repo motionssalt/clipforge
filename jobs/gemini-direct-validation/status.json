@@ -1,7 +1,7 @@
 {
   "job_id": "gemini-direct-validation",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
+  "stage": "error",
+  "message": "Automatic Mode failed after Stage A. No production.json was accepted or Stage B dispatched; see workflow run for the safe failure category.",
   "release_tag": "clipforge-gemini-direct-validation",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-gemini-direct-validation",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-gemini-direct-validation/transcript.json"
   },
   "created_at_epoch": 1787542305,
-  "updated_at_epoch": 1787542324,
+  "updated_at_epoch": 1787542328,
   "expires_at_epoch": 1787585505,
   "extra": {
     "workflow_run_id": "32686634619",
