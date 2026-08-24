@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787545987258",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
+  "stage": "stage_b_queued",
+  "message": "Automatic analysis validated production.json. Dispatching the existing Stage B workflow.",
   "release_tag": "clipforge-automatic-1787545987258",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787545987258",
   "assets": {
@@ -13,13 +13,17 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787545987258/transcript.json"
   },
   "created_at_epoch": 1787546108,
-  "updated_at_epoch": 1787568618,
+  "updated_at_epoch": 1787569044,
   "expires_at_epoch": 1787589308,
   "extra": {
     "workflow_run_id": "32717971427",
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32717971427",
     "automatic_mode": "true",
     "automatic_analysis_result": "jobs/automatic-1787545987258/automatic_analysis.json",
-    "workflow_phase": "stage_a"
+    "workflow_phase": "stage_a",
+    "production_ref": "path:jobs/automatic-1787545987258/production.json",
+    "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a",
+    "music_source": "explicit_library",
+    "original_asset_name": "original.mkv"
   }
 }
