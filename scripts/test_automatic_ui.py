@@ -43,6 +43,13 @@ for required in (
 ):
     assert required in APP, f"Automatic Mode controller missing: {required}"
 
-assert "state.puterKeyMeta" not in APP
-assert "Puter auth token" not in APP
-print("PASS: Automatic Mode has a real source/focus launch form, shared Gemini key prerequisite, unattended dispatch flag, and continuous task-progress route")
+for legacy in (
+    "state.puterKeyMeta",
+    "Puter auth token",
+    "Puter",
+    "Opus",
+    "GPT fallback",
+    "non-Opus",
+):
+    assert legacy not in HTML + APP, f"Automatic Mode must not retain legacy provider gate/copy: {legacy}"
+print("PASS: Automatic Mode has a direct-Gemini-only source/focus launch form, shared Gemini key prerequisite, unattended dispatch flag, and continuous task-progress route")

@@ -4098,8 +4098,18 @@
   var AUDIO_LIBRARY_DIR = 'audio-library';
 
   function isSafeAudioLibraryPath(path) {
-    return typeof path === 'string' &&
-      new RegExp('^' + AUDIO_LIBRARY_DIR.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '/[A-Za-z0-9._-]+$').test(path);
+    // GitHub returns repository paths, not shell paths. A real library
+    // filename may include spaces, parentheses, or Unicode characters. Permit
+    // exactly one non-empty basename while still rejecting traversal, nested
+    // paths, backslashes, and control characters.
+    if (typeof path !== 'string' ||
+        path.slice(0, AUDIO_LIBRARY_DIR.length + 1) !== AUDIO_LIBRARY_DIR + '/') {
+      return false;
+    }
+    var basename = path.slice(AUDIO_LIBRARY_DIR.length + 1);
+    return basename !== '' && basename !== '.' && basename !== '..' &&
+      basename.indexOf('/') === -1 && basename.indexOf('\\') === -1 &&
+      !/[\u0000-\u001F\u007F]/.test(basename);
   }
 
   function musicDefaultLabel() {

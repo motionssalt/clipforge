@@ -12,11 +12,29 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 from pathlib import Path
 
 
-LIBRARY_REF = re.compile(r"^path:audio-library/[A-Za-z0-9._-]+$")
+LIBRARY_REF_PREFIX = "path:audio-library/"
+
+
+def is_safe_library_ref(value: str) -> bool:
+    """Accept one ordinary repository basename, including Unicode names.
+
+    The selection is later opened only from the checked-out repository. This
+    validator still rejects empty names, traversal, nested paths, backslashes,
+    and control characters before the workflow receives it.
+    """
+    if not value.startswith(LIBRARY_REF_PREFIX):
+        return False
+    basename = value[len(LIBRARY_REF_PREFIX):]
+    return (
+        bool(basename)
+        and basename not in {".", ".."}
+        and "/" not in basename
+        and "\\" not in basename
+        and not any(ord(char) < 32 or ord(char) == 127 for char in basename)
+    )
 
 
 def valid_music_ref(value: object, job_id: str) -> str:
@@ -24,7 +42,7 @@ def valid_music_ref(value: object, job_id: str) -> str:
         return ""
     if not isinstance(value, str):
         raise ValueError("automatic music_ref must be a string")
-    if LIBRARY_REF.fullmatch(value):
+    if is_safe_library_ref(value):
         return value
     if value == f"path:jobs/{job_id}/music.mp3":
         return value
