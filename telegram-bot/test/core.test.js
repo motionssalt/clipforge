@@ -102,7 +102,7 @@ test('private Shadow Clone creation copies shared source while excluding all use
   globalThis.fetch = async (url, init = {}) => {
     const parsed = new URL(String(url));
     const path = `${parsed.pathname}${parsed.search}`;
-    calls.push({ path, method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    calls.push({ path, method: init.method || 'GET', headers: init.headers, body: init.body ? JSON.parse(init.body) : null });
     const reply = (value) => new Response(JSON.stringify(value), { headers: { 'content-type': 'application/json' } });
     if (path === '/user') return reply({ login: 'alice' });
     if (path === '/repos/motionssalt/clipforge/git/ref/heads/main') return reply({ object: { sha: 'source-commit' } });
@@ -128,6 +128,7 @@ test('private Shadow Clone creation copies shared source while excluding all use
     assert.deepEqual(treeRequest.body.tree.map((entry) => entry.path).sort(), ['.clipforge-sync.json', 'README.md']);
     assert.equal(calls.some((call) => call.path.includes('job-blob')), false);
     assert.equal(calls.some((call) => call.path.includes('brand-blob')), false);
+    assert.equal(calls.every((call) => call.headers['User-Agent'] === 'ClipForge-Telegram-Bot/1.0'), true);
   } finally {
     globalThis.fetch = originalFetch;
   }
