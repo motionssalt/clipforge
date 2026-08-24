@@ -1887,7 +1887,7 @@
     // Automatic Mode must know its job id before dispatch so an upfront music
     // choice can be committed safely for the unattended Stage B handoff.
     if (!slug) {
-      slug = automaticMode ? 'automatic-' : (torrentFile ? 'torrent-' : (isMagnetLink ? 'magnet-' : 'manual-')) + Date.now();
+      slug = (automaticMode ? 'automatic-' : (torrentFile ? 'torrent-' : (isMagnetLink ? 'magnet-' : 'manual-'))) + Date.now();
       el['job-slug-input'].value = slug;
     }
     var targetDurRaw = (el['target-duration-select'] && el['target-duration-select'].value) || '120';
