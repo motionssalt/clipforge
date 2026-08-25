@@ -156,8 +156,10 @@ def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: in
     file_meta = result.get('result') if isinstance(result, dict) and result.get('ok') else None
     file_path = str(file_meta.get('file_path') or '') if isinstance(file_meta, dict) else ''
     reported_size = int(file_meta.get('file_size') or 0) if isinstance(file_meta, dict) else 0
-    if not file_path or (reported_size and reported_size != expected_size):
-        fail('Local Telegram Bot API did not return the expected relay media.')
+    if not file_path:
+        fail('Local Telegram Bot API did not return a retrievable relay file path.')
+    if reported_size and reported_size != expected_size:
+        fail('Local Telegram Bot API relay media size does not match the staged source.')
     written = 0
     try:
         with requests.get(
