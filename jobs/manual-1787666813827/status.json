@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787666813827/final.mp4"
   },
   "created_at_epoch": 1787666942,
-  "updated_at_epoch": 1787686271,
+  "updated_at_epoch": 1787692218,
   "expires_at_epoch": 1787710142,
   "extra": {
     "workflow_run_id": "32883551481",
@@ -40,7 +40,7 @@
     "scheduled_for": null,
     "timezone": "UTC",
     "idempotency_key": "clipforge-manual-1787666813827-mt9276bx",
-    "updated_at_epoch": 1787686271,
+    "updated_at_epoch": 1787692218,
     "media": {
       "filename": "final.mp4",
       "size_bytes": 96979303,
