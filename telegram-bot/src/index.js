@@ -97,7 +97,7 @@ function userError(error) {
 function mainMenu() {
   return buttons([
     [{ text: 'Automatic', callback_data: 'menu:auto' }, { text: 'Manual', callback_data: 'menu:manual' }],
-    [{ text: 'Tasks', callback_data: 'menu:tasks' }, { text: 'Status', callback_data: 'menu:status' }],
+    [{ text: 'Tasks', callback_data: 'menu:tasks' }],
     [{ text: 'Completed', callback_data: 'menu:done' }, { text: 'Settings', callback_data: 'menu:settings' }]
   ]);
 }
@@ -649,6 +649,7 @@ function taskButtons(label, status) {
   if (status.stage === 'awaiting_json_upload') rows.push([{ text: 'Get agent prompt', callback_data: `agent:${label}` }, { text: 'Upload production.json', callback_data: `plan:${label}` }]);
   if (['error', 'cancelled', 'complete'].includes(status.stage)) rows.push([{ text: 'Restart Stage B', callback_data: `retry:b:${label}` }]);
   if (['stage_b_queued', 'stage_b_running'].includes(status.stage)) rows.push([{ text: 'Cancel Stage B', callback_data: `cancel:${label}` }]);
+  if (status.stage === 'complete') rows.push([{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }]);
   if (taskCanBeDeleted(status)) rows.push([{ text: 'Delete task', callback_data: `task:delete:${label}` }]);
   return buttons(rows);
 }
@@ -784,7 +785,7 @@ async function showCompleted(env, chatId, label, messageId = null) {
   if (assets.final_zip) lines.push(`<a href="${escapeHtml(assets.final_zip)}">Download final ZIP</a>`);
   if (!assets.final_mp4 && !assets.final_zip) lines.push('The completion status has no final asset URL. Open the release from /status.');
   if (status.publishing) lines.push(zernioPublishingSummary(status.publishing));
-  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: buttons([[{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }, { text: 'Refresh', callback_data: `done:${label}` }], [{ text: 'Delete task', callback_data: `task:delete:${label}` }]]) }, messageId);
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: taskButtons(label, status) }, messageId);
 }
 
 async function resumePendingTask(env, chatId, messageId = null) {
