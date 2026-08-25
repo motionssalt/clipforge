@@ -134,7 +134,55 @@ def known_basic_group_message_request(
     return request_factory(id=[input_message_factory(message_id)])
 
 
-async def download_group_media(telegram: dict[str, Any], output_path: Path) -> None:
+def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: int, output_path: Path) -> bool:
+    """Download one Bot B-visible file through a trusted local Bot API server.
+
+    Telegram's public Bot API rejects large files, while the official local Bot
+    API mode supports unrestricted downloads. The file ID is accepted only from
+    Bot B's authenticated group update and is never logged.
+    """
+    base = str(os.environ.get('LOCAL_BOT_API_BASE') or '').rstrip('/')
+    if not base or not file_id:
+        return False
+    try:
+        lookup = requests.post(
+            f'{base}/bot{bot_token}/getFile',
+            data={'file_id': file_id},
+            timeout=REQUEST_TIMEOUT,
+        )
+        result = lookup.json()
+    except Exception as error:
+        raise RuntimeError('Local Telegram Bot API media lookup could not be completed.') from error
+    file_meta = result.get('result') if isinstance(result, dict) and result.get('ok') else None
+    file_path = str(file_meta.get('file_path') or '') if isinstance(file_meta, dict) else ''
+    reported_size = int(file_meta.get('file_size') or 0) if isinstance(file_meta, dict) else 0
+    if not file_path or (reported_size and reported_size != expected_size):
+        fail('Local Telegram Bot API did not return the expected relay media.')
+    written = 0
+    try:
+        with requests.get(
+            f'{base}/file/bot{bot_token}/{file_path}',
+            stream=True,
+            timeout=(REQUEST_TIMEOUT, 15 * 60),
+        ) as response:
+            if response.status_code >= 400:
+                fail(f'Local Telegram Bot API file download failed with HTTP {response.status_code}.')
+            with output_path.open('wb') as target:
+                for chunk in response.iter_content(chunk_size=4 * 1024 * 1024):
+                    if not chunk:
+                        continue
+                    written += len(chunk)
+                    if written > expected_size:
+                        fail('Local Telegram Bot API returned media larger than the staged source.')
+                    target.write(chunk)
+    except requests.RequestException as error:
+        raise RuntimeError('Local Telegram Bot API media download could not be completed.') from error
+    if written != expected_size:
+        fail('Local Telegram Bot API download did not match the staged media size.')
+    return True
+
+
+async def download_group_media(telegram: dict[str, Any], output_path: Path, relay_file_id: str = '') -> None:
     """Download one Bot A-copied basic-group video through an authorized client.
 
     Telegram permits Bot B to receive the authenticated marker but can return an
@@ -161,6 +209,8 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
     expected_size = int(telegram['declared_size'])
     output_path.parent.mkdir(parents=True, exist_ok=True)
     preflight_space(expected_size, output_path.parent)
+    if download_local_bot_api_media(bot_token, relay_file_id, expected_size, output_path):
+        return
     client: Any | None = None
     try:
         client = TelegramClient(MemorySession(), bot_api_id, bot_api_hash, connection_retries=3, request_retries=3, retry_delay=1, receive_updates=False)
@@ -334,12 +384,12 @@ def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, input
     github_request(token, 'POST', dispatch_url, json={'ref': 'main', 'inputs': dispatch_inputs})
 
 
-def run(job_id: str, serialized_payload: str) -> None:
+def run(job_id: str, serialized_payload: str, relay_file_id: str = '') -> None:
     payload = decrypt_payload(job_id, serialized_payload, os.environ.get('RELAY_ENCRYPTION_KEY', ''))
     repo, token, inputs, telegram = ensure_payload(payload)
     work = Path('work/telegram-relay')
     source = work / 'source_input.bin'
-    asyncio.run(download_group_media(telegram, source))
+    asyncio.run(download_group_media(telegram, source, relay_file_id))
     actual_size = source.stat().st_size
     if actual_size != int(telegram['declared_size']):
         fail('Downloaded source size changed before handoff.')
@@ -364,8 +414,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description='Relay one Bot B Telegram media message into a target ClipForge clone.')
     parser.add_argument('--job-id', required=True)
     parser.add_argument('--relay-payload', required=True)
+    parser.add_argument('--relay-file-id', default='')
     args = parser.parse_args()
-    run(str(args.job_id), str(args.relay_payload))
+    run(str(args.job_id), str(args.relay_payload), str(args.relay_file_id))
 
 
 if __name__ == '__main__':

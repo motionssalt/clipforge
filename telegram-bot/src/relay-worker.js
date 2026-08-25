@@ -1,6 +1,6 @@
 import { dispatchWorkflow } from './github.js';
 import { getRelayJob, putRelayJob } from './storage.js';
-import { parseRelayReadySignal } from './relay.js';
+import { parseRelayCaption, parseRelayReadySignal } from './relay.js';
 
 const RELAY_UPDATE_TTL_SECONDS = 24 * 60 * 60;
 
@@ -39,6 +39,27 @@ function sealedRelayPayload(record, marker) {
   return sealed;
 }
 
+function relayMediaFileId(message) {
+  const media = message && (message.video || message.document);
+  return String(media && media.file_id || '').trim();
+}
+
+async function rememberCopiedMedia(env, message) {
+  const groupId = configuredInteger(env.INTERNAL_RELAY_GROUP_CHAT_ID);
+  const botAId = configuredInteger(env.BOT_A_TELEGRAM_ID);
+  if (!groupId || !botAId || !message || !message.chat || Number(message.chat.id) !== groupId) return;
+  if (!message.from || Number(message.from.id) !== botAId || message.from.is_bot !== true) return;
+  const caption = parseRelayCaption(message.caption);
+  const fileId = relayMediaFileId(message);
+  if (!caption || !fileId) return;
+  const record = await getRelayJob(env, caption.sourceChatId, caption.jobId);
+  if (!record || !record.relay || Number(record.relay.internal_group_message_id) !== Number(message.message_id)) return;
+  await putRelayJob(env, caption.sourceChatId, caption.jobId, {
+    ...record,
+    relay: { ...record.relay, bot_b_file_id: fileId },
+  });
+}
+
 async function routeReadyMarker(env, message) {
   const groupId = configuredInteger(env.INTERNAL_RELAY_GROUP_CHAT_ID);
   const botAId = configuredInteger(env.BOT_A_TELEGRAM_ID);
@@ -50,8 +71,10 @@ async function routeReadyMarker(env, message) {
   const record = await getRelayJob(env, marker.sourceChatId, marker.jobId);
   if (!record) throw new Error('Bot B could not find the pending relay job. The source may have expired; send the video again.');
   const sealedPayload = sealedRelayPayload(record, marker);
+  const relayFileId = String(record.relay && record.relay.bot_b_file_id || '').trim();
+  if (!relayFileId) throw new Error('Bot B did not receive the copied media before the relay marker. Send the video again.');
   const central = centralCredentials(env);
-  await dispatchWorkflow(central, central.repo, 'telegram-relay.yml', { job_id: marker.jobId, relay_payload: sealedPayload });
+  await dispatchWorkflow(central, central.repo, 'telegram-relay.yml', { job_id: marker.jobId, relay_payload: sealedPayload, relay_file_id: relayFileId });
   await putRelayJob(env, marker.sourceChatId, marker.jobId, { ...record, state: 'dispatched', dispatched_at_epoch: Math.floor(Date.now() / 1000) });
 }
 
@@ -64,7 +87,10 @@ export default {
     let update;
     try { update = await request.json(); } catch { return new Response('Bad request', { status: 400 }); }
     try {
-      if (!await seenRelayUpdate(env, update.update_id)) await routeReadyMarker(env, update.message);
+      if (!await seenRelayUpdate(env, update.update_id)) {
+        await rememberCopiedMedia(env, update.message);
+        await routeReadyMarker(env, update.message);
+      }
     } catch (error) {
       // Never echo routing credentials or encrypted payloads to Telegram or logs.
       console.log(`Bot B relay routing failed: ${String(error && error.message || 'unknown error').replace(/(?:ghp|github_pat)_[A-Za-z0-9_]+/g, '[redacted]')}`);
@@ -73,4 +99,4 @@ export default {
   }
 };
 
-export const __test = { configuredInteger, parseRelayReadySignal, sealedRelayPayload };
+export const __test = { configuredInteger, parseRelayCaption, parseRelayReadySignal, relayMediaFileId, sealedRelayPayload };
