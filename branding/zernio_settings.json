@@ -6,7 +6,8 @@
   "target_accounts": {
     "tiktok": [
       "6a89d0da77555aae01674321",
-      "6a8cff1e77555aae012e87b3"
+      "6a8cff1e77555aae012e87b3",
+      "6a23f25a2b2567671af5f0f7"
     ],
     "youtube": [
       "6a89d06a77555aae01671ca2",
@@ -22,5 +23,5 @@
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1787693884
+  "updated_at_epoch": 1787693886
 }
