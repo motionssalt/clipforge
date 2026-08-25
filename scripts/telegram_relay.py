@@ -154,10 +154,12 @@ def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: in
     except Exception as error:
         raise RuntimeError('Local Telegram Bot API media lookup could not be completed.') from error
     file_meta = result.get('result') if isinstance(result, dict) and result.get('ok') else None
-    file_path = str(file_meta.get('file_path') or '') if isinstance(file_meta, dict) else ''
-    reported_size = int(file_meta.get('file_size') or 0) if isinstance(file_meta, dict) else 0
+    if not isinstance(file_meta, dict):
+        fail('Local Telegram Bot API rejected Bot B’s relay media handle.')
+    file_path = str(file_meta.get('file_path') or '')
+    reported_size = int(file_meta.get('file_size') or 0)
     if not file_path:
-        fail('Local Telegram Bot API did not return a retrievable relay file path.')
+        fail(f'Local Telegram Bot API accepted the relay media handle but returned no file path (size {reported_size}).')
     if reported_size and reported_size != expected_size:
         fail('Local Telegram Bot API relay media size does not match the staged source.')
     written = 0
