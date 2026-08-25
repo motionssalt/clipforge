@@ -267,11 +267,14 @@ async def _download_telegram_parallel(client, message, output_path: str, media_s
                     if attempts > 2:
                         raise _ParallelTelegramTransferError('Telegram rate-limited the parallel media transfer.') from error
                     await asyncio.sleep(max(1, int(error.seconds)))
-                except (errors.TimedOutError, asyncio.TimeoutError, ConnectionError, OSError) as error:
+                except (errors.TimedOutError, errors.ServerError, asyncio.TimeoutError, ConnectionError, OSError) as error:
+                    # Telegram frequently returns a recoverable server timeout for
+                    # an individual range. Retrying that range preserves all other
+                    # direct-offset writes instead of restarting the whole file.
                     attempts += 1
-                    if attempts > 4:
+                    if attempts > 8:
                         raise _ParallelTelegramTransferError('Parallel Telegram media transfer could not recover from repeated network timeouts.') from error
-                    await asyncio.sleep(min(8, attempts * 2))
+                    await asyncio.sleep(min(12, attempts * 2))
             queue.task_done()
 
     try:
@@ -285,6 +288,7 @@ async def _download_telegram_parallel(client, message, output_path: str, media_s
     except _ParallelTelegramTransferError:
         raise
     except Exception as error:
+        print(f'Parallel Telegram transfer diagnostic: {type(error).__name__}: {error}', flush=True)
         raise _ParallelTelegramTransferError('Parallel Telegram media transfer could not initialize safely.') from error
     finally:
         os.close(file_descriptor)
