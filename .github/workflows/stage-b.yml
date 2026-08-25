@@ -296,6 +296,27 @@ jobs:
           echo "production.json head:"
           head -c 400 work/production.json; echo
 
+          # Series Mode is opt-in per persisted Stage A request. When enabled,
+          # reject a plan that omits its mandatory boundary metadata or claims a
+          # different series/part/start timestamp before any render work begins.
+          JID="$jid" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from scripts.production_plan_contract import validate_production_plan
+          jid = os.environ['JID']
+          plan = json.loads(Path('work/production.json').read_text(encoding='utf-8'))
+          request_path = Path('jobs') / jid / 'stage_a_request.json'
+          request = json.loads(request_path.read_text(encoding='utf-8')) if request_path.exists() else {}
+          errors = validate_production_plan(plan)
+          if request.get('series_mode') == 'true':
+              expected = {'series_id': request.get('series_id'), 'series_part': int(request.get('series_part') or 0), 'series_start_seconds': int(request.get('series_start_seconds') or -1)}
+              for key, value in expected.items():
+                  if plan.get(key) != value:
+                      errors.append(f'Series metadata mismatch for {key}: expected {value!r}.')
+          if errors:
+              raise SystemExit('Invalid production.json:\n- ' + '\n- '.join(errors))
+          PY
+
           # Extract the one-per-job title the analysis agent put in
           # production.json (see generate_analysis_prompt.py). Optional: a
           # missing/blank title exports an empty string and the rest of
