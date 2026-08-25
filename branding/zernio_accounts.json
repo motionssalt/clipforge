@@ -1,24 +1,24 @@
 {
   "version": 1,
   "provider": "zernio",
-  "updated_at_epoch": 1787685749,
+  "updated_at_epoch": 1787693602,
   "accounts": [
     {
-      "id": "6a8cff1e77555aae012e87b3",
+      "id": "6a23f25a2b2567671af5f0f7",
       "platform": "tiktok",
-      "username": "nolly.decoded",
-      "displayName": "NollyDecoded 🎬🇳🇬",
-      "profileId": "{'_id': '6a8cfeddd01efe5f80893d9b', 'name': 'Default'}",
+      "username": "motionsalt",
+      "displayName": "MOTIONSALT",
+      "profileId": "{'_id': '6a23f22dba1bebcaf7982ef3', 'name': 'Default'}",
       "isActive": true,
       "enabled": true,
       "needsReconnection": false
     },
     {
-      "id": "6a8cff4277555aae012e8a8d",
+      "id": "6a8e09b877555aae01785097",
       "platform": "youtube",
-      "username": "nollydecodedng",
-      "displayName": "NollyDecoded",
-      "profileId": "{'_id': '6a8cfeddd01efe5f80893d9b', 'name': 'Default'}",
+      "username": "chimera_vfx",
+      "displayName": "CHIMERAVFX ",
+      "profileId": "{'_id': '6a23f22dba1bebcaf7982ef3', 'name': 'Default'}",
       "isActive": true,
       "enabled": true,
       "needsReconnection": false
