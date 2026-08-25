@@ -57,7 +57,9 @@ export const VOICES = {
   'en-US-AvaNeural': { label: 'Ava', gender: 'Female', style: 'Expressive, caring, conversational' },
   'en-US-AriaNeural': { label: 'Aria', gender: 'Female', style: 'Positive, confident, conversational' },
   'en-US-JennyNeural': { label: 'Jenny', gender: 'Female', style: 'Friendly, considerate narrator' },
-  'en-US-MichelleNeural': { label: 'Michelle', gender: 'Female', style: 'Friendly, polished narrator' }
+  'en-US-MichelleNeural': { label: 'Michelle', gender: 'Female', style: 'Friendly, polished narrator' },
+  'en-NG-AbeoNeural': { label: 'Abeo', gender: 'Male', style: 'Nigerian English, friendly and positive' },
+  'en-NG-EzinneNeural': { label: 'Ezinne', gender: 'Female', style: 'Nigerian English, friendly and positive' }
 };
 
 export const DEFAULT_VOICE = 'en-US-AndrewNeural';

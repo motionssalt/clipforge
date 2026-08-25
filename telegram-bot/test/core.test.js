@@ -101,6 +101,31 @@ test('interactive views safely create a new view only when no editable message e
   }
 });
 
+test('typed slash commands create a new control message rather than editing the prior view', async () => {
+  const workerEnv = { ...env(), TELEGRAM_BOT_TOKEN: 'test-token', TELEGRAM_WEBHOOK_SECRET: 'expected-secret' };
+  await putState(workerEnv, 29, { activeViewId: 444 });
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 445 } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const response = await worker.fetch(new Request('https://worker.example/webhook', {
+      method: 'POST',
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': 'expected-secret', 'content-type': 'application/json' },
+      body: JSON.stringify({ update_id: 4001, message: { message_id: 10, text: '/start', chat: { id: 29, type: 'private' } } })
+    }), workerEnv);
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /\/sendMessage$/);
+    assert.equal(calls[0].body.chat_id, 29);
+    assert.equal((await getState(workerEnv, 29)).activeViewId, 445);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('health is public but webhook updates require the configured Telegram secret', async () => {
   const workerEnv = { ...env(), TELEGRAM_WEBHOOK_SECRET: 'expected-secret', TELEGRAM_BOT_TOKEN: 'test-token' };
   const health = await worker.fetch(new Request('https://worker.example/health'), workerEnv);

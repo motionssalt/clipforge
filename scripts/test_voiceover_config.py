@@ -24,13 +24,15 @@ assert voice.CHANNELS == 1
 assert voice.VOICE_CLARITY_PRESET_NAME == "speech_clarity_v1"
 assert voice.VOICE_CLARITY_TARGET_I_LUFS == -16.0
 assert voice.VOICE_CLARITY_TARGET_TP_DBTP == -1.5
-assert len(voice.TTS_VOICE_CATALOG) == 10
+assert len(voice.TTS_VOICE_CATALOG) == 12
 assert set(voice.TTS_VOICE_CATALOG) == {
     "en-US-AndrewNeural", "en-US-BrianNeural", "en-US-ChristopherNeural",
     "en-US-EricNeural", "en-US-GuyNeural", "en-US-RogerNeural",
     "en-US-AvaNeural", "en-US-AriaNeural", "en-US-JennyNeural",
-    "en-US-MichelleNeural",
+    "en-US-MichelleNeural", "en-NG-AbeoNeural", "en-NG-EzinneNeural",
 }
+assert voice.TTS_VOICE_CATALOG["en-NG-AbeoNeural"]["label"] == "Abeo"
+assert voice.TTS_VOICE_CATALOG["en-NG-EzinneNeural"]["label"] == "Ezinne"
 
 with tempfile.TemporaryDirectory() as temp_dir:
     settings_path = Path(temp_dir) / "tts_settings.json"

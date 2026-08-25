@@ -1034,6 +1034,11 @@ async function cancelStageB(env, chatId, label, messageId = null) {
 }
 
 async function handleCommand(env, chatId, command) {
+  // Commands are typed into the chat, so their response must be a new bot
+  // message. Only callback-driven navigation is allowed to replace a view.
+  const state = await getState(env, chatId);
+  state.activeViewId = null;
+  await putState(env, chatId, state);
   if (command === '/start' || command === '/help') return showHome(env, chatId);
   if (command === '/settings') return showSettings(env, chatId);
   if (command === '/tasks') return listTasks(env, chatId, false);

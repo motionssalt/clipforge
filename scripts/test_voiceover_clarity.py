@@ -33,11 +33,12 @@ for index in range(voice.SAMPLE_RATE_HZ * 2):
 pcm = b"".join(frames)
 
 assert voice.DEFAULT_TTS_VOICE == "en-US-AndrewNeural"
-assert len(voice.TTS_VOICE_CATALOG) == 10
+assert len(voice.TTS_VOICE_CATALOG) == 12
 assert set(voice.TTS_VOICE_CATALOG) == {
     "en-US-AndrewNeural", "en-US-BrianNeural", "en-US-ChristopherNeural",
     "en-US-EricNeural", "en-US-GuyNeural", "en-US-RogerNeural",
     "en-US-AvaNeural", "en-US-AriaNeural", "en-US-JennyNeural", "en-US-MichelleNeural",
+    "en-NG-AbeoNeural", "en-NG-EzinneNeural",
 }
 
 with tempfile.TemporaryDirectory(prefix="clipforge_clarity_test_") as temp_dir:

@@ -78,6 +78,12 @@ TTS_VOICE_CATALOG: dict[str, dict[str, str]] = {
     "en-US-MichelleNeural": {
         "label": "Michelle", "gender": "Female", "style": "Friendly, polished narrator",
     },
+    "en-NG-AbeoNeural": {
+        "label": "Abeo", "gender": "Male", "style": "Nigerian English, friendly and positive",
+    },
+    "en-NG-EzinneNeural": {
+        "label": "Ezinne", "gender": "Female", "style": "Nigerian English, friendly and positive",
+    },
 }
 DEFAULT_TTS_VOICE = "en-US-AndrewNeural"
 TTS_SETTINGS_PATH = Path("branding/tts_settings.json")
