@@ -135,31 +135,39 @@ def known_basic_group_message_request(
 
 
 async def download_group_media(telegram: dict[str, Any], output_path: Path) -> None:
+    """Download one Bot A-copied basic-group video through an authorized client.
+
+    Telegram permits Bot B to receive the authenticated marker but can return an
+    empty ``messages.getMessages`` response for bot sessions in basic groups.
+    In that documented limitation, the existing dedicated user-authorized media
+    session is used only for the exact group/message pair sealed by Bot A.
+    """
     try:
         from telethon import TelegramClient, functions, types
-        from telethon.sessions import MemorySession
+        from telethon.sessions import MemorySession, StringSession
     except ImportError as error:
-        raise RuntimeError('Bot B MTProto dependencies are unavailable.') from error
+        raise RuntimeError('Telegram MTProto dependencies are unavailable.') from error
     try:
-        api_id = int(os.environ['BOTB_MTPROTO_API_ID'])
+        bot_api_id = int(os.environ['BOTB_MTPROTO_API_ID'])
     except (KeyError, ValueError) as error:
         raise RuntimeError('Bot B MTProto API ID is invalid.') from error
-    api_hash = str(os.environ.get('BOTB_MTPROTO_API_HASH') or '')
+    bot_api_hash = str(os.environ.get('BOTB_MTPROTO_API_HASH') or '')
     bot_token = str(os.environ.get('BOTB_MTPROTO_BOT_TOKEN') or '')
-    if not api_hash or not bot_token:
+    if not bot_api_hash or not bot_token:
         fail('Bot B MTProto credentials are not configured.')
     group_chat_id = int(telegram['group_chat_id'])
+    group_message_id = int(telegram['group_message_id'])
     verify_bot_group_access(bot_token, group_chat_id)
     expected_size = int(telegram['declared_size'])
     output_path.parent.mkdir(parents=True, exist_ok=True)
     preflight_space(expected_size, output_path.parent)
-    client = TelegramClient(MemorySession(), api_id, api_hash, connection_retries=3, request_retries=3, retry_delay=1, receive_updates=False)
+    client: Any | None = None
     try:
+        client = TelegramClient(MemorySession(), bot_api_id, bot_api_hash, connection_retries=3, request_retries=3, retry_delay=1, receive_updates=False)
         await client.connect()
         await client(functions.auth.ImportBotAuthorizationRequest(
-            flags=0, api_id=api_id, api_hash=api_hash, bot_auth_token=bot_token
+            flags=0, api_id=bot_api_id, api_hash=bot_api_hash, bot_auth_token=bot_token
         ))
-        group_message_id = int(telegram['group_message_id'])
         request = known_basic_group_message_request(
             group_chat_id,
             group_message_id,
@@ -173,6 +181,23 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
              if int(getattr(candidate, 'id', 0) or 0) == group_message_id),
             None,
         )
+        if not message or not getattr(message, 'media', None):
+            await client.disconnect()
+            client = None
+            try:
+                user_api_id = int(os.environ['CLIPFORGE_TELEGRAM_API_ID'])
+            except (KeyError, ValueError) as error:
+                raise RuntimeError('Dedicated Telegram media-session API ID is invalid.') from error
+            user_api_hash = str(os.environ.get('CLIPFORGE_TELEGRAM_API_HASH') or '')
+            user_session = str(os.environ.get('CLIPFORGE_TELEGRAM_SESSION') or '')
+            if not user_api_hash or not user_session:
+                fail('Dedicated Telegram media-session credentials are not configured.')
+            client = TelegramClient(StringSession(user_session), user_api_id, user_api_hash, connection_retries=3, request_retries=3, retry_delay=1, receive_updates=False)
+            await client.connect()
+            if not await client.is_user_authorized():
+                fail('The dedicated Telegram media session is no longer authorized.')
+            entity = await client.get_entity(types.PeerChat(abs(group_chat_id)))
+            message = await client.get_messages(entity, ids=group_message_id)
         if not message or not getattr(message, 'media', None):
             fail('The internal relay message is unavailable or has no media.')
         mime = str(getattr(getattr(message, 'file', None), 'mime_type', '') or '').lower()
@@ -188,16 +213,17 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
         except _ParallelTelegramTransferError as error:
             if output_path.exists():
                 output_path.unlink()
-            print(f'Parallel Bot B MTProto transfer fell back to one connection: {error}', flush=True)
+            print(f'Parallel Telegram transfer fell back to one connection: {error}', flush=True)
             await asyncio.wait_for(client.download_media(message, file=str(output_path)), timeout=45 * 60)
         if not output_path.is_file() or output_path.stat().st_size != actual_size:
-            fail('Bot B MTProto download completed with an incomplete file.')
+            fail('Authenticated Telegram media download completed with an incomplete file.')
     except asyncio.TimeoutError as error:
         if output_path.exists():
             output_path.unlink()
-        raise RuntimeError('Bot B MTProto download exceeded the 45-minute safety limit.') from error
+        raise RuntimeError('Telegram media download exceeded the 45-minute safety limit.') from error
     finally:
-        await client.disconnect()
+        if client is not None:
+            await client.disconnect()
 
 
 def api_headers(token: str) -> dict[str, str]:

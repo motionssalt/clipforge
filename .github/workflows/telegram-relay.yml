@@ -55,6 +55,9 @@ jobs:
           BOTB_MTPROTO_API_ID: ${{ secrets.BOTB_MTPROTO_API_ID }}
           BOTB_MTPROTO_API_HASH: ${{ secrets.BOTB_MTPROTO_API_HASH }}
           BOTB_MTPROTO_BOT_TOKEN: ${{ secrets.BOTB_MTPROTO_BOT_TOKEN }}
+          CLIPFORGE_TELEGRAM_API_ID: ${{ secrets.CLIPFORGE_TELEGRAM_API_ID }}
+          CLIPFORGE_TELEGRAM_API_HASH: ${{ secrets.CLIPFORGE_TELEGRAM_API_HASH }}
+          CLIPFORGE_TELEGRAM_SESSION: ${{ secrets.CLIPFORGE_TELEGRAM_SESSION }}
           RELAY_PAYLOAD: ${{ github.event.inputs.relay_payload }}
         run: |
           set -euo pipefail
@@ -62,6 +65,9 @@ jobs:
           test -n "$BOTB_MTPROTO_API_ID"
           test -n "$BOTB_MTPROTO_API_HASH"
           test -n "$BOTB_MTPROTO_BOT_TOKEN"
+          test -n "$CLIPFORGE_TELEGRAM_API_ID"
+          test -n "$CLIPFORGE_TELEGRAM_API_HASH"
+          test -n "$CLIPFORGE_TELEGRAM_SESSION"
           python scripts/telegram_relay.py --job-id '${{ github.event.inputs.job_id }}' --relay-payload "$RELAY_PAYLOAD"
 
       - name: Remove local temporary relay files
