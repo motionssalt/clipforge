@@ -43,6 +43,27 @@ print("PASS: inserted transcription timings are allocated across script cuts wit
 
 import generate_subtitles_cinematic as cinematic  # noqa: E402
 
+# When Whisper omits a long run of authoritative words between two matched
+# anchors, those words must be interpolated through the timed interval. Giving
+# them all the preceding timestamp used to make later caption cards jump to the
+# next anchor and left the renderer with a multi-second blank gap.
+omitted_anchor_events = common.align_words_to_script(
+    [timed("alpha", 0.0), timed("omega", 12.0)],
+    [
+        "alpha first second third fourth fifth sixth seventh eighth ninth "
+        "tenth eleventh twelfth omega",
+    ],
+)
+assert [event["word"] for event in omitted_anchor_events] == [
+    "alpha", "first", "second", "third", "fourth", "fifth", "sixth",
+    "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth", "omega",
+]
+assert omitted_anchor_events[1]["start"] > omitted_anchor_events[0]["end"] - 1e-9
+assert omitted_anchor_events[-2]["end"] <= omitted_anchor_events[-1]["start"] + 1e-9
+omitted_anchor_cards = cinematic.split_sentences(omitted_anchor_events)
+cinematic.validate_caption_timeline(omitted_anchor_cards, video_duration=12.1)
+print("PASS: omitted transcription spans are interpolated without caption-card gaps")
+
 edge_cards = [
     {"start": 5.02, "speak_end": 6.0},
     {"start": 6.0, "speak_end": 8.0},
@@ -62,4 +83,11 @@ except ValueError as error:
 else:
     raise AssertionError("A real internal caption gap must remain a hard failure")
 
-print("PASS: VAD-trimmed edge silence is normalized without allowing internal caption gaps")
+# The authoritative script is continuous even when transcription timing skips a
+# phrase. Normalization keeps the preceding card visible until the next timed
+# anchor, avoiding the renderer's deliberate long-gap fade.
+cinematic.normalize_caption_internal_coverage(bad_gap_cards)
+assert bad_gap_cards[0]["speak_end"] == 5.0
+cinematic.validate_caption_timeline(bad_gap_cards, video_duration=8.0)
+
+print("PASS: VAD-trimmed edge silence and transcription-only internal gaps preserve subtitle coverage")

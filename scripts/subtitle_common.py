@@ -225,21 +225,51 @@ def align_words_to_script(timed_words: list[dict],
                 starts[i1 + k] = window[timed_start]["start"]
                 ends[i1 + k] = window[max(timed_start, timed_end - 1)]["end"]
 
-        last_time = window_start
+        # A ``delete`` opcode means the authoritative script contains words
+        # that Whisper did not return. Previously those words inherited the
+        # preceding timestamp, so a following matched anchor could leave a
+        # multi-second (or multi-cut) hole between caption cards. Allocate each
+        # missing run over the bounded interval between its neighbouring timed
+        # anchors instead. This preserves the original script verbatim while
+        # using timing only as an approximate placement source.
+        known_indices = [
+            index for index, start in enumerate(starts) if start is not None
+        ]
+        boundaries = [-1, *known_indices, len(script_words)]
+        for left_index, right_index in zip(boundaries, boundaries[1:]):
+            missing = right_index - left_index - 1
+            if missing <= 0:
+                continue
+            left_time = (
+                float(ends[left_index])
+                if left_index >= 0 and ends[left_index] is not None
+                else window_start
+            )
+            right_time = (
+                float(starts[right_index])
+                if right_index < len(script_words)
+                and starts[right_index] is not None
+                else window_end
+            )
+            right_time = max(right_time, left_time)
+            span = right_time - left_time
+            for offset, index in enumerate(range(left_index + 1, right_index)):
+                start = left_time + span * offset / missing
+                end = left_time + span * (offset + 1) / missing
+                starts[index] = start
+                ends[index] = end
+
+        last_end = window_start
         for index in range(len(script_words)):
-            if starts[index] is None:
-                starts[index] = last_time
-                ends[index] = last_time + MIN_DISPLAY_SECONDS
-            else:
-                if starts[index] < last_time:
-                    starts[index] = last_time
-                ends[index] = max(ends[index] or 0.0,
-                                  starts[index] + MIN_DISPLAY_SECONDS)
-            if starts[index] > window_end:
-                starts[index] = window_end
-                ends[index] = max(ends[index] or 0.0,
-                                  starts[index] + MIN_DISPLAY_SECONDS)
-            last_time = starts[index]
+            start = float(starts[index] if starts[index] is not None else last_end)
+            end = float(ends[index] if ends[index] is not None else start)
+            start = max(start, last_end)
+            if start > window_end:
+                start = window_end
+            end = max(end, start + MIN_DISPLAY_SECONDS)
+            starts[index] = start
+            ends[index] = end
+            last_end = end
 
         for index, word in enumerate(script_words):
             display_events.append({

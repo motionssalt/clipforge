@@ -592,6 +592,33 @@ def normalize_caption_edge_coverage(sentences: list[dict], narration_start: floa
         sentences[-1]["speak_end"] = max(float(sentences[-1]["speak_end"]), narration_end)
 
 
+def normalize_caption_internal_coverage(sentences: list[dict]) -> None:
+    """Hold a caption card across large timing gaps between adjacent cards.
+
+    The rendered text is taken verbatim from the original script, whereas
+    Whisper is used only to estimate word timing. When Whisper skips a phrase,
+    the next reliable anchor can be several seconds later even though the
+    authored narration is continuous. Keeping the preceding card visible until
+    that anchor prevents the renderer's long-gap fade from creating an empty
+    subtitle interval. Invalid or out-of-order cards remain the validator's
+    responsibility and are never silently repaired here.
+    """
+    normalized = 0
+    for current, following in zip(sentences, sentences[1:]):
+        current_end = float(current["speak_end"])
+        following_start = float(following["start"])
+        gap = following_start - current_end
+        if math.isfinite(gap) and gap > CIN_CAPTION_MAX_TIMELINE_GAP_SECONDS:
+            current["speak_end"] = following_start
+            normalized += 1
+    if normalized:
+        print(
+            f"Held {normalized} caption card(s) across large transcription "
+            "timing gap(s) to preserve continuous subtitle coverage.",
+            flush=True,
+        )
+
+
 def validate_caption_timeline(sentences: list[dict], video_duration: float) -> None:
     """Fail closed when caption cards cannot continuously cover narration.
 
@@ -893,6 +920,7 @@ def main() -> None:
     narration_start = min((float(event["start"]) for event in timed_words), default=0.0)
     narration_end = max((float(event["end"]) for event in timed_words), default=0.0)
     normalize_caption_edge_coverage(sentences, narration_start, narration_end)
+    normalize_caption_internal_coverage(sentences)
     validate_caption_timeline(sentences, video_duration)
 
     source_width, source_height = subtitle_common.probe_video_size(args.merged_video_mp4)
