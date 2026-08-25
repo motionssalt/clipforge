@@ -104,6 +104,7 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
     if not api_hash or not bot_token:
         fail('Bot B MTProto credentials are not configured.')
     expected_size = int(telegram['declared_size'])
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     preflight_space(expected_size, output_path.parent)
     client = TelegramClient(MemorySession(), api_id, api_hash, connection_retries=3, request_retries=3, retry_delay=1, receive_updates=False)
     try:
@@ -123,7 +124,6 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
             fail('The actual Telegram media size is unsupported for direct forwarding.')
         if actual_size != expected_size:
             fail('The internal relay media size does not match Bot A’s staged source metadata.')
-        output_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             await asyncio.wait_for(_download_telegram_parallel(client, message, str(output_path), actual_size), timeout=45 * 60)
         except _ParallelTelegramTransferError as error:
