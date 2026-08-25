@@ -93,6 +93,42 @@ def _wall_clock_for(day, preferred_time: str, zone: ZoneInfo) -> datetime:
     return datetime.combine(day, time(hour=hour, minute=minute), tzinfo=zone)
 
 
+def smart_interval_hours(smart: dict[str, Any]) -> int:
+    """Return a positive whole hourly cadence, migrating legacy day settings.
+
+    New settings persist ``interval_hours``. Existing clones can retain their
+    old ``interval_days`` document unchanged until their next settings save;
+    converting it here prevents a legacy two-day schedule from unexpectedly
+    becoming two hours.
+    """
+    raw = smart.get("interval_hours")
+    if raw is None:
+        try:
+            raw = int(smart.get("interval_days", 1)) * 24
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Posting interval must be a positive whole number of hours.") from exc
+    try:
+        hours = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Posting interval must be a positive whole number of hours.") from exc
+    if hours < 1 or hours > 8760:
+        raise ValueError("Posting interval must be between 1 and 8760 hours.")
+    return hours
+
+
+def _advance_slot(slot: datetime, interval_hours: int, preferred_time: str, zone: ZoneInfo) -> datetime:
+    """Advance one cadence interval, retaining old wall-clock DST behavior.
+
+    A 24-hour multiple represents an existing daily-style schedule, so it
+    advances by local calendar dates at the preferred local time. Shorter and
+    non-day-multiple intervals advance by exact elapsed hours, which permits
+    one-hour cadence without date rounding.
+    """
+    if interval_hours % 24 == 0:
+        return _wall_clock_for(slot.date() + timedelta(days=interval_hours // 24), preferred_time, zone)
+    return (slot + timedelta(hours=interval_hours)).astimezone(zone)
+
+
 def _format_local(value: datetime) -> str:
     return value.replace(microsecond=0).isoformat(timespec="seconds")
 
@@ -136,21 +172,17 @@ def plan_smart_schedule(
 ) -> dict[str, str]:
     """Calculate a collision-free native Zernio scheduledFor timestamp.
 
-    Existing ClipForge queue entries reserve their configured N-day interval.
-    Existing Zernio scheduled posts are treated as occupied times.  The result
-    is a local timestamp plus IANA timezone for Zernio's native scheduler.
+    Existing ClipForge queue entries reserve their configured whole-hour
+    interval. Existing Zernio scheduled posts are treated as occupied times.
+    The result is a local timestamp plus IANA timezone for Zernio's native
+    scheduler.
     """
     smart = settings.get("smart_schedule") if isinstance(settings, dict) else {}
     if not isinstance(smart, dict):
         smart = {}
     timezone_name = validate_timezone(str(smart.get("timezone") or "UTC"))
     preferred_time = validate_hhmm(str(smart.get("preferred_time") or "19:30"))
-    try:
-        interval_days = int(smart.get("interval_days", 1))
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Posting interval must be a positive whole number of days.") from exc
-    if interval_days < 1 or interval_days > 365:
-        raise ValueError("Posting interval must be between 1 and 365 days.")
+    interval_hours = smart_interval_hours(smart)
 
     zone = ZoneInfo(timezone_name)
     current = (now or datetime.now(UTC)).astimezone(zone).replace(second=0, microsecond=0)
@@ -160,16 +192,27 @@ def plan_smart_schedule(
         candidate = parse_local_datetime(custom_start, timezone_name).replace(second=0, microsecond=0)
     else:
         candidate = _wall_clock_for(current.date(), preferred_time, zone)
-        if candidate <= current:
-            candidate = _wall_clock_for(current.date() + timedelta(days=1), preferred_time, zone)
+        # Daily-style cadences preserve the previous preferred local wall-clock
+        # behavior. Hourly and other non-day cadences use the same HH:MM value
+        # as an anchor and advance by real elapsed hours until the next slot.
+        if interval_hours % 24 == 0:
+            if candidate <= current:
+                # Keep the historical behavior for day-based schedules: the
+                # first available preferred wall-clock slot is tomorrow, while
+                # queued-slot spacing still uses the configured cadence.
+                candidate = _wall_clock_for(current.date() + timedelta(days=1), preferred_time, zone)
+        else:
+            while candidate <= current:
+                candidate = _advance_slot(candidate, interval_hours, preferred_time, zone)
 
     slots = _active_slots(queue, external_posts, timezone_name)
     own_slots = _active_slots(queue, (), timezone_name)
     # A later item already assigned by ClipForge defines the next interval
-    # anchor. This prevents two Stage B completions from claiming the same day.
+    # anchor. This prevents two Stage B completions from claiming the same
+    # hourly cadence slot.
     if own_slots:
         latest = max(own_slots)
-        after_latest = _wall_clock_for((latest + timedelta(days=interval_days)).date(), preferred_time, zone)
+        after_latest = _advance_slot(latest, interval_hours, preferred_time, zone)
         if candidate < after_latest:
             candidate = after_latest
 
@@ -178,7 +221,7 @@ def plan_smart_schedule(
     occupied = {_format_local(slot.astimezone(zone)) for slot in slots}
     guard = 0
     while _format_local(candidate) in occupied or candidate <= current:
-        candidate = _wall_clock_for((candidate + timedelta(days=interval_days)).date(), preferred_time, zone)
+        candidate = _advance_slot(candidate, interval_hours, preferred_time, zone)
         guard += 1
         if guard > 10000:
             raise ValueError("Could not find an available smart-scheduling slot.")

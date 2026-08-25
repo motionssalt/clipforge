@@ -1258,7 +1258,7 @@
       automatic_mode: 'smart_schedule',
       target_accounts: { tiktok: [], youtube: [] },
       smart_schedule: {
-        timezone: 'UTC', interval_days: 1, preferred_time: '19:30',
+        timezone: 'UTC', interval_hours: 24, preferred_time: '19:30',
         queue_depth: 4, start_mode: 'next_available', custom_start: ''
       }
     };
@@ -1283,7 +1283,11 @@
       youtube: Array.isArray(current.target_accounts && current.target_accounts.youtube) ? current.target_accounts.youtube.map(String) : []
     };
     base.smart_schedule.timezone = String(smart.timezone || 'UTC');
-    base.smart_schedule.interval_days = Number(smart.interval_days) || 1;
+    var explicitHours = Number(smart.interval_hours);
+    var legacyDays = Number(smart.interval_days);
+    base.smart_schedule.interval_hours = Number.isInteger(explicitHours) && explicitHours >= 1 && explicitHours <= 8760
+      ? explicitHours
+      : (Number.isInteger(legacyDays) && legacyDays >= 1 && legacyDays <= 365 ? legacyDays * 24 : 24);
     base.smart_schedule.preferred_time = /^\d\d:\d\d$/.test(String(smart.preferred_time || '')) ? String(smart.preferred_time) : '19:30';
     base.smart_schedule.queue_depth = Number(smart.queue_depth) || 4;
     base.smart_schedule.start_mode = smart.start_mode === 'custom' ? 'custom' : 'next_available';
@@ -1389,7 +1393,7 @@
     el['zernio-auto-publish-input'].checked = settings.auto_publish;
     el['zernio-auto-mode-select'].value = settings.automatic_mode;
     el['zernio-timezone-input'].value = settings.smart_schedule.timezone;
-    el['zernio-interval-input'].value = String(settings.smart_schedule.interval_days);
+    el['zernio-interval-input'].value = String(settings.smart_schedule.interval_hours);
     el['zernio-time-input'].value = settings.smart_schedule.preferred_time;
     el['zernio-queue-depth-input'].value = String(settings.smart_schedule.queue_depth);
     el['zernio-start-mode-select'].value = settings.smart_schedule.start_mode;
@@ -1409,7 +1413,7 @@
     var interval = Number(el['zernio-interval-input'].value);
     var depth = Number(el['zernio-queue-depth-input'].value);
     var preferred = el['zernio-time-input'].value;
-    if (!Number.isInteger(interval) || interval < 1 || interval > 365) throw new Error('Cadence must be a whole number from 1 to 365 days.');
+    if (!Number.isInteger(interval) || interval < 1 || interval > 8760) throw new Error('Cadence must be a whole number from 1 to 8760 hours.');
     if (!Number.isInteger(depth) || depth < 1 || depth > 100) throw new Error('Queue depth must be a whole number from 1 to 100.');
     if (!/^\d\d:\d\d$/.test(preferred)) throw new Error('Choose a preferred posting time.');
     var startMode = el['zernio-start-mode-select'].value === 'custom' ? 'custom' : 'next_available';
@@ -1422,7 +1426,7 @@
       automatic_mode: el['zernio-auto-mode-select'].value === 'publish_now' ? 'publish_now' : 'smart_schedule',
       target_accounts: selectedZernioAccounts(),
       smart_schedule: {
-        timezone: timezone, interval_days: interval, preferred_time: preferred,
+        timezone: timezone, interval_hours: interval, preferred_time: preferred,
         queue_depth: depth, start_mode: startMode, custom_start: customStart
       },
       updated_at_epoch: Math.floor(Date.now() / 1000)

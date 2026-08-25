@@ -16,7 +16,7 @@ from zernio_state import (
 SETTINGS = {
     "smart_schedule": {
         "timezone": "Europe/London",
-        "interval_days": 2,
+        "interval_hours": 48,
         "preferred_time": "19:30",
         "queue_depth": 4,
         "start_mode": "next_available",
@@ -49,9 +49,37 @@ def test_queue_and_provider_slots_delay_without_collision() -> None:
         }],
         now=datetime(2026, 8, 22, 9, 0, tzinfo=UTC),
     )
-    # job-1 reserves the configured two-day cadence; the provider's external
+    # job-1 reserves the configured 48-hour cadence; the provider's external
     # post occupies that first next slot, so the next valid local slot is later.
     assert planned["scheduled_for"] == "2026-08-26T19:30:00"
+
+
+def test_one_hour_cadence_advances_after_queue_and_provider_collisions() -> None:
+    settings = {"smart_schedule": dict(SETTINGS["smart_schedule"], interval_hours=1)}
+    queue = upsert_queue_item(default_queue(), {
+        "job_id": "hourly-1", "status": "scheduled",
+        "scheduled_for": "2026-08-22T19:30:00", "timezone": "Europe/London",
+    })
+    planned = plan_smart_schedule(
+        settings,
+        queue,
+        external_posts=[{
+            "status": "scheduled", "scheduled_for": "2026-08-22T20:30:00", "timezone": "Europe/London",
+        }],
+        now=datetime(2026, 8, 22, 18, 31, tzinfo=UTC),
+    )
+    assert planned["scheduled_for"] == "2026-08-22T21:30:00"
+
+
+def test_legacy_interval_days_migrates_without_changing_cadence() -> None:
+    legacy = {"smart_schedule": dict(SETTINGS["smart_schedule"], interval_days=2)}
+    legacy["smart_schedule"].pop("interval_hours")
+    queue = upsert_queue_item(default_queue(), {
+        "job_id": "legacy", "status": "scheduled",
+        "scheduled_for": "2026-08-22T19:30:00", "timezone": "Europe/London",
+    })
+    planned = plan_smart_schedule(legacy, queue, now=datetime(2026, 8, 22, 9, 0, tzinfo=UTC))
+    assert planned["scheduled_for"] == "2026-08-24T19:30:00"
 
 
 def test_custom_start_and_queue_upsert_are_job_isolated() -> None:

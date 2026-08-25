@@ -130,8 +130,17 @@ function defaultZernioSettings() {
     auto_publish: false,
     automatic_mode: 'smart_schedule',
     target_accounts: { tiktok: [], youtube: [] },
-    smart_schedule: { timezone: 'UTC', interval_days: 1, preferred_time: '19:30', queue_depth: 4, start_mode: 'next_available', custom_start: '' }
+    smart_schedule: { timezone: 'UTC', interval_hours: 24, preferred_time: '19:30', queue_depth: 4, start_mode: 'next_available', custom_start: '' }
   };
+}
+
+function zernioIntervalHours(smart) {
+  const explicit = Number(smart && smart.interval_hours);
+  if (Number.isInteger(explicit) && explicit >= 1 && explicit <= 8760) return explicit;
+  // Preserve legacy clone settings: interval_days: 2 remains 48 hours, not 2.
+  const legacyDays = Number(smart && smart.interval_days);
+  if (Number.isInteger(legacyDays) && legacyDays >= 1 && legacyDays <= 365) return legacyDays * 24;
+  return 24;
 }
 
 function zernioSettingsOrDefault(value) {
@@ -148,7 +157,7 @@ function zernioSettingsOrDefault(value) {
     },
     smart_schedule: {
       timezone: String(smart.timezone || 'UTC'),
-      interval_days: Number.isInteger(Number(smart.interval_days)) ? Number(smart.interval_days) : 1,
+      interval_hours: zernioIntervalHours(smart),
       preferred_time: /^\d\d:\d\d$/.test(String(smart.preferred_time || '')) ? String(smart.preferred_time) : '19:30',
       queue_depth: Number.isInteger(Number(smart.queue_depth)) ? Number(smart.queue_depth) : 4,
       start_mode: smart.start_mode === 'custom' ? 'custom' : 'next_available',
@@ -348,7 +357,7 @@ function zernioSettingsMenu(config) {
 function zernioScheduleMenu(settings) {
   const smart = settings.smart_schedule;
   return buttons([
-    [{ text: `Timezone: ${telegramButtonText(smart.timezone, 42)}`, callback_data: 'zsch:timezone' }, { text: `Cadence: ${smart.interval_days} day(s)`, callback_data: 'zsch:interval' }],
+    [{ text: `Timezone: ${telegramButtonText(smart.timezone, 42)}`, callback_data: 'zsch:timezone' }, { text: `Cadence: ${smart.interval_hours} hour(s)`, callback_data: 'zsch:interval' }],
     [{ text: `Preferred time: ${smart.preferred_time}`, callback_data: 'zsch:time' }, { text: `Queue depth: ${smart.queue_depth}`, callback_data: 'zsch:depth' }],
     [{ text: smart.start_mode === 'custom' ? `Custom start: ${telegramButtonText(smart.custom_start || 'missing', 40)}` : 'Start: next available', callback_data: 'zsch:start' }],
     [{ text: 'Back to Zernio settings', callback_data: 'set:zernio' }]
@@ -368,7 +377,7 @@ async function showZernioSettings(env, chatId, messageId = null) {
   lines.push(`Automatic publishing: ${settings.auto_publish ? settings.automatic_mode === 'publish_now' ? 'publish now' : 'smart schedule' : 'off'}`);
   lines.push(`Targets: ${selected.length ? selected.map((group) => `${group.platform}: ${group.account_ids.length}`).join(' · ') : 'none selected'}`);
   lines.push(`Accounts: ${active.tiktok.length} TikTok · ${active.youtube.length} YouTube active`);
-  lines.push(`Smart schedule: ${escapeHtml(settings.smart_schedule.timezone)} · every ${settings.smart_schedule.interval_days} day(s) at ${settings.smart_schedule.preferred_time} · queue ${settings.smart_schedule.queue_depth}`);
+  lines.push(`Smart schedule: ${escapeHtml(settings.smart_schedule.timezone)} · every ${settings.smart_schedule.interval_hours} hour(s) · preferred time ${settings.smart_schedule.preferred_time} · queue ${settings.smart_schedule.queue_depth}`);
   if (settings.smart_schedule.start_mode === 'custom') lines.push(`First slot: ${escapeHtml(settings.smart_schedule.custom_start || 'missing')}`);
   lines.push('The API key is encrypted into <code>ZERNIO_API_KEY</code>, never committed or displayed. Preferences and account snapshots stay inside this clone.');
   await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: zernioSettingsMenu(config) }, messageId);
@@ -885,8 +894,9 @@ async function handleFlowText(env, chatId, text) {
         if (!validZernioTimezone(value)) throw new Error('Enter a safe IANA timezone such as Europe/London, America/New_York, or UTC.');
         smart.timezone = value;
       } else if (state.flow === 'settings_zernio_interval') {
-        const number = Number(value); if (!Number.isInteger(number) || number < 1 || number > 365) throw new Error('Cadence must be a whole number from 1 to 365 days.');
-        smart.interval_days = number;
+        const number = Number(value); if (!Number.isInteger(number) || number < 1 || number > 8760) throw new Error('Cadence must be a whole number from 1 to 8760 hours.');
+        smart.interval_hours = number;
+        delete smart.interval_days;
       } else if (state.flow === 'settings_zernio_time') {
         if (!validZernioTime(value)) throw new Error('Preferred time must use HH:MM in 24-hour format.');
         smart.preferred_time = value;
@@ -1269,7 +1279,7 @@ async function handleCallback(env, callback) {
     const field = { timezone: 'settings_zernio_timezone', interval: 'settings_zernio_interval', time: 'settings_zernio_time', depth: 'settings_zernio_depth', startcustom: 'settings_zernio_custom_start' }[value];
     if (!field) return;
     const state = await getState(env, chatId); state.flow = field; state.pending = {}; await putState(env, chatId, state);
-    const instruction = value === 'timezone' ? 'Send an IANA timezone, for example <code>Europe/London</code>, <code>America/New_York</code>, or <code>UTC</code>.' : value === 'interval' ? 'Send the smart-schedule cadence in days (1–365).' : value === 'time' ? 'Send the preferred local posting time in <code>HH:MM</code> 24-hour format.' : value === 'depth' ? 'Send the maximum active Zernio queue depth (1–100).' : 'Send the first local smart-schedule slot as <code>YYYY-MM-DDTHH:MM</code>.';
+    const instruction = value === 'timezone' ? 'Send an IANA timezone, for example <code>Europe/London</code>, <code>America/New_York</code>, or <code>UTC</code>.' : value === 'interval' ? 'Send the smart-schedule cadence in whole hours (1–8760). Send <code>1</code> to publish at one-hour intervals.' : value === 'time' ? 'Send the preferred local posting time in <code>HH:MM</code> 24-hour format. It anchors the first slot; hourly cadence advances from there.' : value === 'depth' ? 'Send the maximum active Zernio queue depth (1–100).' : 'Send the first local smart-schedule slot as <code>YYYY-MM-DDTHH:MM</code>.';
     return renderInteractiveView(env, chatId, instruction, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
   }
   if (kind === 'zpub') {

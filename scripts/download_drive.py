@@ -174,6 +174,26 @@ def social_host(url: str) -> str | None:
     return None
 
 
+def youtube_public_token_arguments(host: str) -> list[str]:
+    """Configure a local public PO-token provider for GitHub-hosted YouTube runs.
+
+    Shared cloud-runner IPs can trigger YouTube's bot-confirmation interstitial
+    even for public videos. The provider generates a per-request Proof-of-Origin
+    token locally and uses no cookies, account login, or remote token endpoint.
+    Non-YouTube hosts and local development without the provisioned provider
+    preserve the ordinary yt-dlp command path.
+    """
+    if host not in {'youtube.com', 'youtu.be', 'youtube-nocookie.com'}:
+        return []
+    provider_home = os.environ.get('CLIPFORGE_YTDLP_POT_HOME', '').strip()
+    if not provider_home or not os.path.isdir(provider_home):
+        return []
+    return [
+        '--extractor-args', 'youtube:player_client=mweb',
+        '--extractor-args', f'youtubepot-bgutilscript:server_home={provider_home}',
+    ]
+
+
 def download_social(url: str, output_path: str, host: str) -> None:
     """Download one public social video without cookies, playlists, or shell parsing."""
     output_dir = tempfile.mkdtemp(prefix='clipforge-social-')
@@ -189,6 +209,7 @@ def download_social(url: str, output_path: str, host: str) -> None:
         # Public sites can reject the default Python TLS fingerprint. yt-dlp's
         # supported curl-cffi profile is installed with the extra below.
         '--impersonate', 'chrome-131:macos-14',
+        *youtube_public_token_arguments(host),
         '--format', 'bv*+ba/b', '--merge-output-format', 'mp4', '-o', template, '--', url,
     ]
     try:
@@ -204,7 +225,7 @@ def download_social(url: str, output_path: str, host: str) -> None:
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError('Social-video download exceeded the 45-minute safety limit.') from exc
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f'Could not download this public {host} video. It may be private, unavailable, region-restricted, rate-limited, or currently unsupported by the source platform.') from exc
+        raise RuntimeError(f'Could not download this public {host} video. The source platform refused anonymous retrieval or the video is unavailable, region-restricted, rate-limited, or currently unsupported. No account login or cookies are used.') from exc
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 

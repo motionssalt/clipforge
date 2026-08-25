@@ -333,6 +333,9 @@ test('Zernio settings preserve the site schema and only target active selected a
     { id: 'tik-reconnect', platform: 'tiktok', needsReconnection: true }
   ];
   const settings = __test.zernioSettingsOrDefault({ enabled: true, auto_publish: true, automatic_mode: 'publish_now', target_accounts: { tiktok: ['tik-active', 'tik-reconnect'], youtube: ['yt-active'] }, smart_schedule: { timezone: 'Europe/London', interval_days: 3, preferred_time: '08:15', queue_depth: 7 } });
+  assert.equal(settings.smart_schedule.interval_hours, 72);
+  const hourly = __test.zernioSettingsOrDefault({ smart_schedule: { interval_hours: 1 } });
+  assert.equal(hourly.smart_schedule.interval_hours, 1);
   assert.deepEqual(__test.activeZernioAccounts(accounts).tiktok.map((account) => account.id), ['tik-active']);
   assert.deepEqual(__test.zernioTargets(settings, accounts), [{ platform: 'tiktok', account_ids: ['tik-active'] }, { platform: 'youtube', account_ids: ['yt-active'] }]);
   const callbacks = __test.zernioSettingsMenu({ settings, secretConfigured: true }).inline_keyboard.flat().map((button) => button.callback_data);

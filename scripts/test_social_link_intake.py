@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import importlib.util
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -32,8 +33,22 @@ def test_stage_a_installs_required_social_runtime():
     requirements = (ROOT / 'scripts' / 'requirements.txt').read_text(encoding='utf-8')
     workflow = (ROOT / '.github' / 'workflows' / 'stage-a.yml').read_text(encoding='utf-8')
     assert 'yt-dlp[default,curl-cffi]' in requirements
+    assert 'bgutil-ytdlp-pot-provider==1.3.2' in requirements
     assert 'actions/setup-node@v4' in workflow
     assert 'node-version: "22"' in workflow
+    assert 'Build local YouTube public-token provider' in workflow
+    assert 'CLIPFORGE_YTDLP_POT_HOME' in workflow
+
+
+def test_youtube_uses_provisioned_local_public_token_provider_only():
+    with patch.dict(os.environ, {'CLIPFORGE_YTDLP_POT_HOME': '/safe/provider'}, clear=False):
+        with patch.object(module.os.path, 'isdir', return_value=True):
+            args = module.youtube_public_token_arguments('youtube.com')
+    assert args == [
+        '--extractor-args', 'youtube:player_client=mweb',
+        '--extractor-args', 'youtubepot-bgutilscript:server_home=/safe/provider',
+    ]
+    assert module.youtube_public_token_arguments('vimeo.com') == []
 
 
 def test_social_command_is_public_single_video_only():
@@ -57,6 +72,7 @@ def test_social_command_is_public_single_video_only():
 def main():
     test_recognised_hosts()
     test_stage_a_installs_required_social_runtime()
+    test_youtube_uses_provisioned_local_public_token_provider_only()
     test_social_command_is_public_single_video_only()
     print('social link intake tests passed')
 
