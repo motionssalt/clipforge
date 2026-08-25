@@ -1,6 +1,6 @@
 import { dispatchWorkflow } from './github.js';
 import { getRelayJob, putRelayJob } from './storage.js';
-import { parseRelayReadyMarker } from './relay.js';
+import { parseRelayReadySignal } from './relay.js';
 
 const RELAY_UPDATE_TTL_SECONDS = 24 * 60 * 60;
 
@@ -45,7 +45,7 @@ async function routeReadyMarker(env, message) {
   if (!groupId || !botAId) throw new Error('Bot B internal-group routing is not configured.');
   if (!message || !message.chat || Number(message.chat.id) !== groupId) return;
   if (!message.from || Number(message.from.id) !== botAId || message.from.is_bot !== true) return;
-  const marker = parseRelayReadyMarker(message.text);
+  const marker = parseRelayReadySignal(message.text);
   if (!marker) return;
   const record = await getRelayJob(env, marker.sourceChatId, marker.jobId);
   if (!record) throw new Error('Bot B could not find the pending relay job. The source may have expired; send the video again.');
@@ -73,4 +73,4 @@ export default {
   }
 };
 
-export const __test = { configuredInteger, parseRelayReadyMarker, sealedRelayPayload };
+export const __test = { configuredInteger, parseRelayReadySignal, sealedRelayPayload };

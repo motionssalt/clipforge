@@ -915,7 +915,9 @@ async function finishTaskLaunch(env, chatId, messageId = null) {
     await putRelayJob(env, chatId, jobId, {
       state: 'ready', repo: credentials.repo, mode: pending.mode, relay: normalizedRelay, sealed_payload: sealedPayload
     });
-    await sendMessage(env, Number(relay.internal_group_chat_id), relayReadyMarker(jobId, chatId, Number(relay.internal_group_message_id)), { parseMode: 'HTML' });
+    const botBUsername = String(env.BOT_B_TELEGRAM_USERNAME || '').trim();
+    if (!/^[A-Za-z0-9_]{5,64}$/.test(botBUsername)) throw new Error('The private Telegram relay recipient is not configured yet.');
+    await sendMessage(env, Number(relay.internal_group_chat_id), `/relay@${botBUsername} ${relayReadyMarker(jobId, chatId, Number(relay.internal_group_message_id))}`, { parseMode: 'HTML' });
   } else {
     await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', inputs);
   }

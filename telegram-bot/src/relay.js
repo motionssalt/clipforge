@@ -78,6 +78,14 @@ export function parseRelayReadyMarker(value) {
   return match ? { jobId: match[1], sourceChatId: Number(match[2]), groupMessageId: Number(match[3]) } : null;
 }
 
+// A command mention is deliberately supported as a privacy-mode-safe Bot A →
+// Bot B signal. Telegram delivers a bot-to-bot command addressed to Bot B even
+// if a delayed BotFather privacy change has not yet propagated to getMe().
+export function parseRelayReadySignal(value) {
+  const raw = String(value || '').trim();
+  return parseRelayReadyMarker(raw) || parseRelayReadyMarker((/^\/relay@[A-Za-z0-9_]{5,64}\s+(.+)$/i.exec(raw) || [])[1]);
+}
+
 export function formatBytes(value) {
   const bytes = Number(value);
   if (!Number.isFinite(bytes) || bytes < 0) return 'Unknown size';
@@ -86,4 +94,4 @@ export function formatBytes(value) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
 }
 
-export const __test = { parseRelayCaption, parseRelayReadyMarker, relayCaption, relayReadyMarker, relayVideoMetadata, videoLikeDocument };
+export const __test = { parseRelayCaption, parseRelayReadyMarker, parseRelayReadySignal, relayCaption, relayReadyMarker, relayVideoMetadata, videoLikeDocument };

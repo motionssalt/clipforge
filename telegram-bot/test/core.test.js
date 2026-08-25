@@ -566,6 +566,7 @@ test('relay captions and ready markers bind one job, source chat, and copied gro
   assert.deepEqual(parseRelayCaption(caption), { jobId: 'manual-123', sourceChatId: -10022 });
   const marker = relayReadyMarker('manual-123', -10022, 91);
   assert.deepEqual(parseRelayReadyMarker(marker), { jobId: 'manual-123', sourceChatId: -10022, groupMessageId: 91 });
+  assert.deepEqual(relayWorkerTest.parseRelayReadySignal(`/relay@Clipforgedl_bot ${marker}`), { jobId: 'manual-123', sourceChatId: -10022, groupMessageId: 91 });
   assert.equal(parseRelayCaption('CFRELAY1:bad id:-12'), null);
   assert.equal(parseRelayReadyMarker('CFRELAY_READY1:manual-123:-10022:0'), null);
 });

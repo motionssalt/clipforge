@@ -6,7 +6,8 @@
   "workers_dev": true,
   "vars": {
     "INTERNAL_RELAY_GROUP_CHAT_ID": "-5345479732",
-    "ORIGINAL_CLIPFORGE_REPOSITORY": "motionssalt/clipforge"
+    "ORIGINAL_CLIPFORGE_REPOSITORY": "motionssalt/clipforge",
+    "BOT_B_TELEGRAM_USERNAME": "Clipforgedl_bot"
   },
   "kv_namespaces": [
     {
