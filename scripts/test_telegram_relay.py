@@ -16,6 +16,7 @@ import telegram_relay  # noqa: E402
 from telegram_relay import (  # noqa: E402
     decrypt_payload,
     ensure_payload,
+    handoff_token,
     known_basic_group_message_request,
     release_tag,
     verify_bot_group_access,
@@ -83,6 +84,13 @@ def main() -> None:
     assert inputs['source_type'] == 'telegram_bot_forward'
     assert telegram['group_message_id'] == 44
     assert release_tag(job_id) == 'clipforge-relay-input-manual-relay-test'
+
+    with patch.dict(os.environ, {
+        'RELAY_CENTRAL_REPOSITORY': 'motionssalt/clipforge',
+        'RELAY_CENTRAL_GITHUB_TOKEN': 'workflow-token',
+    }, clear=False):
+        assert handoff_token('motionssalt/clipforge', 'sealed-token') == 'workflow-token'
+        assert handoff_token('owner/external-clone', 'sealed-token') == 'sealed-token'
 
     # The local Bot API image initializes its mounted data directory as root.
     # The relay streams only the exact already validated media path through the

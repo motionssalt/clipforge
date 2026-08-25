@@ -335,6 +335,21 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path, rela
             await client.disconnect()
 
 
+def handoff_token(repo: str, sealed_token: str) -> str:
+    """Use the workflow-scoped token only for its own configured repository.
+
+    Relay jobs can target a user clone and retain their sealed, user-provided
+    token in that case. For the central repository itself, GitHub supplies a
+    fresh workflow token with the exact write scopes declared by the workflow,
+    avoiding an expired token that may have been stored when a task was made.
+    """
+    central_repo = str(os.environ.get('RELAY_CENTRAL_REPOSITORY') or '').strip()
+    central_token = str(os.environ.get('RELAY_CENTRAL_GITHUB_TOKEN') or '').strip()
+    if central_repo and central_token and repo == central_repo:
+        return central_token
+    return sealed_token
+
+
 def api_headers(token: str) -> dict[str, str]:
     return {
         'Accept': 'application/vnd.github+json',
@@ -437,6 +452,7 @@ def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, input
 def run(job_id: str, serialized_payload: str, relay_file_id: str = '') -> None:
     payload = decrypt_payload(job_id, serialized_payload, os.environ.get('RELAY_ENCRYPTION_KEY', ''))
     repo, token, inputs, telegram = ensure_payload(payload)
+    token = handoff_token(repo, token)
     work = Path('work/telegram-relay')
     source = work / 'source_input.bin'
     asyncio.run(download_group_media(telegram, source, relay_file_id))

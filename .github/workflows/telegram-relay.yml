@@ -19,7 +19,8 @@ on:
         type: string
 
 permissions:
-  contents: read
+  actions: write
+  contents: write
 
 concurrency:
   group: clipforge-telegram-relay-${{ github.event.inputs.job_id }}
@@ -94,6 +95,8 @@ jobs:
           LOCAL_BOT_API_BASE: http://127.0.0.1:8081
           LOCAL_BOT_API_FILES_DIR: ${{ runner.temp }}/clipforge-telegram-bot-api
           LOCAL_BOT_API_CONTAINER: clipforge-local-bot-api
+          RELAY_CENTRAL_REPOSITORY: ${{ github.repository }}
+          RELAY_CENTRAL_GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test -n "$RELAY_ENCRYPTION_KEY"
