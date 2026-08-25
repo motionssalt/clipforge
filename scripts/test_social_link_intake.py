@@ -86,6 +86,15 @@ def test_telegram_command_uses_best_streams_without_cookie_or_login() -> None:
         assert command[-1] == 'https://t.me/europa_press/613'
 
 
+def test_mtproto_parallel_transfer_is_bounded_and_has_fallback() -> None:
+    source = (ROOT / 'scripts' / 'download_drive.py').read_text(encoding='utf-8')
+    assert 'TELEGRAM_PARALLEL_WORKERS = 4' in source
+    assert 'TELEGRAM_PARALLEL_PART_BYTES = 512 * 1024' in source
+    assert 'Downloading the public Telegram channel video through {workers} authenticated MTProto connections.' in source
+    assert 'Parallel Telegram transfer fell back to Telethon single-connection mode' in source
+    assert 'await asyncio.gather(*(child.disconnect() for child in children), return_exceptions=True)' in source
+
+
 def test_mtproto_secret_gate_requires_complete_credentials() -> None:
     keys = ['CLIPFORGE_TELEGRAM_API_ID', 'CLIPFORGE_TELEGRAM_API_HASH', 'CLIPFORGE_TELEGRAM_SESSION']
     with patch.dict(os.environ, {key: '' for key in keys}, clear=False):
@@ -118,6 +127,7 @@ def main() -> None:
     test_other_social_hosts_are_explicitly_disabled()
     test_stage_a_uses_no_social_session_or_youtube_runtime()
     test_telegram_command_uses_best_streams_without_cookie_or_login()
+    test_mtproto_parallel_transfer_is_bounded_and_has_fallback()
     test_mtproto_secret_gate_requires_complete_credentials()
     test_group_post_without_exposed_media_has_actionable_error()
     print('Telegram-only social intake tests passed')
