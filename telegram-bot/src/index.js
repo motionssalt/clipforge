@@ -577,9 +577,32 @@ function isPublicTelegramPost(value) {
   return TELEGRAM_PUBLIC_POST_RE.test(String(value || ''));
 }
 
+function telegramPageIsGroup(page) {
+  return /view\s+in\s+group/i.test(String(page || ''));
+}
+
+async function preflightTelegramChannelPost(source) {
+  if (!isPublicTelegramPost(source)) return;
+  try {
+    const response = await fetch(source, {
+      headers: { Accept: 'text/html,application/xhtml+xml', 'User-Agent': 'ClipForge Telegram intake preflight' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return;
+    if (telegramPageIsGroup(await response.text())) {
+      throw new Error('This is a public Telegram group link. ClipForge downloads social video only from a public Telegram channel post. Create a public channel—not a group—forward or upload the video there, then send that channel post link.');
+    }
+  } catch (error) {
+    if (/public Telegram group link/i.test(String(error && error.message || ''))) throw error;
+    // A transient Telegram page check must not prevent a valid public channel
+    // post from reaching the independently verified Stage A downloader.
+  }
+}
+
 function validateSource(value) {
   const source = String(value || '').trim();
-  if (!SOURCE_RE.test(source)) throw new Error('Send a public Telegram channel-post link, a direct https:// video-file URL, an anyone-with-link Google Drive URL, or a magnet URI. To use a social video, first forward or upload it to a public Telegram channel and send that post link.');
+  if (!SOURCE_RE.test(source)) throw new Error('Send a public Telegram channel post link (not a group), a direct https:// video-file URL, an anyone-with-link Google Drive URL, or a magnet URI. To use a social video, first forward or upload it to a public Telegram channel—not a group—and send that post link.');
   if (source.length > 4000) throw new Error('The source URL is too long.');
   if (/^https?:\/\//i.test(source)) {
     const blockedHost = disabledSocialSourceHost(source);
@@ -786,7 +809,7 @@ async function beginTask(env, chatId, mode, messageId = null) {
   state.flow = `${mode}_source`;
   state.pending = { mode, seriesMode: Boolean(series && series.enabled === true) };
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel-post link, a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel first, then send that post link. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel—not a group—first, then send that post link. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
 
 async function setupBack(env, chatId, messageId = null) {
@@ -811,7 +834,7 @@ async function setupBack(env, chatId, messageId = null) {
       state.flow = `${mode}_source`;
       state.pending = pending;
       await putState(env, chatId, state);
-      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend a public Telegram channel-post link, a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel first, then send that post link. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel—not a group—first, then send that post link. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
     }
     state.flow = `${mode}_focus`;
     state.pending = pending;
@@ -830,7 +853,7 @@ async function setupBack(env, chatId, messageId = null) {
     state.flow = `${mode}_source`;
     state.pending = pending;
     await putState(env, chatId, state);
-    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel-post link, a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel first, then send that post link.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel—not a group—first, then send that post link.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
   }
   await clearFlow(env, chatId);
   return renderInteractiveView(env, chatId, 'Task setup closed. Start a new task whenever you are ready.', { replyMarkup: mainMenu() }, messageId);
@@ -1095,6 +1118,7 @@ async function handleFlowText(env, chatId, text) {
   }
   if (state.flow === 'manual_source' || state.flow === 'automatic_source') {
     state.pending.source = validateSource(text);
+    await preflightTelegramChannelPost(state.pending.source);
     state.flow = taskSetupFlowAfterSource(state.pending);
     await putState(env, chatId, state);
     if (state.pending.seriesMode === true) {
@@ -1592,4 +1616,4 @@ export default {
   }
 };
 
-export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, disabledSocialSourceHost, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, isPublicTelegramPost, isSafeAudioLibraryPath, renderInteractiveView, renderTaskInputResponse, settingsMenu, taskCanBeDeleted, taskSetupFlowAfterSource, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, disabledSocialSourceHost, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, isPublicTelegramPost, isSafeAudioLibraryPath, preflightTelegramChannelPost, renderInteractiveView, renderTaskInputResponse, settingsMenu, taskCanBeDeleted, taskSetupFlowAfterSource, telegramButtonText, telegramPageIsGroup, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };

@@ -157,6 +157,26 @@ def _clear_directory(directory: str) -> None:
             shutil.rmtree(entry.path)
 
 
+def telegram_no_media_error(url: str) -> str:
+    """Explain the common public-group case without relying on account access."""
+    try:
+        response = requests.get(url, headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; clipforge-downloader/1.0)',
+            'Accept': 'text/html,application/xhtml+xml',
+        }, timeout=REQUEST_TIMEOUT)
+        page = response.text.lower() if response.ok else ''
+    except requests.RequestException:
+        page = ''
+    if 'view in group' in page:
+        return ('This is a public Telegram group post, not a public channel post. '
+                'Telegram does not expose a downloadable media file for this group link. '
+                'Create a public channel (not a group), forward or upload the video there, '
+                'then send its exact https://t.me/<channel>/<message_id> post link.')
+    return ('Telegram did not expose one downloadable video for this public post. '
+            'Use a public channel (not a group), make sure the post visibly contains one video, '
+            'and send that exact post link.')
+
+
 def download_telegram_public_post(url: str, output_path: str) -> None:
     """Download one public Telegram post video without any account session."""
     output_dir = tempfile.mkdtemp(prefix='clipforge-telegram-post-')
@@ -177,8 +197,10 @@ def download_telegram_public_post(url: str, output_path: str) -> None:
             raise RuntimeError('Telegram could not provide a downloadable public video from this post. Confirm the channel and post are public and that the post contains a video, then try again.') from exc
         files = [entry for entry in os.scandir(output_dir) if entry.is_file() and entry.stat().st_size > 0]
         if len(files) != 1:
-            names = ', '.join(sorted(entry.name for entry in files)) or 'none'
-            raise RuntimeError(f'Expected exactly one final Telegram media file, found {len(files)}: {names}.')
+            if not files:
+                raise RuntimeError(telegram_no_media_error(url))
+            names = ', '.join(sorted(entry.name for entry in files))
+            raise RuntimeError(f'Telegram post produced multiple final media files ({names}); send a post containing exactly one video.')
         os.makedirs(os.path.dirname(os.path.abspath(output_path)) or '.', exist_ok=True)
         shutil.move(files[0].path, output_path)
         print(f'Done. Wrote public Telegram post video to {output_path}.', flush=True)

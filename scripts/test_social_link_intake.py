@@ -81,11 +81,31 @@ def test_telegram_command_uses_best_streams_without_cookie_or_login() -> None:
         assert command[-1] == 'https://t.me/europa_press/613'
 
 
+def test_group_post_without_exposed_media_has_actionable_error() -> None:
+    class GroupPage:
+        ok = True
+        text = '<a>View In Group</a>'
+
+    with tempfile.TemporaryDirectory() as temp:
+        output = Path(temp) / 'final.mp4'
+        with patch.object(module.subprocess, 'run', lambda *args, **kwargs: None):
+            with patch.object(module.requests, 'get', lambda *args, **kwargs: GroupPage()):
+                try:
+                    module.download_telegram_public_post('https://t.me/motionsaltdownloads/2', str(output))
+                    raise AssertionError('group post with no exposed media was accepted')
+                except RuntimeError as error:
+                    text = str(error)
+                    assert 'public Telegram group post' in text
+                    assert 'public channel' in text
+                    assert 'https://t.me/<channel>/<message_id>' in text
+
+
 def main() -> None:
     test_public_telegram_post_policy()
     test_other_social_hosts_are_explicitly_disabled()
     test_stage_a_uses_no_social_session_or_youtube_runtime()
     test_telegram_command_uses_best_streams_without_cookie_or_login()
+    test_group_post_without_exposed_media_has_actionable_error()
     print('Telegram-only social intake tests passed')
 
 

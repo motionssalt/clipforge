@@ -317,6 +317,18 @@ test('source and command helpers enforce Telegram-only social intake while prese
   assert.equal(__test.normalizeFocus('-'), '');
 });
 
+test('Telegram source preflight blocks public groups but permits public channels before Stage A dispatch', async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response('<a>View In Group</a>', { status: 200 });
+    await assert.rejects(__test.preflightTelegramChannelPost('https://t.me/public_group/123'), /public Telegram group link/);
+    globalThis.fetch = async () => new Response('<a>View In Channel</a>', { status: 200 });
+    await __test.preflightTelegramChannelPost('https://t.me/public_channel/123');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('Music Library exposes safe library controls while task deletion is limited to terminal task states', () => {
   const settings = __test.settingsMenu().inline_keyboard.flat().map((button) => button.callback_data);
   assert.ok(settings.includes('set:music_library'));

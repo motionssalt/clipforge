@@ -35,7 +35,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install 'yt-dlp[default]>=2026.1,<2027' 'requests>=2.32,<3'
 
-      - name: Download and verify the requested public Telegram source
+      - name: Download and verify the requested public Telegram channel source
         shell: bash
         env:
           TELEGRAM_POST: ${{ inputs.telegram_post }}
@@ -50,5 +50,20 @@ jobs:
           duration = float(sys.argv[1])
           if duration <= 0:
               raise SystemExit('Downloaded Telegram media has no positive duration.')
-          print(f'Validated public Telegram video duration: {duration:.3f} seconds')
+          print(f'Validated public Telegram channel video duration: {duration:.3f} seconds')
           PY
+
+      - name: Verify public Telegram group links fail before media processing
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          python scripts/download_drive.py https://t.me/motionsaltdownloads/2 work/group-source.bin > work/group-source.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected the public Telegram group link to fail.' >&2
+            exit 1
+          fi
+          grep -q 'public Telegram group post' work/group-source.log
+          echo 'Confirmed actionable rejection for public Telegram group link.'
