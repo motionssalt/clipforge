@@ -19,6 +19,7 @@ from telegram_relay import (  # noqa: E402
     handoff_token,
     known_basic_group_message_request,
     release_tag,
+    stage_a_request_document,
     verify_bot_group_access,
 )
 
@@ -91,6 +92,17 @@ def main() -> None:
     }, clear=False):
         assert handoff_token('motionssalt/clipforge', 'sealed-token') == 'workflow-token'
         assert handoff_token('owner/external-clone', 'sealed-token') == 'sealed-token'
+
+    recovered_request = stage_a_request_document(job_id, {
+        'video_url': 'relay:private', 'source_type': 'telegram_bot_forward',
+        'target_duration_seconds': '45', 'automatic_mode': 'true',
+        'series_mode': 'false', 'whisper_model': 'small', 'language': 'en',
+    })
+    assert recovered_request['job_id'] == job_id
+    assert recovered_request['source_type'] == 'telegram_bot_forward'
+    assert recovered_request['target_duration_seconds'] == '45'
+    assert recovered_request['automatic_mode'] == 'true'
+    assert recovered_request['relay_release_tag'] == ''
 
     # The local Bot API image initializes its mounted data directory as root.
     # The relay streams only the exact already validated media path through the

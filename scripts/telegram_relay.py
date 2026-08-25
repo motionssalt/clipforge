@@ -36,6 +36,15 @@ def fail(message: str) -> None:
     raise RuntimeError(message)
 
 
+class GitHubHandoffError(RuntimeError):
+    """A safe GitHub handoff failure that retains only status and operation."""
+
+    def __init__(self, operation: str, status: int) -> None:
+        self.operation = operation
+        self.status = status
+        super().__init__(f'GitHub {operation} failed with HTTP {status}.')
+
+
 def decode_b64(value: str) -> bytes:
     try:
         return base64.b64decode(value, validate=True)
@@ -363,7 +372,7 @@ def github_request(token: str, method: str, url: str, *, operation: str, **kwarg
     if response.status_code >= 400:
         # Do not interpolate URLs or response content: either can reflect a
         # credential or untrusted input. The static operation label is safe.
-        raise RuntimeError(f'GitHub {operation} failed with HTTP {response.status_code}.')
+        raise GitHubHandoffError(operation, response.status_code)
     return response
 
 
@@ -409,12 +418,43 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def stage_a_request_document(job_id: str, inputs: dict[str, Any]) -> dict[str, Any]:
+    """Build the same restart document that Bot A writes before relay dispatch."""
+    return {
+        'version': 2,
+        'job_id': job_id,
+        'video_url': str(inputs.get('video_url') or ''),
+        'source_type': str(inputs.get('source_type') or 'url'),
+        'relay_release_tag': str(inputs.get('relay_release_tag') or ''),
+        'relay_expected_size': str(inputs.get('relay_expected_size') or ''),
+        'relay_sha256': str(inputs.get('relay_sha256') or ''),
+        'torrent_file_index': str(inputs.get('torrent_file_index') or ''),
+        'whisper_model': str(inputs.get('whisper_model') or 'base'),
+        'language': str(inputs.get('language') or 'auto'),
+        'target_duration_seconds': str(inputs.get('target_duration_seconds') or '120'),
+        'focus': str(inputs.get('focus') or ''),
+        'automatic_mode': 'true' if inputs.get('automatic_mode') == 'true' else 'false',
+        'series_mode': 'true' if inputs.get('series_mode') == 'true' else 'false',
+        'series_id': str(inputs.get('series_id') or ''),
+        'series_source_job_id': str(inputs.get('series_source_job_id') or ''),
+        'series_part': str(inputs.get('series_part') or ''),
+        'series_start_seconds': str(inputs.get('series_start_seconds') or ''),
+        'series_context': str(inputs.get('series_context') or ''),
+        'saved_at_epoch': int(time.time()),
+    }
+
+
 def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, inputs: dict[str, Any], size: int, digest: str) -> None:
     content_url = f'https://api.github.com/repos/{repo}/contents/jobs/{quote(job_id, safe="")}/stage-a-request.json?ref=main'
-    current = github_request(token, 'GET', content_url, operation='Stage A request lookup').json()
+    request_sha = ''
     try:
+        current = github_request(token, 'GET', content_url, operation='Stage A request lookup').json()
         request_doc = json.loads(base64.b64decode(str(current['content']).replace('\n', '')).decode())
         request_sha = str(current['sha'])
+    except GitHubHandoffError as error:
+        if error.status != 404:
+            raise
+        request_doc = stage_a_request_document(job_id, inputs)
     except Exception as error:
         raise RuntimeError('Target clone Stage A request is unreadable.') from error
     if str(request_doc.get('job_id')) != job_id or str(request_doc.get('source_type')) != 'telegram_bot_forward':
@@ -431,12 +471,14 @@ def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, input
     })
     encoded = base64.b64encode((json.dumps(request_doc, indent=2, sort_keys=True) + '\n').encode()).decode()
     write_url = f'https://api.github.com/repos/{repo}/contents/jobs/{quote(job_id, safe="")}/stage-a-request.json'
-    github_request(token, 'PUT', write_url, operation='Stage A request update', json={
+    write_body: dict[str, Any] = {
         'message': f'clipforge: attach private relay source for job {job_id}',
         'content': encoded,
-        'sha': request_sha,
         'branch': 'main',
-    })
+    }
+    if request_sha:
+        write_body['sha'] = request_sha
+    github_request(token, 'PUT', write_url, operation='Stage A request update', json=write_body)
     dispatch_inputs = dict(inputs)
     dispatch_inputs.update({
         'video_url': 'relay:private',
