@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -134,6 +135,33 @@ def known_basic_group_message_request(
     return request_factory(id=[input_message_factory(message_id)])
 
 
+def make_local_bot_api_media_readable(local_path: Path, remote_path: Path) -> None:
+    """Transfer read ownership of one validated local Bot API file to the runner.
+
+    The Bot API image must initialize its state as root. Once it has completed
+    a trusted getFile request, only the already path-validated media inode is
+    chowned through the still-running named container. No unchecked path or
+    directory is passed to Docker.
+    """
+    if os.access(local_path, os.R_OK):
+        return
+    container = str(os.environ.get('LOCAL_BOT_API_CONTAINER') or '').strip()
+    if not container:
+        fail('Local Telegram Bot API shared relay media is not readable by the runner.')
+    try:
+        result = subprocess.run(
+            ['docker', 'exec', '--user', '0:0', container, 'chown', f'{os.getuid()}:{os.getgid()}', '--', str(remote_path)],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError('Local Telegram Bot API could not hand relay media to the runner.') from error
+    if result.returncode != 0 or not os.access(local_path, os.R_OK):
+        fail('Local Telegram Bot API shared relay media could not be made readable by the runner.')
+
+
 def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: int, output_path: Path) -> bool:
     """Download one Bot B-visible file through a trusted local Bot API server.
 
@@ -176,6 +204,7 @@ def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: in
             fail('Local Telegram Bot API returned a relay file outside its shared storage.')
         if not local_path.is_file():
             fail('Local Telegram Bot API did not prepare the relay file in shared storage.')
+        make_local_bot_api_media_readable(local_path, remote_path)
         if local_path.stat().st_size != expected_size:
             fail('Local Telegram Bot API shared relay file size does not match the staged source.')
         shutil.copyfile(local_path, output_path)

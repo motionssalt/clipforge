@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import telegram_relay  # noqa: E402
 from telegram_relay import (  # noqa: E402
     decrypt_payload,
     ensure_payload,
@@ -80,6 +83,21 @@ def main() -> None:
     assert inputs['source_type'] == 'telegram_bot_forward'
     assert telegram['group_message_id'] == 44
     assert release_tag(job_id) == 'clipforge-relay-input-manual-relay-test'
+
+    # The local Bot API image initializes its mounted data directory as root.
+    # The relay may chown only the exact already validated video inode before
+    # copying it, never the mounted storage directory or an unchecked path.
+    local_media = Path('/tmp/clipforge-relay-test/video.bin')
+    remote_media = Path('/var/lib/telegram-bot-api/test-bot/videos/file_0')
+    with patch.object(telegram_relay.os, 'access', side_effect=[False, True]), \
+         patch.object(telegram_relay.os, 'getuid', return_value=1001), \
+         patch.object(telegram_relay.os, 'getgid', return_value=1001), \
+         patch.object(telegram_relay.subprocess, 'run', return_value=telegram_relay.subprocess.CompletedProcess([], 0)) as run_command, \
+         patch.dict(os.environ, {'LOCAL_BOT_API_CONTAINER': 'clipforge-local-bot-api'}, clear=False):
+        telegram_relay.make_local_bot_api_media_readable(local_media, remote_media)
+    assert run_command.call_args.args[0] == [
+        'docker', 'exec', '--user', '0:0', 'clipforge-local-bot-api', 'chown', '1001:1001', '--', str(remote_media)
+    ]
 
     # Bot B must be a member of the configured basic group. The preflight uses
     # Bot API getChat and never exposes Telegram's response body in workflow logs.

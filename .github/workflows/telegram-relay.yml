@@ -65,7 +65,6 @@ jobs:
           test -n "$BOTB_MTPROTO_BOT_TOKEN"
           mkdir -p "${RUNNER_TEMP}/clipforge-telegram-bot-api"
           docker run --detach --name clipforge-local-bot-api --publish 127.0.0.1:8081:8081 \
-            --user "$(id -u):$(id -g)" \
             --volume "${RUNNER_TEMP}/clipforge-telegram-bot-api:/var/lib/telegram-bot-api" \
             --env TELEGRAM_API_ID="$BOTB_MTPROTO_API_ID" \
             --env TELEGRAM_API_HASH="$BOTB_MTPROTO_API_HASH" \
@@ -94,6 +93,7 @@ jobs:
           RELAY_FILE_ID: ${{ github.event.inputs.relay_file_id }}
           LOCAL_BOT_API_BASE: http://127.0.0.1:8081
           LOCAL_BOT_API_FILES_DIR: ${{ runner.temp }}/clipforge-telegram-bot-api
+          LOCAL_BOT_API_CONTAINER: clipforge-local-bot-api
         run: |
           set -euo pipefail
           test -n "$RELAY_ENCRYPTION_KEY"
