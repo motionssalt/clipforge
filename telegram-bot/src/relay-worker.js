@@ -60,7 +60,7 @@ function isRelevantRelayUpdate(env, message) {
   if (!groupId || !botAId || !message || !message.chat) return false;
   if (Number(message.chat.id) !== groupId) return false;
   if (!message.from || Number(message.from.id) !== botAId || message.from.is_bot !== true) return false;
-  return Boolean(relayMediaFileId(message) || parseRelayReadySignal(message.text));
+  return Boolean((parseRelayCaption(message.caption) && relayMediaFileId(message)) || parseRelayReadySignal(message.text));
 }
 
 function relayMediaFileId(message) {

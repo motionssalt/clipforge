@@ -11,9 +11,9 @@ import { downloadTelegramFileBytes, sendAudioBytes, sendDocumentBytes } from '..
 import { cloneRepositoryName, createPrivateShadowClone, deleteClipforgeJob, parseJsonDocument, putBinaryFile, sourcePathAllowed, updateZernioSecret } from '../src/github.js';
 
 class MemoryKv {
-  constructor() { this.values = new Map(); }
+  constructor() { this.values = new Map(); this.putCalls = 0; }
   async get(key) { return this.values.get(key) ?? null; }
-  async put(key, value) { this.values.set(key, value); }
+  async put(key, value) { this.putCalls += 1; this.values.set(key, value); }
   async delete(key) { this.values.delete(key); }
 }
 
@@ -159,6 +159,14 @@ test('conversation state never adopts another chat state', async () => {
   assert.equal((await getState(workerEnv, 1)).activeViewId, 77);
   assert.equal((await getState(workerEnv, 2)).currentTask, null);
   assert.equal((await getState(workerEnv, 2)).activeViewId, null);
+});
+
+test('state persistence does not rewrite an unchanged normalized record', async () => {
+  const workerEnv = env();
+  const state = { flow: 'manual_source', pending: { mode: 'manual' }, currentTask: null, activeViewId: 12 };
+  assert.equal(await putState(workerEnv, 10, state), true);
+  assert.equal(await putState(workerEnv, 10, { ...state, pending: { mode: 'manual' } }), false);
+  assert.equal(workerEnv.CLIPFORGE_BOT_KV.putCalls, 1);
 });
 
 test('interactive views edit the chat-scoped active message before creating a new one', async () => {
@@ -513,7 +521,7 @@ test('manual production-plan validation preserves ClipForge’s timing and narra
 import { getRelayJob, putCredentials } from '../src/storage.js';
 import { encryptRelayPayload } from '../src/crypto.js';
 import { MAX_RELAY_VIDEO_BYTES, parseRelayCaption, parseRelayReadyMarker, relayCaption, relayReadyMarker, relayVideoMetadata } from '../src/relay.js';
-import { __test as relayWorkerTest } from '../src/relay-worker.js';
+import relayWorker, { __test as relayWorkerTest } from '../src/relay-worker.js';
 
 test('direct video source is copied into the internal group without calling getFile or downloading media bytes', async () => {
   const workerEnv = {
@@ -572,6 +580,30 @@ test('relay captions and ready markers bind one job, source chat, and copied gro
   assert.deepEqual(relayWorkerTest.parseRelayReadySignal(`/relay@Clipforgedl_bot ${marker}`), { jobId: 'manual-123', sourceChatId: -10022, groupMessageId: 91 });
   assert.equal(parseRelayCaption('CFRELAY1:bad id:-12'), null);
   assert.equal(parseRelayReadyMarker('CFRELAY_READY1:manual-123:-10022:0'), null);
+});
+
+test('deduplication keys are allocated only for processable Bot A and Bot B updates', async () => {
+  const botAEnv = { ...env(), TELEGRAM_BOT_TOKEN: 'test-token', TELEGRAM_WEBHOOK_SECRET: 'expected-secret' };
+  const botAResponse = await worker.fetch(new Request('https://worker.example/webhook', {
+    method: 'POST', headers: { 'X-Telegram-Bot-Api-Secret-Token': 'expected-secret', 'content-type': 'application/json' },
+    body: JSON.stringify({ update_id: 8001, message: { message_id: 1, text: 'group noise', chat: { id: -1001, type: 'group' } } })
+  }), botAEnv);
+  assert.equal(botAResponse.status, 200);
+  assert.equal(botAEnv.CLIPFORGE_BOT_KV.values.size, 0);
+
+  const botBEnv = {
+    ...env(), BOT_B_TELEGRAM_WEBHOOK_SECRET: 'bot-b-secret', INTERNAL_RELAY_GROUP_CHAT_ID: '-10022', BOT_A_TELEGRAM_ID: '1234'
+  };
+  const botBResponse = await relayWorker.fetch(new Request('https://worker.example/webhook', {
+    method: 'POST', headers: { 'X-Telegram-Bot-Api-Secret-Token': 'bot-b-secret', 'content-type': 'application/json' },
+    body: JSON.stringify({ update_id: 8002, message: { message_id: 2, text: 'unrelated group noise', chat: { id: -10022, type: 'group' }, from: { id: 9999, is_bot: true } } })
+  }), botBEnv);
+  assert.equal(botBResponse.status, 200);
+  assert.equal(botBEnv.CLIPFORGE_BOT_KV.values.size, 0);
+
+  const copiedMedia = { chat: { id: -10022 }, from: { id: 1234, is_bot: true }, caption: relayCaption('manual-123', 17), video: { file_id: 'media-id' } };
+  assert.equal(relayWorkerTest.isRelevantRelayUpdate(botBEnv, copiedMedia), true);
+  assert.equal(relayWorkerTest.isRelevantRelayUpdate(botBEnv, { ...copiedMedia, from: { id: 5678, is_bot: true } }), false);
 });
 
 test('legacy authenticated public Telegram intake is authorized only for the configured original repository', () => {

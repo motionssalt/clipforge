@@ -1765,11 +1765,15 @@ async function handleCallback(env, callback) {
 
 async function handleUpdate(env, update) {
   if (!update || typeof update !== 'object') return;
-  if (await markUpdateSeen(env, update.update_id)) return;
-  if (update.callback_query) return handleCallback(env, update.callback_query);
+  const callback = update.callback_query;
   const message = update.message;
-  const chatId = message && message.chat && message.chat.id;
-  if (!chatId || message.chat.type !== 'private') return;
+  const chat = callback && callback.message && callback.message.chat || message && message.chat;
+  const chatId = chat && chat.id;
+  // Ignore non-private and structurally unsupported updates before allocating
+  // a 24-hour deduplication key. These updates cannot enter the bot flow.
+  if (!chatId || chat.type !== 'private') return;
+  if (await markUpdateSeen(env, update.update_id)) return;
+  if (callback) return handleCallback(env, callback);
   const command = commandOf(message.text);
   if (command) return handleCommand(env, chatId, command);
   if (message.video) return handleRelayVideo(env, chatId, message);

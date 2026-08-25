@@ -27,13 +27,19 @@ export async function getState(env, chatId) {
 }
 
 export async function putState(env, chatId, state) {
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'state'), JSON.stringify({
+  const stateKey = key(chatId, 'state');
+  const serialized = JSON.stringify({
     version: 1,
     flow: state.flow || null,
     pending: state.pending || {},
     currentTask: state.currentTask || null,
     activeViewId: Number.isInteger(Number(state.activeViewId)) && Number(state.activeViewId) > 0 ? Number(state.activeViewId) : null
-  }), { expirationTtl: STATE_TTL_SECONDS });
+  });
+  // View refreshes can revisit the exact same state. A read is far cheaper
+  // than consuming a daily KV write quota, so persist only a real change.
+  if (await env.CLIPFORGE_BOT_KV.get(stateKey) === serialized) return false;
+  await env.CLIPFORGE_BOT_KV.put(stateKey, serialized, { expirationTtl: STATE_TTL_SECONDS });
+  return true;
 }
 
 export async function clearFlow(env, chatId) {
