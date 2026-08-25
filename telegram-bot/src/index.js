@@ -5,8 +5,8 @@ import {
 import { maskSecret } from './crypto.js';
 import {
   GitHubError, actionsSecretExists, cancelWorkflowRun, createPrivateShadowClone, currentBranchSha, deleteZernioSecret, dispatchWorkflow, geminiFingerprint, getJsonFile,
-  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
-  putBinaryFile, saveNarrator, saveProductionPlan, saveStageARequest, saveWatermark, saveZernioSettings, tryGetJsonFile, updateGeminiSecret, updateZernioSecret, validateConnection,
+  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readSeriesSettings, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
+  putBinaryFile, saveNarrator, saveProductionPlan, saveSeriesSettings, saveStageARequest, saveWatermark, saveZernioSettings, tryGetJsonFile, updateGeminiSecret, updateZernioSecret, validateConnection,
   writeGeminiMetadata, zernioFingerprint
 } from './github.js';
 import { validateProductionPlan } from './production.js';
@@ -114,7 +114,7 @@ function settingsMenu() {
     [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini API key', callback_data: 'set:gemini' }],
     [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music default', callback_data: 'set:music_default' }],
     [{ text: 'Watermark', callback_data: 'set:watermark' }, { text: 'Zernio publishing', callback_data: 'set:zernio' }],
-    [{ text: 'Back to menu', callback_data: 'menu:home' }]
+    [{ text: 'Series Mode', callback_data: 'set:series' }, { text: 'Back to menu', callback_data: 'menu:home' }]
   ]);
 }
 
@@ -267,18 +267,19 @@ async function showHome(env, chatId, messageId = null) {
 }
 
 async function readExistingSettings(credentials) {
-  if (!credentials || !credentials.repo) return { geminiMeta: [], narrator: null, watermark: null, musicDefault: null };
+  if (!credentials || !credentials.repo) return { geminiMeta: [], narrator: null, watermark: null, musicDefault: null, series: null };
   const safeJson = async (path) => {
     try { return await tryGetJsonFile(credentials, credentials.repo, path); }
     catch { return null; }
   };
-  const [geminiMeta, narrator, watermark, musicDefault] = await Promise.all([
+  const [geminiMeta, narrator, watermark, musicDefault, series] = await Promise.all([
     readGeminiMetadata(credentials, credentials.repo).catch(() => []),
     safeJson(TTS_SETTINGS_PATH),
     safeJson(WATERMARK_PATH),
-    safeJson(MUSIC_DEFAULT_PATH)
+    safeJson(MUSIC_DEFAULT_PATH),
+    readSeriesSettings(credentials, credentials.repo).catch(() => null)
   ]);
-  return { geminiMeta, narrator: narrator && narrator.document, watermark: watermark && watermark.document, musicDefault: musicDefault && musicDefault.document };
+  return { geminiMeta, narrator: narrator && narrator.document, watermark: watermark && watermark.document, musicDefault: musicDefault && musicDefault.document, series };
 }
 
 function existingGeminiLabel(localKeys, metadata) {
@@ -298,6 +299,7 @@ async function showSettings(env, chatId, messageId = null) {
   lines.push(`Narrator: ${escapeHtml(VOICES[voice].label)} (Edge TTS)`);
   lines.push(`Watermark: ${existing.watermark && existing.watermark.creator_name ? escapeHtml(existing.watermark.creator_name) : 'not set'}`);
   lines.push(`Music default: ${existing.musicDefault && existing.musicDefault.library_track_path ? escapeHtml(String(existing.musicDefault.library_track_path).replace(/^audio-library\//, '')) : 'not set'}`);
+  lines.push(`Series Mode: ${existing.series && existing.series.enabled === true ? 'on — new tasks chain parts sequentially' : 'off'}`);
   if (zernio) lines.push(`Zernio: ${zernio.secretConfigured ? zernio.settings.enabled ? zernio.settings.auto_publish ? `enabled · automatic ${zernio.settings.automatic_mode === 'publish_now' ? 'publish now' : 'smart schedule'}` : 'enabled · automatic off' : 'controls disabled' : 'API key not configured'}`);
   lines.push('Existing Gemini and Zernio secrets remain opaque: the bot can use them but will never display or copy raw values.');
   await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: settingsMenu() }, messageId);
@@ -445,19 +447,19 @@ async function listTasks(env, chatId, completedOnly = false, messageId = null) {
   const entries = [];
   for (const jobId of ids) {
     const status = await readStatus(credentials, credentials.repo, jobId);
-    let dispatched = Boolean(status);
-    if (!dispatched) {
-      try { await readStageARequest(credentials, credentials.repo, jobId); dispatched = true; }
-      catch (error) { if (!(error instanceof GitHubError && error.status === 404)) throw error; }
-    }
+    let request = null;
+    try { request = await readStageARequest(credentials, credentials.repo, jobId); } catch (error) { if (!(error instanceof GitHubError && error.status === 404)) throw error; }
+    const dispatched = Boolean(status || request);
     if (!dispatched) continue; // A source.torrent alone is staged task input, not a dispatched task.
     if (completedOnly && (!status || status.stage !== 'complete')) continue;
     const label = await ensureTaskLabel(env, chatId, jobId);
-    entries.push({ label, jobId, status });
+    const seriesId = request && request.series_mode === 'true' ? String(request.series_id || '') : '';
+    const seriesPart = request && request.series_mode === 'true' ? Number(request.series_part || 0) : 0;
+    entries.push({ label, jobId, status, seriesId, seriesPart });
     if (entries.length >= MAX_TASKS) break;
   }
   if (!entries.length) { await renderInteractiveView(env, chatId, completedOnly ? 'No completed tasks were found.' : 'No dispatched tasks were found.', { replyMarkup: mainMenu() }, messageId); return; }
-  const text = entries.map(({ label, jobId, status }) => `<b>${label}</b> · ${escapeHtml(stageLabel(status ? status.stage : 'starting'))}\n<code>${escapeHtml(jobId)}</code>`).join('\n\n');
+  const text = entries.map(({ label, jobId, status, seriesId, seriesPart }) => `${seriesId ? `<b>Series ${escapeHtml(seriesId)} · Part ${seriesPart || '?'}</b>\n` : ''}<b>${label}</b> · ${escapeHtml(stageLabel(status ? status.stage : 'starting'))}\n<code>${escapeHtml(jobId)}</code>`).join('\n\n');
   const rows = entries.map(({ label }) => [{ text: `Task ${label}`, callback_data: completedOnly ? `done:${label}` : `status:${label}` }]);
   await renderInteractiveView(env, chatId, `<b>${completedOnly ? 'Completed tasks' : 'Tasks'}</b>\n\n${text}`, { replyMarkup: buttons(rows) }, messageId);
 }
@@ -589,9 +591,10 @@ async function beginTask(env, chatId, mode, messageId = null) {
       return;
     }
   }
+  const series = await readSeriesSettings(credentials, credentials.repo).catch(() => null);
   const state = await getState(env, chatId);
   state.flow = `${mode}_source`;
-  state.pending = { mode };
+  state.pending = { mode, seriesMode: Boolean(series && series.enabled === true) };
   await putState(env, chatId, state);
   await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
@@ -610,7 +613,10 @@ async function finishTaskLaunch(env, chatId, messageId = null) {
     language: 'auto',
     target_duration_seconds: String(pending.duration),
     focus: pending.focus || '',
-    automatic_mode: pending.mode === 'automatic' ? 'true' : 'false'
+    automatic_mode: pending.mode === 'automatic' ? 'true' : 'false',
+    series_mode: pending.seriesMode === true ? 'true' : '', series_id: pending.seriesMode === true ? jobId : '',
+    series_source_job_id: pending.seriesMode === true ? jobId : '', series_part: pending.seriesMode === true ? '1' : '',
+    series_start_seconds: pending.seriesMode === true ? '0' : '', series_context: ''
   };
   await saveStageARequest(credentials, credentials.repo, jobId, inputs);
   if (pending.mode === 'automatic' && pending.musicSource !== 'default') {
@@ -1116,6 +1122,15 @@ async function handleCallback(env, callback) {
       if (!await requireCredentials(env, chatId)) return;
       const state = await getState(env, chatId); state.flow = 'settings_watermark'; state.pending = {}; await putState(env, chatId, state);
       return renderInteractiveView(env, chatId, 'Send the creator watermark text (up to 64 characters), or send <code>clear</code> to remove it.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
+    }
+    if (value === 'series') {
+      const credentials = await requireCredentials(env, chatId); if (!credentials) return;
+      const current = await readSeriesSettings(credentials, credentials.repo).catch(() => null);
+      const enabled = !(current && current.enabled === true);
+      await saveSeriesSettings(credentials, credentials.repo, enabled);
+      return renderInteractiveView(env, chatId, enabled
+        ? '<b>Series Mode is on.</b> New tasks begin at Part 1. Later parts reuse the original Stage A evidence and begin after the prior part\'s claimed source timestamp.'
+        : '<b>Series Mode is off.</b> New tasks use the ordinary one-video flow. Existing series continue unchanged.', { replyMarkup: settingsMenu() }, viewId);
     }
     if (value === 'zernio') return showZernioSettings(env, chatId, viewId);
     if (value === 'zernio_key') {

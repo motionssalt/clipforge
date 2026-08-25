@@ -767,6 +767,43 @@ jobs:
         env:
           JOB_TITLE: ${{ env.JOB_TITLE }}
 
+      - name: Continue the next validated Series Mode part
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_ID: ${{ steps.jid.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          test -f "jobs/$JOB_ID/production.json" || exit 0
+          python scripts/series_state.py . "$JOB_ID" > work/series_next.json
+          python - <<'PY'
+          import json, os, subprocess
+          payload = json.load(open("work/series_next.json", encoding="utf-8"))
+          if not payload.get("continue"):
+              print("Series is not enabled or this was the final part; no continuation dispatched.")
+              raise SystemExit(0)
+          required = ("job_id", "video_url", "series_id", "series_source_job_id", "series_part", "series_start_seconds")
+          if any(not str(payload.get(key, "")).strip() for key in required):
+              raise SystemExit("Series continuation payload is incomplete.")
+          from pathlib import Path
+          request_path = Path("jobs") / payload["job_id"] / "stage_a_request.json"
+          if request_path.exists():
+              print(f"Series continuation {payload['job_id']} was already persisted; skipping duplicate dispatch.")
+              raise SystemExit(0)
+          request_path.parent.mkdir(parents=True, exist_ok=True)
+          request_path.write_text(json.dumps({"version": 1, **payload}, indent=2) + "\n", encoding="utf-8")
+          subprocess.run(["git", "add", str(request_path)], check=True)
+          subprocess.run(["git", "commit", "-m", f"clipforge: queue series part {payload['series_part']}"], check=True)
+          subprocess.run(["git", "push"], check=True)
+          command = ["gh", "workflow", "run", "stage-a.yml", "--repo", os.environ["GITHUB_REPOSITORY"], "--ref", os.environ.get("GITHUB_REF_NAME", "main")]
+          for key, value in payload.items():
+              if key != "continue":
+                  command.extend(["-f", f"{key}={value}"])
+          subprocess.run(command, check=True)
+          print(f"Dispatched Series Mode Part {payload['series_part']} as {payload['job_id']}.")
+          PY
+
       # -------------------------------------------------------------------
       # OPTIONAL DISTRIBUTION — Stage B has already produced, validated,
       # released, and persisted the final output above. This best-effort

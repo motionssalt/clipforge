@@ -426,6 +426,16 @@ export function zernioFingerprint(value) {
   return raw.length >= 9 ? `${raw.slice(0, 4)}…${raw.slice(-4)}` : 'invalid';
 }
 
+export async function readSeriesSettings(credentials, repo) {
+  const result = await tryGetJsonFile(credentials, repo, 'branding/series_settings.json');
+  return result ? result.document : null;
+}
+
+export async function saveSeriesSettings(credentials, repo, enabled) {
+  const document = { version: 1, enabled: enabled === true, updated_at_epoch: Math.floor(Date.now() / 1000) };
+  return putTextFile(credentials, repo, 'branding/series_settings.json', `${JSON.stringify(document, null, 2)}\n`, 'clipforge: update Series Mode setting');
+}
+
 export async function saveNarrator(credentials, repo, voice, label) {
   const document = { version: 1, engine: 'edge-tts', voice, voice_label: label, rate: '+20%', volume: '+0%', pitch: '+0Hz', updated_at_epoch: Math.floor(Date.now() / 1000) };
   return putTextFile(credentials, repo, TTS_SETTINGS_PATH, `${JSON.stringify(document, null, 2)}\n`, 'clipforge: save Edge TTS narrator');
@@ -441,7 +451,11 @@ export async function saveStageARequest(credentials, repo, jobId, inputs) {
     version: 1, job_id: jobId, video_url: String(inputs.video_url || ''), torrent_file_index: String(inputs.torrent_file_index || ''),
     whisper_model: String(inputs.whisper_model || 'base'), language: String(inputs.language || 'auto'),
     target_duration_seconds: String(inputs.target_duration_seconds || '120'), focus: String(inputs.focus || ''),
-    automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false', saved_at_epoch: Math.floor(Date.now() / 1000)
+    automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false',
+    series_mode: inputs.series_mode === 'true' ? 'true' : 'false', series_id: String(inputs.series_id || ''),
+    series_source_job_id: String(inputs.series_source_job_id || ''), series_part: String(inputs.series_part || ''),
+    series_start_seconds: String(inputs.series_start_seconds || ''), series_context: String(inputs.series_context || ''),
+    saved_at_epoch: Math.floor(Date.now() / 1000)
   };
   return putTextFile(credentials, repo, STAGE_A_REQUEST_PATH(jobId), `${JSON.stringify(document, null, 2)}\n`, `clipforge: save Stage A restart settings for job ${jobId}`);
 }

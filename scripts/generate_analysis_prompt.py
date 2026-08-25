@@ -181,8 +181,27 @@ ClipForge guidance; read it through that thread, not through the whole video.
 """
 
 
+SERIES_DIRECTIVE = """\
+################################################################################
+## SERIES MODE — PART {series_part}
+################################################################################
+This is Part {series_part} of a sequential ClipForge series. Use only source
+footage from {series_start_seconds}s onward. Do not recap, say "previously on",
+or replay earlier material. Prior-part continuity notes are private guidance:
+{series_context}
+
+Start with a strong standalone hook. For every non-final part, choose an honest
+cliffhanger rather than forcing a target timestamp. In production.json include
+series_id, series_part, series_start_seconds ({series_start_seconds}),
+series_end_seconds, series_final (boolean), and a concise non-empty
+series_summary. Put "Part {series_part}" directly in title.
+################################################################################
+
+"""
+
+
 TEMPLATE = """\
-{focus_block}================================================================================
+{series_block}{focus_block}================================================================================
   READ THIS FIRST — Source-video cut-selection instructions for the AI agent
 ================================================================================
 
@@ -1172,9 +1191,11 @@ def main() -> None:
     ap.add_argument(
         "--focus-env",
         default=None,
-        help="Name of the environment variable that carries the focus "
-             "string. Preferred over --focus for stage-a.yml wiring.",
+        help="Name of the environment variable that carries the focus string.",
     )
+    ap.add_argument("--series-part", type=int, default=None)
+    ap.add_argument("--series-start-seconds", type=int, default=None)
+    ap.add_argument("--series-context-env", default=None)
     args = ap.parse_args()
 
     window_seconds = max(int(args.window_seconds), 1)
@@ -1188,6 +1209,11 @@ def main() -> None:
 
     focus_text = _resolve_focus(args)
     has_focus = bool(focus_text)
+    series_enabled = args.series_part is not None or args.series_start_seconds is not None
+    if series_enabled and (args.series_part is None or args.series_part < 1 or args.series_start_seconds is None or args.series_start_seconds < 0):
+        ap.error("Series prompts require a positive part number and a non-negative start timestamp.")
+    series_context = (os.environ.get(args.series_context_env, "") if args.series_context_env else "").strip() or "(Part 1: no prior parts.)"
+    series_block = SERIES_DIRECTIVE.format(series_part=args.series_part, series_start_seconds=args.series_start_seconds, series_context=series_context) if series_enabled else ""
 
     # Compose the focus-conditional blocks. Supplied focus preserves its
     # operator-controlled directive. Empty focus gets a distinct directive that
@@ -1293,6 +1319,7 @@ def main() -> None:
         )
 
     content = TEMPLATE.format(
+        series_block=series_block,
         focus_block=focus_block,
         focus_scope_clause=focus_scope_clause,
         focus_metadata=focus_metadata,

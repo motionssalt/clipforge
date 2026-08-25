@@ -94,6 +94,29 @@ def validate_production_plan(document: Any, contract: dict[str, Any] | None = No
         if scalar_rules.get("required") and (not is_int(value) or value <= 0):
             errors.append(f"`{key}` must be a positive integer.")
 
+    series_rules = rules.get("series", {})
+    series_id = document.get(series_rules.get("id_field", "series_id"))
+    series_start = None
+    series_end = None
+    if series_id is not None:
+        id_field = series_rules.get("id_field", "series_id")
+        part_field = series_rules.get("part_field", "series_part")
+        start_key = series_rules.get("start_field", "series_start_seconds")
+        end_key = series_rules.get("end_field", "series_end_seconds")
+        final_key = series_rules.get("final_field", "series_final")
+        summary_key = series_rules.get("summary_field", "series_summary")
+        if not isinstance(series_id, str) or not series_id.strip(): errors.append(f"`{id_field}` must be a non-empty string for a series production plan.")
+        if not is_int(document.get(part_field)) or document.get(part_field) <= 0: errors.append(f"`{part_field}` must be a positive integer for a series production plan.")
+        if not is_int(document.get(start_key)) or document.get(start_key) < 0: errors.append(f"`{start_key}` must be a non-negative integer for a series production plan.")
+        else: series_start = int(document[start_key])
+        if not is_int(document.get(end_key)) or document.get(end_key) < 0: errors.append(f"`{end_key}` must be a non-negative integer for a series production plan.")
+        else: series_end = int(document[end_key])
+        if series_start is not None and series_end is not None and series_end <= series_start: errors.append(f"`{end_key}` must be greater than `{start_key}` for a series production plan.")
+        if not isinstance(document.get(final_key), bool): errors.append(f"`{final_key}` must be boolean for a series production plan.")
+        summary = document.get(summary_key)
+        if not isinstance(summary, str) or not summary.strip(): errors.append(f"`{summary_key}` must be a non-empty string for a series production plan.")
+        elif len(summary.strip()) > int(series_rules.get("summary_max_length", 1200)): errors.append(f"`{summary_key}` exceeds the maximum allowed length.")
+
     cut_rules = rules["cuts"]
     cuts = document.get("cuts")
     if not isinstance(cuts, list):
@@ -133,6 +156,8 @@ def validate_production_plan(document: Any, contract: dict[str, Any] | None = No
             errors.append(f"{at}: end_seconds ({end}) must be greater than start_seconds ({start}).")
         if start < int(cut_rules["start_minimum"]):
             errors.append(f"{at}: start_seconds ({start}) is below 0.")
+        if series_start is not None and start < series_start: errors.append(f"{at}: start_seconds ({start}) precedes series_start_seconds ({series_start}).")
+        if series_end is not None and end > series_end: errors.append(f"{at}: end_seconds ({end}) exceeds series_end_seconds ({series_end}).")
         if valid_duration is not None and end > valid_duration:
             errors.append(f"{at}: end_seconds ({end}) exceeds video_duration_seconds ({valid_duration}).")
         if previous_end is not None and start < previous_end:

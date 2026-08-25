@@ -52,6 +52,36 @@ on:
         required: false
         type: string
         default: "false"
+      series_mode:
+        description: "true only for a sequential Series Mode part"
+        required: false
+        type: string
+        default: ""
+      series_id:
+        description: "Stable series identifier"
+        required: false
+        type: string
+        default: ""
+      series_source_job_id:
+        description: "Part 1 job whose Stage A release assets are reused"
+        required: false
+        type: string
+        default: ""
+      series_part:
+        description: "1-based series part number"
+        required: false
+        type: string
+        default: ""
+      series_start_seconds:
+        description: "First unclaimed source timestamp for this part"
+        required: false
+        type: string
+        default: ""
+      series_context:
+        description: "Private summaries of prior parts"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -398,7 +428,46 @@ jobs:
             echo "WARN: initial status push failed after 3 attempts; the final status commit will carry it." >&2
           fi
 
+      - name: Reuse original Stage A evidence for a Series Mode continuation
+        if: ${{ github.event.inputs.series_mode == 'true' && github.event.inputs.series_source_job_id != '' && github.event.inputs.series_source_job_id != github.event.inputs.job_id }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source_job="${{ github.event.inputs.series_source_job_id }}"
+          mkdir -p work/screenshots work/stash
+          gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
+            --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
+            --pattern 'screenshots.zip' --pattern 'original.*'
+          cp work/series-source/transcript.json work/transcript.json
+          cp work/series-source/scene_index.json work/scene_index.json
+          cp work/series-source/key_moments.json work/key_moments.json
+          unzip -q work/series-source/screenshots.zip -d work/screenshots
+          original="$(find work/series-source -maxdepth 1 -type f -name 'original.*' | head -n 1)"
+          test -n "$original"
+          original_name="$(basename "$original")"
+          cp "$original" "work/stash/$original_name"
+          echo "ORIGINAL_ASSET_NAME=$original_name" >> "$GITHUB_ENV"
+          python - <<'PY'
+          import json
+          transcript=json.load(open('work/transcript.json', encoding='utf-8'))
+          duration=int(round(float(transcript.get('duration_seconds') or transcript.get('duration') or 0)))
+          if duration <= 0:
+              duration=max((float(s.get('end', 0)) for s in transcript.get('segments', [])), default=0)
+          if duration <= 0: raise SystemExit('Could not recover source duration from reused transcript.')
+          open('/tmp/series_env', 'w').write(f'DURATION_SECONDS={int(round(duration))}\n')
+          print(f'Reused evidence duration: {duration}')
+          PY
+          cat /tmp/series_env >> "$GITHUB_ENV"
+          echo "SCREENSHOT_COUNT=$(find work/screenshots -type f | wc -l)" >> "$GITHUB_ENV"
+          echo "SHOT_COUNT=$(python -c \"import json; print(json.load(open('work/scene_index.json')).get('shot_count', 0))\")" >> "$GITHUB_ENV"
+          echo "KEY_MOMENT_COUNT=$(python -c \"import json; print(json.load(open('work/key_moments.json')).get('moment_count', 0))\")" >> "$GITHUB_ENV"
+          echo "EVENT_FRAME_COUNT=$(find work/screenshots -name 'event_*' -type f | wc -l)" >> "$GITHUB_ENV"
+          echo "SCREENSHOT_WINDOW_SECONDS=6" >> "$GITHUB_ENV"
+
       - name: Download source video (URL, Drive, uploaded torrent, or magnet-resolved torrent)
+        if: ${{ github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id }}
         shell: bash
         env:
           SOURCE_REF: ${{ github.event.inputs.video_url }}
@@ -478,6 +547,7 @@ jobs:
           ls -lh work/
 
       - name: Probe duration + build compressed analysis copy (720p, CRF 28)
+        if: ${{ github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -497,6 +567,7 @@ jobs:
           ls -lh work/analysis/compressed.mp4
 
       - name: Extract 6-frame composite screenshots (one file per 6s window)
+        if: ${{ github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -540,6 +611,7 @@ jobs:
           du -sh work/screenshots || true
 
       - name: Extract audio for transcription
+        if: ${{ github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -547,6 +619,7 @@ jobs:
           ls -lh work/audio.wav
 
       - name: Transcribe with faster-whisper (CPU)
+        if: ${{ github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -576,7 +649,7 @@ jobs:
       # ---------------------------------------------------------------
 
       - name: Detect shot boundaries (scene_index.json)
-        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' && (github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -590,7 +663,7 @@ jobs:
           echo "Detected $shot_count shot(s)"
 
       - name: Build key-moments shortlist (key_moments.json)
-        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' && (github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -604,7 +677,7 @@ jobs:
           echo "Shortlisted $km_count key moment(s)"
 
       - name: Emit dense event composites for high-signal beats
-        if: ${{ github.event.inputs.enable_vision_assist != 'false' }}
+        if: ${{ github.event.inputs.enable_vision_assist != 'false' && (github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -628,7 +701,7 @@ jobs:
           echo "Wrote $event_count dense event composite(s) (baseline unchanged: $before)"
 
       - name: Vision-assist disabled — write empty stubs
-        if: ${{ github.event.inputs.enable_vision_assist == 'false' }}
+        if: ${{ github.event.inputs.enable_vision_assist == 'false' && (github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id) }}
         shell: bash
         run: |
           set -euo pipefail
@@ -657,6 +730,7 @@ jobs:
           # newlines, or `$` characters and would otherwise be a shell
           # injection footgun.
           FOCUS_INPUT: ${{ github.event.inputs.focus }}
+          SERIES_CONTEXT_INPUT: ${{ github.event.inputs.series_context }}
         run: |
           set -euo pipefail
           # Sanitize user-supplied target duration; fall back to 120s if
@@ -681,10 +755,14 @@ jobs:
             echo "Focus: (none — whole video considered)"
           fi
 
-          # Pass the focus value via env into the generator so we don't
-          # have to worry about shell-quoting a multi-line / special-char
-          # user string on the argv command line.
-          FOCUS="$focus_trimmed" \
+          # Pass free-form focus and series continuity context through env rather
+          # than shell interpolation. Later parts are bounded by the persisted
+          # production.json end timestamp of the previous successful part.
+          series_args=()
+          if [ "${{ github.event.inputs.series_mode }}" = "true" ]; then
+            series_args=(--series-part "${{ github.event.inputs.series_part }}" --series-start-seconds "${{ github.event.inputs.series_start_seconds }}" --series-context-env SERIES_CONTEXT)
+          fi
+          FOCUS="$focus_trimmed" SERIES_CONTEXT="$SERIES_CONTEXT_INPUT" \
           python scripts/generate_analysis_prompt.py \
             "$DURATION_SECONDS" "$SCREENSHOT_COUNT" \
             "work/00_READ_THIS_FIRST.txt" \
@@ -694,7 +772,7 @@ jobs:
             --shot-count "${SHOT_COUNT:-0}" \
             --key-moment-count "${KEY_MOMENT_COUNT:-0}" \
             --event-frame-count "${EVENT_FRAME_COUNT:-0}" \
-            --focus-env FOCUS
+            --focus-env FOCUS "${series_args[@]}"
           head -n 60 work/00_READ_THIS_FIRST.txt
 
       - name: Zip screenshots (baseline + event composites)

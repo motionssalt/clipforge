@@ -19,6 +19,16 @@
       "required": true
     }
   },
+  "series": {
+    "optional": true,
+    "id_field": "series_id",
+    "part_field": "series_part",
+    "start_field": "series_start_seconds",
+    "end_field": "series_end_seconds",
+    "final_field": "series_final",
+    "summary_field": "series_summary",
+    "summary_max_length": 1200
+  },
   "string_arrays": {
     "hashtags": {
       "optional": true,
