@@ -53,7 +53,7 @@ async function rememberCopiedMedia(env, message) {
   const fileId = relayMediaFileId(message);
   if (!caption || !fileId) return;
   const record = await getRelayJob(env, caption.sourceChatId, caption.jobId);
-  if (!record || !record.relay || Number(record.relay.internal_group_message_id) !== Number(message.message_id)) return;
+  if (!record || !record.relay) return;
   await putRelayJob(env, caption.sourceChatId, caption.jobId, {
     ...record,
     relay: { ...record.relay, bot_b_file_id: fileId },
