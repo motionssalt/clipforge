@@ -14,12 +14,22 @@ function configuredInteger(value) {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-async function seenRelayUpdate(env, updateId) {
+async function alreadySeenRelayUpdate(env, updateId) {
   if (!Number.isInteger(updateId)) return false;
   const key = `relay:update:${updateId}`;
-  if (await env.CLIPFORGE_BOT_KV.get(key)) return true;
+  return Boolean(await env.CLIPFORGE_BOT_KV.get(key));
+}
+
+// Only call this once the update has been confirmed relevant (a media
+// message from Bot A in the relay group, or a valid ready-signal) — never
+// unconditionally per webhook delivery. Every KV put costs against the
+// account's daily write quota, and most updates a group receives (chatter,
+// join/leave events, Telegram's own retry deliveries of updates we already
+// dropped) are not relay-relevant at all.
+async function markRelayUpdateSeen(env, updateId) {
+  if (!Number.isInteger(updateId)) return;
+  const key = `relay:update:${updateId}`;
   await env.CLIPFORGE_BOT_KV.put(key, '1', { expirationTtl: RELAY_UPDATE_TTL_SECONDS });
-  return false;
 }
 
 function centralCredentials(env) {
@@ -37,6 +47,20 @@ function sealedRelayPayload(record, marker) {
   }
   if (sealed.length < 64 || sealed.length > 16000) throw new Error('The relay job does not contain a valid sealed payload.');
   return sealed;
+}
+
+// Cheap, no-KV-access gate: is this update even shaped like something Bot B
+// acts on (a message from Bot A, in the relay group, carrying either the
+// copied media or a ready-signal)? Run this before touching KV at all —
+// most updates a group receives are not relay-relevant, and every KV
+// operation costs against the account's daily quota.
+function isRelevantRelayUpdate(env, message) {
+  const groupId = configuredInteger(env.INTERNAL_RELAY_GROUP_CHAT_ID);
+  const botAId = configuredInteger(env.BOT_A_TELEGRAM_ID);
+  if (!groupId || !botAId || !message || !message.chat) return false;
+  if (Number(message.chat.id) !== groupId) return false;
+  if (!message.from || Number(message.from.id) !== botAId || message.from.is_bot !== true) return false;
+  return Boolean(relayMediaFileId(message) || parseRelayReadySignal(message.text));
 }
 
 function relayMediaFileId(message) {
@@ -87,9 +111,11 @@ export default {
     let update;
     try { update = await request.json(); } catch { return new Response('Bad request', { status: 400 }); }
     try {
-      if (!await seenRelayUpdate(env, update.update_id)) {
+      const relevant = isRelevantRelayUpdate(env, update.message);
+      if (relevant && !await alreadySeenRelayUpdate(env, update.update_id)) {
         await rememberCopiedMedia(env, update.message);
         await routeReadyMarker(env, update.message);
+        await markRelayUpdateSeen(env, update.update_id);
       }
     } catch (error) {
       // Never echo routing credentials or encrypted payloads to Telegram or logs.
@@ -99,4 +125,4 @@ export default {
   }
 };
 
-export const __test = { configuredInteger, parseRelayCaption, parseRelayReadySignal, relayMediaFileId, sealedRelayPayload };
+export const __test = { configuredInteger, isRelevantRelayUpdate, parseRelayCaption, parseRelayReadySignal, relayMediaFileId, sealedRelayPayload };
