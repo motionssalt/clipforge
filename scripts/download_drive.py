@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Download a video file to a local path from either:
+Download a video file to a local path from one of three public sources:
 
   A) A public Google Drive share link / file id, e.g.:
        - https://drive.google.com/file/d/<FILE_ID>/view?usp=sharing
@@ -13,7 +13,11 @@ Download a video file to a local path from either:
      downloaded via Drive's uc?export=download endpoint, including the
      "confirm token" interstitial that Drive shows for large files.
 
-  B) ANY other direct download URL (raw GitHub file URL, a plain
+  B) A public, single-video social link from an explicitly recognised host:
+       YouTube, TikTok, Instagram, Facebook, X/Twitter, Vimeo, or Reddit.
+     These are downloaded through yt-dlp without cookies, login, or playlists.
+
+  C) ANY other direct download URL (raw GitHub file URL, a plain
      .mp4/.mkv/.webm link on any host, etc.). Non-Drive input is treated
      as a direct URL and streamed as-is — no Drive-only restriction.
 
@@ -23,7 +27,7 @@ file bytes is rejected (the caller separately verifies the bytes are a
 video container).
 
 Usage:
-    python download_drive.py <drive_link_or_id_or_direct_url> <output_path>
+    python download_drive.py <public_drive_link_or_id_social_or_direct_url> <output_path>
 """
 import os
 import re
@@ -40,12 +44,14 @@ import requests
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 REQUEST_TIMEOUT = (30, 60)  # (connect, read) seconds
 MAX_SOCIAL_MEDIA_BYTES = 5 * 1024 * 1024 * 1024
-SOCIAL_HOSTS = {
-    'youtube.com', 'youtu.be', 'youtube-nocookie.com',
-    'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
-    'instagram.com', 'facebook.com', 'fb.watch',
-    'x.com', 'twitter.com', 'vimeo.com', 'reddit.com', 'redd.it',
-}
+# Keep this ordered from specialised subdomains to parent domains so host
+# classification and user-facing error messages are deterministic.
+SOCIAL_HOSTS = (
+    'youtube-nocookie.com', 'youtu.be', 'youtube.com',
+    'vm.tiktok.com', 'vt.tiktok.com', 'tiktok.com',
+    'fb.watch', 'facebook.com', 'instagram.com',
+    'twitter.com', 'x.com', 'vimeo.com', 'redd.it', 'reddit.com',
+)
 
 
 def extract_file_id(link: str) -> str:
@@ -174,8 +180,15 @@ def download_social(url: str, output_path: str, host: str) -> None:
     template = os.path.join(output_dir, 'source.%(ext)s')
     command = [
         sys.executable, '-m', 'yt_dlp', '--no-config', '--no-playlist',
-        '--abort-on-error', '--no-warnings', '--restrict-filenames',
+        '--abort-on-error', '--no-warnings', '--restrict-filenames', '--no-keep-video',
         '--retries', '3', '--socket-timeout', '60', '--max-filesize', str(MAX_SOCIAL_MEDIA_BYTES),
+        # YouTube now requires an external JavaScript challenge runtime for
+        # reliable public extraction. Node 22 is installed in Stage A and this
+        # explicit opt-in keeps the command independent of user config files.
+        '--js-runtimes', 'node',
+        # Public sites can reject the default Python TLS fingerprint. yt-dlp's
+        # supported curl-cffi profile is installed with the extra below.
+        '--impersonate', 'chrome-131:macos-14',
         '--format', 'bv*+ba/b', '--merge-output-format', 'mp4', '-o', template, '--', url,
     ]
     try:
@@ -183,14 +196,15 @@ def download_social(url: str, output_path: str, host: str) -> None:
         subprocess.run(command, check=True, timeout=45 * 60)
         files = [entry for entry in os.scandir(output_dir) if entry.is_file() and entry.stat().st_size > 0]
         if len(files) != 1:
-            raise RuntimeError(f'Expected exactly one downloaded media file, found {len(files)}.')
+            names = ', '.join(sorted(entry.name for entry in files)) or 'none'
+            raise RuntimeError(f'Expected exactly one final downloaded media file, found {len(files)}: {names}.')
         os.makedirs(os.path.dirname(os.path.abspath(output_path)) or '.', exist_ok=True)
         shutil.move(files[0].path, output_path)
         print(f'Done. Wrote public {host} video to {output_path}', flush=True)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError('Social-video download exceeded the 45-minute safety limit.') from exc
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f'Could not download this public {host} video. It may be private, unavailable, region-restricted, or currently unsupported by the source platform.') from exc
+        raise RuntimeError(f'Could not download this public {host} video. It may be private, unavailable, region-restricted, rate-limited, or currently unsupported by the source platform.') from exc
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -265,7 +279,7 @@ def main() -> None:
     # Neither a Drive link/id nor a usable URL — this is genuinely bad input.
     print(
         f"Could not handle input: {raw}\n"
-        "Provide a public Google Drive share link, a Drive file id, or a "
+        "Provide a public Google Drive share link, a Drive file id, a supported public social-video link, or a "
         "direct http(s) URL to the video file.",
         file=sys.stderr,
     )

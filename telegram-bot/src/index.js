@@ -96,6 +96,11 @@ function mainMenu() {
   ]);
 }
 
+function taskSetupFlowAfterSource(pending) {
+  if (!pending || !['manual', 'automatic'].includes(pending.mode)) return null;
+  return `${pending.mode}_${pending.seriesMode === true ? 'duration' : 'focus'}`;
+}
+
 function hasResumablePendingTask(state) {
   const pending = state && state.pending;
   return Boolean(pending && pending.mode && pending.source && pending.jobId && [
@@ -585,7 +590,15 @@ async function showCompleted(env, chatId, label, messageId = null) {
 async function resumePendingTask(env, chatId, messageId = null) {
   const state = await getState(env, chatId);
   if (!hasResumablePendingTask(state)) { await renderInteractiveView(env, chatId, 'There is no staged task setup to resume.', { replyMarkup: mainMenu() }, messageId); return; }
-  if (state.flow.endsWith('_focus')) return renderInteractiveView(env, chatId, 'Resume task setup: send an optional editorial focus, or send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  if (state.flow.endsWith('_focus')) {
+    if (state.pending && state.pending.seriesMode === true) {
+      delete state.pending.focus;
+      state.flow = `${state.pending.mode}_duration`;
+      await putState(env, chatId, state);
+      return renderInteractiveView(env, chatId, '<b>Series Mode does not use editorial focus.</b> Choose the target output length for each part.', { replyMarkup: durationMenu() }, messageId);
+    }
+    return renderInteractiveView(env, chatId, 'Resume task setup: send an optional editorial focus, or send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  }
   if (state.flow.endsWith('_duration')) return renderInteractiveView(env, chatId, 'Resume task setup: choose the target output length.', { replyMarkup: durationMenu() }, messageId);
   return renderInteractiveView(env, chatId, 'Resume task setup: choose optional background music.', { replyMarkup: musicMenu() }, messageId);
 }
@@ -624,13 +637,27 @@ async function setupBack(env, chatId, messageId = null) {
     return renderInteractiveView(env, chatId, 'Choose the target output length.', { replyMarkup: durationMenu() }, messageId);
   }
   if (state.flow.endsWith('_duration')) {
-    delete pending.focus;
+    delete pending.duration; delete pending.focus;
+    if (pending.seriesMode === true) {
+      delete pending.source; delete pending.jobId;
+      state.flow = `${mode}_source`;
+      state.pending = pending;
+      await putState(env, chatId, state);
+      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend a public YouTube, TikTok, Instagram, Facebook, X, Vimeo, Reddit, or direct video URL; a Google Drive anyone-with-link URL; a magnet URI; or upload a non-empty <code>.torrent</code> document up to 1 MB. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+    }
     state.flow = `${mode}_focus`;
     state.pending = pending;
     await putState(env, chatId, state);
     return renderInteractiveView(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
   }
   if (state.flow.endsWith('_focus')) {
+    if (pending.seriesMode === true) {
+      delete pending.focus;
+      state.flow = `${mode}_duration`;
+      state.pending = pending;
+      await putState(env, chatId, state);
+      return renderInteractiveView(env, chatId, '<b>Series Mode does not use editorial focus.</b> Choose the target output length for each part.', { replyMarkup: durationMenu() }, messageId);
+    }
     delete pending.source; delete pending.jobId; delete pending.focus;
     state.flow = `${mode}_source`;
     state.pending = pending;
@@ -654,7 +681,7 @@ async function finishTaskLaunch(env, chatId, messageId = null) {
     whisper_model: 'base',
     language: 'auto',
     target_duration_seconds: String(pending.duration),
-    focus: pending.focus || '',
+    focus: pending.seriesMode === true ? '' : (pending.focus || ''),
     automatic_mode: pending.mode === 'automatic' ? 'true' : 'false',
     series_mode: pending.seriesMode === true ? 'true' : '', series_id: pending.seriesMode === true ? jobId : '',
     series_source_job_id: pending.seriesMode === true ? jobId : '', series_part: pending.seriesMode === true ? '1' : '',
@@ -896,12 +923,23 @@ async function handleFlowText(env, chatId, text) {
   }
   if (state.flow === 'manual_source' || state.flow === 'automatic_source') {
     state.pending.source = validateSource(text);
-    state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
+    state.flow = taskSetupFlowAfterSource(state.pending);
     await putState(env, chatId, state);
-    await renderTaskInputResponse(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+    if (state.pending.seriesMode === true) {
+      await renderTaskInputResponse(env, chatId, '<b>Series Mode does not use editorial focus.</b> Choose the target output length for each part.', { replyMarkup: durationMenu() });
+    } else {
+      await renderTaskInputResponse(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+    }
     return true;
   }
   if (state.flow === 'manual_focus' || state.flow === 'automatic_focus') {
+    if (state.pending.seriesMode === true) {
+      delete state.pending.focus;
+      state.flow = `${state.pending.mode}_duration`;
+      await putState(env, chatId, state);
+      await renderTaskInputResponse(env, chatId, '<b>Series Mode ignores editorial focus.</b> Choose the target output length for each part.', { replyMarkup: durationMenu() });
+      return true;
+    }
     state.pending.focus = normalizeFocus(text);
     state.flow = `${state.pending.mode}_duration`;
     await putState(env, chatId, state);
@@ -953,9 +991,13 @@ async function handleTorrentUpload(env, chatId, document, state) {
   await putBinaryFile(credentials, credentials.repo, `jobs/${jobId}/source.torrent`, bytes, `clipforge: upload source.torrent for job ${jobId}`);
   state.pending.source = `path:jobs/${jobId}/source.torrent`;
   state.pending.jobId = jobId;
-  state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
+  state.flow = taskSetupFlowAfterSource(state.pending);
   await putState(env, chatId, state);
-  await renderTaskInputResponse(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`, { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+  if (state.pending.seriesMode === true) {
+    await renderTaskInputResponse(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nSeries Mode does not use editorial focus. Choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`, { replyMarkup: durationMenu() });
+  } else {
+    await renderTaskInputResponse(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`, { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+  }
 }
 
 async function handleDocument(env, chatId, document) {
@@ -1338,4 +1380,4 @@ export default {
   }
 };
 
-export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, renderInteractiveView, renderTaskInputResponse, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, renderInteractiveView, renderTaskInputResponse, taskSetupFlowAfterSource, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };

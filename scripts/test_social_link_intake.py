@@ -28,6 +28,14 @@ def test_recognised_hosts():
         assert module.social_host(url) is None, url
 
 
+def test_stage_a_installs_required_social_runtime():
+    requirements = (ROOT / 'scripts' / 'requirements.txt').read_text(encoding='utf-8')
+    workflow = (ROOT / '.github' / 'workflows' / 'stage-a.yml').read_text(encoding='utf-8')
+    assert 'yt-dlp[default,curl-cffi]' in requirements
+    assert 'actions/setup-node@v4' in workflow
+    assert 'node-version: "22"' in workflow
+
+
 def test_social_command_is_public_single_video_only():
     with tempfile.TemporaryDirectory() as temp:
         output = Path(temp) / 'final.mp4'
@@ -40,12 +48,15 @@ def test_social_command_is_public_single_video_only():
             module.download_social('https://www.youtube.com/watch?v=abc', str(output), 'youtube.com')
         assert output.read_bytes() == b'video'
         assert '--no-config' in captured and '--no-playlist' in captured
-        assert '--max-filesize' in captured and '--' in captured
+        assert '--no-keep-video' in captured and '--max-filesize' in captured and '--' in captured
+        assert captured[captured.index('--js-runtimes') + 1] == 'node'
+        assert captured[captured.index('--impersonate') + 1] == 'chrome-131:macos-14'
         assert captured[-1] == 'https://www.youtube.com/watch?v=abc'
 
 
 def main():
     test_recognised_hosts()
+    test_stage_a_installs_required_social_runtime()
     test_social_command_is_public_single_video_only()
     print('social link intake tests passed')
 

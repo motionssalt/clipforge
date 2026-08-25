@@ -283,6 +283,14 @@ jobs:
           cache: "pip"
           cache-dependency-path: scripts/requirements.txt
 
+      # yt-dlp uses Node 22 to run the bundled EJS public-platform challenge
+      # solver. This is required for reliable YouTube extraction and remains
+      # scoped to public URLs only; no browser cookies or login are supplied.
+      - name: Set up Node for yt-dlp public-platform extraction
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install ffmpeg
         shell: bash
         run: |

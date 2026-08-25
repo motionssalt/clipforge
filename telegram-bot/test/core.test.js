@@ -8,7 +8,7 @@ import worker, { __test } from '../src/index.js';
 import nacl from 'tweetnacl';
 import sealedbox from 'tweetnacl-sealedbox-js';
 import { downloadTelegramFileBytes, sendAudioBytes, sendDocumentBytes } from '../src/telegram.js';
-import { cloneRepositoryName, createPrivateShadowClone, parseJsonDocument, putBinaryFile, sourcePathAllowed } from '../src/github.js';
+import { cloneRepositoryName, createPrivateShadowClone, parseJsonDocument, putBinaryFile, sourcePathAllowed, updateZernioSecret } from '../src/github.js';
 
 class MemoryKv {
   constructor() { this.values = new Map(); }
@@ -37,6 +37,30 @@ test('credentials are encrypted, bound to a chat, and round-trip without plainte
   assert.equal(encrypted.includes(value.githubPat), false);
   assert.deepEqual(await decryptCredentials(encrypted, 101, encryptionSecret), value);
   await assert.rejects(() => decryptCredentials(encrypted, 102, encryptionSecret));
+});
+
+test('Zernio key saving seals a GitHub Actions secret with the required 48-byte envelope overhead', async () => {
+  const pair = nacl.box.keyPair();
+  const publicKey = btoa(String.fromCharCode(...pair.publicKey));
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), method: init.method || 'GET', body: init.body ? JSON.parse(init.body) : null });
+    if (calls.length === 1) return new Response(JSON.stringify({ key: publicKey, key_id: 'test-key-id' }), { headers: { 'content-type': 'application/json' } });
+    return new Response(null, { status: 204 });
+  };
+  try {
+    const zernioKey = 'sk_example_zernio_key_for_regression';
+    await updateZernioSecret({ githubPat: 'test-token' }, 'owner/repo', zernioKey);
+    assert.equal(calls.length, 2);
+    assert.match(calls[0].url, /\/actions\/secrets\/public-key$/);
+    assert.match(calls[1].url, /\/actions\/secrets\/ZERNIO_API_KEY$/);
+    assert.equal(calls[1].method, 'PUT');
+    assert.equal(calls[1].body.key_id, 'test-key-id');
+    assert.equal(atob(calls[1].body.encrypted_value).length, new TextEncoder().encode(zernioKey).length + 48);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('task labels are stable and isolated per Telegram chat', async () => {
@@ -213,6 +237,41 @@ test('source and command helpers retain the intended operator contract', () => {
   assert.throws(() => __test.validateSource('file:///etc/passwd'));
   assert.equal(__test.normalizeFocus('  the  opening scene  '), 'the opening scene');
   assert.equal(__test.normalizeFocus('-'), '');
+});
+
+test('Series Mode proceeds from source directly to duration and retains normal focus setup for ordinary tasks', () => {
+  assert.equal(__test.taskSetupFlowAfterSource({ mode: 'manual', seriesMode: true }), 'manual_duration');
+  assert.equal(__test.taskSetupFlowAfterSource({ mode: 'automatic', seriesMode: true }), 'automatic_duration');
+  assert.equal(__test.taskSetupFlowAfterSource({ mode: 'manual', seriesMode: false }), 'manual_focus');
+  assert.equal(__test.taskSetupFlowAfterSource({ mode: 'automatic' }), 'automatic_focus');
+  assert.equal(__test.taskSetupFlowAfterSource({ mode: 'unsupported', seriesMode: true }), null);
+});
+
+test('a Series Mode source message creates a duration prompt rather than asking for editorial focus', async () => {
+  const workerEnv = { ...env(), TELEGRAM_BOT_TOKEN: 'test-token', TELEGRAM_WEBHOOK_SECRET: 'expected-secret' };
+  await putState(workerEnv, 61, { flow: 'manual_source', pending: { mode: 'manual', seriesMode: true }, activeViewId: 901 });
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ ok: true, result: { message_id: 902 } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const response = await worker.fetch(new Request('https://worker.example/webhook', {
+      method: 'POST',
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': 'expected-secret', 'content-type': 'application/json' },
+      body: JSON.stringify({ update_id: 4061, message: { message_id: 61, text: 'https://example.com/source.mp4', chat: { id: 61, type: 'private' } } })
+    }), workerEnv);
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /\/sendMessage$/);
+    assert.match(calls[0].body.text, /Series Mode does not use editorial focus/);
+    assert.equal(calls[0].body.text.includes('Send an optional editorial focus'), false);
+    assert.equal((await getState(workerEnv, 61)).flow, 'manual_duration');
+    assert.equal((await getState(workerEnv, 61)).pending.focus, undefined);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('music and torrent inline-button labels are bounded by UTF-8 bytes', () => {

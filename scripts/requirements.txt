@@ -52,4 +52,6 @@ edge-tts==7.2.8
 # Stage A uses yt-dlp only for public, single-video links from explicitly
 # recognised social hosts. Login, cookies, playlists, and private media are not
 # supported by ClipForge's automated intake.
-yt-dlp[default]>=2026.1,<2027
+# The curl-cffi extra provides yt-dlp's supported browser-impersonation
+# client for public platforms that reject Python's default TLS fingerprint.
+yt-dlp[default,curl-cffi]>=2026.1,<2027

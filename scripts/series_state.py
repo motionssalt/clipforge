@@ -51,7 +51,9 @@ def main() -> None:
         "whisper_model": str(request.get("whisper_model") or "base"),
         "language": str(request.get("language") or "auto"),
         "target_duration_seconds": str(request.get("target_duration_seconds") or "120"),
-        "focus": str(request.get("focus") or ""),
+        # Series Mode has no editorial-focus override. Each part is bounded by
+        # its persisted source window and continuity context instead.
+        "focus": "",
         "automatic_mode": str(request.get("automatic_mode") or "false"),
         "series_mode": "true",
         "series_id": series_id,

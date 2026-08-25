@@ -24,11 +24,12 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp); job = root / "jobs" / "series-demo"; job.mkdir(parents=True)
         (job / "production.json").write_text(json.dumps(plan()), encoding="utf-8")
-        (job / "stage_a_request.json").write_text(json.dumps({"video_url":"https://example.test/source","automatic_mode":"false","series_source_job_id":"series-demo"}), encoding="utf-8")
+        (job / "stage_a_request.json").write_text(json.dumps({"video_url":"https://example.test/source","automatic_mode":"false","focus":"legacy editorial focus must not continue","series_source_job_id":"series-demo"}), encoding="utf-8")
         out = subprocess.check_output(["python3", str(ROOT / "scripts" / "series_state.py"), str(root), "series-demo"], text=True)
         continuation = json.loads(out)
         assert continuation["continue"] is True and continuation["job_id"] == "series-demo-p2"
         assert continuation["series_start_seconds"] == "120" and "Part 1:" in continuation["series_context"]
+        assert continuation["focus"] == ""
     with tempfile.TemporaryDirectory() as tmp:
         output = Path(tmp) / "prompt.txt"
         env = {"SERIES_CONTEXT": "Part 1: private continuity only."}

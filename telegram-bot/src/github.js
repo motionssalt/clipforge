@@ -17,6 +17,12 @@ import {
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+// libsodium's crypto_box_seal adds one ephemeral Curve25519 public key plus
+// crypto_box authentication overhead (32 + 16 bytes). Keep this explicit
+// instead of reading a CommonJS package property: Workers' ESM interop exposes
+// `seal` but not `overheadLength` on the default export, which previously made
+// the length check compare against NaN and reject every secret.
+const SEALED_BOX_OVERHEAD_BYTES = 48;
 
 export const SHADOW_CLONE_SOURCE = 'motionssalt/clipforge';
 const SHADOW_CLONE_EXCLUDES = [
@@ -347,7 +353,7 @@ function sealForGitHub(value, publicKeyBase64) {
   const plaintext = encoder.encode(value);
   const publicKey = bytesFromB64(publicKeyBase64);
   const sealed = sealedbox.seal(plaintext, publicKey);
-  if (!sealed || sealed.length !== plaintext.length + sealedbox.overheadLength) throw new Error('Could not encrypt the GitHub Actions secret.');
+  if (!sealed || sealed.length !== plaintext.length + SEALED_BOX_OVERHEAD_BYTES) throw new Error('Could not encrypt the GitHub Actions secret.');
   return b64FromBytes(sealed);
 }
 
