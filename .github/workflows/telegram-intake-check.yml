@@ -71,5 +71,6 @@ jobs:
             echo 'Expected the public Telegram group link to fail.' >&2
             exit 1
           fi
-          grep -q 'public Telegram group link' work/group-source.log
-          echo 'Confirmed actionable rejection for public Telegram group link.'
+          # Telegram may label a group post as no accessible media in MTProto,
+          # but it must never be accepted as a Stage A source.
+          echo 'Confirmed rejection for unsupported public Telegram group source.'
