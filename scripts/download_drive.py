@@ -166,7 +166,7 @@ def mtproto_credentials_available() -> bool:
     ))
 
 
-async def _download_telegram_mtproto(url: str, output_path: str) -> None:
+async def _download_telegram_mtproto(url: str, output_path: str, api_id: int) -> None:
     """Download a public channel post via the dedicated authenticated session."""
     try:
         from telethon import TelegramClient
@@ -177,7 +177,6 @@ async def _download_telegram_mtproto(url: str, output_path: str) -> None:
     if not canonical:
         raise RuntimeError('Telegram MTProto intake requires a public channel post link.')
     _, channel, message_id = urllib.parse.urlparse(canonical).path.split('/')
-    api_id = int(os.environ['CLIPFORGE_TELEGRAM_API_ID'])
     api_hash = os.environ['CLIPFORGE_TELEGRAM_API_HASH']
     session = os.environ['CLIPFORGE_TELEGRAM_SESSION']
     client = TelegramClient(
@@ -219,9 +218,10 @@ async def _download_telegram_mtproto(url: str, output_path: str) -> None:
 
 def download_telegram_mtproto(url: str, output_path: str) -> None:
     try:
-        asyncio.run(_download_telegram_mtproto(url, output_path))
+        api_id = int(os.environ['CLIPFORGE_TELEGRAM_API_ID'])
     except ValueError as error:
         raise RuntimeError('The configured Telegram API ID is invalid.') from error
+    asyncio.run(_download_telegram_mtproto(url, output_path, api_id))
 
 
 def telegram_no_media_error(url: str) -> str:
