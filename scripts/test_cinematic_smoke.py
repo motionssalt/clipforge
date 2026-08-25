@@ -109,7 +109,26 @@ assert cin._caption_card_opacity(long_gap_cards, 0, 5.0) == 0.0
 assert cin._caption_card_opacity(long_gap_cards, 1, 5.0) == 1.0
 assert cin.CIN_CAPTION_LONG_GAP_SECONDS == 3.0
 assert cin.CIN_CAPTION_GAP_FADE_SECONDS == 1.0
-print("PASS: short-gap hold, long-gap fade, and no-overlap cutover")
+# A long visual silence may be stylistically valid only when narration is
+# truly absent. Stage B's merged Edge TTS narration is continuous across cuts,
+# so a gap large enough to fade captions out must fail before release.
+continuous_cards = [
+    {"start": 0.0, "speak_end": 1.0, "words": []},
+    {"start": 1.1, "speak_end": 2.0, "words": []},
+]
+cin.validate_caption_timeline(continuous_cards, 2.5)
+for invalid_cards, duration, expected in [
+    ([{"start": 0.0, "speak_end": 1.0, "words": []},
+      {"start": 5.1, "speak_end": 6.0, "words": []}], 6.0, "internal blank gap"),
+    ([{"start": 0.0, "speak_end": 1.0, "words": []},
+      {"start": 1.1, "speak_end": 8.0, "words": []}], 4.0, "outside"),
+]:
+    try:
+        cin.validate_caption_timeline(invalid_cards, duration)
+        raise AssertionError("Expected invalid cinematic caption timeline to fail")
+    except ValueError as exc:
+        assert expected in str(exc), str(exc)
+print("PASS: short-gap hold, long-gap fade, no-overlap cutover, and no silent caption blackouts")
 
 # --- Cinematic 10:9 output + title banner
 # The source deliberately differs from the output geometry: the renderer must
@@ -309,12 +328,18 @@ subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi",
                 "pcm_s16le", voice_wav], check=True)
 cli_out = os.path.join(WORK, "cli_cinematic.mp4")
 cli_work = os.path.join(WORK, "cli_work")
+# The production CLI fixture must reflect continuous Edge TTS narration for the
+# complete base-video timeline. Short/long gap behavior is covered above as a
+# renderer unit; this route verifies the real fail-closed production guard.
+cli_events = []
+for cut_text, t0 in zip(texts, (0.5, 9.5)):
+    cli_events += mk(cut_text.split(), t0, per=0.95)
 orig_transcribe = cin.subtitle_common.transcribe_words
 orig_align = cin.subtitle_common.align_words_to_script
 orig_argv = sys.argv[:]
 try:
-    cin.subtitle_common.transcribe_words = lambda *_args, **_kwargs: events
-    cin.subtitle_common.align_words_to_script = lambda *_args, **_kwargs: events
+    cin.subtitle_common.transcribe_words = lambda *_args, **_kwargs: cli_events
+    cin.subtitle_common.align_words_to_script = lambda *_args, **_kwargs: cli_events
     sys.argv = ["generate_subtitles_cinematic.py", src, voice_wav, cli_out,
                 "--script-json", prod_path, "--work-dir", cli_work]
     cin.main()

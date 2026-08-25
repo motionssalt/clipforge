@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import math
 import os
 import re
 import subprocess
@@ -154,13 +155,30 @@ def align_words_to_script(timed_words: list[dict],
         quotas = [len(cut) for cut in script_cuts]
         leftover = n_timed - total_script
         if leftover > 0:
+            # Whisper insertions can occur anywhere in the narration. Giving
+            # every extra timing token to the final cut makes all earlier cut
+            # windows too short and shifts the late captions onto the wrong
+            # section of the video. Preserve authoritative display wording,
+            # but spread timing-only insertions across windows in proportion to
+            # their script length, using stable largest-remainder allocation.
+            weighted = [leftover * len(cut) / total_script for cut in script_cuts]
+            extras = [int(math.floor(value)) for value in weighted]
+            remainder = leftover - sum(extras)
+            ranked = sorted(
+                range(len(script_cuts)),
+                key=lambda index: (weighted[index] - extras[index], -index),
+                reverse=True,
+            )
+            for index in ranked[:remainder]:
+                extras[index] += 1
+            quotas = [quota + extra for quota, extra in zip(quotas, extras)]
             print(
                 f"NOTE: transcription produced {leftover} more word(s) "
-                "than the script contains; extras are ignored for display "
-                "(script is authoritative).",
+                "than the script contains; extras are timing-only and were "
+                "distributed proportionally across script cuts (display "
+                "wording remains authoritative).",
                 flush=True,
             )
-            quotas[-1] += leftover
 
     display_events: list[dict] = []
     cursor = 0

@@ -155,6 +155,11 @@ CIN_BANNER_MIN_FONT_PX = 20            # autofit floor for long titles
 # otherwise-empty gap rather than lingering awkwardly or cutting abruptly.
 CIN_CAPTION_LONG_GAP_SECONDS = 3.0
 CIN_CAPTION_GAP_FADE_SECONDS = 1.0
+# Edge TTS narration is concatenated without editorial silence. A gap this
+# large in the aligned card timeline is therefore a timing failure, not a
+# legitimate pause to render blank; fail before shipping missing captions.
+CIN_CAPTION_MAX_TIMELINE_GAP_SECONDS = CIN_CAPTION_LONG_GAP_SECONDS
+CIN_CAPTION_EDGE_TOLERANCE_SECONDS = 2.0
 
 # ---------- Author-controlled keyword colors ----------
 # production.json optionally carries literal #RRGGBB values chosen by its
@@ -571,6 +576,66 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     return runs
 
 
+def validate_caption_timeline(sentences: list[dict], video_duration: float) -> None:
+    """Fail closed when caption cards cannot continuously cover narration.
+
+    The authoritative script is spoken by Edge TTS cut-by-cut and the merged
+    voiceover is concatenated without editorial silence. Caption cards should
+    therefore begin near the video origin, end near its final narration, and
+    never contain an internal blank interval large enough for the renderer's
+    long-gap fade. This catches clock-rate errors and malformed word alignment
+    before a visually plausible but incomplete subtitle overlay is released.
+    """
+    if not sentences:
+        raise ValueError("Cinematic subtitle timeline has no caption cards.")
+    if not math.isfinite(video_duration) or video_duration <= 0:
+        raise ValueError(f"Invalid final-video duration for caption timeline: {video_duration!r}")
+
+    previous_end = 0.0
+    for index, sentence in enumerate(sentences, start=1):
+        start = float(sentence["start"])
+        end = float(sentence["speak_end"])
+        if not math.isfinite(start) or not math.isfinite(end) or end < start:
+            raise ValueError(
+                f"Caption card #{index} has invalid timing [{start!r}, {end!r}]."
+            )
+        if start < -CIN_CAPTION_EDGE_TOLERANCE_SECONDS or \
+                end > video_duration + CIN_CAPTION_EDGE_TOLERANCE_SECONDS:
+            raise ValueError(
+                f"Caption card #{index} spans [{start:.3f}s, {end:.3f}s] outside "
+                f"the final video timeline [0.000s, {video_duration:.3f}s]. "
+                "Refusing to burn captions with a mismatched timing source."
+            )
+        if index == 1:
+            if start > CIN_CAPTION_EDGE_TOLERANCE_SECONDS:
+                raise ValueError(
+                    f"First caption starts at {start:.3f}s, leaving an unexpected "
+                    "opening subtitle gap."
+                )
+        else:
+            gap = start - previous_end
+            if gap > CIN_CAPTION_MAX_TIMELINE_GAP_SECONDS:
+                raise ValueError(
+                    f"Caption cards #{index - 1} and #{index} contain a {gap:.3f}s "
+                    "internal blank gap. This would fade captions out while narration "
+                    "continues, so Stage B is refusing the release."
+                )
+        previous_end = max(previous_end, end)
+
+    trailing_gap = video_duration - previous_end
+    if trailing_gap > CIN_CAPTION_EDGE_TOLERANCE_SECONDS:
+        raise ValueError(
+            f"Last caption ends at {previous_end:.3f}s but the final video lasts "
+            f"{video_duration:.3f}s, leaving a {trailing_gap:.3f}s uncaptained tail."
+        )
+    print(
+        f"Caption timeline validated: {len(sentences)} card(s) cover "
+        f"{sentences[0]['start']:.3f}s..{previous_end:.3f}s of the "
+        f"{video_duration:.3f}s final video without long blank gaps.",
+        flush=True,
+    )
+
+
 def _caption_card_opacity(sentences: list[dict], index: int, time_s: float) -> float:
     """Return a static card's gap-aware opacity without permitting overlap."""
     sentence = sentences[index]
@@ -785,6 +850,9 @@ def main() -> None:
     os.makedirs(work_dir, exist_ok=True)
 
     # Transcription = TIMING SOURCE ONLY (shared with template mode).
+    # Probe once and use the exact final-video duration for all subtitle timing
+    # validation, crop planning, and raster overlay generation.
+    video_duration = _probe_video_duration(args.merged_video_mp4)
     timed_words = subtitle_common.transcribe_words(args.voiceover_wav, args.model,
                                           args.lang, work_dir)
 
@@ -806,12 +874,13 @@ def main() -> None:
         words = timed_words
 
     sentences = split_sentences(words)
+    validate_caption_timeline(sentences, video_duration)
 
     source_width, source_height = subtitle_common.probe_video_size(args.merged_video_mp4)
     width, height = CIN_FRAME_WIDTH, CIN_FRAME_HEIGHT
     crop_plan = cinematic_reframe.build_scene_crop_plan(
         args.merged_video_mp4,
-        duration_seconds=_probe_video_duration(args.merged_video_mp4),
+        duration_seconds=video_duration,
         threshold=args.scene_threshold,
         enable_face_detection=True,
     )
@@ -849,7 +918,7 @@ def main() -> None:
     foreground_mov = os.path.join(work_dir, "cinematic_caption_flat_shadow.mov")
     render_cinematic_overlays(
         sentences, keyword_map, width, height,
-        _probe_video_duration(args.merged_video_mp4), foreground_mov)
+        video_duration, foreground_mov)
 
     print(f"Compositing flat-3D-shadow cinematic captions"
           f"{' + title banner' if banner else ''} into "

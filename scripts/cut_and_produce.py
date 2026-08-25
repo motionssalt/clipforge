@@ -508,11 +508,62 @@ def write_merged_voiceover(vo_wavs: list[str], plan: list[dict],
         "-filter_complex", ";".join(parts),
         "-map", "[wout]",
         "-c:a", "pcm_s16le",
-        "-ar", "16000",  # whisper-friendly rate; timestamps are unaffected
+        # Keep the already-reconciled 48 kHz sample timeline intact. Whisper
+        # decodes/resamples internally; writing a 16 kHz header over concat
+        # frames would stretch this WAV's apparent duration and make subtitle
+        # timestamps drift far beyond the final video.
+        "-ar", AAC_SAMPLE_RATE,
         "-ac", "1",
         out_wav,
     ]
     sh(cmd)
+
+
+def validate_merged_voiceover_timeline(path: str, expected_seconds: float) -> float:
+    """Fail closed if the subtitle timing source is not 1:1 with final video.
+
+    The subtitle renderer transcribes this WAV and uses its timestamps directly
+    on the final MP4. A sample-rate/header mismatch can make a valid-looking WAV
+    several times longer than the reconciled video, which presents as caption
+    gaps, late resumption, or a silent cutoff. Do not allow that artifact to
+    reach the renderer.
+    """
+    try:
+        with wave.open(path, "rb") as wav:
+            frames = wav.getnframes()
+            sample_rate = wav.getframerate()
+            channels = wav.getnchannels()
+    except (wave.Error, EOFError) as exc:
+        raise ValueError(f"Merged voiceover WAV is unreadable: {path}") from exc
+    if frames <= 0 or sample_rate <= 0 or channels != 1:
+        raise ValueError(
+            f"Merged voiceover WAV has invalid audio metadata: "
+            f"frames={frames}, sample_rate={sample_rate}, channels={channels}"
+        )
+    expected_rate = int(AAC_SAMPLE_RATE)
+    if sample_rate != expected_rate:
+        raise ValueError(
+            f"Merged voiceover sample rate is {sample_rate} Hz, expected "
+            f"{expected_rate} Hz for the reconciled subtitle timeline."
+        )
+    actual_seconds = frames / sample_rate
+    tolerance_seconds = max(0.05, expected_seconds * 0.0005)
+    drift_seconds = abs(actual_seconds - expected_seconds)
+    if drift_seconds > tolerance_seconds:
+        raise ValueError(
+            f"Merged voiceover duration ({actual_seconds:.3f}s) differs from "
+            f"the reconciled final-video plan ({expected_seconds:.3f}s) by "
+            f"{drift_seconds:.3f}s (tolerance {tolerance_seconds:.3f}s). "
+            "Refusing subtitle generation because captions would not share the "
+            "final video timeline."
+        )
+    print(
+        f"Merged voiceover timeline validated: {actual_seconds:.3f}s at "
+        f"{sample_rate} Hz mono matches the reconciled final video "
+        f"({expected_seconds:.3f}s).",
+        flush=True,
+    )
+    return actual_seconds
 
 
 def validate_mp4(path: str) -> None:
@@ -788,6 +839,8 @@ def main() -> None:
         "voiceover.wav",
     )
     write_merged_voiceover(vo_wavs, plan, vo_wav)
+    expected_voiceover_seconds = sum(float(item["video_seconds"]) for item in plan)
+    validate_merged_voiceover_timeline(vo_wav, expected_voiceover_seconds)
     print(f"Merged voiceover written: {vo_wav}", flush=True)
 
 
