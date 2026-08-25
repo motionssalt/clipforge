@@ -196,7 +196,16 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
             await client.connect()
             if not await client.is_user_authorized():
                 fail('The dedicated Telegram media session is no longer authorized.')
-            entity = await client.get_entity(types.PeerChat(abs(group_chat_id)))
+            # A basic-group peer cannot be reconstructed from its numeric ID in
+            # a fresh Telethon session. Resolve it from the authorized user's
+            # dialog list, which carries the required in-session peer metadata.
+            dialogs = await client.get_dialogs(limit=200)
+            entity = next(
+                (dialog.entity for dialog in dialogs if int(getattr(dialog, 'id', 0) or 0) == group_chat_id),
+                None,
+            )
+            if entity is None:
+                fail('The dedicated Telegram media session cannot access the private relay group.')
             message = await client.get_messages(entity, ids=group_message_id)
         if not message or not getattr(message, 'media', None):
             fail('The internal relay message is unavailable or has no media.')
