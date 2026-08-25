@@ -575,16 +575,15 @@ test('legacy authenticated public Telegram intake is authorized only for the con
   assert.equal(__test.permitsLegacyTelegramMtproto({ ORIGINAL_CLIPFORGE_REPOSITORY: 'motionssalt/clipforge' }, { repo: 'other-user/clipforge-shadow' }), false);
 });
 
-test('Bot B relay payload requires a matching ready record and never includes Bot B credentials', async () => {
-  const record = {
-    state: 'ready', repo: 'owner/clone', inputs: { job_id: 'manual-51', source_type: 'telegram_bot_forward' },
-    relay: { internal_group_chat_id: -10022, internal_group_message_id: 43, file_size: 100, file_unique_id: 'u', mime_type: 'video/mp4', file_name: 'input.mp4' }
-  };
-  const payload = relayWorkerTest.safeRelayPayload(record, { repo: 'owner/clone', githubPat: 'clone-pat' }, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 43 });
-  assert.equal(payload.target_repo, 'owner/clone');
-  assert.equal(payload.telegram.group_message_id, 43);
-  assert.equal(JSON.stringify(payload).includes('BOTB_MTPROTO'), false);
-  assert.throws(() => relayWorkerTest.safeRelayPayload(record, { repo: 'owner/clone', githubPat: 'clone-pat' }, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 44 }), /does not match/);
+test('Bot B routes only a matching opaque Bot A payload and needs no per-user credential decryption', async () => {
+  const payload = { version: 1, job_id: 'manual-51', target_repo: 'owner/clone', target_github_pat: 'clone-pat', stage_a_inputs: {}, telegram: { group_message_id: 43 } };
   const sealed = await encryptRelayPayload(payload, 'manual-51', encryptionSecret);
+  const record = {
+    state: 'ready', repo: 'owner/clone', sealed_payload: sealed,
+    relay: { internal_group_chat_id: -10022, internal_group_message_id: 43 }
+  };
+  assert.equal(relayWorkerTest.sealedRelayPayload(record, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 43 }), sealed);
   assert.equal(sealed.includes('clone-pat'), false);
+  assert.throws(() => relayWorkerTest.sealedRelayPayload(record, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 44 }), /does not match/);
+  assert.throws(() => relayWorkerTest.sealedRelayPayload({ ...record, sealed_payload: 'short' }, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 43 }), /sealed payload/);
 });

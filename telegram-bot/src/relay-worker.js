@@ -1,6 +1,5 @@
-import { encryptRelayPayload } from './crypto.js';
 import { dispatchWorkflow } from './github.js';
-import { getCredentials, getRelayJob, putRelayJob } from './storage.js';
+import { getRelayJob, putRelayJob } from './storage.js';
 import { parseRelayReadyMarker } from './relay.js';
 
 const RELAY_UPDATE_TTL_SECONDS = 24 * 60 * 60;
@@ -30,27 +29,14 @@ function centralCredentials(env) {
   return { githubPat, repo };
 }
 
-function safeRelayPayload(record, credentials, marker) {
+function sealedRelayPayload(record, marker) {
   const relay = record && record.relay || {};
-  const inputs = record && record.inputs || {};
+  const sealed = String(record && record.sealed_payload || '');
   if (record.state !== 'ready' || !relay || Number(relay.internal_group_message_id) !== marker.groupMessageId) {
     throw new Error('The relay job is not ready or does not match the copied media message.');
   }
-  return {
-    version: 1,
-    job_id: marker.jobId,
-    target_repo: String(credentials.repo || ''),
-    target_github_pat: String(credentials.githubPat || ''),
-    stage_a_inputs: inputs,
-    telegram: {
-      group_chat_id: Number(relay.internal_group_chat_id),
-      group_message_id: Number(relay.internal_group_message_id),
-      declared_size: Number(relay.file_size || 0),
-      expected_file_unique_id: String(relay.file_unique_id || ''),
-      expected_mime_type: String(relay.mime_type || ''),
-      source_name: String(relay.file_name || 'telegram-video.bin')
-    }
-  };
+  if (sealed.length < 64 || sealed.length > 16000) throw new Error('The relay job does not contain a valid sealed payload.');
+  return sealed;
 }
 
 async function routeReadyMarker(env, message) {
@@ -63,10 +49,7 @@ async function routeReadyMarker(env, message) {
   if (!marker) return;
   const record = await getRelayJob(env, marker.sourceChatId, marker.jobId);
   if (!record) throw new Error('Bot B could not find the pending relay job. The source may have expired; send the video again.');
-  const credentials = await getCredentials(env, marker.sourceChatId);
-  if (!credentials || credentials.repo !== record.repo) throw new Error('Bot B could not validate the target clone credentials for this relay job.');
-  const payload = safeRelayPayload(record, credentials, marker);
-  const sealedPayload = await encryptRelayPayload(payload, marker.jobId, env.RELAY_ENCRYPTION_KEY);
+  const sealedPayload = sealedRelayPayload(record, marker);
   const central = centralCredentials(env);
   await dispatchWorkflow(central, central.repo, 'telegram-relay.yml', { job_id: marker.jobId, relay_payload: sealedPayload });
   await putRelayJob(env, marker.sourceChatId, marker.jobId, { ...record, state: 'dispatched', dispatched_at_epoch: Math.floor(Date.now() / 1000) });
@@ -90,4 +73,4 @@ export default {
   }
 };
 
-export const __test = { configuredInteger, parseRelayReadyMarker, safeRelayPayload };
+export const __test = { configuredInteger, parseRelayReadyMarker, sealedRelayPayload };

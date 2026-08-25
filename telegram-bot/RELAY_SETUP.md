@@ -22,8 +22,7 @@ Deploy `wrangler.bot-b.jsonc` as a separate Worker sharing the existing `CLIPFOR
 | Binding | Kind | Purpose |
 |---|---|---|
 | `BOT_B_TELEGRAM_WEBHOOK_SECRET` | secret | Validates Telegram’s webhook to Bot B. |
-| `KV_ENCRYPTION_KEY` | secret | Same key as Bot A, solely to read the existing encrypted per-chat clone credentials. |
-| `RELAY_ENCRYPTION_KEY` | secret | Random 32-byte base64 key shared only with the central relay workflow. |
+| `RELAY_ENCRYPTION_KEY` | secret | Not required by Bot B. Bot A uses this key to seal a per-job payload; Bot B forwards only that opaque ciphertext. |
 | `RELAY_GITHUB_TOKEN` | secret | Central repository token used only to dispatch `telegram-relay.yml`. |
 | `RELAY_GITHUB_REPOSITORY` | variable | Trusted central repository holding `telegram-relay.yml`. |
 | `INTERNAL_RELAY_GROUP_CHAT_ID` | variable | The private group chat ID. |
@@ -31,11 +30,11 @@ Deploy `wrangler.bot-b.jsonc` as a separate Worker sharing the existing `CLIPFOR
 
 ## Central relay workflow secrets
 
-Set these only in the trusted central repository. They must never be copied to a Shadow Clone.
+Set these only in the trusted central repository. The relay encryption key is also set on Bot A so it can seal each job before Bot B sees it. None of these secrets is copied to a Shadow Clone.
 
 | Secret | Purpose |
 |---|---|
-| `RELAY_ENCRYPTION_KEY` | Decrypts Bot B’s sealed per-job routing envelope. |
+| `RELAY_ENCRYPTION_KEY` | Decrypts Bot A’s sealed per-job routing envelope. |
 | `BOTB_MTPROTO_API_ID` | Bot B’s dedicated Telegram application ID. |
 | `BOTB_MTPROTO_API_HASH` | Bot B’s dedicated Telegram application hash. |
 | `BOTB_MTPROTO_BOT_TOKEN` | Authorizes the temporary Bot B MTProto session. |

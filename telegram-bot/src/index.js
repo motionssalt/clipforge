@@ -2,7 +2,7 @@ import {
   COMMANDS, DEFAULT_VOICE, GEMINI_KEYS_META_PATH, MUSIC_DEFAULT_PATH, PRODUCTION_PATH, STAGE_LABELS, TARGET_DURATIONS, TTS_SETTINGS_PATH, WATERMARK_PATH,
   VOICES, WHISPER_MODELS, ZERNIO_SECRET_NAME, ZERNIO_WORKFLOW, isTerminalStage, stageLabel
 } from './constants.js';
-import { maskSecret } from './crypto.js';
+import { encryptRelayPayload, maskSecret } from './crypto.js';
 import {
   GitHubError, actionsSecretExists, cancelWorkflowRun, clearMusicDefaultIfTrack, createPrivateShadowClone, currentBranchSha, deleteAudioLibraryTrack, deleteClipforgeJob, deleteZernioSecret, dispatchWorkflow, geminiFingerprint, getJsonFile,
   getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readSeriesSettings, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
@@ -901,9 +901,19 @@ async function finishTaskLaunch(env, chatId, messageId = null) {
     if (!Number.isSafeInteger(Number(relay.internal_group_chat_id)) || !Number.isSafeInteger(Number(relay.internal_group_message_id))) {
       throw new Error('The private Telegram relay metadata is incomplete. Send the video again.');
     }
+    const normalizedRelay = { ...relay, internal_group_chat_id: Number(relay.internal_group_chat_id), internal_group_message_id: Number(relay.internal_group_message_id) };
+    if (!env.RELAY_ENCRYPTION_KEY) throw new Error('The private Telegram relay is not configured yet. Use a supported link source for now.');
+    const sealedPayload = await encryptRelayPayload({
+      version: 1, job_id: jobId, target_repo: credentials.repo, target_github_pat: credentials.githubPat,
+      stage_a_inputs: inputs,
+      telegram: {
+        group_chat_id: normalizedRelay.internal_group_chat_id, group_message_id: normalizedRelay.internal_group_message_id,
+        declared_size: Number(normalizedRelay.file_size || 0), expected_file_unique_id: String(normalizedRelay.file_unique_id || ''),
+        expected_mime_type: String(normalizedRelay.mime_type || ''), source_name: String(normalizedRelay.file_name || 'telegram-video.bin')
+      }
+    }, jobId, env.RELAY_ENCRYPTION_KEY);
     await putRelayJob(env, chatId, jobId, {
-      state: 'ready', repo: credentials.repo, mode: pending.mode, inputs,
-      relay: { ...relay, internal_group_chat_id: Number(relay.internal_group_chat_id), internal_group_message_id: Number(relay.internal_group_message_id) }
+      state: 'ready', repo: credentials.repo, mode: pending.mode, relay: normalizedRelay, sealed_payload: sealedPayload
     });
     await sendMessage(env, Number(relay.internal_group_chat_id), relayReadyMarker(jobId, chatId, Number(relay.internal_group_message_id)), { parseMode: 'HTML' });
   } else {
