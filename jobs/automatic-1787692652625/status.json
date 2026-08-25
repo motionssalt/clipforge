@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787692652625",
-  "stage": "stage_b_queued",
-  "message": "Automatic analysis validated production.json. Dispatching the existing Stage B workflow.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-automatic-1787692652625",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787692652625",
   "assets": {
@@ -13,14 +13,14 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787692652625/transcript.json"
   },
   "created_at_epoch": 1787692690,
-  "updated_at_epoch": 1787694412,
+  "updated_at_epoch": 1787694560,
   "expires_at_epoch": 1787735890,
   "extra": {
     "torrent_selection_path": "jobs/automatic-1787692652625/torrent-selection.json",
-    "workflow_run_id": "32900843997",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32900843997",
+    "workflow_run_id": "32902815946",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32902815946",
     "automatic_mode": "true",
-    "workflow_phase": "stage_a",
+    "workflow_phase": "stage_b",
     "automatic_analysis_result": "jobs/automatic-1787692652625/automatic_analysis.json",
     "production_ref": "path:jobs/automatic-1787692652625/production.json",
     "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
