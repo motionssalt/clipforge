@@ -5,7 +5,7 @@ import {
 import { encryptRelayPayload, maskSecret } from './crypto.js';
 import {
   GitHubError, actionsSecretExists, cancelWorkflowRun, clearMusicDefaultIfTrack, createPrivateShadowClone, currentBranchSha, deleteAudioLibraryTrack, deleteClipforgeJob, deleteZernioSecret, dispatchWorkflow, geminiFingerprint, getJsonFile,
-  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readSeriesSettings, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
+  getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readProductionPlan, readSeriesSettings, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
   putBinaryFile, saveMusicDefault, saveNarrator, saveProductionPlan, saveSeriesSettings, saveStageARequest, saveWatermark, saveZernioSettings, tryGetJsonFile, updateGeminiSecret, updateZernioSecret, validateConnection,
   writeGeminiMetadata, zernioFingerprint
 } from './github.js';
@@ -641,7 +641,30 @@ function taskCanBeDeleted(status) {
   return Boolean(status && ['error', 'cancelled', 'complete', 'awaiting_json_upload', 'awaiting_torrent_selection'].includes(status.stage));
 }
 
-function taskButtons(label, status) {
+async function readJobRequest(credentials, jobId) {
+  try { return await readStageARequest(credentials, credentials.repo, jobId); } catch (error) { if (error instanceof GitHubError && error.status === 404) return null; throw error; }
+}
+
+// Manual Series Mode has no workflow-driven continuation: when a non-final
+// MANUAL series part completes, the user needs a way to start the next part
+// (automatic mode gets this from stage-b.yml + scripts/series_state.py).
+// Returns the next part's coordinates, or null when the completed job is not
+// a continuable manual series part.
+async function manualSeriesContinuation(credentials, jobId, status) {
+  if (!status || status.stage !== 'complete') return null;
+  const request = await readJobRequest(credentials, jobId);
+  if (!request || request.series_mode !== 'true' || request.automatic_mode === 'true') return null;
+  const seriesId = String(request.series_id || '').trim();
+  const part = Number(request.series_part || 0);
+  if (!seriesId || !Number.isInteger(part) || part < 1) return null;
+  const plan = await readProductionPlan(credentials, credentials.repo, jobId);
+  if (!plan || plan.series_final === true) return null;
+  const end = Number(plan.series_end_seconds);
+  if (!Number.isInteger(end) || end < 0) return null;
+  return { seriesId, part: part + 1, startSeconds: end };
+}
+
+function taskButtons(label, status, seriesContinuation = null) {
   const rows = [[{ text: 'Refresh', callback_data: `status:${label}` }]];
   if (!status) return buttons(rows);
   if (['error', 'cancelled'].includes(status.stage)) rows.push([{ text: 'Restart Stage A', callback_data: `retry:a:${label}` }]);
@@ -650,6 +673,7 @@ function taskButtons(label, status) {
   if (['error', 'cancelled', 'complete'].includes(status.stage)) rows.push([{ text: 'Restart Stage B', callback_data: `retry:b:${label}` }]);
   if (['stage_b_queued', 'stage_b_running'].includes(status.stage)) rows.push([{ text: 'Cancel Stage B', callback_data: `cancel:${label}` }]);
   if (status.stage === 'complete') rows.push([{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }]);
+  if (seriesContinuation) rows.push([{ text: `Start next part (Part ${seriesContinuation.part})`, callback_data: `series:next:${label}` }]);
   if (taskCanBeDeleted(status)) rows.push([{ text: 'Delete task', callback_data: `task:delete:${label}` }]);
   return buttons(rows);
 }
@@ -684,10 +708,11 @@ async function showTaskStatus(env, chatId, label, messageId = null) {
   const jobId = await getJobIdForLabel(env, chatId, label);
   if (!credentials || !jobId) { if (!jobId) await renderInteractiveView(env, chatId, 'That task label is no longer available. Use /tasks to refresh it.', { replyMarkup: mainMenu() }, messageId); return; }
   const status = await readStatus(credentials, credentials.repo, jobId);
+  const seriesContinuation = await manualSeriesContinuation(credentials, jobId, status);
   const state = await getState(env, chatId);
   state.currentTask = jobId;
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, formatStatus(label, jobId, status), { replyMarkup: taskButtons(label, status) }, messageId);
+  await renderInteractiveView(env, chatId, formatStatus(label, jobId, status), { replyMarkup: taskButtons(label, status, seriesContinuation) }, messageId);
 }
 
 function zernioPostId(post) {
@@ -785,7 +810,8 @@ async function showCompleted(env, chatId, label, messageId = null) {
   if (assets.final_zip) lines.push(`<a href="${escapeHtml(assets.final_zip)}">Download final ZIP</a>`);
   if (!assets.final_mp4 && !assets.final_zip) lines.push('The completion status has no final asset URL. Open the release from /status.');
   if (status.publishing) lines.push(zernioPublishingSummary(status.publishing));
-  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: taskButtons(label, status) }, messageId);
+  const seriesContinuation = await manualSeriesContinuation(credentials, jobId, status);
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: taskButtons(label, status, seriesContinuation) }, messageId);
 }
 
 async function resumePendingTask(env, chatId, messageId = null) {
@@ -1003,6 +1029,73 @@ async function sendManualAgentPrompt(env, chatId, label, messageId = null) {
     { replyMarkup: { inline_keyboard: [...replyMarkup.inline_keyboard, [{ text: 'Upload production.json', callback_data: `plan:${label}` }, { text: 'Back to task', callback_data: `status:${label}` }]] } },
     messageId
   );
+}
+
+// Prior-part summaries become the private continuity context for the next
+// part's analysis prompt — the same derivation scripts/series_state.py
+// performs for the automatic continuation path.
+async function seriesContextSummaries(credentials, seriesId) {
+  const entries = [];
+  for (const id of await listJobIds(credentials, credentials.repo)) {
+    const request = await readJobRequest(credentials, id);
+    if (!request || request.series_mode !== 'true' || String(request.series_id || '') !== seriesId) continue;
+    const plan = await readProductionPlan(credentials, credentials.repo, id);
+    const part = plan && Number(plan.series_part);
+    const summary = plan && String(plan.series_summary || '').trim();
+    if (Number.isInteger(part) && summary) entries.push([part, summary]);
+  }
+  entries.sort((a, b) => a[0] - b[0]);
+  const text = entries.map(([part, summary]) => `Part ${part}: ${summary}`).join('\n');
+  return (text || '(No prior summaries.)').slice(0, 8000);
+}
+
+// Manual equivalent of stage-b.yml's "Continue the next validated Series Mode
+// part" step: persist the next part's Stage A request (same continuation
+// payload series_state.py derives for automatic mode, with automatic_mode
+// forced off) and dispatch Stage A. When that run reaches
+// awaiting_json_upload, the EXISTING "Get agent prompt" / "Upload
+// production.json" buttons handle the human/agent handoff unchanged.
+async function startNextSeriesPart(env, chatId, label, messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  const status = await readStatus(credentials, credentials.repo, jobId);
+  const continuation = await manualSeriesContinuation(credentials, jobId, status);
+  if (!continuation) {
+    await renderInteractiveView(env, chatId, 'That completed task has no next Series Mode part to start (it is not a manual series part, or it was the final part).', { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
+    return;
+  }
+  const request = await readJobRequest(credentials, jobId);
+  const nextId = `${continuation.seriesId}-p${continuation.part}`;
+  if (!SAFE_JOB_RE.test(nextId) || nextId.length > 120) throw new Error('The next series part job id would be unsafe.');
+  // Duplicate-dispatch guard, mirroring the request_path.exists() check in
+  // stage-b.yml's automatic continuation step.
+  if ((await readJobRequest(credentials, nextId)) || (await readStatus(credentials, credentials.repo, nextId))) {
+    const existingLabel = await ensureTaskLabel(env, chatId, nextId);
+    await renderInteractiveView(env, chatId, `Part ${continuation.part} of this series already exists as task <b>${escapeHtml(existingLabel)}</b>.\n<code>${escapeHtml(nextId)}</code>`, { replyMarkup: buttons([[{ text: `View Task ${existingLabel}`, callback_data: `status:${existingLabel}` }]]) }, messageId);
+    return;
+  }
+  const inputs = {
+    video_url: String(request.video_url || ''),
+    source_type: String(request.source_type || 'url'),
+    relay_release_tag: '', relay_expected_size: '', relay_sha256: '',
+    torrent_file_index: String(request.torrent_file_index || ''),
+    job_id: nextId,
+    whisper_model: WHISPER_MODELS.has(request.whisper_model) ? request.whisper_model : 'base',
+    language: String(request.language || 'auto'),
+    target_duration_seconds: String(request.target_duration_seconds || '120'),
+    focus: '',
+    automatic_mode: 'false',
+    series_mode: 'true', series_id: continuation.seriesId,
+    series_source_job_id: String(request.series_source_job_id || continuation.seriesId),
+    series_part: String(continuation.part),
+    series_start_seconds: String(continuation.startSeconds),
+    series_context: await seriesContextSummaries(credentials, continuation.seriesId)
+  };
+  await saveStageARequest(credentials, credentials.repo, nextId, inputs);
+  await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', inputs);
+  const nextLabel = await ensureTaskLabel(env, chatId, nextId);
+  await renderInteractiveView(env, chatId, `Series Part ${continuation.part} was dispatched as task <b>${escapeHtml(nextLabel)}</b>.\n<code>${escapeHtml(nextId)}</code>\nIt continues from ${continuation.startSeconds}s of the original source. When Stage A reaches \u201cAwaiting production plan\u201d, use <b>Get agent prompt</b> and <b>Upload production.json</b> exactly as you did for the previous part.`, { replyMarkup: buttons([[{ text: `View Task ${nextLabel}`, callback_data: `status:${nextLabel}` }, { text: 'Main menu', callback_data: 'menu:home' }]]) }, messageId);
 }
 
 async function sendVoicePreview(env, chatId, voice) {
@@ -1545,6 +1638,11 @@ async function handleCallback(env, callback) {
     if (action === 'delete') return promptMusicLibraryDelete(env, chatId, argument, viewId);
     if (action === 'deleteconfirm') return deleteMusicLibraryTrack(env, chatId, argument, viewId);
     if (action === 'upload') return promptMusicLibraryUpload(env, chatId, viewId);
+    return;
+  }
+  if (kind === 'series') {
+    const [action, label] = value.split(':');
+    if (action === 'next') return startNextSeriesPart(env, chatId, label, viewId);
     return;
   }
   if (kind === 'task') {

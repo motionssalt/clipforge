@@ -113,13 +113,20 @@ def _norm_token(text: str) -> str:
 
 
 def align_words_to_script(timed_words: list[dict],
-                          script_texts: list[str]) -> list[dict]:
+                          script_texts: list[str],
+                          cut_durations: list[float] | None = None) -> list[dict]:
     """Map authoritative script wording onto the transcription timing line.
 
-    Timed words are partitioned by script-cut word counts, then matched within
-    each cut with a monotone sequence alignment. This preserves original script
-    wording while gracefully handling contractions, insertions, and omissions
-    in transcription output.
+    When ``cut_durations`` (the exact per-cut output durations persisted to
+    ``cut_timing.json`` by cut_and_produce.py) is provided, timed words are
+    partitioned by the CUMULATIVE real cut boundaries in the merged-voiceover
+    timeline — the same boundaries the voiceover WAV was padded/trimmed and
+    concatenated from — instead of proportional word-count quotas. When it is
+    not supplied (tests, older jobs without the sidecar), the historical
+    word-count-ratio scaling below remains as the fallback. Either way, timed
+    words are matched within each cut with a monotone sequence alignment. This
+    preserves original script wording while gracefully handling contractions,
+    insertions, and omissions in transcription output.
     """
     script_cuts = [_WORD_RE.findall(text) for text in script_texts]
     total_script = sum(len(cut) for cut in script_cuts)
@@ -130,7 +137,49 @@ def align_words_to_script(timed_words: list[dict],
 
     timed = list(timed_words)
     n_timed = len(timed)
-    if n_timed < total_script:
+
+    use_real_boundaries = (
+        cut_durations is not None
+        and len(cut_durations) == len(script_cuts)
+        and all(float(duration) > 0 for duration in cut_durations)
+    )
+    if cut_durations is not None and not use_real_boundaries:
+        print(
+            "NOTE: supplied per-cut durations do not match the script's cut "
+            "count (or contain a non-positive duration); falling back to "
+            "proportional word-count partitioning.",
+            flush=True,
+        )
+
+    if use_real_boundaries:
+        # Authoritative cut boundaries: the merged voiceover.wav is
+        # concatenated from per-cut WAVs padded/trimmed to EXACTLY these
+        # durations, so a word's timestamp relative to the cumulative
+        # boundaries identifies its cut directly — no word-count statistics.
+        # A word belongs to the cut containing its midpoint, which keeps a
+        # word whose tail barely crosses a boundary with the cut it started
+        # in. The final boundary is inclusive so nothing falls off the end.
+        boundaries: list[float] = []
+        cumulative = 0.0
+        for duration in cut_durations:
+            cumulative += float(duration)
+            boundaries.append(cumulative)
+        quotas = [0] * len(script_cuts)
+        cut_index = 0
+        for word in timed:
+            midpoint = (float(word["start"]) + float(word["end"])) / 2.0
+            while (cut_index < len(boundaries) - 1
+                   and midpoint >= boundaries[cut_index]):
+                cut_index += 1
+            quotas[cut_index] += 1
+        print(
+            f"NOTE: partitioned {n_timed} timed word(s) by the exact "
+            f"per-cut durations from cut_timing.json (boundaries at "
+            f"{[round(boundary, 3) for boundary in boundaries]}s); caption "
+            "timing is anchored to real per-cut audio, not word counts.",
+            flush=True,
+        )
+    elif n_timed < total_script:
         print(
             f"NOTE: transcription produced {n_timed} timed words but the "
             f"script has {total_script}. Scaling per-cut timing quotas "

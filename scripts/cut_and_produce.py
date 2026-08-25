@@ -770,6 +770,38 @@ def main() -> None:
         item["audio_samples"] = audio_samples
     assert_reconciled_duration_coverage(cuts, plan)
 
+    # Persist the authoritative per-cut durations as a sidecar next to the
+    # merged voiceover WAV. The subtitle step runs as a separate process and
+    # otherwise has to re-derive cut boundaries from proportional word-count
+    # ratios, which drifts whenever a cut's real spoken duration does not
+    # match its word-count share. The merged voiceover is concatenated in
+    # this exact order with each cut padded/trimmed to exactly these
+    # durations, so their cumulative sums ARE the real cut boundaries of the
+    # WAV the subtitle step transcribes. Pure addition: nothing here feeds
+    # back into the ffmpeg/produce/validation flow.
+    sidecar_wav = args.voiceover_wav or os.path.join(
+        os.path.dirname(os.path.abspath(args.out_video_mp4)) or ".",
+        "voiceover.wav",
+    )
+    cut_timing_path = os.path.join(
+        os.path.dirname(os.path.abspath(sidecar_wav)) or ".",
+        "cut_timing.json",
+    )
+    with open(cut_timing_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "version": 1,
+                "cuts": [
+                    {"index": index, "video_seconds": float(item["video_seconds"])}
+                    for index, item in enumerate(plan)
+                ],
+            },
+            f,
+            indent=2,
+        )
+        f.write("\n")
+    print(f"Cut timing sidecar written: {cut_timing_path}", flush=True)
+
     total_video = sum(p["video_seconds"] for p in plan)
     total_vo = sum(vo_durations)
     print(

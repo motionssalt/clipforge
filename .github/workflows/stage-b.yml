@@ -815,6 +815,26 @@ jobs:
           request_path.parent.mkdir(parents=True, exist_ok=True)
           request_path.write_text(json.dumps({"version": 1, **payload}, indent=2) + "\n", encoding="utf-8")
           subprocess.run(["git", "add", str(request_path)], check=True)
+          # Automatic-continuation parity with the browser/bot dispatch: the
+          # Automatic Mode music choice is stored PER JOB ID
+          # (jobs/<job_id>/automatic_music.json) and Stage A resolves it at
+          # analysis time, so part 1's choice would silently revert to the
+          # shared default for every continued part unless it is copied
+          # forward here. A one-off uploaded track (path:jobs/<part1>/music.mp3)
+          # is deliberately NOT copied: read_automatic_music.py rejects
+          # another job's one-off path, so those fall back to the default.
+          choice_path = Path("jobs") / os.environ["JOB_ID"] / "automatic_music.json"
+          if choice_path.exists():
+              document = json.loads(choice_path.read_text(encoding="utf-8"))
+              music_ref = str(document.get("music_ref") or "")
+              if not music_ref or music_ref.startswith("path:audio-library/"):
+                  document["job_id"] = payload["job_id"]
+                  next_choice = request_path.parent / "automatic_music.json"
+                  next_choice.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+                  subprocess.run(["git", "add", str(next_choice)], check=True)
+                  print(f"Carried the Automatic Mode music choice forward to {payload['job_id']}.")
+              else:
+                  print("Part 1 used a one-off music upload; it cannot be reused across jobs, so the next part falls back to the shared default.")
           subprocess.run(["git", "commit", "-m", f"clipforge: queue series part {payload['series_part']}"], check=True)
           subprocess.run(["git", "push"], check=True)
           command = ["gh", "workflow", "run", "stage-a.yml", "--repo", os.environ["GITHUB_REPOSITORY"], "--ref", os.environ.get("GITHUB_REF_NAME", "main")]

@@ -899,12 +899,50 @@ def main() -> None:
     timed_words = subtitle_common.transcribe_words(args.voiceover_wav, args.model,
                                           args.lang, work_dir)
 
+    # Exact per-cut durations written by cut_and_produce.py next to the
+    # merged voiceover WAV. When present they replace the proportional
+    # word-count quota partitioning inside align_words_to_script() with the
+    # real cut boundaries the voiceover was concatenated from.
+    cut_durations: list[float] | None = None
+    cut_timing_path = os.path.join(
+        os.path.dirname(os.path.abspath(args.voiceover_wav)) or ".",
+        "cut_timing.json",
+    )
+    if os.path.exists(cut_timing_path):
+        try:
+            with open(cut_timing_path, "r", encoding="utf-8") as f:
+                timing_payload = json.load(f)
+            timing_cuts = timing_payload.get("cuts") or []
+            durations = [float(entry["video_seconds"]) for entry in timing_cuts]
+            if not durations or not all(duration > 0 for duration in durations):
+                raise ValueError("sidecar contains no positive durations")
+            cut_durations = durations
+            print(
+                f"Loaded exact per-cut timing from {cut_timing_path} "
+                f"({len(durations)} cut(s), {sum(durations):.2f}s total).",
+                flush=True,
+            )
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(
+                f"WARNING: could not use {cut_timing_path} ({exc}); caption "
+                "timing is approximate for this job (proportional word-count "
+                "partitioning).",
+                file=sys.stderr, flush=True,
+            )
+    else:
+        print(
+            "NOTE: no cut_timing.json next to the voiceover WAV (this job "
+            "predates exact per-cut timing) — caption timing is approximate "
+            "for this job (proportional word-count partitioning).",
+            flush=True,
+        )
+
     keyword_map: dict[str, str] = {}
     if args.script_json:
         # Original script = AUTHORITATIVE WORDING; keywords = additive
         # literal author-selected keyword-color metadata.
         script_texts, keyword_map = load_script_with_keywords(args.script_json)
-        words = subtitle_common.align_words_to_script(timed_words, script_texts)
+        words = subtitle_common.align_words_to_script(timed_words, script_texts, cut_durations=cut_durations)
     else:
         print(
             "WARNING: no --script-json given — falling back to the "

@@ -575,6 +575,13 @@ export async function readStageARequest(credentials, repo, jobId) {
   return result.document;
 }
 
+export async function readProductionPlan(credentials, repo, jobId) {
+  // Absence is meaningful (a job without an uploaded plan is not an error),
+  // so use the null-on-404 reader instead of the throwing getJsonFile.
+  const result = await tryGetJsonFile(credentials, repo, PRODUCTION_PATH(jobId));
+  return result ? result.document : null;
+}
+
 export async function saveProductionPlan(credentials, repo, jobId, jsonText) {
   return putTextFile(credentials, repo, PRODUCTION_PATH(jobId), jsonText, `clipforge: upload production.json for job ${jobId}`);
 }

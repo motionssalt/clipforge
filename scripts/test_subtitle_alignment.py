@@ -91,3 +91,49 @@ assert bad_gap_cards[0]["speak_end"] == 5.0
 cinematic.validate_caption_timeline(bad_gap_cards, video_duration=8.0)
 
 print("PASS: VAD-trimmed edge silence and transcription-only internal gaps preserve subtitle coverage")
+
+# Real per-cut durations (cut_timing.json, written by cut_and_produce.py) must
+# override proportional word-count partitioning: cut 1 is SHORT (2s) with a
+# 2-word script, cut 2 is LONG (6s) with a 3-word script, and Whisper returns
+# FEWER timed words than the script has — exactly the branch that used to
+# scale per-cut timing quotas by word count and drift captions across cuts.
+drift_timed = [
+    timed("buy", 0.1), timed("uh", 0.9), timed("now", 1.5),
+    timed("everyone", 4.0),
+]
+drift_script = ["buy now", "welcome back everyone"]
+
+# Legacy behavior (no sidecar): scaled word-count quotas hand cut 2 a window
+# starting inside cut 1, so "welcome" is captioned at 1.5s — before the real
+# 2.0s cut boundary — while someone else is still speaking.
+approx_events = common.align_words_to_script(drift_timed, drift_script)
+assert approx_events[2]["start"] < 2.0
+
+# With the exact per-cut durations, boundaries come from real audio time:
+# every cut-2 caption must land inside [2.0s, 8.0s], never spread
+# proportionally by word count.
+exact_events = common.align_words_to_script(
+    drift_timed, drift_script, cut_durations=[2.0, 6.0],
+)
+assert [event["word"] for event in exact_events] == [
+    "buy", "now", "welcome", "back", "everyone",
+]
+assert exact_events[0]["start"] == 0.1
+assert exact_events[1]["start"] == 1.5  # "now" keeps its true anchor in cut 1
+assert exact_events[1]["end"] <= 2.0
+assert all(event["start"] >= 2.0 - 1e-9 for event in exact_events[2:])
+assert exact_events[-1]["end"] <= 8.0 + 1e-9
+
+# A sidecar whose cut count does not match the script must fall back to the
+# legacy proportional partitioning rather than corrupting the partition.
+fallback_events = common.align_words_to_script(
+    drift_timed, drift_script, cut_durations=[8.0],
+)
+assert [event["word"] for event in fallback_events] == [
+    event["word"] for event in approx_events
+]
+assert [event["start"] for event in fallback_events] == [
+    event["start"] for event in approx_events
+]
+
+print("PASS: real per-cut durations override proportional word-count partitioning")
