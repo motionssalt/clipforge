@@ -29,6 +29,9 @@ import os
 import re
 import sys
 import time
+import shutil
+import subprocess
+import tempfile
 import urllib.parse
 
 import requests
@@ -36,6 +39,13 @@ import requests
 
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 REQUEST_TIMEOUT = (30, 60)  # (connect, read) seconds
+MAX_SOCIAL_MEDIA_BYTES = 5 * 1024 * 1024 * 1024
+SOCIAL_HOSTS = {
+    'youtube.com', 'youtu.be', 'youtube-nocookie.com',
+    'tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com',
+    'instagram.com', 'facebook.com', 'fb.watch',
+    'x.com', 'twitter.com', 'vimeo.com', 'reddit.com', 'redd.it',
+}
 
 
 def extract_file_id(link: str) -> str:
@@ -147,6 +157,44 @@ def download(file_id: str, output_path: str) -> None:
     _stream_to_file(resp, output_path, f"file id={file_id}")
 
 
+def social_host(url: str) -> str | None:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {'http', 'https'}:
+        return None
+    host = (parsed.hostname or '').lower().rstrip('.')
+    for allowed in SOCIAL_HOSTS:
+        if host == allowed or host.endswith(f'.{allowed}'):
+            return allowed
+    return None
+
+
+def download_social(url: str, output_path: str, host: str) -> None:
+    """Download one public social video without cookies, playlists, or shell parsing."""
+    output_dir = tempfile.mkdtemp(prefix='clipforge-social-')
+    template = os.path.join(output_dir, 'source.%(ext)s')
+    command = [
+        sys.executable, '-m', 'yt_dlp', '--no-config', '--no-playlist',
+        '--abort-on-error', '--no-warnings', '--restrict-filenames',
+        '--retries', '3', '--socket-timeout', '60', '--max-filesize', str(MAX_SOCIAL_MEDIA_BYTES),
+        '--format', 'bv*+ba/b', '--merge-output-format', 'mp4', '-o', template, '--', url,
+    ]
+    try:
+        print(f'Downloading one public {host} video with yt-dlp (no login or cookies).', flush=True)
+        subprocess.run(command, check=True, timeout=45 * 60)
+        files = [entry for entry in os.scandir(output_dir) if entry.is_file() and entry.stat().st_size > 0]
+        if len(files) != 1:
+            raise RuntimeError(f'Expected exactly one downloaded media file, found {len(files)}.')
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)) or '.', exist_ok=True)
+        shutil.move(files[0].path, output_path)
+        print(f'Done. Wrote public {host} video to {output_path}', flush=True)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError('Social-video download exceeded the 45-minute safety limit.') from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f'Could not download this public {host} video. It may be private, unavailable, region-restricted, or currently unsupported by the source platform.') from exc
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
 def download_direct(url: str, output_path: str) -> None:
     """Plain direct-URL download for any non-Drive link."""
     session = requests.Session()
@@ -206,7 +254,11 @@ def main() -> None:
         return
 
     if raw.lower().startswith(("http://", "https://")):
-        print("Not a Google Drive link — treating as a direct download URL.", flush=True)
+        host = social_host(raw)
+        if host:
+            download_social(raw, out, host)
+            return
+        print("Not a Google Drive or recognised social link — treating as a direct download URL.", flush=True)
         download_direct(raw, out)
         return
 

@@ -417,7 +417,7 @@ function normalizeFocus(value) {
 
 function validateSource(value) {
   const source = String(value || '').trim();
-  if (!SOURCE_RE.test(source)) throw new Error('Send a public https:// video URL, an anyone-with-link Google Drive URL, or a magnet URI.');
+  if (!SOURCE_RE.test(source)) throw new Error('Send a public YouTube, TikTok, Instagram, or other https:// video link, an anyone-with-link Google Drive URL, or a magnet URI.');
   if (source.length > 4000) throw new Error('The source URL is too long.');
   return source;
 }
@@ -605,7 +605,7 @@ async function beginTask(env, chatId, mode, messageId = null) {
   state.flow = `${mode}_source`;
   state.pending = { mode, seriesMode: Boolean(series && series.enabled === true) };
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public YouTube, TikTok, Instagram, Facebook, X, Vimeo, Reddit, or direct video URL; a Google Drive anyone-with-link URL; a magnet URI; or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
 
 async function setupBack(env, chatId, messageId = null) {
@@ -635,7 +635,7 @@ async function setupBack(env, chatId, messageId = null) {
     state.flow = `${mode}_source`;
     state.pending = pending;
     await putState(env, chatId, state);
-    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public YouTube, TikTok, Instagram, Facebook, X, Vimeo, Reddit, or direct video URL; a Google Drive anyone-with-link URL; a magnet URI; or upload a non-empty <code>.torrent</code> document up to 1 MB.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
   }
   await clearFlow(env, chatId);
   return renderInteractiveView(env, chatId, 'Task setup closed. Start a new task whenever you are ready.', { replyMarkup: mainMenu() }, messageId);

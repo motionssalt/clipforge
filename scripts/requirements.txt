@@ -47,3 +47,9 @@ google-genai>=1.66,<2
 # returns MP3 transport audio which the script immediately normalizes and
 # masters into ClipForge's unchanged 24 kHz mono PCM WAV contract.
 edge-tts==7.2.8
+
+# --- Public social-video intake ------------------------------------------------
+# Stage A uses yt-dlp only for public, single-video links from explicitly
+# recognised social hosts. Login, cookies, playlists, and private media are not
+# supported by ClipForge's automated intake.
+yt-dlp[default]>=2026.1,<2027
