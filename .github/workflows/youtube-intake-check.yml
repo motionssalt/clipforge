@@ -1,0 +1,56 @@
+name: YouTube intake check
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: Public YouTube video URL to validate
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  download:
+    name: Validate authenticated YouTube intake
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node for yt-dlp JavaScript challenges
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install source downloader dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Download and verify the requested YouTube source
+        shell: bash
+        env:
+          SOURCE_REF: ${{ inputs.video_url }}
+          CLIPFORGE_YOUTUBE_COOKIES: ${{ secrets.CLIPFORGE_YOUTUBE_COOKIES }}
+        run: |
+          set -euo pipefail
+          cookie_file=""
+          cleanup_youtube_cookie() {
+            if [[ -n "$cookie_file" ]]; then rm -f "$cookie_file"; fi
+          }
+          trap cleanup_youtube_cookie EXIT
+          if [[ -n "${CLIPFORGE_YOUTUBE_COOKIES:-}" ]]; then
+            cookie_file="$(mktemp "$RUNNER_TEMP/clipforge-youtube-cookies.XXXXXX")"
+            umask 077
+            printf '%s' "$CLIPFORGE_YOUTUBE_COOKIES" > "$cookie_file"
+            export CLIPFORGE_YOUTUBE_COOKIES_FILE="$cookie_file"
+            echo "Using user-authorized disposable YouTube session for this validation."
+          fi
+          python scripts/download_drive.py "$SOURCE_REF" work/source_input.bin
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 work/source_input.bin
+          test -s work/source_input.bin

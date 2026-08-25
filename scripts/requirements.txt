@@ -48,14 +48,9 @@ google-genai>=1.66,<2
 # masters into ClipForge's unchanged 24 kHz mono PCM WAV contract.
 edge-tts==7.2.8
 
-# --- Public social-video intake ------------------------------------------------
-# Stage A uses yt-dlp only for public, single-video links from explicitly
-# recognised social hosts. Login, cookies, playlists, and private media are not
-# supported by ClipForge's automated intake.
-# The curl-cffi extra provides yt-dlp's supported browser-impersonation
-# client for public platforms that reject Python's default TLS fingerprint.
+# --- YouTube intake ------------------------------------------------------------
+# Stage A uses yt-dlp only for single-video YouTube links. The curl-cffi extra
+# provides yt-dlp's supported browser-impersonation client. A user-authorized
+# disposable-account cookie file may be supplied only through the encrypted
+# CLIPFORGE_YOUTUBE_COOKIES Actions secret; it is never committed.
 yt-dlp[default,curl-cffi]>=2026.1,<2027
-# Supplies yt-dlp with public Proof-of-Origin tokens generated locally for
-# YouTube requests from cloud-runner IP addresses. No account cookies or login
-# data are used.
-bgutil-ytdlp-pot-provider==1.3.2

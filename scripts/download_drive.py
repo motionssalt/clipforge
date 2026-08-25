@@ -13,9 +13,11 @@ Download a video file to a local path from one of three public sources:
      downloaded via Drive's uc?export=download endpoint, including the
      "confirm token" interstitial that Drive shows for large files.
 
-  B) A public, single-video social link from an explicitly recognised host:
-       YouTube, TikTok, Instagram, Facebook, X/Twitter, Vimeo, or Reddit.
-     These are downloaded through yt-dlp without cookies, login, or playlists.
+  B) A public, single-video YouTube link from an explicitly recognised host.
+     It is downloaded through yt-dlp without playlists. If the clone owner has
+     explicitly configured a disposable-account export as an encrypted Actions
+     secret, it is used only through a temporary workflow file. Other social
+     platforms are intentionally not handled in this release.
 
   C) ANY other direct download URL (raw GitHub file URL, a plain
      .mp4/.mkv/.webm link on any host, etc.). Non-Drive input is treated
@@ -44,14 +46,17 @@ import requests
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 REQUEST_TIMEOUT = (30, 60)  # (connect, read) seconds
 MAX_SOCIAL_MEDIA_BYTES = 5 * 1024 * 1024 * 1024
-# Keep this ordered from specialised subdomains to parent domains so host
-# classification and user-facing error messages are deterministic.
-SOCIAL_HOSTS = (
-    'youtube-nocookie.com', 'youtu.be', 'youtube.com',
-    'vm.tiktok.com', 'vt.tiktok.com', 'tiktok.com',
-    'fb.watch', 'facebook.com', 'instagram.com',
-    'twitter.com', 'x.com', 'vimeo.com', 'redd.it', 'reddit.com',
+# YouTube is the only social platform currently enabled. Direct public media
+# URLs remain supported separately, while removed social hosts fail closed so a
+# platform page is never mistaken for a downloadable media file.
+YOUTUBE_HOSTS = ('youtube-nocookie.com', 'youtu.be', 'youtube.com')
+REMOVED_SOCIAL_HOSTS = (
+    'vm.tiktok.com', 'vt.tiktok.com', 'tiktok.com', 'fb.watch',
+    'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'vimeo.com',
+    'redd.it', 'reddit.com',
 )
+YOUTUBE_PUBLIC_CLIENTS = ('web_embedded', 'android_vr')
+MAX_YOUTUBE_COOKIE_FILE_BYTES = 256 * 1024
 
 
 def extract_file_id(link: str) -> str:
@@ -163,69 +168,93 @@ def download(file_id: str, output_path: str) -> None:
     _stream_to_file(resp, output_path, f"file id={file_id}")
 
 
-def social_host(url: str) -> str | None:
+def recognised_host(url: str, allowed_hosts: tuple[str, ...]) -> str | None:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in {'http', 'https'}:
         return None
     host = (parsed.hostname or '').lower().rstrip('.')
-    for allowed in SOCIAL_HOSTS:
+    for allowed in allowed_hosts:
         if host == allowed or host.endswith(f'.{allowed}'):
             return allowed
     return None
 
 
-def youtube_public_token_arguments(host: str) -> list[str]:
-    """Configure a local public PO-token provider for GitHub-hosted YouTube runs.
+def youtube_host(url: str) -> str | None:
+    return recognised_host(url, YOUTUBE_HOSTS)
 
-    Shared cloud-runner IPs can trigger YouTube's bot-confirmation interstitial
-    even for public videos. The provider generates a per-request Proof-of-Origin
-    token locally and uses no cookies, account login, or remote token endpoint.
-    Non-YouTube hosts and local development without the provisioned provider
-    preserve the ordinary yt-dlp command path.
+
+def removed_social_host(url: str) -> str | None:
+    return recognised_host(url, REMOVED_SOCIAL_HOSTS)
+
+
+def youtube_cookie_arguments() -> list[str]:
+    """Return a validated, secret-backed cookie file only when provisioned.
+
+    The workflow writes the encrypted Actions secret to a mode-0600 temporary
+    file for the duration of one source download. The file path is never logged,
+    committed, released, or accepted from task input.
     """
-    if host not in {'youtube.com', 'youtu.be', 'youtube-nocookie.com'}:
+    cookie_file = os.environ.get('CLIPFORGE_YOUTUBE_COOKIES_FILE', '').strip()
+    if not cookie_file:
         return []
-    provider_home = os.environ.get('CLIPFORGE_YTDLP_POT_HOME', '').strip()
-    if not provider_home or not os.path.isdir(provider_home):
-        return []
-    return [
-        '--extractor-args', 'youtube:player_client=mweb',
-        '--extractor-args', f'youtubepot-bgutilscript:server_home={provider_home}',
-    ]
+    if not os.path.isfile(cookie_file):
+        raise RuntimeError('Configured YouTube cookie file is unavailable.')
+    if not 0 < os.path.getsize(cookie_file) <= MAX_YOUTUBE_COOKIE_FILE_BYTES:
+        raise RuntimeError('Configured YouTube cookie file is empty or exceeds the safety limit.')
+    return ['--cookies', cookie_file]
 
 
-def download_social(url: str, output_path: str, host: str) -> None:
-    """Download one public social video without cookies, playlists, or shell parsing."""
-    output_dir = tempfile.mkdtemp(prefix='clipforge-social-')
+def _clear_directory(directory: str) -> None:
+    for entry in os.scandir(directory):
+        if entry.is_file() or entry.is_symlink():
+            os.unlink(entry.path)
+        elif entry.is_dir():
+            shutil.rmtree(entry.path)
+
+
+def download_youtube(url: str, output_path: str, host: str) -> None:
+    """Download one public YouTube video with bounded public client fallback.
+
+    A user may deliberately configure a disposable-account cookie file through
+    the encrypted Actions secret. When absent, the path remains public-only.
+    The cookies are passed only to yt-dlp from the workflow's mode-0600
+    temporary file and are never logged, committed, or accepted from users.
+    """
+    output_dir = tempfile.mkdtemp(prefix='clipforge-youtube-')
     template = os.path.join(output_dir, 'source.%(ext)s')
-    command = [
-        sys.executable, '-m', 'yt_dlp', '--no-config', '--no-playlist',
-        '--abort-on-error', '--no-warnings', '--restrict-filenames', '--no-keep-video',
-        '--retries', '3', '--socket-timeout', '60', '--max-filesize', str(MAX_SOCIAL_MEDIA_BYTES),
-        # YouTube now requires an external JavaScript challenge runtime for
-        # reliable public extraction. Node 22 is installed in Stage A and this
-        # explicit opt-in keeps the command independent of user config files.
-        '--js-runtimes', 'node',
-        # Public sites can reject the default Python TLS fingerprint. yt-dlp's
-        # supported curl-cffi profile is installed with the extra below.
-        '--impersonate', 'chrome-131:macos-14',
-        *youtube_public_token_arguments(host),
-        '--format', 'bv*+ba/b', '--merge-output-format', 'mp4', '-o', template, '--', url,
-    ]
+    cookie_args = youtube_cookie_arguments()
+    last_error = None
     try:
-        print(f'Downloading one public {host} video with yt-dlp (no login or cookies).', flush=True)
-        subprocess.run(command, check=True, timeout=45 * 60)
-        files = [entry for entry in os.scandir(output_dir) if entry.is_file() and entry.stat().st_size > 0]
-        if len(files) != 1:
-            names = ', '.join(sorted(entry.name for entry in files)) or 'none'
-            raise RuntimeError(f'Expected exactly one final downloaded media file, found {len(files)}: {names}.')
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)) or '.', exist_ok=True)
-        shutil.move(files[0].path, output_path)
-        print(f'Done. Wrote public {host} video to {output_path}', flush=True)
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError('Social-video download exceeded the 45-minute safety limit.') from exc
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f'Could not download this public {host} video. The source platform refused anonymous retrieval or the video is unavailable, region-restricted, rate-limited, or currently unsupported. No account login or cookies are used.') from exc
+        for client in YOUTUBE_PUBLIC_CLIENTS:
+            _clear_directory(output_dir)
+            command = [
+                sys.executable, '-m', 'yt_dlp', '--no-config', '--no-playlist',
+                '--abort-on-error', '--no-warnings', '--restrict-filenames', '--no-keep-video',
+                '--retries', '3', '--socket-timeout', '60', '--max-filesize', str(MAX_SOCIAL_MEDIA_BYTES),
+                '--js-runtimes', 'node', '--impersonate', 'chrome-131:macos-14',
+                *cookie_args, '--extractor-args', f'youtube:player_client={client}',
+                '--format', 'bv*+ba/b', '--merge-output-format', 'mp4', '-o', template, '--', url,
+            ]
+            try:
+                auth_mode = 'authorized disposable-session cookies' if cookie_args else 'no login or cookies'
+                print(f'Downloading one public {host} video with yt-dlp client {client} ({auth_mode}).', flush=True)
+                subprocess.run(command, check=True, timeout=45 * 60)
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError('YouTube download exceeded the 45-minute safety limit.') from exc
+            except subprocess.CalledProcessError as exc:
+                last_error = exc
+                print(f'Public YouTube client {client} was rejected; trying the next approved client.', flush=True)
+                continue
+            files = [entry for entry in os.scandir(output_dir) if entry.is_file() and entry.stat().st_size > 0]
+            if len(files) != 1:
+                names = ', '.join(sorted(entry.name for entry in files)) or 'none'
+                last_error = RuntimeError(f'Expected exactly one final downloaded media file, found {len(files)}: {names}.')
+                continue
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)) or '.', exist_ok=True)
+            shutil.move(files[0].path, output_path)
+            print(f'Done. Wrote public {host} video to {output_path} using {client}.', flush=True)
+            return
+        raise RuntimeError('YouTube rejected ClipForge’s approved playback clients. Try again later or use a direct public video file or Google Drive link.') from last_error
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 
@@ -289,18 +318,21 @@ def main() -> None:
         return
 
     if raw.lower().startswith(("http://", "https://")):
-        host = social_host(raw)
+        host = youtube_host(raw)
         if host:
-            download_social(raw, out, host)
+            download_youtube(raw, out, host)
             return
-        print("Not a Google Drive or recognised social link — treating as a direct download URL.", flush=True)
+        disabled_host = removed_social_host(raw)
+        if disabled_host:
+            raise RuntimeError(f'{disabled_host} social links are temporarily disabled. ClipForge currently accepts YouTube social links only; use a direct public video file or Google Drive link instead.')
+        print("Not a Google Drive or YouTube link — treating as a direct download URL.", flush=True)
         download_direct(raw, out)
         return
 
     # Neither a Drive link/id nor a usable URL — this is genuinely bad input.
     print(
         f"Could not handle input: {raw}\n"
-        "Provide a public Google Drive share link, a Drive file id, a supported public social-video link, or a "
+        "Provide a public Google Drive share link, a Drive file id, a public YouTube link, or a "
         "direct http(s) URL to the video file.",
         file=sys.stderr,
     )

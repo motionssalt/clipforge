@@ -339,20 +339,6 @@ jobs:
           rm -rf "$workdir"
           pip install -r scripts/requirements.txt
 
-      # YouTube can classify shared GitHub-hosted runner IPs as automated even
-      # for public videos. Build yt-dlp's maintained PO-token provider locally
-      # for this job; it does not receive cookies, account credentials, or a
-      # remote token service URL.
-      - name: Build local YouTube public-token provider
-        shell: bash
-        run: |
-          set -euo pipefail
-          provider_root="$RUNNER_TEMP/bgutil-ytdlp-pot-provider"
-          git clone --depth 1 --branch 1.3.2 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git "$provider_root"
-          cd "$provider_root/server"
-          npm ci
-          npx tsc
-
       # ---------------------------------------------------------------
       # Verify the onnxruntime stack up-front.
       #
@@ -493,7 +479,10 @@ jobs:
         shell: bash
         env:
           SOURCE_REF: ${{ github.event.inputs.video_url }}
-          CLIPFORGE_YTDLP_POT_HOME: ${{ runner.temp }}/bgutil-ytdlp-pot-provider/server
+          # User-authorized disposable-account cookie export. GitHub masks this
+          # Actions secret; it is written only to a 0600 runner-temp file and
+          # deleted within this step. An empty secret preserves public-only use.
+          CLIPFORGE_YOUTUBE_COOKIES: ${{ secrets.CLIPFORGE_YOUTUBE_COOKIES }}
         run: |
           set -euo pipefail
           mkdir -p work
@@ -545,6 +534,18 @@ jobs:
             source_file="$(python scripts/torrent_source.py select-video work/torrent "$selected_path")"
             echo "Selected torrent video: $source_file"
           else
+            cookie_file=""
+            cleanup_youtube_cookie() {
+              if [[ -n "$cookie_file" ]]; then rm -f "$cookie_file"; fi
+            }
+            trap cleanup_youtube_cookie EXIT
+            if [[ -n "${CLIPFORGE_YOUTUBE_COOKIES:-}" ]]; then
+              cookie_file="$(mktemp "$RUNNER_TEMP/clipforge-youtube-cookies.XXXXXX")"
+              umask 077
+              printf '%s' "$CLIPFORGE_YOUTUBE_COOKIES" > "$cookie_file"
+              export CLIPFORGE_YOUTUBE_COOKIES_FILE="$cookie_file"
+              echo "Using user-authorized disposable YouTube session for this source request."
+            fi
             python scripts/download_drive.py "$source_ref" work/source_input.bin
             source_file="work/source_input.bin"
           fi
