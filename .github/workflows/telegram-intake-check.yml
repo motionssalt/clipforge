@@ -71,5 +71,5 @@ jobs:
             echo 'Expected the public Telegram group link to fail.' >&2
             exit 1
           fi
-          grep -q 'public Telegram group post' work/group-source.log
+          grep -q 'public Telegram group link' work/group-source.log
           echo 'Confirmed actionable rejection for public Telegram group link.'
