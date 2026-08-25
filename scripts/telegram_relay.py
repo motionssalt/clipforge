@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""Trusted, temporary Bot B MTProto relay for one ClipForge task.
+
+This runs only in the central repository. The target clone receives a release
+asset and checksum; it never receives Bot B or the MTProto application secrets.
+"""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import base64
+import hashlib
+import json
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+from typing import Any
+from urllib.parse import quote
+
+import requests
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+# Reuse the production-tested bounded four-connection MTProto transfer rather
+# than falling back to a new single-connection implementation.
+from download_drive import _ParallelTelegramTransferError, _download_telegram_parallel
+
+MAX_RELAY_BYTES = 1800 * 1024 * 1024
+REQUEST_TIMEOUT = 60
+API_VERSION = '2026-03-10'
+
+
+def fail(message: str) -> None:
+    raise RuntimeError(message)
+
+
+def decode_b64(value: str) -> bytes:
+    try:
+        return base64.b64decode(value, validate=True)
+    except Exception as error:  # pragma: no cover - message is the contract
+        raise RuntimeError('The relay envelope is malformed.') from error
+
+
+def decrypt_payload(job_id: str, serialized: str, secret: str) -> dict[str, Any]:
+    try:
+        envelope = json.loads(serialized)
+        iv = decode_b64(str(envelope['iv']))
+        ciphertext = decode_b64(str(envelope['ciphertext']))
+        key = decode_b64(secret)
+        if envelope.get('v') != 1 or len(iv) != 12 or len(key) != 32:
+            raise ValueError('unsupported envelope')
+        plaintext = AESGCM(key).decrypt(iv, ciphertext, f'clipforge-telegram-relay:v1:{job_id}'.encode())
+        payload = json.loads(plaintext.decode())
+    except Exception as error:
+        raise RuntimeError('The relay payload could not be authenticated.') from error
+    if not isinstance(payload, dict) or payload.get('version') != 1 or payload.get('job_id') != job_id:
+        raise RuntimeError('The relay payload does not belong to this job.')
+    return payload
+
+
+def ensure_payload(payload: dict[str, Any]) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
+    repo = str(payload.get('target_repo') or '').strip()
+    token = str(payload.get('target_github_pat') or '').strip()
+    inputs = payload.get('stage_a_inputs')
+    telegram = payload.get('telegram')
+    if not repo or '/' not in repo or not token or not isinstance(inputs, dict) or not isinstance(telegram, dict):
+        fail('The relay payload is incomplete.')
+    group_chat = int(telegram.get('group_chat_id') or 0)
+    message_id = int(telegram.get('group_message_id') or 0)
+    declared_size = int(telegram.get('declared_size') or 0)
+    if not group_chat or message_id <= 0 or declared_size <= 0 or declared_size > MAX_RELAY_BYTES:
+        fail('The relay media metadata is unsafe or exceeds the direct-forward limit.')
+    return repo, token, inputs, telegram
+
+
+def preflight_space(expected_bytes: int, work_dir: Path) -> None:
+    free = shutil.disk_usage(work_dir).free
+    required = expected_bytes * 2 + 1024 * 1024 * 1024
+    if free < required:
+        fail(f'Insufficient central-runner disk space for this relay source (need at least {required // (1024 * 1024)} MiB free).')
+
+
+async def find_dialog_entity(client: Any, marked_chat_id: int) -> Any:
+    from telethon import utils
+    async for dialog in client.iter_dialogs(limit=None):
+        if int(utils.get_peer_id(dialog.entity)) == marked_chat_id:
+            return dialog.entity
+    fail('Bot B cannot access the configured internal group through MTProto.')
+
+
+async def download_group_media(telegram: dict[str, Any], output_path: Path) -> None:
+    try:
+        from telethon import TelegramClient, functions
+        from telethon.sessions import MemorySession
+    except ImportError as error:
+        raise RuntimeError('Bot B MTProto dependencies are unavailable.') from error
+    try:
+        api_id = int(os.environ['BOTB_MTPROTO_API_ID'])
+    except (KeyError, ValueError) as error:
+        raise RuntimeError('Bot B MTProto API ID is invalid.') from error
+    api_hash = str(os.environ.get('BOTB_MTPROTO_API_HASH') or '')
+    bot_token = str(os.environ.get('BOTB_MTPROTO_BOT_TOKEN') or '')
+    if not api_hash or not bot_token:
+        fail('Bot B MTProto credentials are not configured.')
+    expected_size = int(telegram['declared_size'])
+    preflight_space(expected_size, output_path.parent)
+    client = TelegramClient(MemorySession(), api_id, api_hash, connection_retries=3, request_retries=3, retry_delay=1, receive_updates=False)
+    try:
+        await client.connect()
+        await client(functions.auth.ImportBotAuthorizationRequest(
+            flags=0, api_id=api_id, api_hash=api_hash, bot_auth_token=bot_token
+        ))
+        entity = await find_dialog_entity(client, int(telegram['group_chat_id']))
+        message = await client.get_messages(entity, ids=int(telegram['group_message_id']))
+        if not message or not message.media:
+            fail('The internal relay message is unavailable or has no media.')
+        mime = str(getattr(getattr(message, 'file', None), 'mime_type', '') or '').lower()
+        actual_size = int(getattr(getattr(message, 'file', None), 'size', 0) or 0)
+        if not getattr(message, 'video', None) and not mime.startswith('video/'):
+            fail('The internal relay message is not a video attachment.')
+        if actual_size <= 0 or actual_size > MAX_RELAY_BYTES:
+            fail('The actual Telegram media size is unsupported for direct forwarding.')
+        if actual_size != expected_size:
+            fail('The internal relay media size does not match Bot A’s staged source metadata.')
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            await asyncio.wait_for(_download_telegram_parallel(client, message, str(output_path), actual_size), timeout=45 * 60)
+        except _ParallelTelegramTransferError as error:
+            if output_path.exists():
+                output_path.unlink()
+            print(f'Parallel Bot B MTProto transfer fell back to one connection: {error}', flush=True)
+            await asyncio.wait_for(client.download_media(message, file=str(output_path)), timeout=45 * 60)
+        if not output_path.is_file() or output_path.stat().st_size != actual_size:
+            fail('Bot B MTProto download completed with an incomplete file.')
+    except asyncio.TimeoutError as error:
+        if output_path.exists():
+            output_path.unlink()
+        raise RuntimeError('Bot B MTProto download exceeded the 45-minute safety limit.') from error
+    finally:
+        await client.disconnect()
+
+
+def api_headers(token: str) -> dict[str, str]:
+    return {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': f'Bearer {token}',
+        'X-GitHub-Api-Version': API_VERSION,
+    }
+
+
+def github_request(token: str, method: str, url: str, **kwargs: Any) -> requests.Response:
+    response = requests.request(method, url, headers=api_headers(token), timeout=REQUEST_TIMEOUT, **kwargs)
+    if response.status_code >= 400:
+        # Do not interpolate response content: it can reflect a credential or input.
+        raise RuntimeError(f'GitHub handoff request failed with HTTP {response.status_code}.')
+    return response
+
+
+def release_tag(job_id: str) -> str:
+    return f'clipforge-relay-input-{job_id}'
+
+
+def create_release(repo: str, token: str, job_id: str) -> dict[str, Any]:
+    url = f'https://api.github.com/repos/{repo}/releases'
+    response = github_request(token, 'POST', url, json={
+        'tag_name': release_tag(job_id),
+        'target_commitish': 'main',
+        'name': f'ClipForge temporary relay input — {job_id}',
+        'body': 'Temporary private source handoff. ClipForge deletes this asset after task expiry.',
+        'draft': False,
+        'prerelease': True,
+        'generate_release_notes': False,
+    })
+    result = response.json()
+    if not isinstance(result, dict) or not result.get('upload_url'):
+        fail('GitHub did not return a release upload URL.')
+    return result
+
+
+def upload_release_asset(release: dict[str, Any], token: str, source_path: Path) -> None:
+    upload_url = str(release['upload_url']).split('{', 1)[0]
+    with source_path.open('rb') as source:
+        response = requests.post(
+            f'{upload_url}?name={quote("source_input.bin")}',
+            headers={**api_headers(token), 'Content-Type': 'application/octet-stream'},
+            data=source,
+            timeout=60 * 60,
+        )
+    if response.status_code >= 400:
+        raise RuntimeError(f'GitHub temporary-release upload failed with HTTP {response.status_code}.')
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, inputs: dict[str, Any], size: int, digest: str) -> None:
+    content_url = f'https://api.github.com/repos/{repo}/contents/jobs/{quote(job_id, safe="")}/stage-a-request.json?ref=main'
+    current = github_request(token, 'GET', content_url).json()
+    try:
+        request_doc = json.loads(base64.b64decode(str(current['content']).replace('\n', '')).decode())
+        request_sha = str(current['sha'])
+    except Exception as error:
+        raise RuntimeError('Target clone Stage A request is unreadable.') from error
+    if str(request_doc.get('job_id')) != job_id or str(request_doc.get('source_type')) != 'telegram_bot_forward':
+        fail('Target clone Stage A request does not match this relay job.')
+    tag = release_tag(job_id)
+    request_doc.update({
+        'version': 2,
+        'source_type': 'telegram_bot_forward',
+        'video_url': 'relay:private',
+        'relay_release_tag': tag,
+        'relay_expected_size': str(size),
+        'relay_sha256': digest,
+        'saved_at_epoch': int(time.time()),
+    })
+    encoded = base64.b64encode((json.dumps(request_doc, indent=2, sort_keys=True) + '\n').encode()).decode()
+    write_url = f'https://api.github.com/repos/{repo}/contents/jobs/{quote(job_id, safe="")}/stage-a-request.json'
+    github_request(token, 'PUT', write_url, json={
+        'message': f'clipforge: attach private relay source for job {job_id}',
+        'content': encoded,
+        'sha': request_sha,
+        'branch': 'main',
+    })
+    dispatch_inputs = dict(inputs)
+    dispatch_inputs.update({
+        'video_url': 'relay:private',
+        'source_type': 'telegram_bot_forward',
+        'relay_release_tag': tag,
+        'relay_expected_size': str(size),
+        'relay_sha256': digest,
+        'job_id': job_id,
+    })
+    dispatch_url = f'https://api.github.com/repos/{repo}/actions/workflows/stage-a.yml/dispatches'
+    github_request(token, 'POST', dispatch_url, json={'ref': 'main', 'inputs': dispatch_inputs})
+
+
+def run(job_id: str, serialized_payload: str) -> None:
+    payload = decrypt_payload(job_id, serialized_payload, os.environ.get('RELAY_ENCRYPTION_KEY', ''))
+    repo, token, inputs, telegram = ensure_payload(payload)
+    work = Path('work/telegram-relay')
+    source = work / 'source_input.bin'
+    asyncio.run(download_group_media(telegram, source))
+    actual_size = source.stat().st_size
+    if actual_size != int(telegram['declared_size']):
+        fail('Downloaded source size changed before handoff.')
+    digest = sha256(source)
+    release = create_release(repo, token, job_id)
+    try:
+        upload_release_asset(release, token, source)
+        write_stage_a_request_and_dispatch(repo, token, job_id, inputs, actual_size, digest)
+    except Exception:
+        # Best-effort cleanup. No error details are logged because release API
+        # errors can include untrusted reflected content.
+        try:
+            github_request(token, 'DELETE', f'https://api.github.com/repos/{repo}/releases/{int(release["id"])}')
+        except Exception:
+            pass
+        raise
+    finally:
+        source.unlink(missing_ok=True)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description='Relay one Bot B Telegram media message into a target ClipForge clone.')
+    parser.add_argument('--job-id', required=True)
+    parser.add_argument('--relay-payload', required=True)
+    args = parser.parse_args()
+    run(str(args.job_id), str(args.relay_payload))
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as error:
+        print(f'Private Telegram relay failed: {error}', file=sys.stderr)
+        raise SystemExit(1)

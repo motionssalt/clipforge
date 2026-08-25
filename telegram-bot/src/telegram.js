@@ -42,6 +42,18 @@ export async function answerCallback(env, callbackId, text = '') {
   return telegram(env, 'answerCallbackQuery', { callback_query_id: callbackId, ...(text ? { text } : {}) });
 }
 
+// Copies Telegram-side media without downloading bytes into the Worker. A new
+// caption binds the copy to one ClipForge job without exposing the sender.
+export async function copyMessage(env, toChatId, fromChatId, messageId, caption) {
+  return telegram(env, 'copyMessage', {
+    chat_id: toChatId,
+    from_chat_id: fromChatId,
+    message_id: messageId,
+    caption,
+    disable_notification: true,
+  });
+}
+
 async function telegramMultipart(env, method, fields, fileField, bytes, fileName, mimeType) {
   const form = new FormData();
   for (const [name, value] of Object.entries(fields)) {

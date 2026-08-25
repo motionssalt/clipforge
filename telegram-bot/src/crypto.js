@@ -29,16 +29,26 @@ function aadFor(chatId) {
   return encoder.encode(`clipforge-telegram-credentials:v1:${String(chatId)}`);
 }
 
-export async function encryptCredentials(plainObject, chatId, encryptionSecret) {
-  const key = await importEncryptionKey(encryptionSecret);
+function relayAad(jobId) {
+  return encoder.encode(`clipforge-telegram-relay:v1:${String(jobId)}`);
+}
+
+async function encryptObject(plainObject, keySecret, aad) {
+  const key = await importEncryptionKey(keySecret);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const plaintext = encoder.encode(JSON.stringify(plainObject));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv, additionalData: aadFor(chatId), tagLength: 128 },
-    key,
-    plaintext
-  );
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: aad, tagLength: 128 }, key, encoder.encode(JSON.stringify(plainObject)));
   return JSON.stringify({ v: 1, iv: bytesToBase64(iv), ciphertext: bytesToBase64(new Uint8Array(ciphertext)) });
+}
+
+export async function encryptCredentials(plainObject, chatId, encryptionSecret) {
+  return encryptObject(plainObject, encryptionSecret, aadFor(chatId));
+}
+
+// The relay payload is independently encrypted for the trusted central
+// workflow. Its GitHub workflow_dispatch input is safe to persist because it
+// is authenticated ciphertext, not a clone PAT or Telegram credential.
+export async function encryptRelayPayload(plainObject, jobId, encryptionSecret) {
+  return encryptObject(plainObject, encryptionSecret, relayAad(jobId));
 }
 
 export async function decryptCredentials(serialized, chatId, encryptionSecret) {

@@ -1,0 +1,70 @@
+name: Telegram private relay
+
+run-name: Telegram relay — ${{ github.event.inputs.job_id || 'unknown' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "ClipForge job identifier"
+        required: true
+        type: string
+      relay_payload:
+        description: "Authenticated ciphertext produced by Bot B; never log or edit this value."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clipforge-telegram-relay-${{ github.event.inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout trusted relay code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install relay dependencies only
+        run: python -m pip install --disable-pip-version-check -r scripts/telegram_relay_requirements.txt
+
+      - name: Verify relay disk headroom
+        shell: bash
+        run: |
+          set -euo pipefail
+          available="$(df -Pm "$GITHUB_WORKSPACE" | awk 'NR==2 {print $4}')"
+          if [[ -z "$available" || "$available" -lt 4096 ]]; then
+            echo "Central relay runner has insufficient free disk space." >&2
+            exit 1
+          fi
+          echo "Central relay free space: ${available} MiB"
+
+      - name: Download privately and hand off to target Stage A
+        shell: bash
+        env:
+          RELAY_ENCRYPTION_KEY: ${{ secrets.RELAY_ENCRYPTION_KEY }}
+          BOTB_MTPROTO_API_ID: ${{ secrets.BOTB_MTPROTO_API_ID }}
+          BOTB_MTPROTO_API_HASH: ${{ secrets.BOTB_MTPROTO_API_HASH }}
+          BOTB_MTPROTO_BOT_TOKEN: ${{ secrets.BOTB_MTPROTO_BOT_TOKEN }}
+          RELAY_PAYLOAD: ${{ github.event.inputs.relay_payload }}
+        run: |
+          set -euo pipefail
+          test -n "$RELAY_ENCRYPTION_KEY"
+          test -n "$BOTB_MTPROTO_API_ID"
+          test -n "$BOTB_MTPROTO_API_HASH"
+          test -n "$BOTB_MTPROTO_BOT_TOKEN"
+          python scripts/telegram_relay.py --job-id '${{ github.event.inputs.job_id }}' --relay-payload "$RELAY_PAYLOAD"
+
+      - name: Remove local temporary relay files
+        if: ${{ always() }}
+        shell: bash
+        run: rm -rf work/telegram-relay

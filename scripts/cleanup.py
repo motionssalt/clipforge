@@ -32,6 +32,7 @@ import requests
 
 API = "https://api.github.com"
 JOB_TAG_PREFIX = "clipforge-"
+RELAY_TAG_PREFIX = "clipforge-relay-input-"
 JOB_BRANCH_PREFIX = "clipforge-job/"
 JOBS_DIR = "jobs"
 
@@ -107,6 +108,8 @@ def list_job_ids_from_disk() -> list[str]:
 
 def job_id_from_release(rel: dict) -> str | None:
     tag = rel.get("tag_name") or ""
+    if tag.startswith(RELAY_TAG_PREFIX):
+        return tag[len(RELAY_TAG_PREFIX):]
     if tag.startswith(JOB_TAG_PREFIX):
         return tag[len(JOB_TAG_PREFIX):]
     body = rel.get("body") or ""

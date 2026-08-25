@@ -58,3 +58,8 @@ yt-dlp[default]>=2026.1,<2027
 # available. This removes the pure-Python AES bottleneck for large media.
 cryptg>=0.4,<1
 telethon>=1.44,<2
+
+# --- Trusted Telegram relay ---------------------------------------------------
+# The central temporary relay decrypts Bot B routing ciphertext using AES-GCM.
+# It never writes the decrypted target credential or Bot B identity to disk.
+cryptography>=43,<47

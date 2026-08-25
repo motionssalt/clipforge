@@ -2,6 +2,7 @@ import { decryptCredentials, encryptCredentials } from './crypto.js';
 
 const STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const UPDATE_TTL_SECONDS = 24 * 60 * 60;
+const RELAY_TTL_SECONDS = 12 * 60 * 60;
 
 function key(chatId, suffix) {
   return `user:${String(chatId)}:${suffix}`;
@@ -63,6 +64,24 @@ export async function putCredentials(env, chatId, credentials) {
 
 export async function deleteCredentials(env, chatId) {
   await env.CLIPFORGE_BOT_KV.delete(key(chatId, 'credentials'));
+}
+
+export async function putRelayJob(env, chatId, jobId, record) {
+  const keyName = `relay:${String(chatId)}:${String(jobId)}`;
+  const payload = { version: 1, job_id: String(jobId), chat_id: Number(chatId), ...(record || {}) };
+  await env.CLIPFORGE_BOT_KV.put(keyName, JSON.stringify(payload), { expirationTtl: RELAY_TTL_SECONDS });
+  return payload;
+}
+
+export async function getRelayJob(env, chatId, jobId) {
+  const raw = await env.CLIPFORGE_BOT_KV.get(`relay:${String(chatId)}:${String(jobId)}`);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && parsed.version === 1 && parsed.job_id === String(jobId) && Number(parsed.chat_id) === Number(chatId) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getTasks(env, chatId) {

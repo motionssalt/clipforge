@@ -12,6 +12,26 @@ on:
         description: "Public video URL, Google Drive share link, BitTorrent magnet URI, or path:jobs/<JOB_ID>/source.torrent uploaded by the site"
         required: true
         type: string
+      source_type:
+        description: "url for existing inputs or telegram_bot_forward for a trusted temporary relay asset."
+        required: false
+        type: string
+        default: "url"
+      relay_release_tag:
+        description: "Temporary private relay release tag; used only with telegram_bot_forward."
+        required: false
+        type: string
+        default: ""
+      relay_expected_size:
+        description: "Expected temporary relay asset size in bytes."
+        required: false
+        type: string
+        default: ""
+      relay_sha256:
+        description: "Expected SHA-256 of temporary relay asset."
+        required: false
+        type: string
+        default: ""
       torrent_file_index:
         description: "Required only for site-uploaded torrents: the explicit 1-based video entry index selected in the UI."
         required: false
@@ -466,11 +486,16 @@ jobs:
           echo "EVENT_FRAME_COUNT=$(find work/screenshots -name 'event_*' -type f | wc -l)" >> "$GITHUB_ENV"
           echo "SCREENSHOT_WINDOW_SECONDS=6" >> "$GITHUB_ENV"
 
-      - name: Download source video (Telegram public post, Drive, uploaded torrent, or magnet-resolved torrent)
+      - name: Download source video (private relay, Telegram public post, Drive, uploaded torrent, or magnet-resolved torrent)
         if: ${{ github.event.inputs.series_mode != 'true' || github.event.inputs.series_source_job_id == '' || github.event.inputs.series_source_job_id == github.event.inputs.job_id }}
         shell: bash
         env:
           SOURCE_REF: ${{ github.event.inputs.video_url }}
+          SOURCE_TYPE: ${{ github.event.inputs.source_type }}
+          RELAY_RELEASE_TAG: ${{ github.event.inputs.relay_release_tag }}
+          RELAY_EXPECTED_SIZE: ${{ github.event.inputs.relay_expected_size }}
+          RELAY_SHA256: ${{ github.event.inputs.relay_sha256 }}
+          GH_TOKEN: ${{ github.token }}
           # Dedicated user-authorized MTProto media session for public Telegram
           # channel posts that are too large for Telegram's anonymous web view.
           # GitHub masks these encrypted secrets; the downloader never logs them.
@@ -480,9 +505,38 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p work
-          source_ref="$SOURCE_REF"
+                    source_ref="$SOURCE_REF"
 
-          if [[ "$source_ref" == path:* ]]; then
+          if [[ "$SOURCE_TYPE" == "telegram_bot_forward" ]]; then
+            if ! [[ "$RELAY_RELEASE_TAG" =~ ^clipforge-relay-input-[A-Za-z0-9._-]+$ ]]; then
+              echo "Invalid temporary relay release tag" >&2
+              exit 1
+            fi
+            if ! [[ "$RELAY_EXPECTED_SIZE" =~ ^[1-9][0-9]*$ ]] || (( RELAY_EXPECTED_SIZE > 1887436800 )); then
+              echo "Invalid temporary relay source size" >&2
+              exit 1
+            fi
+            if ! [[ "$RELAY_SHA256" =~ ^[a-f0-9]{64}$ ]]; then
+              echo "Invalid temporary relay source checksum" >&2
+              exit 1
+            fi
+            free_kib="$(df -Pk work | awk 'NR==2 {print $4}')"
+            required_kib="$(( (RELAY_EXPECTED_SIZE * 2) / 1024 + 1048576 ))"
+            if [[ -z "$free_kib" || "$free_kib" -lt "$required_kib" ]]; then
+              echo "Insufficient runner disk space for the private relay source" >&2
+              exit 1
+            fi
+            gh release download "$RELAY_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern source_input.bin --dir work
+            source_file="work/source_input.bin"
+            actual_size="$(stat -c%s "$source_file")"
+            actual_sha="$(sha256sum "$source_file" | awk '{print $1}')"
+            if [[ "$actual_size" != "$RELAY_EXPECTED_SIZE" ]] || [[ "$actual_sha" != "$RELAY_SHA256" ]]; then
+              rm -f "$source_file"
+              echo "Temporary relay source integrity validation failed" >&2
+              exit 1
+            fi
+          elif [[ "$source_ref" == path:* ]]; then
+
             torrent_path="${source_ref#path:}"
             # The site only uploads manifests to this job-local path. Reject
             # any other repository path rather than treating path: as a

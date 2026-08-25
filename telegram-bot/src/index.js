@@ -12,9 +12,10 @@ import {
 import { validateProductionPlan } from './production.js';
 import {
   clearFlow, ensureTaskLabel, getCredentials, getJobIdForLabel, getState, getTaskOptions, markUpdateSeen,
-  putCredentials, putState, removeTask, setTaskOptions, taskLabels
+  putCredentials, putRelayJob, putState, removeTask, setTaskOptions, taskLabels
 } from './storage.js';
-import { answerCallback, buttons, deleteMessage, downloadTelegramFile, downloadTelegramFileBytes, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage } from './telegram.js';
+import { answerCallback, buttons, copyMessage, deleteMessage, downloadTelegramFile, downloadTelegramFileBytes, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage } from './telegram.js';
+import { RELAY_SOURCE_TYPE, relayCaption, relayReadyMarker, relayVideoMetadata } from './relay.js';
 
 const SOURCE_RE = /^(https?:\/\/|magnet:\?)/i;
 const SAFE_JOB_RE = /^[A-Za-z0-9._-]+$/;
@@ -577,6 +578,14 @@ function isPublicTelegramPost(value) {
   return TELEGRAM_PUBLIC_POST_RE.test(String(value || ''));
 }
 
+function originalRepositoryForLegacyMtproto(env) {
+  return String(env.ORIGINAL_CLIPFORGE_REPOSITORY || 'motionssalt/clipforge').trim().toLowerCase();
+}
+
+function permitsLegacyTelegramMtproto(env, credentials) {
+  return Boolean(credentials && String(credentials.repo || '').trim().toLowerCase() === originalRepositoryForLegacyMtproto(env));
+}
+
 function telegramPageIsGroup(page) {
   return /view\s+in\s+group/i.test(String(page || ''));
 }
@@ -809,7 +818,7 @@ async function beginTask(env, chatId, mode, messageId = null) {
   state.flow = `${mode}_source`;
   state.pending = { mode, seriesMode: Boolean(series && series.enabled === true) };
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel—not a group—first, then send that post link. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend or forward one video directly to ClipForge, send a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
 
 async function setupBack(env, chatId, messageId = null) {
@@ -834,7 +843,7 @@ async function setupBack(env, chatId, messageId = null) {
       state.flow = `${mode}_source`;
       state.pending = pending;
       await putState(env, chatId, state);
-      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel—not a group—first, then send that post link. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend or forward one video directly to ClipForge, send a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
     }
     state.flow = `${mode}_focus`;
     state.pending = pending;
@@ -853,7 +862,7 @@ async function setupBack(env, chatId, messageId = null) {
     state.flow = `${mode}_source`;
     state.pending = pending;
     await putState(env, chatId, state);
-    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel—not a group—first, then send that post link.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend or forward one video directly to ClipForge, send a public Telegram channel post link (not a group), a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
   }
   await clearFlow(env, chatId);
   return renderInteractiveView(env, chatId, 'Task setup closed. Start a new task whenever you are ready.', { replyMarkup: mainMenu() }, messageId);
@@ -865,8 +874,13 @@ async function finishTaskLaunch(env, chatId, messageId = null) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials || !pending.mode || !pending.source || !TARGET_DURATIONS.includes(Number(pending.duration))) return;
   const jobId = pending.jobId || startTaskJobId(pending.mode);
+  const isRelaySource = pending.source === RELAY_SOURCE_TYPE;
   const inputs = {
-    video_url: pending.source,
+    video_url: isRelaySource ? 'relay:private' : pending.source,
+    source_type: isRelaySource ? RELAY_SOURCE_TYPE : 'url',
+    relay_release_tag: '',
+    relay_expected_size: '',
+    relay_sha256: '',
     torrent_file_index: '',
     job_id: jobId,
     whisper_model: 'base',
@@ -882,14 +896,29 @@ async function finishTaskLaunch(env, chatId, messageId = null) {
   if (pending.mode === 'automatic' && pending.musicSource !== 'default') {
     await saveAutomaticMusicChoice(credentials, credentials.repo, jobId, pending.musicRef || '', pending.musicSource || 'none');
   }
-  await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', inputs);
+  if (isRelaySource) {
+    const relay = pending.relay || {};
+    if (!Number.isSafeInteger(Number(relay.internal_group_chat_id)) || !Number.isSafeInteger(Number(relay.internal_group_message_id))) {
+      throw new Error('The private Telegram relay metadata is incomplete. Send the video again.');
+    }
+    await putRelayJob(env, chatId, jobId, {
+      state: 'ready', repo: credentials.repo, mode: pending.mode, inputs,
+      relay: { ...relay, internal_group_chat_id: Number(relay.internal_group_chat_id), internal_group_message_id: Number(relay.internal_group_message_id) }
+    });
+    await sendMessage(env, Number(relay.internal_group_chat_id), relayReadyMarker(jobId, chatId, Number(relay.internal_group_message_id)), { parseMode: 'HTML' });
+  } else {
+    await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', inputs);
+  }
   const label = await ensureTaskLabel(env, chatId, jobId);
   await setTaskOptions(env, chatId, jobId, { musicRef: pending.musicRef || '', mode: pending.mode });
   state.flow = null;
   state.pending = {};
   state.currentTask = jobId;
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `Task <b>${label}</b> was dispatched.\n<code>${escapeHtml(jobId)}</code>\nUse the button below for progress.`, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }, { text: 'Main menu', callback_data: 'menu:home' }]]) }, messageId);
+  const dispatchedText = isRelaySource
+    ? `Task <b>${label}</b> was queued for private Telegram relay.\n<code>${escapeHtml(jobId)}</code>\nClipForge will start Stage A after the temporary relay has safely delivered the source to this clone.`
+    : `Task <b>${label}</b> was dispatched.\n<code>${escapeHtml(jobId)}</code>\nUse the button below for progress.`;
+  await renderInteractiveView(env, chatId, dispatchedText, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }, { text: 'Main menu', callback_data: 'menu:home' }]]) }, messageId);
 }
 
 async function chooseLibrary(env, chatId, messageId = null) {
@@ -1117,7 +1146,15 @@ async function handleFlowText(env, chatId, text) {
     return true;
   }
   if (state.flow === 'manual_source' || state.flow === 'automatic_source') {
-    state.pending.source = validateSource(text);
+    const source = validateSource(text);
+    if (isPublicTelegramPost(source)) {
+      const credentials = await requireCredentials(env, chatId);
+      if (!credentials) return true;
+      if (!permitsLegacyTelegramMtproto(env, credentials)) {
+        throw new Error('Public Telegram channel-link intake is reserved for the original ClipForge repository. This Shadow Clone accepts direct videos sent or forwarded to ClipForge, plus Drive, direct-file, magnet, and .torrent sources.');
+      }
+    }
+    state.pending.source = source;
     await preflightTelegramChannelPost(state.pending.source);
     state.flow = taskSetupFlowAfterSource(state.pending);
     await putState(env, chatId, state);
@@ -1196,8 +1233,42 @@ async function handleTorrentUpload(env, chatId, document, state) {
   }
 }
 
-async function handleDocument(env, chatId, document) {
+async function handleRelayVideo(env, chatId, message) {
   const state = await getState(env, chatId);
+  if (!['manual_source', 'automatic_source'].includes(state.flow)) {
+    await renderTaskInputResponse(env, chatId, 'This video was not expected. Start Manual or Automatic Mode first, then send or forward one video directly to ClipForge.', { replyMarkup: mainMenu() });
+    return;
+  }
+  const relayGroup = String(env.INTERNAL_RELAY_GROUP_CHAT_ID || '').trim();
+  if (!/^-?[1-9][0-9]{0,18}$/.test(relayGroup)) throw new Error('Direct Telegram forwarding is not configured yet. Use a public channel post link for now.');
+  const media = relayVideoMetadata(message);
+  if (!media) throw new Error('Send a video or a video document. Other file types are not supported as a direct source.');
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const jobId = startTaskJobId(state.pending.mode);
+  const copied = await copyMessage(env, relayGroup, chatId, message.message_id, relayCaption(jobId, chatId));
+  const internalMessageId = Number(copied && copied.message_id || 0);
+  if (!Number.isSafeInteger(internalMessageId) || internalMessageId <= 0) throw new Error('Telegram copied the video without returning an internal relay message identifier.');
+  state.pending.source = RELAY_SOURCE_TYPE;
+  state.pending.relay = {
+    ...media,
+    internal_group_chat_id: Number(relayGroup),
+    internal_group_message_id: internalMessageId,
+  };
+  state.pending.jobId = jobId;
+  state.flow = taskSetupFlowAfterSource(state.pending);
+  await putState(env, chatId, state);
+  const next = state.pending.seriesMode === true
+    ? `<b>Video securely staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nSeries Mode does not use editorial focus. Choose output length and music. ClipForge will then begin the private relay and Stage A.`
+    : `<b>Video securely staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. ClipForge will begin the private relay only after your task setup is complete.`;
+  await renderTaskInputResponse(env, chatId, next, { replyMarkup: state.pending.seriesMode === true ? durationMenu() : buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+}
+
+async function handleDocument(env, chatId, document, message = null) {
+  const state = await getState(env, chatId);
+  if (message && ['manual_source', 'automatic_source'].includes(state.flow) && relayVideoMetadata(message)) {
+    return handleRelayVideo(env, chatId, message);
+  }
   if (state.flow === 'settings_music_upload') {
     await handleMusicLibraryUpload(env, chatId, document);
     return;
@@ -1291,7 +1362,9 @@ async function restartStageA(env, chatId, label, messageId = null) {
     if (!metadata.length) throw new Error('Automatic Mode needs a stored Gemini API key before Stage A can restart.');
   }
   await dispatchWorkflow(credentials, credentials.repo, 'stage-a.yml', {
-    video_url: String(inputs.video_url || ''), torrent_file_index: String(inputs.torrent_file_index || ''), job_id: jobId,
+    video_url: String(inputs.video_url || ''), source_type: String(inputs.source_type || 'url'),
+    relay_release_tag: String(inputs.relay_release_tag || ''), relay_expected_size: String(inputs.relay_expected_size || ''), relay_sha256: String(inputs.relay_sha256 || ''),
+    torrent_file_index: String(inputs.torrent_file_index || ''), job_id: jobId,
     whisper_model: WHISPER_MODELS.has(inputs.whisper_model) ? inputs.whisper_model : 'base', language: String(inputs.language || 'auto'),
     target_duration_seconds: String(inputs.target_duration_seconds || '120'), focus: String(inputs.focus || ''), automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false'
   });
@@ -1580,7 +1653,8 @@ async function handleUpdate(env, update) {
   if (!chatId || message.chat.type !== 'private') return;
   const command = commandOf(message.text);
   if (command) return handleCommand(env, chatId, command);
-  if (message.document) return handleDocument(env, chatId, message.document);
+  if (message.video) return handleRelayVideo(env, chatId, message);
+  if (message.document) return handleDocument(env, chatId, message.document, message);
   const priorState = await getState(env, chatId);
   if (message.text && await handleFlowText(env, chatId, message.text)) {
     if (['settings_github_pat', 'settings_shadow_pat', 'settings_gemini', 'settings_zernio_key'].includes(priorState.flow)) {
@@ -1616,4 +1690,4 @@ export default {
   }
 };
 
-export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, disabledSocialSourceHost, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, isPublicTelegramPost, isSafeAudioLibraryPath, preflightTelegramChannelPost, renderInteractiveView, renderTaskInputResponse, settingsMenu, taskCanBeDeleted, taskSetupFlowAfterSource, telegramButtonText, telegramPageIsGroup, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, disabledSocialSourceHost, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, isPublicTelegramPost, isSafeAudioLibraryPath, permitsLegacyTelegramMtproto, preflightTelegramChannelPost, renderInteractiveView, renderTaskInputResponse, settingsMenu, taskCanBeDeleted, taskSetupFlowAfterSource, telegramButtonText, telegramPageIsGroup, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };

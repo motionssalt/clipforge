@@ -61,6 +61,15 @@ def test_stage_a_uses_no_social_session_or_youtube_runtime() -> None:
     assert 'CLIPFORGE_TELEGRAM_SESSION' in workflow
     assert 'cryptg>=0.4,<1' in requirements
     assert 'telethon>=1.44,<2' in requirements
+    assert 'source_type' in workflow
+    assert 'telegram_bot_forward' in workflow
+    assert 'RELAY_RELEASE_TAG' in workflow
+    assert 'gh release download "$RELAY_RELEASE_TAG"' in workflow
+    assert 'Temporary relay source integrity validation failed' in workflow
+    relay_workflow = (ROOT / '.github' / 'workflows' / 'telegram-relay.yml').read_text(encoding='utf-8')
+    assert 'BOTB_MTPROTO_BOT_TOKEN' in relay_workflow
+    assert 'RELAY_ENCRYPTION_KEY' in relay_workflow
+    assert 'telegram_relay.py' in relay_workflow
 
 
 def test_telegram_command_uses_best_streams_without_cookie_or_login() -> None:

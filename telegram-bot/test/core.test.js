@@ -104,6 +104,9 @@ test('confirmed task cleanup deletes only the selected job release, tag, and job
     if (path === '/repos/owner/repo/releases/tags/clipforge-manual-delete') return reply({ id: 42 });
     if (path === '/repos/owner/repo/releases/42' && method === 'DELETE') return reply(null, 204);
     if (path === '/repos/owner/repo/git/refs/tags/clipforge-manual-delete' && method === 'DELETE') return reply(null, 204);
+    if (path === '/repos/owner/repo/releases/tags/clipforge-relay-input-manual-delete') return reply({ id: 43 });
+    if (path === '/repos/owner/repo/releases/43' && method === 'DELETE') return reply(null, 204);
+    if (path === '/repos/owner/repo/git/refs/tags/clipforge-relay-input-manual-delete' && method === 'DELETE') return reply(null, 204);
     if (path === '/repos/owner/repo/contents/jobs/manual-delete/status.json?ref=main') return reply({ sha: 'status-sha' });
     if (path === '/repos/owner/repo/contents/jobs/manual-delete/production.json?ref=main') return reply({ sha: 'production-sha' });
     if (path === '/repos/owner/repo/contents/jobs/manual-delete/status.json' && method === 'DELETE') return reply({});
@@ -117,6 +120,7 @@ test('confirmed task cleanup deletes only the selected job release, tag, and job
     assert.equal(calls.some((call) => call.path.includes('README.md')), false);
     assert.equal(calls.some((call) => call.path === '/repos/owner/repo/releases/42' && call.method === 'DELETE'), true);
     assert.equal(calls.some((call) => call.path === '/repos/owner/repo/git/refs/tags/clipforge-manual-delete' && call.method === 'DELETE'), true);
+    assert.equal(calls.some((call) => call.path === '/repos/owner/repo/releases/43' && call.method === 'DELETE'), true);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -134,6 +138,8 @@ test('task cleanup tolerates a missing release and GitHub’s 422 missing-tag re
     if (path === '/repos/owner/repo/git/trees/tree-sha?recursive=1') return reply({ truncated: false, tree: [{ type: 'blob', path: 'jobs/manual-no-release/status.json' }] });
     if (path === '/repos/owner/repo/releases/tags/clipforge-manual-no-release') return reply({ message: 'Not Found' }, 404);
     if (path === '/repos/owner/repo/git/refs/tags/clipforge-manual-no-release' && method === 'DELETE') return reply({ message: 'Reference does not exist' }, 422);
+    if (path === '/repos/owner/repo/releases/tags/clipforge-relay-input-manual-no-release') return reply({ message: 'Not Found' }, 404);
+    if (path === '/repos/owner/repo/git/refs/tags/clipforge-relay-input-manual-no-release' && method === 'DELETE') return reply({ message: 'Reference does not exist' }, 422);
     if (path === '/repos/owner/repo/contents/jobs/manual-no-release/status.json?ref=main') return reply({ sha: 'status-sha' });
     if (path === '/repos/owner/repo/contents/jobs/manual-no-release/status.json' && method === 'DELETE') return reply({});
     throw new Error(`Unexpected GitHub request: ${method} ${path}`);
@@ -502,4 +508,83 @@ test('manual production-plan validation preserves ClipForge’s timing and narra
     cuts: [{ start_seconds: 8, end_seconds: 7, raw_narration: '' }]
   };
   assert.ok(validateProductionPlan(invalid).length >= 2);
+});
+
+import { getRelayJob, putCredentials } from '../src/storage.js';
+import { encryptRelayPayload } from '../src/crypto.js';
+import { MAX_RELAY_VIDEO_BYTES, parseRelayCaption, parseRelayReadyMarker, relayCaption, relayReadyMarker, relayVideoMetadata } from '../src/relay.js';
+import { __test as relayWorkerTest } from '../src/relay-worker.js';
+
+test('direct video source is copied into the internal group without calling getFile or downloading media bytes', async () => {
+  const workerEnv = {
+    ...env(), TELEGRAM_BOT_TOKEN: 'test-token', TELEGRAM_WEBHOOK_SECRET: 'expected-secret',
+    INTERNAL_RELAY_GROUP_CHAT_ID: '-1001234567890'
+  };
+  await putCredentials(workerEnv, 77, { githubPat: 'test-clone-pat', repo: 'example/clone', geminiKeys: [] });
+  await putState(workerEnv, 77, { flow: 'manual_source', pending: { mode: 'manual', seriesMode: false }, activeViewId: null });
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const body = JSON.parse(init.body);
+    calls.push({ url: String(url), body });
+    const result = /\/copyMessage$/.test(String(url)) ? { message_id: 700 } : { message_id: 701 };
+    return new Response(JSON.stringify({ ok: true, result }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const response = await worker.fetch(new Request('https://worker.example/webhook', {
+      method: 'POST', headers: { 'X-Telegram-Bot-Api-Secret-Token': 'expected-secret', 'content-type': 'application/json' },
+      body: JSON.stringify({ update_id: 7011, message: {
+        message_id: 701, chat: { id: 77, type: 'private' },
+        video: { file_id: 'video-id', file_unique_id: 'unique-video', file_size: 123456, mime_type: 'video/mp4' }
+      } })
+    }), workerEnv);
+    assert.equal(response.status, 200);
+    assert.equal(calls.length, 2);
+    assert.match(calls[0].url, /\/copyMessage$/);
+    assert.equal(calls[0].body.chat_id, '-1001234567890');
+    assert.equal(calls[0].body.from_chat_id, 77);
+    assert.equal(calls[0].body.message_id, 701);
+    assert.match(calls[0].body.caption, /^CFRELAY1:manual-/);
+    assert.equal(calls.some((call) => /\/getFile$|\/file\/bot/.test(call.url)), false);
+    const state = await getState(workerEnv, 77);
+    assert.equal(state.pending.source, 'telegram_bot_forward');
+    assert.equal(state.pending.relay.internal_group_message_id, 700);
+    assert.equal(state.flow, 'manual_focus');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('direct relay metadata rejects non-video, missing, and oversized files before any handoff', () => {
+  assert.equal(relayVideoMetadata({ message_id: 1, document: { file_name: 'notes.txt', file_size: 10 } }), null);
+  assert.throws(() => relayVideoMetadata({ message_id: 1, video: { file_id: 'a', file_unique_id: 'b', file_size: MAX_RELAY_VIDEO_BYTES + 1 } }), /safety limit/);
+  assert.throws(() => relayVideoMetadata({ message_id: 1, video: { file_id: '', file_unique_id: 'b', file_size: 100 } }), /reusable media identifier/);
+});
+
+test('relay captions and ready markers bind one job, source chat, and copied group message', () => {
+  const caption = relayCaption('manual-123', -10022);
+  assert.deepEqual(parseRelayCaption(caption), { jobId: 'manual-123', sourceChatId: -10022 });
+  const marker = relayReadyMarker('manual-123', -10022, 91);
+  assert.deepEqual(parseRelayReadyMarker(marker), { jobId: 'manual-123', sourceChatId: -10022, groupMessageId: 91 });
+  assert.equal(parseRelayCaption('CFRELAY1:bad id:-12'), null);
+  assert.equal(parseRelayReadyMarker('CFRELAY_READY1:manual-123:-10022:0'), null);
+});
+
+test('legacy authenticated public Telegram intake is authorized only for the configured original repository', () => {
+  assert.equal(__test.permitsLegacyTelegramMtproto({ ORIGINAL_CLIPFORGE_REPOSITORY: 'motionssalt/clipforge' }, { repo: 'motionssalt/clipforge' }), true);
+  assert.equal(__test.permitsLegacyTelegramMtproto({ ORIGINAL_CLIPFORGE_REPOSITORY: 'motionssalt/clipforge' }, { repo: 'other-user/clipforge-shadow' }), false);
+});
+
+test('Bot B relay payload requires a matching ready record and never includes Bot B credentials', async () => {
+  const record = {
+    state: 'ready', repo: 'owner/clone', inputs: { job_id: 'manual-51', source_type: 'telegram_bot_forward' },
+    relay: { internal_group_chat_id: -10022, internal_group_message_id: 43, file_size: 100, file_unique_id: 'u', mime_type: 'video/mp4', file_name: 'input.mp4' }
+  };
+  const payload = relayWorkerTest.safeRelayPayload(record, { repo: 'owner/clone', githubPat: 'clone-pat' }, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 43 });
+  assert.equal(payload.target_repo, 'owner/clone');
+  assert.equal(payload.telegram.group_message_id, 43);
+  assert.equal(JSON.stringify(payload).includes('BOTB_MTPROTO'), false);
+  assert.throws(() => relayWorkerTest.safeRelayPayload(record, { repo: 'owner/clone', githubPat: 'clone-pat' }, { jobId: 'manual-51', sourceChatId: 17, groupMessageId: 44 }), /does not match/);
+  const sealed = await encryptRelayPayload(payload, 'manual-51', encryptionSecret);
+  assert.equal(sealed.includes('clone-pat'), false);
 });

@@ -411,10 +411,11 @@ export async function deleteClipforgeJob(credentials, repo, jobId) {
     ? tree.tree.filter((entry) => entry && entry.type === 'blob' && typeof entry.path === 'string' && entry.path.startsWith(prefix)).map((entry) => entry.path).sort()
     : [];
   await deleteReleaseAndTag(credentials, repo, `clipforge-${jobId}`);
+  await deleteReleaseAndTag(credentials, repo, `clipforge-relay-input-${jobId}`);
   for (const path of paths) {
     await deleteRepositoryFile(credentials, repo, path, `clipforge: delete task ${jobId}`);
   }
-  return { jobId, deletedFiles: paths.length, releaseTag: `clipforge-${jobId}` };
+  return { jobId, deletedFiles: paths.length, releaseTag: `clipforge-${jobId}`, relayReleaseTag: `clipforge-relay-input-${jobId}` };
 }
 
 export async function dispatchWorkflow(credentials, repo, workflow, inputs) {
@@ -549,7 +550,10 @@ export async function saveWatermark(credentials, repo, creatorName) {
 
 export async function saveStageARequest(credentials, repo, jobId, inputs) {
   const document = {
-    version: 1, job_id: jobId, video_url: String(inputs.video_url || ''), torrent_file_index: String(inputs.torrent_file_index || ''),
+    version: 2, job_id: jobId, video_url: String(inputs.video_url || ''),
+    source_type: String(inputs.source_type || 'url'), relay_release_tag: String(inputs.relay_release_tag || ''),
+    relay_expected_size: String(inputs.relay_expected_size || ''), relay_sha256: String(inputs.relay_sha256 || ''),
+    torrent_file_index: String(inputs.torrent_file_index || ''),
     whisper_model: String(inputs.whisper_model || 'base'), language: String(inputs.language || 'auto'),
     target_duration_seconds: String(inputs.target_duration_seconds || '120'), focus: String(inputs.focus || ''),
     automatic_mode: inputs.automatic_mode === 'true' ? 'true' : 'false',
