@@ -4,6 +4,11 @@
   "main": "src/relay-worker.js",
   "compatibility_date": "2025-09-01",
   "workers_dev": true,
+  "vars": {
+    "INTERNAL_RELAY_GROUP_CHAT_ID": "-5345479732",
+    "BOT_A_TELEGRAM_ID": "8670100252",
+    "RELAY_GITHUB_REPOSITORY": "motionssalt/clipforge"
+  },
   "kv_namespaces": [
     {
       "binding": "CLIPFORGE_BOT_KV",
