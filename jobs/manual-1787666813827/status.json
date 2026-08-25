@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787666813827/final.mp4"
   },
   "created_at_epoch": 1787666942,
-  "updated_at_epoch": 1787683773,
+  "updated_at_epoch": 1787683795,
   "expires_at_epoch": 1787710142,
   "extra": {
     "workflow_run_id": "32883551481",
@@ -32,5 +32,68 @@
     "title": "A Stranger's Kindness Leads To Danger Part 1",
     "creator_watermark_applied": true,
     "creator_watermark_name": "CHIMERAVFX"
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "failed",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-manual-1787666813827-32883551481",
+    "updated_at_epoch": 1787683795,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 96979303,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "A Stranger's Kindness Leads To Danger Part 1",
+      "caption": "A Stranger's Kindness Leads To Danger Part 1",
+      "hashtags": [
+        "#nollywood",
+        "#shortfilm",
+        "#drama",
+        "#kindness",
+        "#football",
+        "#relatable"
+      ],
+      "tags": [
+        "nollywood drama",
+        "african movie",
+        "short story",
+        "football player injury",
+        "kindness rewarded",
+        "mimi and gerald",
+        "secret relationship",
+        "viral drama skit",
+        "african short film",
+        "unexpected kindness"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "",
+        "status": "failed",
+        "error": "One or more accounts do not belong to this user",
+        "error_details": {},
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-manual-1787666813827-32883551481-tiktok"
+      },
+      {
+        "post_id": "",
+        "status": "failed",
+        "error": "One or more accounts do not belong to this user",
+        "error_details": {},
+        "platform": "youtube",
+        "request_id": "clipforge-auto-manual-1787666813827-32883551481-youtube"
+      }
+    ],
+    "metadata_source": "jobs/manual-1787666813827/production.json"
   }
 }
