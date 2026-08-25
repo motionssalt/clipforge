@@ -7,7 +7,7 @@ on:
         description: Public Telegram channel post URL containing one video
         required: true
         type: string
-        default: https://t.me/europa_press/613
+        default: https://t.me/yt4clipforge/2
 
 permissions:
   contents: read
@@ -16,7 +16,13 @@ jobs:
   validate-public-telegram-intake:
     name: Validate public Telegram intake
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
+    env:
+      # Dedicated user-authorized MTProto session. GitHub masks encrypted
+      # secret values, and the downloader never prints them.
+      CLIPFORGE_TELEGRAM_API_ID: ${{ secrets.CLIPFORGE_TELEGRAM_API_ID }}
+      CLIPFORGE_TELEGRAM_API_HASH: ${{ secrets.CLIPFORGE_TELEGRAM_API_HASH }}
+      CLIPFORGE_TELEGRAM_SESSION: ${{ secrets.CLIPFORGE_TELEGRAM_SESSION }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -33,7 +39,7 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          python -m pip install 'yt-dlp[default]>=2026.1,<2027' 'requests>=2.32,<3'
+          python -m pip install 'yt-dlp[default]>=2026.1,<2027' 'requests>=2.32,<3' 'telethon>=1.44,<2'
 
       - name: Download and verify the requested public Telegram channel source
         shell: bash

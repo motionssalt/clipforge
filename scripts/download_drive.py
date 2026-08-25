@@ -17,14 +17,17 @@ Supported inputs are:
 YouTube, TikTok, Instagram, Facebook, X/Twitter, Vimeo, and Reddit page links
 are deliberately disabled. To process a video from one of those services,
 forward or upload it to a public Telegram channel, then use that public post
-link. No social-platform credentials, cookies, or user session files are read
-by this script.
+link. For large Telegram media that public web pages do not expose, the script may
+use a dedicated user-authorized MTProto session supplied only through encrypted
+GitHub Actions environment secrets. No credential values are committed, logged,
+or persisted by the downloader.
 
 Usage:
     python download_drive.py <drive_link_or_telegram_post_or_direct_url> <output_path>
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import shutil
@@ -157,6 +160,70 @@ def _clear_directory(directory: str) -> None:
             shutil.rmtree(entry.path)
 
 
+def mtproto_credentials_available() -> bool:
+    return all(os.environ.get(name, '').strip() for name in (
+        'CLIPFORGE_TELEGRAM_API_ID', 'CLIPFORGE_TELEGRAM_API_HASH', 'CLIPFORGE_TELEGRAM_SESSION',
+    ))
+
+
+async def _download_telegram_mtproto(url: str, output_path: str) -> None:
+    """Download a public channel post via the dedicated authenticated session."""
+    try:
+        from telethon import TelegramClient
+        from telethon.sessions import StringSession
+    except ImportError as error:
+        raise RuntimeError('Telegram MTProto support is unavailable on this runner.') from error
+    canonical = telegram_public_post_url(url)
+    if not canonical:
+        raise RuntimeError('Telegram MTProto intake requires a public channel post link.')
+    _, channel, message_id = urllib.parse.urlparse(canonical).path.split('/')
+    api_id = int(os.environ['CLIPFORGE_TELEGRAM_API_ID'])
+    api_hash = os.environ['CLIPFORGE_TELEGRAM_API_HASH']
+    session = os.environ['CLIPFORGE_TELEGRAM_SESSION']
+    client = TelegramClient(
+        StringSession(session), api_id, api_hash,
+        connection_retries=3, request_retries=3, retry_delay=1,
+    )
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            raise RuntimeError('The dedicated Telegram media session is no longer authorized. Re-authorize it in ClipForge settings.')
+        entity = await client.get_entity(channel)
+        if not getattr(entity, 'broadcast', False) or getattr(entity, 'megagroup', False):
+            raise RuntimeError('This is a public Telegram group link. ClipForge downloads social video only from a public Telegram channel post. Create a public channel—not a group—forward or upload the video there, then send that channel post link.')
+        message = await client.get_messages(entity, ids=int(message_id))
+        if not message or not message.media:
+            raise RuntimeError('This public Telegram channel post has no media attachment.')
+        mime_type = str(getattr(getattr(message, 'file', None), 'mime_type', '') or '').lower()
+        if not getattr(message, 'video', None) and not mime_type.startswith('video/'):
+            raise RuntimeError('This public Telegram channel post does not contain a video attachment.')
+        media_size = int(getattr(getattr(message, 'file', None), 'size', 0) or 0)
+        if media_size and media_size > MAX_TELEGRAM_MEDIA_BYTES:
+            raise RuntimeError(f'Telegram media exceeds the {MAX_TELEGRAM_MEDIA_BYTES // (1024 ** 3)} GiB Stage A safety limit.')
+        print('Downloading one public Telegram channel-post video through the dedicated authenticated media session.', flush=True)
+        os.makedirs(os.path.dirname(os.path.abspath(output_path)) or '.', exist_ok=True)
+        written_path = await asyncio.wait_for(client.download_media(message, file=output_path), timeout=45 * 60)
+        if not written_path or not os.path.isfile(output_path) or os.path.getsize(output_path) <= 0:
+            raise RuntimeError('Telegram authenticated media retrieval completed without a video file.')
+        if os.path.getsize(output_path) > MAX_TELEGRAM_MEDIA_BYTES:
+            os.unlink(output_path)
+            raise RuntimeError(f'Telegram media exceeds the {MAX_TELEGRAM_MEDIA_BYTES // (1024 ** 3)} GiB Stage A safety limit.')
+        print(f'Done. Wrote authenticated public Telegram post video to {output_path}.', flush=True)
+    except asyncio.TimeoutError as error:
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        raise RuntimeError('Telegram authenticated media download exceeded the 45-minute safety limit.') from error
+    finally:
+        await client.disconnect()
+
+
+def download_telegram_mtproto(url: str, output_path: str) -> None:
+    try:
+        asyncio.run(_download_telegram_mtproto(url, output_path))
+    except ValueError as error:
+        raise RuntimeError('The configured Telegram API ID is invalid.') from error
+
+
 def telegram_no_media_error(url: str) -> str:
     """Explain the common public-group case without relying on account access."""
     try:
@@ -241,10 +308,14 @@ def main() -> None:
         download_drive(file_id, output_path)
         return
     if raw.lower().startswith(('http://', 'https://')):
-        telegram_post = telegram_public_post_url(raw)
-        if telegram_post:
+            telegram_post = telegram_public_post_url(raw)
+    if telegram_post:
+        if mtproto_credentials_available():
+            download_telegram_mtproto(telegram_post, output_path)
+        else:
             download_telegram_public_post(telegram_post, output_path)
-            return
+        return
+
         disabled = disabled_social_host(raw)
         if disabled:
             raise RuntimeError(f'{disabled} social links are disabled. Forward or upload the video to a public Telegram channel, then use its public post link instead.')

@@ -56,6 +56,10 @@ def test_stage_a_uses_no_social_session_or_youtube_runtime() -> None:
     assert 'clipforge-youtube-cookies' not in workflow
     assert 'actions/setup-node@v4' not in workflow
     assert 'Telegram public post' in workflow
+    assert 'CLIPFORGE_TELEGRAM_API_ID' in workflow
+    assert 'CLIPFORGE_TELEGRAM_API_HASH' in workflow
+    assert 'CLIPFORGE_TELEGRAM_SESSION' in workflow
+    assert 'telethon>=1.44,<2' in requirements
 
 
 def test_telegram_command_uses_best_streams_without_cookie_or_login() -> None:
@@ -79,6 +83,14 @@ def test_telegram_command_uses_best_streams_without_cookie_or_login() -> None:
         assert '--extractor-args' not in command
         assert command[command.index('--format') + 1] == 'bv*+ba/b'
         assert command[-1] == 'https://t.me/europa_press/613'
+
+
+def test_mtproto_secret_gate_requires_complete_credentials() -> None:
+    keys = ['CLIPFORGE_TELEGRAM_API_ID', 'CLIPFORGE_TELEGRAM_API_HASH', 'CLIPFORGE_TELEGRAM_SESSION']
+    with patch.dict(os.environ, {key: '' for key in keys}, clear=False):
+        assert module.mtproto_credentials_available() is False
+    with patch.dict(os.environ, dict(zip(keys, ['123', 'hash', 'session'])), clear=False):
+        assert module.mtproto_credentials_available() is True
 
 
 def test_group_post_without_exposed_media_has_actionable_error() -> None:
@@ -105,6 +117,7 @@ def main() -> None:
     test_other_social_hosts_are_explicitly_disabled()
     test_stage_a_uses_no_social_session_or_youtube_runtime()
     test_telegram_command_uses_best_streams_without_cookie_or_login()
+    test_mtproto_secret_gate_requires_complete_credentials()
     test_group_post_without_exposed_media_has_actionable_error()
     print('Telegram-only social intake tests passed')
 
