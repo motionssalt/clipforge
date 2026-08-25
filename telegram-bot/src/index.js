@@ -196,7 +196,7 @@ function musicMenu() {
   return buttons([
     [{ text: 'No music', callback_data: 'music:none' }, { text: 'Use saved default', callback_data: 'music:default' }],
     [{ text: 'Choose library track', callback_data: 'music:library' }],
-    [{ text: 'Cancel', callback_data: 'flow:cancel' }]
+    [{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]
   ]);
 }
 
@@ -204,7 +204,7 @@ function durationMenu() {
   return buttons([
     TARGET_DURATIONS.slice(0, 3).map((seconds) => ({ text: seconds === 60 ? '1 min' : `${seconds}s`, callback_data: `dur:${seconds}` })),
     TARGET_DURATIONS.slice(3).map((seconds) => ({ text: seconds === 180 ? '3 min' : '5 min', callback_data: `dur:${seconds}` })),
-    [{ text: 'Cancel', callback_data: 'flow:cancel' }]
+    [{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]
   ]);
 }
 
@@ -220,6 +220,15 @@ async function requireCredentials(env, chatId) {
     return null;
   }
   return credentials;
+}
+
+async function renderTaskInputResponse(env, chatId, text, options = {}) {
+  const state = await getState(env, chatId);
+  // A human just supplied text or a document. Preserve the prior menu and
+  // deliberately start a fresh control message for the next task-setup step.
+  state.activeViewId = null;
+  await putState(env, chatId, state);
+  return renderInteractiveView(env, chatId, text, options, null);
 }
 
 async function renderInteractiveView(env, chatId, text, options = {}, messageId = null) {
@@ -596,7 +605,40 @@ async function beginTask(env, chatId, mode, messageId = null) {
   state.flow = `${mode}_source`;
   state.pending = { mode, seriesMode: Boolean(series && series.enabled === true) };
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+}
+
+async function setupBack(env, chatId, messageId = null) {
+  const state = await getState(env, chatId);
+  const pending = state.pending || {};
+  const mode = pending.mode;
+  if (!mode || !state.flow || !state.flow.startsWith(`${mode}_`)) {
+    await clearFlow(env, chatId);
+    return renderInteractiveView(env, chatId, 'Task setup is no longer active.', { replyMarkup: mainMenu() }, messageId);
+  }
+  if (state.flow.endsWith('_music')) {
+    delete pending.duration; delete pending.musicRef; delete pending.musicSource; delete pending.musicOptions;
+    state.flow = `${mode}_duration`;
+    state.pending = pending;
+    await putState(env, chatId, state);
+    return renderInteractiveView(env, chatId, 'Choose the target output length.', { replyMarkup: durationMenu() }, messageId);
+  }
+  if (state.flow.endsWith('_duration')) {
+    delete pending.focus;
+    state.flow = `${mode}_focus`;
+    state.pending = pending;
+    await putState(env, chatId, state);
+    return renderInteractiveView(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  }
+  if (state.flow.endsWith('_focus')) {
+    delete pending.source; delete pending.jobId; delete pending.focus;
+    state.flow = `${mode}_source`;
+    state.pending = pending;
+    await putState(env, chatId, state);
+    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public video URL, Google Drive anyone-with-link URL, magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  }
+  await clearFlow(env, chatId);
+  return renderInteractiveView(env, chatId, 'Task setup closed. Start a new task whenever you are ready.', { replyMarkup: mainMenu() }, messageId);
 }
 
 async function finishTaskLaunch(env, chatId, messageId = null) {
@@ -730,7 +772,7 @@ async function submitPlan(env, chatId, jsonText) {
   try { document = JSON.parse(jsonText); } catch { throw new Error('The submitted production plan is not valid JSON.'); }
   const errors = validateProductionPlan(document);
   if (errors.length) {
-    await renderInteractiveView(env, chatId, `<b>Production plan not accepted</b>\n${errors.slice(0, 10).map(escapeHtml).join('\n')}\n\nCorrect the plan and send it again.`, { replyMarkup: buttons([[{ text: 'Back to task', callback_data: `status:${label}` }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+    await renderTaskInputResponse(env, chatId, `<b>Production plan not accepted</b>\n${errors.slice(0, 10).map(escapeHtml).join('\n')}\n\nCorrect the plan and send it again.`, { replyMarkup: buttons([[{ text: 'Back to task', callback_data: `status:${label}` }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
     return;
   }
   const credentials = await requireCredentials(env, chatId);
@@ -744,7 +786,7 @@ async function submitPlan(env, chatId, jsonText) {
   state.flow = null;
   state.pending = {};
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `Validated production.json and dispatched Stage B for task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }]]) });
+  await renderTaskInputResponse(env, chatId, `Validated production.json and dispatched Stage B for task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: `View Task ${label}`, callback_data: `status:${label}` }]]) });
 }
 
 async function handleFlowText(env, chatId, text) {
@@ -856,14 +898,14 @@ async function handleFlowText(env, chatId, text) {
     state.pending.source = validateSource(text);
     state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
     await putState(env, chatId, state);
-    await renderInteractiveView(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+    await renderTaskInputResponse(env, chatId, 'Send an optional editorial focus. Send <code>-</code> to consider the whole video.', { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
     return true;
   }
   if (state.flow === 'manual_focus' || state.flow === 'automatic_focus') {
     state.pending.focus = normalizeFocus(text);
     state.flow = `${state.pending.mode}_duration`;
     await putState(env, chatId, state);
-    await renderInteractiveView(env, chatId, 'Choose the target output length.', { replyMarkup: durationMenu() });
+    await renderTaskInputResponse(env, chatId, 'Choose the target output length.', { replyMarkup: durationMenu() });
     return true;
   }
   if (state.flow === 'manual_plan') { await submitPlan(env, chatId, text); return true; }
@@ -913,7 +955,7 @@ async function handleTorrentUpload(env, chatId, document, state) {
   state.pending.jobId = jobId;
   state.flow = state.pending.mode === 'automatic' ? 'automatic_focus' : 'manual_focus';
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) });
+  await renderTaskInputResponse(env, chatId, `<b>Torrent source staged — setup is not complete yet.</b>\n<code>${escapeHtml(jobId)}</code>\n\nNext, send an optional editorial focus, or send <code>-</code> to consider the whole video. Then choose output length and music. Only after those choices will Stage A dispatch and ask you to choose the video file inside the torrent.`, { replyMarkup: buttons([[{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) });
 }
 
 async function handleDocument(env, chatId, document) {
@@ -922,7 +964,7 @@ async function handleDocument(env, chatId, document) {
     await handleTorrentUpload(env, chatId, document, state);
     return;
   }
-  if (state.flow !== 'manual_plan') { await renderInteractiveView(env, chatId, 'This document was not expected. Start Manual or Automatic Mode first to upload a .torrent file, or choose a task awaiting production.json before uploading a production plan.', { replyMarkup: mainMenu() }); return; }
+  if (state.flow !== 'manual_plan') { await renderTaskInputResponse(env, chatId, 'This document was not expected. Start Manual or Automatic Mode first to upload a .torrent file, or choose a task awaiting production.json before uploading a production plan.', { replyMarkup: mainMenu() }); return; }
   if (!document || document.file_size > 1024 * 1024) throw new Error('production.json must be 1 MB or smaller.');
   const file = await getTelegramFile(env, document.file_id);
   if (!file || !file.file_path) throw new Error('Telegram did not return the uploaded file.');
@@ -1232,6 +1274,7 @@ async function handleCallback(env, callback) {
     state.pending.duration = duration; state.flow = `${state.pending.mode}_music`; await putState(env, chatId, state);
     return renderInteractiveView(env, chatId, 'Choose optional background music.', { replyMarkup: musicMenu() }, viewId);
   }
+  if (kind === 'setup' && value === 'back') return setupBack(env, chatId, viewId);
   if (kind === 'music') {
     if (value === 'library') return chooseLibrary(env, chatId, viewId);
     if (value === 'back') return renderInteractiveView(env, chatId, 'Choose optional background music.', { replyMarkup: musicMenu() }, viewId);
@@ -1286,10 +1329,13 @@ export default {
     try { await handleUpdate(env, update); }
     catch (error) {
       const chatId = update && ((update.message && update.message.chat && update.message.chat.id) || (update.callback_query && update.callback_query.message && update.callback_query.message.chat && update.callback_query.message.chat.id));
-      if (chatId) await renderInteractiveView(env, chatId, `<b>ClipForge could not complete that step.</b>\n${escapeHtml(userError(error))}`, { replyMarkup: mainMenu() }).catch(() => undefined);
+      if (chatId) {
+        const respond = update && update.message ? renderTaskInputResponse : renderInteractiveView;
+        await respond(env, chatId, `<b>ClipForge could not complete that step.</b>\n${escapeHtml(userError(error))}`, { replyMarkup: mainMenu() }).catch(() => undefined);
+      }
     }
     return new Response('ok', { status: 200 });
   }
 };
 
-export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, renderInteractiveView, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, renderInteractiveView, renderTaskInputResponse, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
