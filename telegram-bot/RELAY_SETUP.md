@@ -4,7 +4,7 @@ The direct-forward feature uses two shared bots and a temporary trusted workflow
 
 ## BotFather and group prerequisites
 
-Both Bot A and Bot B must be administrators of the configured private internal group. Enable **Bot-to-Bot Communication Mode** for at least Bot B, and disable Bot B’s Group Privacy Mode. Telegram documents that this is required for an administrator Bot B to receive Bot A’s copied group messages without a command mention or reply. Bot A’s group copy must be confirmed by a small-media proof before production use.
+Both Bot A and Bot B must be members of the configured private **basic Telegram group** (a negative ID such as `-5345479732`, not a `-100…` supergroup/channel ID). Make both administrators where the group permits it. Enable **Bot-to-Bot Communication Mode** for at least Bot B, and disable Bot B’s Group Privacy Mode. Confirm that each bot’s `getChat` call succeeds for the configured group before production use; a `chat not found` response means that bot has not been added. The relay requests the single authenticated media message directly and deliberately never enumerates dialogs, which Telegram disallows for bot accounts.
 
 ## Bot A Worker bindings
 
@@ -12,7 +12,7 @@ Existing Bot A bindings remain unchanged. Add these non-secret variables and pre
 
 | Binding | Kind | Purpose |
 |---|---|---|
-| `INTERNAL_RELAY_GROUP_CHAT_ID` | variable | Private group chat ID shared by Bot A and Bot B. |
+| `INTERNAL_RELAY_GROUP_CHAT_ID` | variable | Basic private group chat ID shared by Bot A and Bot B; do not use a `-100…` supergroup/channel ID. |
 | `ORIGINAL_CLIPFORGE_REPOSITORY` | variable | The original repository permitted to use the existing authenticated public-channel MTProto path. |
 
 ## Bot B Worker bindings
@@ -25,7 +25,7 @@ Deploy `wrangler.bot-b.jsonc` as a separate Worker sharing the existing `CLIPFOR
 | `RELAY_ENCRYPTION_KEY` | secret | Not required by Bot B. Bot A uses this key to seal a per-job payload; Bot B forwards only that opaque ciphertext. |
 | `RELAY_GITHUB_TOKEN` | secret | Central repository token used only to dispatch `telegram-relay.yml`. |
 | `RELAY_GITHUB_REPOSITORY` | variable | Trusted central repository holding `telegram-relay.yml`. |
-| `INTERNAL_RELAY_GROUP_CHAT_ID` | variable | The private group chat ID. |
+| `INTERNAL_RELAY_GROUP_CHAT_ID` | variable | The same basic private group chat ID; do not use a `-100…` supergroup/channel ID. |
 | `BOT_A_TELEGRAM_ID` | variable | Numeric Bot A user ID; lets Bot B ignore all non-Bot-A group traffic. |
 
 ## Central relay workflow secrets

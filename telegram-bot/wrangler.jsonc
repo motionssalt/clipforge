@@ -5,7 +5,7 @@
   "compatibility_date": "2025-09-01",
   "workers_dev": true,
   "vars": {
-    "INTERNAL_RELAY_GROUP_CHAT_ID": "-1004377458972",
+    "INTERNAL_RELAY_GROUP_CHAT_ID": "-5345479732",
     "ORIGINAL_CLIPFORGE_REPOSITORY": "motionssalt/clipforge",
     "BOT_B_TELEGRAM_USERNAME": "Clipforgedl_bot"
   },

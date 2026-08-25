@@ -10,7 +10,13 @@ from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from telegram_relay import decrypt_payload, ensure_payload, release_tag  # noqa: E402
+from telegram_relay import (  # noqa: E402
+    decrypt_payload,
+    ensure_payload,
+    known_basic_group_message_request,
+    release_tag,
+    verify_bot_group_access,
+)
 
 
 def b64(data: bytes) -> str:
@@ -21,6 +27,36 @@ def sealed(job_id: str, key: bytes, payload: dict) -> str:
     nonce = bytes(range(12))
     ciphertext = AESGCM(key).encrypt(nonce, json.dumps(payload).encode(), f'clipforge-telegram-relay:v1:{job_id}'.encode())
     return json.dumps({'v': 1, 'iv': b64(nonce), 'ciphertext': b64(ciphertext)})
+
+
+class FakeTelegramResponse:
+    def __init__(self, ok: bool, payload: dict):
+        self.ok = ok
+        self._payload = payload
+
+    def json(self) -> dict:
+        return self._payload
+
+
+def successful_group_requester(url: str, *, params: dict, timeout: int) -> FakeTelegramResponse:
+    assert url.endswith('/getChat')
+    assert params == {'chat_id': -5345479732}
+    assert timeout > 0
+    return FakeTelegramResponse(True, {'ok': True, 'result': {'id': -5345479732, 'type': 'group'}})
+
+
+def missing_group_requester(url: str, *, params: dict, timeout: int) -> FakeTelegramResponse:
+    return FakeTelegramResponse(False, {'ok': False, 'description': 'chat not found'})
+
+
+class FakeInputMessageID:
+    def __init__(self, message_id: int):
+        self.message_id = message_id
+
+
+class FakeGetMessagesRequest:
+    def __init__(self, *, id: list[FakeInputMessageID]):
+        self.id = id
 
 
 def main() -> None:
@@ -44,6 +80,41 @@ def main() -> None:
     assert inputs['source_type'] == 'telegram_bot_forward'
     assert telegram['group_message_id'] == 44
     assert release_tag(job_id) == 'clipforge-relay-input-manual-relay-test'
+
+    # Bot B must be a member of the configured basic group. The preflight uses
+    # Bot API getChat and never exposes Telegram's response body in workflow logs.
+    verify_bot_group_access('test-token', -5345479732, successful_group_requester)
+    try:
+        verify_bot_group_access('test-token', -5345479732, missing_group_requester)
+    except RuntimeError as error:
+        assert 'Add Bot B' in str(error)
+    else:
+        raise AssertionError('Missing Bot B membership must fail before MTProto transfer.')
+
+    # Bot accounts cannot call messages.getDialogs. The supplied private relay
+    # group is a basic group, so the exact authenticated message is requested
+    # directly through messages.getMessages instead of enumerating dialogs.
+    direct_request = known_basic_group_message_request(
+        -5345479732,
+        91,
+        FakeGetMessagesRequest,
+        FakeInputMessageID,
+    )
+    assert isinstance(direct_request, FakeGetMessagesRequest)
+    assert [item.message_id for item in direct_request.id] == [91]
+    for invalid_group_id in (-1004377458972, 0, 123):
+        try:
+            known_basic_group_message_request(
+                invalid_group_id,
+                91,
+                FakeGetMessagesRequest,
+                FakeInputMessageID,
+            )
+        except RuntimeError as error:
+            assert 'basic Telegram group ID' in str(error)
+        else:
+            raise AssertionError('Supergroup, channel, and user IDs must not trigger a bot dialogs lookup.')
+
     print('telegram_relay offline contracts passed')
 
 

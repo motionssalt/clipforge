@@ -81,17 +81,62 @@ def preflight_space(expected_bytes: int, work_dir: Path) -> None:
         fail(f'Insufficient central-runner disk space for this relay source (need at least {required // (1024 * 1024)} MiB free).')
 
 
-async def find_dialog_entity(client: Any, marked_chat_id: int) -> Any:
-    from telethon import utils
-    async for dialog in client.iter_dialogs(limit=None):
-        if int(utils.get_peer_id(dialog.entity)) == marked_chat_id:
-            return dialog.entity
-    fail('Bot B cannot access the configured internal group through MTProto.')
+def verify_bot_group_access(
+    bot_token: str,
+    marked_chat_id: int,
+    requester: Any = requests.get,
+) -> None:
+    """Confirm Bot B can access the configured basic relay group.
+
+    A bot that has not been added to the group cannot resolve its messages.
+    Check this with the supported Bot API before opening the MTProto transfer,
+    while deliberately keeping Telegram's response body out of workflow logs.
+    """
+    try:
+        response = requester(
+            f'https://api.telegram.org/bot{bot_token}/getChat',
+            params={'chat_id': marked_chat_id},
+            timeout=REQUEST_TIMEOUT,
+        )
+        payload = response.json()
+    except Exception as error:
+        raise RuntimeError('Bot B group-access preflight could not contact Telegram.') from error
+    result = payload.get('result') if isinstance(payload, dict) else None
+    if not getattr(response, 'ok', False) or not isinstance(result, dict):
+        fail(
+            'Bot B cannot access the configured private relay group. Add '
+            'Bot B to that group, then retry the relay.'
+        )
+    if int(result.get('id') or 0) != marked_chat_id or result.get('type') != 'group':
+        fail('The configured private relay group is not an accessible basic Telegram group.')
+
+
+def known_basic_group_message_request(
+    marked_chat_id: int,
+    message_id: int,
+    request_factory: Any,
+    input_message_factory: Any,
+) -> Any:
+    """Build a direct request for one known message in a basic group.
+
+    Bot accounts cannot enumerate dialogs, so relay media must be addressed by
+    the exact message ID already authenticated in Bot A's sealed payload. A
+    normal Telegram group uses a negative marked ID without the ``-100``
+    supergroup/channel prefix and is retrieved through ``messages.getMessages``.
+    """
+    if not (-1_000_000_000_000 < marked_chat_id < 0):
+        fail(
+            'The private relay must use a basic Telegram group ID (for example '
+            '-5345479732), not a supergroup or channel ID.'
+        )
+    if message_id <= 0:
+        fail('The private relay message ID is invalid.')
+    return request_factory(id=[input_message_factory(message_id)])
 
 
 async def download_group_media(telegram: dict[str, Any], output_path: Path) -> None:
     try:
-        from telethon import TelegramClient, functions
+        from telethon import TelegramClient, functions, types
         from telethon.sessions import MemorySession
     except ImportError as error:
         raise RuntimeError('Bot B MTProto dependencies are unavailable.') from error
@@ -103,6 +148,8 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
     bot_token = str(os.environ.get('BOTB_MTPROTO_BOT_TOKEN') or '')
     if not api_hash or not bot_token:
         fail('Bot B MTProto credentials are not configured.')
+    group_chat_id = int(telegram['group_chat_id'])
+    verify_bot_group_access(bot_token, group_chat_id)
     expected_size = int(telegram['declared_size'])
     output_path.parent.mkdir(parents=True, exist_ok=True)
     preflight_space(expected_size, output_path.parent)
@@ -112,9 +159,21 @@ async def download_group_media(telegram: dict[str, Any], output_path: Path) -> N
         await client(functions.auth.ImportBotAuthorizationRequest(
             flags=0, api_id=api_id, api_hash=api_hash, bot_auth_token=bot_token
         ))
-        entity = await find_dialog_entity(client, int(telegram['group_chat_id']))
-        message = await client.get_messages(entity, ids=int(telegram['group_message_id']))
-        if not message or not message.media:
+        group_message_id = int(telegram['group_message_id'])
+        request = known_basic_group_message_request(
+            group_chat_id,
+            group_message_id,
+            functions.messages.GetMessagesRequest,
+            types.InputMessageID,
+        )
+        result = await client(request)
+        messages = list(getattr(result, 'messages', []) or [])
+        message = next(
+            (candidate for candidate in messages
+             if int(getattr(candidate, 'id', 0) or 0) == group_message_id),
+            None,
+        )
+        if not message or not getattr(message, 'media', None):
             fail('The internal relay message is unavailable or has no media.')
         mime = str(getattr(getattr(message, 'file', None), 'mime_type', '') or '').lower()
         actual_size = int(getattr(getattr(message, 'file', None), 'size', 0) or 0)
