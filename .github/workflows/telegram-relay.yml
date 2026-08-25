@@ -63,7 +63,7 @@ jobs:
           test -n "$BOTB_MTPROTO_API_ID"
           test -n "$BOTB_MTPROTO_API_HASH"
           test -n "$BOTB_MTPROTO_BOT_TOKEN"
-          docker run --detach --rm --name clipforge-local-bot-api --publish 127.0.0.1:8081:8081 \
+          docker run --detach --name clipforge-local-bot-api --publish 127.0.0.1:8081:8081 \
             aiogram/telegram-bot-api:latest \
             --api-id="$BOTB_MTPROTO_API_ID" \
             --api-hash="$BOTB_MTPROTO_API_HASH" \
