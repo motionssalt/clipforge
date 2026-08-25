@@ -40,9 +40,9 @@ class FakeTelegramResponse:
 
 def successful_group_requester(url: str, *, params: dict, timeout: int) -> FakeTelegramResponse:
     assert url.endswith('/getChat')
-    assert params == {'chat_id': -5345479732}
+    assert params == {'chat_id': -5405387856}
     assert timeout > 0
-    return FakeTelegramResponse(True, {'ok': True, 'result': {'id': -5345479732, 'type': 'group'}})
+    return FakeTelegramResponse(True, {'ok': True, 'result': {'id': -5405387856, 'type': 'group'}})
 
 
 def missing_group_requester(url: str, *, params: dict, timeout: int) -> FakeTelegramResponse:
@@ -83,9 +83,9 @@ def main() -> None:
 
     # Bot B must be a member of the configured basic group. The preflight uses
     # Bot API getChat and never exposes Telegram's response body in workflow logs.
-    verify_bot_group_access('test-token', -5345479732, successful_group_requester)
+    verify_bot_group_access('test-token', -5405387856, successful_group_requester)
     try:
-        verify_bot_group_access('test-token', -5345479732, missing_group_requester)
+        verify_bot_group_access('test-token', -5405387856, missing_group_requester)
     except RuntimeError as error:
         assert 'Add Bot B' in str(error)
     else:
@@ -95,7 +95,7 @@ def main() -> None:
     # group is a basic group, so the exact authenticated message is requested
     # directly through messages.getMessages instead of enumerating dialogs.
     direct_request = known_basic_group_message_request(
-        -5345479732,
+        -5405387856,
         91,
         FakeGetMessagesRequest,
         FakeInputMessageID,

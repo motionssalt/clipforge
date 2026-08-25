@@ -5,7 +5,7 @@
   "compatibility_date": "2025-09-01",
   "workers_dev": true,
   "vars": {
-    "INTERNAL_RELAY_GROUP_CHAT_ID": "-5345479732",
+    "INTERNAL_RELAY_GROUP_CHAT_ID": "-5405387856",
     "BOT_A_TELEGRAM_ID": "8670100252",
     "RELAY_GITHUB_REPOSITORY": "motionssalt/clipforge"
   },

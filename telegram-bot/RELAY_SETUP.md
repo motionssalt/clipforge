@@ -4,7 +4,7 @@ The direct-forward feature uses two shared bots and a temporary trusted workflow
 
 ## BotFather and group prerequisites
 
-Both Bot A and Bot B must be members of the configured private **basic Telegram group** (a negative ID such as `-5345479732`, not a `-100…` supergroup/channel ID). Make both administrators where the group permits it. Enable **Bot-to-Bot Communication Mode** for at least Bot B, and disable Bot B’s Group Privacy Mode. Confirm that each bot’s `getChat` call succeeds for the configured group before production use; a `chat not found` response means that bot has not been added. The relay requests the single authenticated media message directly and deliberately never enumerates dialogs, which Telegram disallows for bot accounts.
+Both Bot A and Bot B must be members of the configured private **basic Telegram group** (a negative ID such as `-5405387856`, not a `-100…` supergroup/channel ID). Make both administrators where the group permits it. Enable **Bot-to-Bot Communication Mode** for at least Bot B, and disable Bot B’s Group Privacy Mode. Confirm that each bot’s `getChat` call succeeds for the configured group before production use; a `chat not found` response means that bot has not been added. The relay requests the single authenticated media message directly and deliberately never enumerates dialogs, which Telegram disallows for bot accounts.
 
 ## Bot A Worker bindings
 
