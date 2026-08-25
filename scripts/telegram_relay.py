@@ -148,7 +148,7 @@ def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: in
         lookup = requests.post(
             f'{base}/bot{bot_token}/getFile',
             data={'file_id': file_id},
-            timeout=REQUEST_TIMEOUT,
+            timeout=(REQUEST_TIMEOUT, 15 * 60),
         )
         result = lookup.json()
     except Exception as error:
