@@ -9,7 +9,8 @@
       "6a8cff1e77555aae012e87b3"
     ],
     "youtube": [
-      "6a89d06a77555aae01671ca2"
+      "6a89d06a77555aae01671ca2",
+      "6a8cff4277555aae012e8a8d"
     ]
   },
   "smart_schedule": {
@@ -20,5 +21,5 @@
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1787686036
+  "updated_at_epoch": 1787686038
 }
