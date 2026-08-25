@@ -1,12 +1,12 @@
 {
   "job_id": "manual-1787634650272",
-  "stage": "stage_a_running",
-  "message": "Downloading source video",
+  "stage": "error",
+  "message": "Stage A failed. See workflow run for logs.",
   "release_tag": "clipforge-manual-1787634650272",
   "release_url": "",
   "assets": {},
   "created_at_epoch": 1787634771,
-  "updated_at_epoch": 1787634771,
+  "updated_at_epoch": 1787634774,
   "expires_at_epoch": 1787677971,
   "extra": {
     "workflow_run_id": "32811819674",
