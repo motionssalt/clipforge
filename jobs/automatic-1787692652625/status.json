@@ -1,7 +1,7 @@
 {
   "job_id": "automatic-1787692652625",
-  "stage": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with direct Gemini API native tools.",
+  "stage": "stage_b_queued",
+  "message": "Automatic analysis validated production.json. Dispatching the existing Stage B workflow.",
   "release_tag": "clipforge-automatic-1787692652625",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787692652625",
   "assets": {
@@ -13,7 +13,7 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787692652625/transcript.json"
   },
   "created_at_epoch": 1787692690,
-  "updated_at_epoch": 1787694262,
+  "updated_at_epoch": 1787694412,
   "expires_at_epoch": 1787735890,
   "extra": {
     "torrent_selection_path": "jobs/automatic-1787692652625/torrent-selection.json",
@@ -21,6 +21,10 @@
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32900843997",
     "automatic_mode": "true",
     "workflow_phase": "stage_a",
-    "automatic_analysis_result": "jobs/automatic-1787692652625/automatic_analysis.json"
+    "automatic_analysis_result": "jobs/automatic-1787692652625/automatic_analysis.json",
+    "production_ref": "path:jobs/automatic-1787692652625/production.json",
+    "music_ref": "path:audio-library/MONTAGEM_LYNARO_FILI__Super_Slowed_.m4a",
+    "music_source": "explicit_library",
+    "original_asset_name": "original.mkv"
   }
 }
