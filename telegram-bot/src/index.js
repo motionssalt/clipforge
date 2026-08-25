@@ -14,7 +14,7 @@ import {
   clearFlow, ensureTaskLabel, getCredentials, getJobIdForLabel, getState, getTaskOptions, markUpdateSeen,
   putCredentials, putRelayJob, putState, removeTask, setTaskOptions, taskLabels
 } from './storage.js';
-import { answerCallback, buttons, copyMessage, deleteMessage, downloadTelegramFile, downloadTelegramFileBytes, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage } from './telegram.js';
+import { answerCallback, buttons, copyMessage, deleteMessage, downloadTelegramFile, downloadTelegramFileBytes, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage, TelegramError } from './telegram.js';
 import { RELAY_SOURCE_TYPE, relayCaption, relayReadyMarker, relayVideoMetadata } from './relay.js';
 
 const SOURCE_RE = /^(https?:\/\/|magnet:\?)/i;
@@ -1258,13 +1258,21 @@ async function handleRelayVideo(env, chatId, message) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return;
   const jobId = startTaskJobId(state.pending.mode);
-  const copied = await copyMessage(env, relayGroup, chatId, message.message_id, relayCaption(jobId, chatId));
+  let resolvedRelayGroup = Number(relayGroup);
+  let copied;
+  try {
+    copied = await copyMessage(env, resolvedRelayGroup, chatId, message.message_id, relayCaption(jobId, chatId));
+  } catch (error) {
+    if (!(error instanceof TelegramError) || !Number.isSafeInteger(error.migrateToChatId)) throw error;
+    resolvedRelayGroup = error.migrateToChatId;
+    copied = await copyMessage(env, resolvedRelayGroup, chatId, message.message_id, relayCaption(jobId, chatId));
+  }
   const internalMessageId = Number(copied && copied.message_id || 0);
   if (!Number.isSafeInteger(internalMessageId) || internalMessageId <= 0) throw new Error('Telegram copied the video without returning an internal relay message identifier.');
   state.pending.source = RELAY_SOURCE_TYPE;
   state.pending.relay = {
     ...media,
-    internal_group_chat_id: Number(relayGroup),
+    internal_group_chat_id: resolvedRelayGroup,
     internal_group_message_id: internalMessageId,
   };
   state.pending.jobId = jobId;

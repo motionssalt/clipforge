@@ -518,7 +518,8 @@ import { __test as relayWorkerTest } from '../src/relay-worker.js';
 test('direct video source is copied into the internal group without calling getFile or downloading media bytes', async () => {
   const workerEnv = {
     ...env(), TELEGRAM_BOT_TOKEN: 'test-token', TELEGRAM_WEBHOOK_SECRET: 'expected-secret',
-    INTERNAL_RELAY_GROUP_CHAT_ID: '-1001234567890'
+    INTERNAL_RELAY_GROUP_CHAT_ID: '-1001234567890', BOT_B_TELEGRAM_USERNAME: 'Clipforgedl_bot',
+    RELAY_ENCRYPTION_KEY: encryptionSecret
   };
   await putCredentials(workerEnv, 77, { githubPat: 'test-clone-pat', repo: 'example/clone', geminiKeys: [] });
   await putState(workerEnv, 77, { flow: 'manual_source', pending: { mode: 'manual', seriesMode: false }, activeViewId: null });
@@ -541,10 +542,12 @@ test('direct video source is copied into the internal group without calling getF
     assert.equal(response.status, 200);
     assert.equal(calls.length, 2);
     assert.match(calls[0].url, /\/copyMessage$/);
-    assert.equal(calls[0].body.chat_id, '-1001234567890');
+    assert.equal(calls[0].body.chat_id, -1001234567890);
     assert.equal(calls[0].body.from_chat_id, 77);
     assert.equal(calls[0].body.message_id, 701);
     assert.match(calls[0].body.caption, /^CFRELAY1:manual-/);
+    assert.match(calls[1].url, /\/sendMessage$/);
+    assert.match(calls[1].body.text, /Video securely staged/);
     assert.equal(calls.some((call) => /\/getFile$|\/file\/bot/.test(call.url)), false);
     const state = await getState(workerEnv, 77);
     assert.equal(state.pending.source, 'telegram_bot_forward');

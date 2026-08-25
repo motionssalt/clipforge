@@ -2,13 +2,23 @@ function telegramUrl(token, method) {
   return `https://api.telegram.org/bot${token}/${method}`;
 }
 
+export class TelegramError extends Error {
+  constructor(description, body = null) {
+    super(description);
+    this.name = 'TelegramError';
+    const migrated = body && body.parameters && Number(body.parameters.migrate_to_chat_id);
+    this.migrateToChatId = Number.isSafeInteger(migrated) ? migrated : null;
+  }
+}
+
 export async function telegram(env, method, payload) {
   const response = await fetch(telegramUrl(env.TELEGRAM_BOT_TOKEN, method), {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
   });
   const body = await response.json().catch(() => null);
   if (!response.ok || !body || body.ok !== true) {
-    throw new Error(body && body.description ? `Telegram could not complete that request: ${body.description}` : 'Telegram could not complete that request.');
+    const description = body && body.description ? `Telegram could not complete that request: ${body.description}` : 'Telegram could not complete that request.';
+    throw new TelegramError(description, body);
   }
   return body.result;
 }

@@ -40,3 +40,26 @@ assert events[4]["start"] >= events[3]["end"]
 assert abs(events[-1]["end"] - 1.92) < 1e-9
 
 print("PASS: inserted transcription timings are allocated across script cuts without late-caption drift")
+
+import generate_subtitles_cinematic as cinematic  # noqa: E402
+
+edge_cards = [
+    {"start": 5.02, "speak_end": 6.0},
+    {"start": 6.0, "speak_end": 8.0},
+]
+cinematic.normalize_caption_edge_coverage(edge_cards, narration_start=5.02, narration_end=8.0)
+assert edge_cards[0]["start"] == 0.0
+cinematic.validate_caption_timeline(edge_cards, video_duration=8.0)
+
+bad_gap_cards = [
+    {"start": 0.0, "speak_end": 1.0},
+    {"start": 5.0, "speak_end": 8.0},
+]
+try:
+    cinematic.validate_caption_timeline(bad_gap_cards, video_duration=8.0)
+except ValueError as error:
+    assert "internal blank gap" in str(error)
+else:
+    raise AssertionError("A real internal caption gap must remain a hard failure")
+
+print("PASS: VAD-trimmed edge silence is normalized without allowing internal caption gaps")

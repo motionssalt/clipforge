@@ -576,6 +576,22 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     return runs
 
 
+def normalize_caption_edge_coverage(sentences: list[dict], narration_start: float, narration_end: float) -> None:
+    """Extend only the edge cards over detected narration silence.
+
+    VAD-backed transcription deliberately omits leading and trailing silence.
+    The first/last visual caption card therefore needs to cover that silence so
+    an opening or closing pause cannot trigger a false timeline failure. This
+    does not alter any displayed word or conceal interior timing gaps.
+    """
+    if not sentences:
+        return
+    if math.isfinite(narration_start) and narration_start > 0:
+        sentences[0]["start"] = 0.0
+    if math.isfinite(narration_end) and narration_end > 0:
+        sentences[-1]["speak_end"] = max(float(sentences[-1]["speak_end"]), narration_end)
+
+
 def validate_caption_timeline(sentences: list[dict], video_duration: float) -> None:
     """Fail closed when caption cards cannot continuously cover narration.
 
@@ -874,6 +890,9 @@ def main() -> None:
         words = timed_words
 
     sentences = split_sentences(words)
+    narration_start = min((float(event["start"]) for event in timed_words), default=0.0)
+    narration_end = max((float(event["end"]) for event in timed_words), default=0.0)
+    normalize_caption_edge_coverage(sentences, narration_start, narration_end)
     validate_caption_timeline(sentences, video_duration)
 
     source_width, source_height = subtitle_common.probe_video_size(args.merged_video_mp4)
