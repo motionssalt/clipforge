@@ -358,11 +358,12 @@ def api_headers(token: str) -> dict[str, str]:
     }
 
 
-def github_request(token: str, method: str, url: str, **kwargs: Any) -> requests.Response:
+def github_request(token: str, method: str, url: str, *, operation: str, **kwargs: Any) -> requests.Response:
     response = requests.request(method, url, headers=api_headers(token), timeout=REQUEST_TIMEOUT, **kwargs)
     if response.status_code >= 400:
-        # Do not interpolate response content: it can reflect a credential or input.
-        raise RuntimeError(f'GitHub handoff request failed with HTTP {response.status_code}.')
+        # Do not interpolate URLs or response content: either can reflect a
+        # credential or untrusted input. The static operation label is safe.
+        raise RuntimeError(f'GitHub {operation} failed with HTTP {response.status_code}.')
     return response
 
 
@@ -372,7 +373,7 @@ def release_tag(job_id: str) -> str:
 
 def create_release(repo: str, token: str, job_id: str) -> dict[str, Any]:
     url = f'https://api.github.com/repos/{repo}/releases'
-    response = github_request(token, 'POST', url, json={
+    response = github_request(token, 'POST', url, operation='temporary release creation', json={
         'tag_name': release_tag(job_id),
         'target_commitish': 'main',
         'name': f'ClipForge temporary relay input — {job_id}',
@@ -410,7 +411,7 @@ def sha256(path: Path) -> str:
 
 def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, inputs: dict[str, Any], size: int, digest: str) -> None:
     content_url = f'https://api.github.com/repos/{repo}/contents/jobs/{quote(job_id, safe="")}/stage-a-request.json?ref=main'
-    current = github_request(token, 'GET', content_url).json()
+    current = github_request(token, 'GET', content_url, operation='Stage A request lookup').json()
     try:
         request_doc = json.loads(base64.b64decode(str(current['content']).replace('\n', '')).decode())
         request_sha = str(current['sha'])
@@ -430,7 +431,7 @@ def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, input
     })
     encoded = base64.b64encode((json.dumps(request_doc, indent=2, sort_keys=True) + '\n').encode()).decode()
     write_url = f'https://api.github.com/repos/{repo}/contents/jobs/{quote(job_id, safe="")}/stage-a-request.json'
-    github_request(token, 'PUT', write_url, json={
+    github_request(token, 'PUT', write_url, operation='Stage A request update', json={
         'message': f'clipforge: attach private relay source for job {job_id}',
         'content': encoded,
         'sha': request_sha,
@@ -446,7 +447,7 @@ def write_stage_a_request_and_dispatch(repo: str, token: str, job_id: str, input
         'job_id': job_id,
     })
     dispatch_url = f'https://api.github.com/repos/{repo}/actions/workflows/stage-a.yml/dispatches'
-    github_request(token, 'POST', dispatch_url, json={'ref': 'main', 'inputs': dispatch_inputs})
+    github_request(token, 'POST', dispatch_url, operation='Stage A dispatch', json={'ref': 'main', 'inputs': dispatch_inputs})
 
 
 def run(job_id: str, serialized_payload: str, relay_file_id: str = '') -> None:
@@ -468,7 +469,7 @@ def run(job_id: str, serialized_payload: str, relay_file_id: str = '') -> None:
         # Best-effort cleanup. No error details are logged because release API
         # errors can include untrusted reflected content.
         try:
-            github_request(token, 'DELETE', f'https://api.github.com/repos/{repo}/releases/{int(release["id"])}')
+            github_request(token, 'DELETE', f'https://api.github.com/repos/{repo}/releases/{int(release["id"])}', operation='temporary release cleanup')
         except Exception:
             pass
         raise
