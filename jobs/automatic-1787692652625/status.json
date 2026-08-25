@@ -1,0 +1,14 @@
+{
+  "job_id": "automatic-1787692652625",
+  "stage": "awaiting_torrent_selection",
+  "message": "Choose a video from this torrent to begin Stage A.",
+  "release_tag": "clipforge-automatic-1787692652625",
+  "release_url": "",
+  "assets": {},
+  "created_at_epoch": 1787692690,
+  "updated_at_epoch": 1787692690,
+  "expires_at_epoch": 1787735890,
+  "extra": {
+    "torrent_selection_path": "jobs/automatic-1787692652625/torrent-selection.json"
+  }
+}
