@@ -246,7 +246,10 @@ async def _download_telegram_parallel(client, message, output_path: str, media_s
             while True:
                 try:
                     result = await asyncio.wait_for(
-                        child(functions.upload.GetFileRequest(location, offset=offset, limit=length)),
+                        # Telegram requires request limits to be a valid MTProto
+                        # part size. Keep the final request at 512 KiB and accept
+                        # its naturally shorter response.
+                        child(functions.upload.GetFileRequest(location, offset=offset, limit=TELEGRAM_PARALLEL_PART_BYTES)),
                         timeout=25,
                     )
                     if isinstance(result, types.upload.FileCdnRedirect):
