@@ -59,6 +59,7 @@ def test_stage_a_uses_no_social_session_or_youtube_runtime() -> None:
     assert 'CLIPFORGE_TELEGRAM_API_ID' in workflow
     assert 'CLIPFORGE_TELEGRAM_API_HASH' in workflow
     assert 'CLIPFORGE_TELEGRAM_SESSION' in workflow
+    assert 'cryptg>=0.4,<1' in requirements
     assert 'telethon>=1.44,<2' in requirements
 
 

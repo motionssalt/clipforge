@@ -54,4 +54,7 @@ edge-tts==7.2.8
 # encrypted MTProto session may be injected only by Stage A to retrieve public
 # channel media that Telegram does not expose to anonymous web clients.
 yt-dlp[default]>=2026.1,<2027
+# Telethon automatically uses cryptg for MTProto encryption/decryption when
+# available. This removes the pure-Python AES bottleneck for large media.
+cryptg>=0.4,<1
 telethon>=1.44,<2
