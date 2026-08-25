@@ -4,15 +4,15 @@ import {
 } from './constants.js';
 import { maskSecret } from './crypto.js';
 import {
-  GitHubError, actionsSecretExists, cancelWorkflowRun, createPrivateShadowClone, currentBranchSha, deleteZernioSecret, dispatchWorkflow, geminiFingerprint, getJsonFile,
+  GitHubError, actionsSecretExists, cancelWorkflowRun, clearMusicDefaultIfTrack, createPrivateShadowClone, currentBranchSha, deleteAudioLibraryTrack, deleteClipforgeJob, deleteZernioSecret, dispatchWorkflow, geminiFingerprint, getJsonFile,
   getRepositoryFileBytes, listAudioLibrary, listJobIds, readGeminiMetadata, readSeriesSettings, readStageARequest, readStatus, readZernioAccounts, readZernioSettings, saveAutomaticMusicChoice,
-  putBinaryFile, saveNarrator, saveProductionPlan, saveSeriesSettings, saveStageARequest, saveWatermark, saveZernioSettings, tryGetJsonFile, updateGeminiSecret, updateZernioSecret, validateConnection,
+  putBinaryFile, saveMusicDefault, saveNarrator, saveProductionPlan, saveSeriesSettings, saveStageARequest, saveWatermark, saveZernioSettings, tryGetJsonFile, updateGeminiSecret, updateZernioSecret, validateConnection,
   writeGeminiMetadata, zernioFingerprint
 } from './github.js';
 import { validateProductionPlan } from './production.js';
 import {
   clearFlow, ensureTaskLabel, getCredentials, getJobIdForLabel, getState, getTaskOptions, markUpdateSeen,
-  putCredentials, putState, setTaskOptions, taskLabels
+  putCredentials, putState, removeTask, setTaskOptions, taskLabels
 } from './storage.js';
 import { answerCallback, buttons, deleteMessage, downloadTelegramFile, downloadTelegramFileBytes, editMessage, getTelegramFile, sendAudioBytes, sendDocumentBytes, sendMessage } from './telegram.js';
 
@@ -20,6 +20,11 @@ const SOURCE_RE = /^(https?:\/\/|magnet:\?)/i;
 const SAFE_JOB_RE = /^[A-Za-z0-9._-]+$/;
 const MAX_TASKS = 12;
 const MAX_TORRENT_BYTES = 1024 * 1024;
+const MAX_LIBRARY_TRACK_BYTES = 8 * 1024 * 1024;
+const MUSIC_LIBRARY_TRACKS_PER_PAGE = 6;
+const SAFE_AUDIO_FILENAME_RE = /^[^/\\\u0000-\u001f\u007f]+\.(?:mp3|m4a|aac|wav|ogg|opus|flac)$/i;
+const TELEGRAM_PUBLIC_POST_RE = /^https?:\/\/(?:t\.me|telegram\.me)\/(?:s\/)?[A-Za-z0-9_]{5,64}\/[1-9][0-9]*(?:[/?#]|$)/i;
+const DISABLED_SOCIAL_SOURCE_HOSTS = ['youtube-nocookie.com', 'youtu.be', 'youtube.com', 'vm.tiktok.com', 'vt.tiktok.com', 'tiktok.com', 'fb.watch', 'facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'vimeo.com', 'redd.it', 'reddit.com'];
 const TORRENT_CANDIDATES_PER_PAGE = 8;
 
 function escapeHtml(value) {
@@ -117,7 +122,7 @@ function homeMenu(state) {
 function settingsMenu() {
   return buttons([
     [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini API key', callback_data: 'set:gemini' }],
-    [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music default', callback_data: 'set:music_default' }],
+    [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music library', callback_data: 'set:music_library' }],
     [{ text: 'Watermark', callback_data: 'set:watermark' }, { text: 'Zernio publishing', callback_data: 'set:zernio' }],
     [{ text: 'Series Mode', callback_data: 'set:series' }, { text: 'Back to menu', callback_data: 'menu:home' }]
   ]);
@@ -212,6 +217,131 @@ function musicMenu() {
     [{ text: 'Choose library track', callback_data: 'music:library' }],
     [{ text: 'Back', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]
   ]);
+}
+
+function isSafeAudioLibraryPath(path) {
+  return /^audio-library\/[^/\\\u0000-\u001f\u007f]+$/.test(String(path || ''));
+}
+
+async function readMusicDefaultPath(credentials) {
+  try {
+    const { document } = await getJsonFile(credentials, credentials.repo, MUSIC_DEFAULT_PATH);
+    const path = document && document.library_track_path;
+    return isSafeAudioLibraryPath(path) ? path : null;
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+async function resolveMusicTrackByIndex(credentials, indexValue) {
+  const index = Number(indexValue);
+  if (!Number.isInteger(index) || index < 0) throw new Error('That music-library selection is invalid.');
+  const tracks = await listAudioLibrary(credentials, credentials.repo);
+  const track = tracks[index];
+  if (!track || !isSafeAudioLibraryPath(track.path)) throw new Error('That music-library track is no longer available. Refresh the library and try again.');
+  return track;
+}
+
+async function resolveMusicTrackBySha(credentials, sha) {
+  if (!/^[A-Fa-f0-9]{40}$/.test(String(sha || ''))) throw new Error('That music-library deletion request is invalid.');
+  const tracks = await listAudioLibrary(credentials, credentials.repo);
+  const track = tracks.find((entry) => entry.sha === sha);
+  if (!track || !isSafeAudioLibraryPath(track.path)) throw new Error('That music-library track is no longer available. Refresh the library and try again.');
+  return track;
+}
+
+async function showMusicLibrary(env, chatId, pageValue = '0', messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const [tracks, defaultPath] = await Promise.all([
+    listAudioLibrary(credentials, credentials.repo),
+    readMusicDefaultPath(credentials)
+  ]);
+  const requested = Number(pageValue);
+  const totalPages = Math.max(1, Math.ceil(tracks.length / MUSIC_LIBRARY_TRACKS_PER_PAGE));
+  const page = Number.isInteger(requested) ? Math.min(Math.max(requested, 0), totalPages - 1) : 0;
+  const lines = ['<b>Music library</b>'];
+  lines.push(`Tracks in this Shadow Clone: <b>${tracks.length}</b>`);
+  lines.push(defaultPath ? `Saved default: <code>${escapeHtml(defaultPath.replace(/^audio-library\//, ''))}</code>` : 'Saved default: not set');
+  lines.push('Preview, set the default, or delete library tracks below. Uploads are clone-scoped; one-off task music is never added here.');
+  const rows = [];
+  for (let index = page * MUSIC_LIBRARY_TRACKS_PER_PAGE; index < Math.min(tracks.length, (page + 1) * MUSIC_LIBRARY_TRACKS_PER_PAGE); index += 1) {
+    const track = tracks[index];
+    const defaultMark = track.path === defaultPath ? ' ✓ default' : '';
+    rows.push([{ text: `▶ ${telegramButtonText(`${track.name} · ${formatBytes(track.size)}${defaultMark}`, 58)}`, callback_data: `ml:preview:${index}` }]);
+    rows.push([
+      { text: track.path === defaultPath ? 'Default ✓' : 'Set default', callback_data: `ml:default:${index}` },
+      { text: 'Delete', callback_data: `ml:delete:${track.sha}` }
+    ]);
+  }
+  if (!tracks.length) rows.push([{ text: 'No tracks yet — add one', callback_data: 'ml:upload' }]);
+  if (totalPages > 1) {
+    const navigation = [];
+    if (page > 0) navigation.push({ text: 'Previous', callback_data: `ml:page:${page - 1}` });
+    navigation.push({ text: `Page ${page + 1}/${totalPages}`, callback_data: `ml:page:${page}` });
+    if (page < totalPages - 1) navigation.push({ text: 'Next', callback_data: `ml:page:${page + 1}` });
+    rows.push(navigation);
+  }
+  rows.push([{ text: 'Upload track', callback_data: 'ml:upload' }, { text: 'Refresh library', callback_data: `ml:page:${page}` }]);
+  rows.push([{ text: 'Back to settings', callback_data: 'menu:settings' }]);
+  return renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: buttons(rows) }, messageId);
+}
+
+async function previewMusicLibraryTrack(env, chatId, indexValue) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const track = await resolveMusicTrackByIndex(credentials, indexValue);
+  const bytes = await getRepositoryFileBytes(credentials, credentials.repo, track.path, MAX_LIBRARY_TRACK_BYTES);
+  await sendAudioBytes(env, chatId, bytes, track.name, `<b>${escapeHtml(track.name)}</b>\n${escapeHtml(formatBytes(track.size))} · preview from this Shadow Clone music library`);
+}
+
+async function setMusicLibraryDefault(env, chatId, indexValue, messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const track = await resolveMusicTrackByIndex(credentials, indexValue);
+  await saveMusicDefault(credentials, credentials.repo, track.path);
+  return showMusicLibrary(env, chatId, String(Math.floor(Number(indexValue) / MUSIC_LIBRARY_TRACKS_PER_PAGE)), messageId);
+}
+
+async function promptMusicLibraryDelete(env, chatId, sha, messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const track = await resolveMusicTrackBySha(credentials, sha);
+  return renderInteractiveView(env, chatId, `<b>Delete music track?</b>\n\n<code>${escapeHtml(track.name)}</code>\n${escapeHtml(formatBytes(track.size))}\n\nThis permanently removes the track from this Shadow Clone. If it is the saved default, the default will be cleared. Existing job-local music files are not touched.`, { replyMarkup: buttons([[{ text: 'Delete track', callback_data: `ml:deleteconfirm:${track.sha}` }, { text: 'Keep track', callback_data: 'set:music_library' }]]) }, messageId);
+}
+
+async function deleteMusicLibraryTrack(env, chatId, sha, messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const track = await resolveMusicTrackBySha(credentials, sha);
+  await deleteAudioLibraryTrack(credentials, credentials.repo, track.path);
+  await clearMusicDefaultIfTrack(credentials, credentials.repo, track.path);
+  return showMusicLibrary(env, chatId, '0', messageId);
+}
+
+async function promptMusicLibraryUpload(env, chatId, messageId = null) {
+  if (!await requireCredentials(env, chatId)) return;
+  const state = await getState(env, chatId);
+  state.flow = 'settings_music_upload';
+  state.pending = {};
+  await putState(env, chatId, state);
+  return renderInteractiveView(env, chatId, `Send one audio document for this Shadow Clone music library. Allowed formats: <code>.mp3</code>, <code>.m4a</code>, <code>.aac</code>, <code>.wav</code>, <code>.ogg</code>, <code>.opus</code>, or <code>.flac</code>. Maximum size: ${formatBytes(MAX_LIBRARY_TRACK_BYTES)}.`, { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+}
+
+async function handleMusicLibraryUpload(env, chatId, document) {
+  const filename = String(document && document.file_name || '').trim();
+  const size = Number(document && document.file_size || 0);
+  if (!SAFE_AUDIO_FILENAME_RE.test(filename)) throw new Error('Upload an audio file with an allowed audio extension and a safe filename.');
+  if (!Number.isFinite(size) || size <= 0 || size > MAX_LIBRARY_TRACK_BYTES) throw new Error(`Music-library uploads must be non-empty and no larger than ${formatBytes(MAX_LIBRARY_TRACK_BYTES)}.`);
+  const credentials = await requireCredentials(env, chatId);
+  if (!credentials) return;
+  const file = await getTelegramFile(env, document.file_id);
+  if (!file || !file.file_path) throw new Error('Telegram did not return the uploaded audio file.');
+  const bytes = await downloadTelegramFileBytes(env, file.file_path, MAX_LIBRARY_TRACK_BYTES);
+  await putBinaryFile(credentials, credentials.repo, `audio-library/${filename}`, bytes, `clipforge: add ${filename} to audio library`);
+  await clearFlow(env, chatId);
+  await renderTaskInputResponse(env, chatId, `<b>Music track added.</b>\n<code>${escapeHtml(filename)}</code>\n${escapeHtml(formatBytes(bytes.length))}\n\nYou can preview it, set it as the default, or delete it from the library.`, { replyMarkup: buttons([[{ text: 'Open music library', callback_data: 'set:music_library' }, { text: 'Back to settings', callback_data: 'menu:settings' }]]) });
 }
 
 function durationMenu() {
@@ -429,10 +559,34 @@ function normalizeFocus(value) {
   return normalized;
 }
 
+function sourceHost(value) {
+  try { return new URL(value).hostname.toLowerCase().replace(/\.$/, ''); }
+  catch { return ''; }
+}
+
+function hostMatches(host, allowed) {
+  return host === allowed || host.endsWith(`.${allowed}`);
+}
+
+function disabledSocialSourceHost(value) {
+  const host = sourceHost(value);
+  return DISABLED_SOCIAL_SOURCE_HOSTS.find((allowed) => hostMatches(host, allowed)) || null;
+}
+
+function isPublicTelegramPost(value) {
+  return TELEGRAM_PUBLIC_POST_RE.test(String(value || ''));
+}
+
 function validateSource(value) {
   const source = String(value || '').trim();
-  if (!SOURCE_RE.test(source)) throw new Error('Send a public YouTube link or direct https:// video-file URL, an anyone-with-link Google Drive URL, or a magnet URI.');
+  if (!SOURCE_RE.test(source)) throw new Error('Send a public Telegram channel-post link, a direct https:// video-file URL, an anyone-with-link Google Drive URL, or a magnet URI. To use a social video, first forward or upload it to a public Telegram channel and send that post link.');
   if (source.length > 4000) throw new Error('The source URL is too long.');
+  if (/^https?:\/\//i.test(source)) {
+    const blockedHost = disabledSocialSourceHost(source);
+    if (blockedHost) throw new Error(`${blockedHost} social links are disabled. Forward or upload the video to a public Telegram channel and send its public post link instead.`);
+    const host = sourceHost(source);
+    if ((host === 't.me' || host === 'telegram.me') && !isPublicTelegramPost(source)) throw new Error('Send a public Telegram channel post link in the form https://t.me/<channel>/<message_id>. Private and non-post Telegram links are not supported.');
+  }
   return source;
 }
 
@@ -451,6 +605,10 @@ function formatStatus(label, jobId, status) {
   return lines.join('\n');
 }
 
+function taskCanBeDeleted(status) {
+  return Boolean(status && ['error', 'cancelled', 'complete', 'awaiting_json_upload', 'awaiting_torrent_selection'].includes(status.stage));
+}
+
 function taskButtons(label, status) {
   const rows = [[{ text: 'Refresh', callback_data: `status:${label}` }]];
   if (!status) return buttons(rows);
@@ -459,6 +617,7 @@ function taskButtons(label, status) {
   if (status.stage === 'awaiting_json_upload') rows.push([{ text: 'Get agent prompt', callback_data: `agent:${label}` }, { text: 'Upload production.json', callback_data: `plan:${label}` }]);
   if (['error', 'cancelled', 'complete'].includes(status.stage)) rows.push([{ text: 'Restart Stage B', callback_data: `retry:b:${label}` }]);
   if (['stage_b_queued', 'stage_b_running'].includes(status.stage)) rows.push([{ text: 'Cancel Stage B', callback_data: `cancel:${label}` }]);
+  if (taskCanBeDeleted(status)) rows.push([{ text: 'Delete task', callback_data: `task:delete:${label}` }]);
   return buttons(rows);
 }
 
@@ -593,7 +752,7 @@ async function showCompleted(env, chatId, label, messageId = null) {
   if (assets.final_zip) lines.push(`<a href="${escapeHtml(assets.final_zip)}">Download final ZIP</a>`);
   if (!assets.final_mp4 && !assets.final_zip) lines.push('The completion status has no final asset URL. Open the release from /status.');
   if (status.publishing) lines.push(zernioPublishingSummary(status.publishing));
-  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: buttons([[{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }, { text: 'Refresh', callback_data: `done:${label}` }]]) }, messageId);
+  await renderInteractiveView(env, chatId, lines.join('\n'), { replyMarkup: buttons([[{ text: 'Zernio publishing', callback_data: `zpub:menu:${label}` }, { text: 'Refresh', callback_data: `done:${label}` }], [{ text: 'Delete task', callback_data: `task:delete:${label}` }]]) }, messageId);
 }
 
 async function resumePendingTask(env, chatId, messageId = null) {
@@ -627,7 +786,7 @@ async function beginTask(env, chatId, mode, messageId = null) {
   state.flow = `${mode}_source`;
   state.pending = { mode, seriesMode: Boolean(series && series.enabled === true) };
   await putState(env, chatId, state);
-  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public YouTube link or direct video-file URL; a Google Drive anyone-with-link URL; a magnet URI; or upload a non-empty <code>.torrent</code> document up to 1 MB. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+  await renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel-post link, a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel first, then send that post link. Send /cancel to stop.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
 }
 
 async function setupBack(env, chatId, messageId = null) {
@@ -652,7 +811,7 @@ async function setupBack(env, chatId, messageId = null) {
       state.flow = `${mode}_source`;
       state.pending = pending;
       await putState(env, chatId, state);
-      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend a public YouTube link or direct video-file URL; a Google Drive anyone-with-link URL; a magnet URI; or upload a non-empty <code>.torrent</code> document up to 1 MB. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+      return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} Series task</b>\nSend a public Telegram channel-post link, a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel first, then send that post link. Series Mode does not request editorial focus.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
     }
     state.flow = `${mode}_focus`;
     state.pending = pending;
@@ -671,7 +830,7 @@ async function setupBack(env, chatId, messageId = null) {
     state.flow = `${mode}_source`;
     state.pending = pending;
     await putState(env, chatId, state);
-    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public YouTube link or direct video-file URL; a Google Drive anyone-with-link URL; a magnet URI; or upload a non-empty <code>.torrent</code> document up to 1 MB.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
+    return renderInteractiveView(env, chatId, `<b>${mode === 'automatic' ? 'Automatic' : 'Manual'} task</b>\nSend a public Telegram channel-post link, a direct video-file URL, a Google Drive anyone-with-link URL, a magnet URI, or upload a non-empty <code>.torrent</code> document up to 1 MB. For YouTube or other social videos, forward or upload the video to a public Telegram channel first, then send that post link.`, { replyMarkup: buttons([[{ text: 'Back to menu', callback_data: 'setup:back' }, { text: 'Cancel', callback_data: 'flow:cancel' }]]) }, messageId);
   }
   await clearFlow(env, chatId);
   return renderInteractiveView(env, chatId, 'Task setup closed. Start a new task whenever you are ready.', { replyMarkup: mainMenu() }, messageId);
@@ -828,6 +987,9 @@ async function submitPlan(env, chatId, jsonText) {
 async function handleFlowText(env, chatId, text) {
   const state = await getState(env, chatId);
   if (!state.flow) return false;
+  if (state.flow === 'settings_music_upload') {
+    throw new Error('Use Telegram’s attachment control to send an allowed audio document for the music library.');
+  }
   if (state.flow === 'settings_github_pat' || state.flow === 'settings_shadow_pat') {
     const token = String(text || '').trim();
     if (token.length < 20 || /\s/.test(token)) throw new Error('That does not look like a valid GitHub token. Send the token again without spaces.');
@@ -1012,6 +1174,10 @@ async function handleTorrentUpload(env, chatId, document, state) {
 
 async function handleDocument(env, chatId, document) {
   const state = await getState(env, chatId);
+  if (state.flow === 'settings_music_upload') {
+    await handleMusicLibraryUpload(env, chatId, document);
+    return;
+  }
   if (state.flow === 'manual_source' || state.flow === 'automatic_source') {
     await handleTorrentUpload(env, chatId, document, state);
     return;
@@ -1133,6 +1299,34 @@ async function cancelStageB(env, chatId, label, messageId = null) {
   await renderInteractiveView(env, chatId, `Cancellation requested for Stage B task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
 }
 
+async function promptTaskDelete(env, chatId, label, messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  const status = await readStatus(credentials, credentials.repo, jobId);
+  if (!taskCanBeDeleted(status)) {
+    return renderInteractiveView(env, chatId, 'This task is still active or has not written a terminal status. Refresh it after the run finishes or fails before deleting it.', { replyMarkup: buttons([[{ text: 'Refresh task', callback_data: `status:${label}` }]]) }, messageId);
+  }
+  const publishingWarning = status.publishing ? '\n\nThis does not withdraw any Zernio post that may already have been submitted or published.' : '';
+  return renderInteractiveView(env, chatId, `<b>Delete task ${escapeHtml(label)}?</b>\n\nThis permanently removes the task’s job files, release assets, release tag, and this chat’s task record from the connected Shadow Clone. It cannot be undone.${publishingWarning}`, { replyMarkup: buttons([[{ text: 'Delete task permanently', callback_data: `task:confirm:${label}` }, { text: 'Keep task', callback_data: `status:${label}` }]]) }, messageId);
+}
+
+async function deleteTask(env, chatId, label, messageId = null) {
+  const credentials = await requireCredentials(env, chatId);
+  const jobId = await getJobIdForLabel(env, chatId, label);
+  if (!credentials || !jobId) return;
+  const status = await readStatus(credentials, credentials.repo, jobId);
+  if (!taskCanBeDeleted(status)) throw new Error('This task is still active and cannot be deleted yet. Refresh its status after it stops.');
+  const removed = await deleteClipforgeJob(credentials, credentials.repo, jobId);
+  const localRemoved = await removeTask(env, chatId, label, jobId);
+  if (!localRemoved) throw new Error('The task mapping changed before deletion completed. Refresh the task list.');
+  const state = await getState(env, chatId);
+  if (state.currentTask === jobId) state.currentTask = null;
+  if (state.pending && state.pending.jobId === jobId) { state.flow = null; state.pending = {}; }
+  await putState(env, chatId, state);
+  return renderInteractiveView(env, chatId, `<b>Task ${escapeHtml(label)} deleted.</b>\n\nRemoved ${removed.deletedFiles} job file${removed.deletedFiles === 1 ? '' : 's'} and the associated ClipForge release when present. Other tasks and all other chats remain unchanged.`, { replyMarkup: buttons([[{ text: 'View tasks', callback_data: 'menu:tasks' }, { text: 'Main menu', callback_data: 'menu:home' }]]) }, messageId);
+}
+
 async function handleCommand(env, chatId, command) {
   // Commands are typed into the chat, so their response must be a new bot
   // message. Only callback-driven navigation is allowed to replace a view.
@@ -1203,15 +1397,7 @@ async function handleCallback(env, callback) {
       ]);
       return renderInteractiveView(env, chatId, 'Choose the Edge TTS default narrator for future Stage B jobs, or preview any of the ten committed voice samples first.', { replyMarkup: buttons(rows) }, viewId);
     }
-    if (value === 'music_default') {
-      const credentials = await requireCredentials(env, chatId);
-      if (!credentials) return;
-      const existing = await readExistingSettings(credentials);
-      const track = existing.musicDefault && existing.musicDefault.library_track_path;
-      return renderInteractiveView(env, chatId, track
-        ? `The ClipForge site default is <code>${escapeHtml(String(track).replace(/^audio-library\//, ''))}</code>. Automatic Mode uses it when you choose <b>Use saved default</b> during task setup.`
-        : 'No persistent music default is saved in this clone. You can choose no music, use a library track, or set a default from the ClipForge site.', { replyMarkup: buttons([[{ text: 'Back to settings', callback_data: 'menu:settings' }]]) }, viewId);
-    }
+    if (value === 'music_library' || value === 'music_default') return showMusicLibrary(env, chatId, '0', viewId);
     if (value === 'watermark') {
       if (!await requireCredentials(env, chatId)) return;
       const state = await getState(env, chatId); state.flow = 'settings_watermark'; state.pending = {}; await putState(env, chatId, state);
@@ -1232,6 +1418,22 @@ async function handleCallback(env, callback) {
       const state = await getState(env, chatId); state.flow = 'settings_zernio_key'; state.pending = {}; await putState(env, chatId, state);
       return renderInteractiveView(env, chatId, 'Send the Zernio API key. It will be encrypted into the <code>ZERNIO_API_KEY</code> GitHub Actions secret, never committed, and never shown again.', { replyMarkup: buttons([[{ text: 'Cancel', callback_data: 'flow:cancel' }]]) }, viewId);
     }
+  }
+  if (kind === 'ml') {
+    const [action, argument] = value.split(':');
+    if (action === 'page') return showMusicLibrary(env, chatId, argument, viewId);
+    if (action === 'preview') return previewMusicLibraryTrack(env, chatId, argument);
+    if (action === 'default') return setMusicLibraryDefault(env, chatId, argument, viewId);
+    if (action === 'delete') return promptMusicLibraryDelete(env, chatId, argument, viewId);
+    if (action === 'deleteconfirm') return deleteMusicLibraryTrack(env, chatId, argument, viewId);
+    if (action === 'upload') return promptMusicLibraryUpload(env, chatId, viewId);
+    return;
+  }
+  if (kind === 'task') {
+    const [action, label] = value.split(':');
+    if (action === 'delete') return promptTaskDelete(env, chatId, label, viewId);
+    if (action === 'confirm') return deleteTask(env, chatId, label, viewId);
+    return;
   }
   if (kind === 'zernio') {
     if (value === 'refresh') return refreshZernioAccounts(env, chatId, viewId);
@@ -1390,4 +1592,4 @@ export default {
   }
 };
 
-export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, renderInteractiveView, renderTaskInputResponse, taskSetupFlowAfterSource, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };
+export const __test = { activeZernioAccounts, buildAgentHandoffPrompt, callbackMessageId, cloneOnboardingMenu, commandOf, defaultZernioSettings, disabledSocialSourceHost, existingGeminiLabel, formatBytes, formatStatus, hasResumablePendingTask, homeMenu, isPublicTelegramPost, isSafeAudioLibraryPath, renderInteractiveView, renderTaskInputResponse, settingsMenu, taskCanBeDeleted, taskSetupFlowAfterSource, telegramButtonText, torrentCandidateButtonText, validZernioDateTime, validZernioTime, validZernioTimezone, validateSource, normalizeFocus, mainMenu, durationMenu, taskButtons, userError, zernioSettingsMenu, zernioSettingsOrDefault, zernioTargets };

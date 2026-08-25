@@ -54,13 +54,18 @@ async function telegramMultipart(env, method, fields, fileField, bytes, fileName
   return body.result;
 }
 
+function audioMimeType(filename) {
+  const extension = String(filename || '').split('.').pop().toLowerCase();
+  return ({ mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', ogg: 'audio/ogg', opus: 'audio/ogg', flac: 'audio/flac' })[extension] || 'application/octet-stream';
+}
+
 export async function sendAudioBytes(env, chatId, bytes, filename, caption) {
   return telegramMultipart(env, 'sendAudio', {
     chat_id: chatId,
     caption,
     parse_mode: 'HTML',
-    title: filename.replace(/\.mp3$/i, ''),
-  }, 'audio', bytes, filename, 'audio/mpeg');
+    title: filename.replace(/\.[^.]+$/i, ''),
+  }, 'audio', bytes, filename, audioMimeType(filename));
 }
 
 export async function sendDocumentBytes(env, chatId, bytes, filename, caption, replyMarkup = null) {

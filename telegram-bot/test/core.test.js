@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { decryptCredentials, encryptCredentials } from '../src/crypto.js';
 import { validateProductionPlan } from '../src/production.js';
 import { stageLabel } from '../src/constants.js';
-import { ensureTaskLabel, getJobIdForLabel, getTasks, getState, putState } from '../src/storage.js';
+import { ensureTaskLabel, getJobIdForLabel, getTasks, getState, putState, removeTask } from '../src/storage.js';
 import worker, { __test } from '../src/index.js';
 import nacl from 'tweetnacl';
 import sealedbox from 'tweetnacl-sealedbox-js';
 import { downloadTelegramFileBytes, sendAudioBytes, sendDocumentBytes } from '../src/telegram.js';
-import { cloneRepositoryName, createPrivateShadowClone, parseJsonDocument, putBinaryFile, sourcePathAllowed, updateZernioSecret } from '../src/github.js';
+import { cloneRepositoryName, createPrivateShadowClone, deleteClipforgeJob, parseJsonDocument, putBinaryFile, sourcePathAllowed, updateZernioSecret } from '../src/github.js';
 
 class MemoryKv {
   constructor() { this.values = new Map(); }
@@ -72,6 +72,54 @@ test('task labels are stable and isolated per Telegram chat', async () => {
   assert.equal(await getJobIdForLabel(workerEnv, 1, 'A'), 'manual-1');
   assert.equal(await getJobIdForLabel(workerEnv, 2, 'B'), null);
   assert.equal((await getTasks(workerEnv, 1)).labels.B, 'automatic-2');
+});
+
+test('task removal clears only the requested chat label and its job options', async () => {
+  const workerEnv = env();
+  await ensureTaskLabel(workerEnv, 1, 'manual-delete');
+  await ensureTaskLabel(workerEnv, 2, 'other-chat-job');
+  assert.equal(await removeTask(workerEnv, 1, 'A', 'manual-delete'), true);
+  assert.equal(await getJobIdForLabel(workerEnv, 1, 'A'), null);
+  assert.equal(await getJobIdForLabel(workerEnv, 2, 'A'), 'other-chat-job');
+  assert.equal(await removeTask(workerEnv, 1, 'A', 'manual-delete'), false);
+});
+
+test('confirmed task cleanup deletes only the selected job release, tag, and job files', async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    const parsed = new URL(String(url));
+    const path = `${parsed.pathname}${parsed.search}`;
+    const method = init.method || 'GET';
+    calls.push({ path, method, body: init.body ? JSON.parse(init.body) : null });
+    const reply = (value, status = 200) => new Response(value === null ? null : JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
+    if (path === '/repos/owner/repo/git/ref/heads/main') return reply({ object: { sha: 'branch-sha' } });
+    if (path === '/repos/owner/repo/git/commits/branch-sha') return reply({ tree: { sha: 'tree-sha' } });
+    if (path === '/repos/owner/repo/git/trees/tree-sha?recursive=1') return reply({ truncated: false, tree: [
+      { type: 'blob', path: 'jobs/manual-delete/status.json' },
+      { type: 'blob', path: 'jobs/manual-delete/production.json' },
+      { type: 'blob', path: 'jobs/other-job/status.json' },
+      { type: 'blob', path: 'README.md' }
+    ] });
+    if (path === '/repos/owner/repo/releases/tags/clipforge-manual-delete') return reply({ id: 42 });
+    if (path === '/repos/owner/repo/releases/42' && method === 'DELETE') return reply(null, 204);
+    if (path === '/repos/owner/repo/git/refs/tags/clipforge-manual-delete' && method === 'DELETE') return reply(null, 204);
+    if (path === '/repos/owner/repo/contents/jobs/manual-delete/status.json?ref=main') return reply({ sha: 'status-sha' });
+    if (path === '/repos/owner/repo/contents/jobs/manual-delete/production.json?ref=main') return reply({ sha: 'production-sha' });
+    if (path === '/repos/owner/repo/contents/jobs/manual-delete/status.json' && method === 'DELETE') return reply({});
+    if (path === '/repos/owner/repo/contents/jobs/manual-delete/production.json' && method === 'DELETE') return reply({});
+    throw new Error(`Unexpected GitHub request: ${method} ${path}`);
+  };
+  try {
+    const result = await deleteClipforgeJob({ githubPat: 'test-token' }, 'owner/repo', 'manual-delete');
+    assert.equal(result.deletedFiles, 2);
+    assert.equal(calls.some((call) => call.path.includes('jobs/other-job')), false);
+    assert.equal(calls.some((call) => call.path.includes('README.md')), false);
+    assert.equal(calls.some((call) => call.path === '/repos/owner/repo/releases/42' && call.method === 'DELETE'), true);
+    assert.equal(calls.some((call) => call.path === '/repos/owner/repo/git/refs/tags/clipforge-manual-delete' && call.method === 'DELETE'), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('conversation state never adopts another chat state', async () => {
@@ -228,15 +276,37 @@ test('private Shadow Clone creation copies shared source while excluding all use
   }
 });
 
-test('source and command helpers retain the intended operator contract', () => {
+test('source and command helpers enforce Telegram-only social intake while preserving other source paths', () => {
   assert.equal(__test.commandOf('/automatic'), '/automatic');
   assert.equal(__test.commandOf('/automatic@ClipForgeBot'), '/automatic');
   assert.equal(__test.commandOf('/unknown'), null);
   assert.equal(__test.validateSource('https://example.com/video.mp4'), 'https://example.com/video.mp4');
+  assert.equal(__test.validateSource('https://t.me/public_channel/123'), 'https://t.me/public_channel/123');
   assert.equal(__test.validateSource('magnet:?xt=urn:btih:abcdef'), 'magnet:?xt=urn:btih:abcdef');
+  assert.equal(__test.isPublicTelegramPost('https://t.me/public_channel/123'), true);
+  assert.equal(__test.isPublicTelegramPost('https://t.me/c/123/456'), false);
+  assert.equal(__test.disabledSocialSourceHost('https://www.youtube.com/watch?v=x'), 'youtube.com');
+  assert.throws(() => __test.validateSource('https://www.youtube.com/watch?v=x'), /disabled/);
+  assert.throws(() => __test.validateSource('https://t.me/c/123/456'), /public Telegram channel post/);
   assert.throws(() => __test.validateSource('file:///etc/passwd'));
   assert.equal(__test.normalizeFocus('  the  opening scene  '), 'the opening scene');
   assert.equal(__test.normalizeFocus('-'), '');
+});
+
+test('Music Library exposes safe library controls while task deletion is limited to terminal task states', () => {
+  const settings = __test.settingsMenu().inline_keyboard.flat().map((button) => button.callback_data);
+  assert.ok(settings.includes('set:music_library'));
+  assert.equal(settings.includes('set:music_default'), false);
+  assert.equal(__test.isSafeAudioLibraryPath('audio-library/LoFi Night.m4a'), true);
+  assert.equal(__test.isSafeAudioLibraryPath('jobs/manual-1/music.mp3'), false);
+  assert.equal(__test.isSafeAudioLibraryPath('audio-library/../escape.mp3'), false);
+  assert.equal(__test.taskCanBeDeleted({ stage: 'complete' }), true);
+  assert.equal(__test.taskCanBeDeleted({ stage: 'awaiting_json_upload' }), true);
+  assert.equal(__test.taskCanBeDeleted({ stage: 'stage_a_running' }), false);
+  const terminalCallbacks = __test.taskButtons('A', { stage: 'complete' }).inline_keyboard.flat().map((button) => button.callback_data);
+  assert.ok(terminalCallbacks.includes('task:delete:A'));
+  const runningCallbacks = __test.taskButtons('A', { stage: 'stage_a_running' }).inline_keyboard.flat().map((button) => button.callback_data);
+  assert.equal(runningCallbacks.includes('task:delete:A'), false);
 });
 
 test('Series Mode proceeds from source directly to duration and retains normal focus setup for ordinary tasks', () => {

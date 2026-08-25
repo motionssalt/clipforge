@@ -115,6 +115,16 @@ export async function getJobIdForLabel(env, chatId, label) {
   return tasks.labels[String(label || '').toUpperCase()] || null;
 }
 
+export async function removeTask(env, chatId, label, jobId) {
+  const tasks = await getTasks(env, chatId);
+  const normalizedLabel = String(label || '').toUpperCase();
+  if (!normalizedLabel || tasks.labels[normalizedLabel] !== jobId) return false;
+  delete tasks.labels[normalizedLabel];
+  delete tasks.options[jobId];
+  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
+  return true;
+}
+
 export async function taskLabels(env, chatId) {
   const tasks = await getTasks(env, chatId);
   return Object.entries(tasks.labels).map(([label, jobId]) => ({ label, jobId }));

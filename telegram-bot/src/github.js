@@ -282,10 +282,15 @@ export async function putTextFile(credentials, repo, path, text, message) {
 
 export async function getRepositoryFileBytes(credentials, repo, path, maximumBytes = 10 * 1024 * 1024) {
   const file = await getContent(credentials, repo, path);
-  if (!file || typeof file.content !== 'string' || file.encoding !== 'base64') throw new Error(`GitHub did not return binary content for ${path}.`);
-  const bytes = bytesFromB64(file.content);
-  if (!bytes.length || bytes.length > maximumBytes) throw new Error(`${path} is missing or too large for Telegram delivery.`);
-  return bytes;
+  if (file && typeof file.content === 'string' && file.encoding === 'base64') {
+    const bytes = bytesFromB64(file.content);
+    if (!bytes.length || bytes.length > maximumBytes) throw new Error(`${path} is missing or too large for Telegram delivery.`);
+    return bytes;
+  }
+  if (file && typeof file.download_url === 'string') {
+    return downloadPrivateAsset(credentials, file.download_url, maximumBytes, path);
+  }
+  throw new Error(`GitHub did not return binary content for ${path}.`);
 }
 
 export async function getReleaseTextAsset(credentials, url, maximumBytes = 1024 * 1024) {
@@ -310,16 +315,99 @@ export async function readStatus(credentials, repo, jobId) {
   return result ? result.document : null;
 }
 
+function safeAudioLibraryPath(path) {
+  return /^audio-library\/[^/\\\u0000-\u001f\u007f]+$/.test(String(path || ''));
+}
+
+function safeJobId(jobId) {
+  return /^[A-Za-z0-9._-]{3,200}$/.test(String(jobId || ''));
+}
+
+async function deleteRepositoryFile(credentials, repo, path, message) {
+  const { owner, name } = parseRepo(repo);
+  const existing = await getContent(credentials, repo, path);
+  if (!existing || !existing.sha) throw new Error(`GitHub could not resolve ${path} for deletion.`);
+  return githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodePath(path)}`, {
+    method: 'DELETE', body: { message, sha: existing.sha, branch: DEFAULT_BRANCH }
+  });
+}
+
 export async function listAudioLibrary(credentials, repo) {
   const { owner, name } = parseRepo(repo);
   try {
     const listing = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/audio-library?ref=${encodeURIComponent(DEFAULT_BRANCH)}`);
     if (!Array.isArray(listing)) return [];
-    return listing.filter((item) => item && item.type === 'file' && /^[^/\\\u0000-\u001f\u007f]+$/.test(item.name)).map((item) => ({ name: item.name, path: `audio-library/${item.name}` }));
+    return listing
+      .filter((item) => item && item.type === 'file' && safeAudioLibraryPath(`audio-library/${item.name}`))
+      .map((item) => ({ name: item.name, path: `audio-library/${item.name}`, size: Number(item.size) || 0, sha: String(item.sha || '') }))
+      .sort((left, right) => left.name.localeCompare(right.name));
   } catch (error) {
     if (error instanceof GitHubError && error.status === 404) return [];
     throw error;
   }
+}
+
+export async function saveMusicDefault(credentials, repo, trackPath) {
+  if (!safeAudioLibraryPath(trackPath)) throw new Error('Default music must be a track in audio-library/.');
+  const document = {
+    version: 1,
+    library_track_path: trackPath,
+    updated_at_epoch: Math.floor(Date.now() / 1000),
+    note: 'Last explicitly selected audio-library track. One-off job uploads are never stored as the default.'
+  };
+  return putTextFile(credentials, repo, 'branding/music_default.json', `${JSON.stringify(document, null, 2)}\n`, 'clipforge: save default background music');
+}
+
+export async function deleteAudioLibraryTrack(credentials, repo, trackPath) {
+  if (!safeAudioLibraryPath(trackPath)) throw new Error('Only a safe audio-library track may be deleted.');
+  return deleteRepositoryFile(credentials, repo, trackPath, `clipforge: remove ${trackPath.slice('audio-library/'.length)} from audio library`);
+}
+
+export async function clearMusicDefaultIfTrack(credentials, repo, trackPath) {
+  if (!safeAudioLibraryPath(trackPath)) throw new Error('Only a safe audio-library track may clear the default.');
+  const current = await tryGetJsonFile(credentials, repo, 'branding/music_default.json');
+  if (!current || !current.document || current.document.library_track_path !== trackPath) return false;
+  await deleteRepositoryFile(credentials, repo, 'branding/music_default.json', 'clipforge: clear deleted default background music');
+  return true;
+}
+
+async function deleteReleaseAndTag(credentials, repo, tag) {
+  const { owner, name } = parseRepo(repo);
+  try {
+    const release = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/releases/tags/${encodeURIComponent(tag)}`);
+    if (release && Number.isInteger(Number(release.id))) {
+      await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/releases/${Number(release.id)}`, { method: 'DELETE' });
+    }
+  } catch (error) {
+    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+  }
+  try {
+    await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/git/refs/tags/${encodeURIComponent(tag)}`, { method: 'DELETE' });
+  } catch (error) {
+    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+  }
+}
+
+export async function deleteClipforgeJob(credentials, repo, jobId) {
+  if (!safeJobId(jobId)) throw new Error('That task identifier is invalid.');
+  const { owner, name } = parseRepo(repo);
+  const branch = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(DEFAULT_BRANCH)}`);
+  const commitSha = branch && branch.object && branch.object.sha;
+  if (!commitSha) throw new Error('GitHub could not resolve the clone branch before task cleanup.');
+  const commit = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/git/commits/${encodeURIComponent(commitSha)}`);
+  const treeSha = commit && commit.tree && commit.tree.sha;
+  if (!treeSha) throw new Error('GitHub could not resolve the clone file tree before task cleanup.');
+  const tree = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/git/trees/${encodeURIComponent(treeSha)}?recursive=1`);
+  if (tree && tree.truncated) throw new Error('The clone file tree is too large to safely delete this task.');
+  const prefix = `jobs/${jobId}/`;
+  const paths = Array.isArray(tree && tree.tree)
+    ? tree.tree.filter((entry) => entry && entry.type === 'blob' && typeof entry.path === 'string' && entry.path.startsWith(prefix)).map((entry) => entry.path).sort()
+    : [];
+  await deleteReleaseAndTag(credentials, repo, `clipforge-${jobId}`);
+  for (const path of paths) {
+    await deleteRepositoryFile(credentials, repo, path, `clipforge: delete task ${jobId}`);
+  }
+  return { jobId, deletedFiles: paths.length, releaseTag: `clipforge-${jobId}` };
 }
 
 export async function dispatchWorkflow(credentials, repo, workflow, inputs) {
