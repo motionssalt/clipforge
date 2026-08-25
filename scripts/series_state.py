@@ -16,7 +16,15 @@ def main() -> None:
     root = Path(sys.argv[1]).resolve()
     job_id = sys.argv[2]
     plan = load(root / "jobs" / job_id / "production.json")
-    request = load(root / "jobs" / job_id / "stage_a_request.json")
+    request_path = root / "jobs" / job_id / "stage_a_request.json"
+    if not request_path.exists():
+        # Jobs dispatched outside the normal Stage A trigger (e.g. manual
+        # jobs) have no persisted original request, so there is nothing to
+        # derive a continuation from. Treat as not eligible rather than
+        # crashing the workflow.
+        print(json.dumps({"continue": False}))
+        return
+    request = load(request_path)
     series_id = str(plan.get("series_id") or "").strip()
     if not series_id or plan.get("series_final") is True:
         print(json.dumps({"continue": False}))
