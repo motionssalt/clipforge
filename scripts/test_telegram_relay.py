@@ -85,18 +85,18 @@ def main() -> None:
     assert release_tag(job_id) == 'clipforge-relay-input-manual-relay-test'
 
     # The local Bot API image initializes its mounted data directory as root.
-    # The relay may chown only the exact already validated video inode before
-    # copying it, never the mounted storage directory or an unchecked path.
-    local_media = Path('/tmp/clipforge-relay-test/video.bin')
+    # The relay streams only the exact already validated media path through the
+    # container, creating the destination file as the runner rather than
+    # changing permissions on any storage directory.
     remote_media = Path('/var/lib/telegram-bot-api/test-bot/videos/file_0')
-    with patch.object(telegram_relay.os, 'access', side_effect=[False, True]), \
-         patch.object(telegram_relay.os, 'getuid', return_value=1001), \
-         patch.object(telegram_relay.os, 'getgid', return_value=1001), \
-         patch.object(telegram_relay.subprocess, 'run', return_value=telegram_relay.subprocess.CompletedProcess([], 0)) as run_command, \
+    output_media = Path('/tmp/clipforge-relay-test/source_input.bin')
+    output_media.parent.mkdir(parents=True, exist_ok=True)
+    with patch.object(telegram_relay.subprocess, 'run', return_value=telegram_relay.subprocess.CompletedProcess([], 0)) as run_command, \
          patch.dict(os.environ, {'LOCAL_BOT_API_CONTAINER': 'clipforge-local-bot-api'}, clear=False):
-        telegram_relay.make_local_bot_api_media_readable(local_media, remote_media)
+        telegram_relay.stream_local_bot_api_media_to_runner(remote_media, output_media)
+    output_media.unlink(missing_ok=True)
     assert run_command.call_args.args[0] == [
-        'docker', 'exec', '--user', '0:0', 'clipforge-local-bot-api', 'chown', '1001:1001', '--', str(remote_media)
+        'docker', 'exec', '--user', '0:0', 'clipforge-local-bot-api', 'cat', '--', str(remote_media)
     ]
 
     # Bot B must be a member of the configured basic group. The preflight uses

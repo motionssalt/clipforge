@@ -135,31 +135,32 @@ def known_basic_group_message_request(
     return request_factory(id=[input_message_factory(message_id)])
 
 
-def make_local_bot_api_media_readable(local_path: Path, remote_path: Path) -> None:
-    """Transfer read ownership of one validated local Bot API file to the runner.
+def stream_local_bot_api_media_to_runner(remote_path: Path, output_path: Path) -> None:
+    """Stream one validated local Bot API media file into a runner-owned file.
 
-    The Bot API image must initialize its state as root. Once it has completed
-    a trusted getFile request, only the already path-validated media inode is
-    chowned through the still-running named container. No unchecked path or
-    directory is passed to Docker.
+    The Bot API container initializes its data directory as root and may use
+    non-traversable directories. Rather than changing broad host permissions,
+    stream only the already prefix-validated media file through the named
+    container; the output file is therefore created by the GitHub runner.
     """
-    if os.access(local_path, os.R_OK):
-        return
     container = str(os.environ.get('LOCAL_BOT_API_CONTAINER') or '').strip()
     if not container:
-        fail('Local Telegram Bot API shared relay media is not readable by the runner.')
+        fail('Local Telegram Bot API container is unavailable for relay media transfer.')
     try:
-        result = subprocess.run(
-            ['docker', 'exec', '--user', '0:0', container, 'chown', f'{os.getuid()}:{os.getgid()}', '--', str(remote_path)],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=60,
-        )
+        with output_path.open('wb') as target:
+            result = subprocess.run(
+                ['docker', 'exec', '--user', '0:0', container, 'cat', '--', str(remote_path)],
+                check=False,
+                stdout=target,
+                stderr=subprocess.DEVNULL,
+                timeout=30 * 60,
+            )
     except (OSError, subprocess.SubprocessError) as error:
-        raise RuntimeError('Local Telegram Bot API could not hand relay media to the runner.') from error
-    if result.returncode != 0 or not os.access(local_path, os.R_OK):
-        fail('Local Telegram Bot API shared relay media could not be made readable by the runner.')
+        output_path.unlink(missing_ok=True)
+        raise RuntimeError('Local Telegram Bot API could not stream relay media to the runner.') from error
+    if result.returncode != 0:
+        output_path.unlink(missing_ok=True)
+        fail('Local Telegram Bot API could not stream the validated relay media file.')
 
 
 def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: int, output_path: Path) -> bool:
@@ -202,12 +203,10 @@ def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: in
             local_path.relative_to(files_root.resolve())
         except ValueError:
             fail('Local Telegram Bot API returned a relay file outside its shared storage.')
-        if not local_path.is_file():
-            fail('Local Telegram Bot API did not prepare the relay file in shared storage.')
-        make_local_bot_api_media_readable(local_path, remote_path)
-        if local_path.stat().st_size != expected_size:
-            fail('Local Telegram Bot API shared relay file size does not match the staged source.')
-        shutil.copyfile(local_path, output_path)
+        stream_local_bot_api_media_to_runner(remote_path, output_path)
+        if not output_path.is_file() or output_path.stat().st_size != expected_size:
+            output_path.unlink(missing_ok=True)
+            fail('Local Telegram Bot API streamed relay media with an unexpected size.')
         return True
     written = 0
     try:
