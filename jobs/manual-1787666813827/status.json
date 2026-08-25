@@ -1,7 +1,7 @@
 {
   "job_id": "manual-1787666813827",
-  "stage": "error",
-  "message": "Stage B failed. See workflow run for logs.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-manual-1787666813827",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787666813827",
   "assets": {
@@ -13,11 +13,11 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787666813827/transcript.json"
   },
   "created_at_epoch": 1787666942,
-  "updated_at_epoch": 1787670053,
+  "updated_at_epoch": 1787673056,
   "expires_at_epoch": 1787710142,
   "extra": {
-    "workflow_run_id": "32861560439",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32861560439",
+    "workflow_run_id": "32868194988",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32868194988",
     "automatic_mode": "false",
     "workflow_phase": "stage_b",
     "duration_seconds": "1686",
