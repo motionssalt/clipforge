@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "job_id": "manual-1787623045517",
+  "video_url": "https://drive.google.com/file/d/1ho0TOtMtgDQ-H-5T9SPTEM_6z_JgOcOJ/view",
+  "torrent_file_index": "",
+  "whisper_model": "base",
+  "language": "auto",
+  "target_duration_seconds": "300",
+  "focus": "",
+  "automatic_mode": "false",
+  "series_mode": "false",
+  "series_id": "",
+  "series_source_job_id": "",
+  "series_part": "",
+  "series_start_seconds": "",
+  "series_context": "",
+  "saved_at_epoch": 1787623045
+}
