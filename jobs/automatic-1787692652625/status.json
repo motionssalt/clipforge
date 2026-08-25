@@ -15,7 +15,7 @@
     "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787692652625/final.mp4"
   },
   "created_at_epoch": 1787692690,
-  "updated_at_epoch": 1787695939,
+  "updated_at_epoch": 1787695983,
   "expires_at_epoch": 1787735890,
   "extra": {
     "torrent_selection_path": "jobs/automatic-1787692652625/torrent-selection.json",
@@ -31,5 +31,70 @@
     "title": "Morty's Place-Saving Device Has a Horrifying Secret",
     "creator_watermark_applied": true,
     "creator_watermark_name": "CHIMERAVFX"
+  },
+  "publishing": {
+    "provider": "zernio",
+    "status": "failed",
+    "mode": "publish_now",
+    "scheduled_for": null,
+    "timezone": "UTC",
+    "idempotency_key": "clipforge-auto-automatic-1787692652625-32902815946",
+    "updated_at_epoch": 1787695983,
+    "media": {
+      "filename": "final.mp4",
+      "size_bytes": 25038251,
+      "public_url_present": true
+    },
+    "metadata": {
+      "title": "Morty's Place-Saving Device Has a Horrifying Secret",
+      "caption": "Morty's Place-Saving Device Has a Horrifying Secret",
+      "hashtags": [
+        "#rickandmorty",
+        "#vatofacid",
+        "#morty",
+        "#rick",
+        "#animerecap",
+        "#scifi"
+      ],
+      "tags": [
+        "rick and morty",
+        "vat of acid episode",
+        "morty place saving device",
+        "rick and morty reaction",
+        "rick and morty highlights",
+        "rick and morty recap",
+        "the prestige morty",
+        "rick and morty clips",
+        "rick and morty best moments",
+        "scifi comedy",
+        "adult swim",
+        "rick tricking morty"
+      ],
+      "metadata_source": {
+        "title": "production.json.title",
+        "caption": "production.json.title",
+        "hashtags": "production.json.hashtags",
+        "tags": "production.json.youtube_tags"
+      }
+    },
+    "posts": [
+      {
+        "post_id": "",
+        "status": "failed",
+        "error": "One or more accounts do not belong to this user",
+        "error_details": {},
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-automatic-1787692652625-32902815946-tiktok"
+      },
+      {
+        "post_id": "",
+        "status": "failed",
+        "error": "One or more accounts do not belong to this user",
+        "error_details": {},
+        "platform": "youtube",
+        "request_id": "clipforge-auto-automatic-1787692652625-32902815946-youtube"
+      }
+    ],
+    "metadata_source": "jobs/automatic-1787692652625/production.json"
   }
 }
