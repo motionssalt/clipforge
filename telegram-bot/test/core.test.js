@@ -122,6 +122,30 @@ test('confirmed task cleanup deletes only the selected job release, tag, and job
   }
 });
 
+test('task cleanup tolerates a missing release and GitHub’s 422 missing-tag response', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const parsed = new URL(String(url));
+    const path = `${parsed.pathname}${parsed.search}`;
+    const method = init.method || 'GET';
+    const reply = (value, status = 200) => new Response(value === null ? null : JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } });
+    if (path === '/repos/owner/repo/git/ref/heads/main') return reply({ object: { sha: 'branch-sha' } });
+    if (path === '/repos/owner/repo/git/commits/branch-sha') return reply({ tree: { sha: 'tree-sha' } });
+    if (path === '/repos/owner/repo/git/trees/tree-sha?recursive=1') return reply({ truncated: false, tree: [{ type: 'blob', path: 'jobs/manual-no-release/status.json' }] });
+    if (path === '/repos/owner/repo/releases/tags/clipforge-manual-no-release') return reply({ message: 'Not Found' }, 404);
+    if (path === '/repos/owner/repo/git/refs/tags/clipforge-manual-no-release' && method === 'DELETE') return reply({ message: 'Reference does not exist' }, 422);
+    if (path === '/repos/owner/repo/contents/jobs/manual-no-release/status.json?ref=main') return reply({ sha: 'status-sha' });
+    if (path === '/repos/owner/repo/contents/jobs/manual-no-release/status.json' && method === 'DELETE') return reply({});
+    throw new Error(`Unexpected GitHub request: ${method} ${path}`);
+  };
+  try {
+    const result = await deleteClipforgeJob({ githubPat: 'test-token' }, 'owner/repo', 'manual-no-release');
+    assert.equal(result.deletedFiles, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('conversation state never adopts another chat state', async () => {
   const workerEnv = env();
   await putState(workerEnv, 1, { flow: 'manual_source', pending: { mode: 'manual' }, currentTask: 'manual-1', activeViewId: 77 });

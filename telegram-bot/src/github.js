@@ -371,6 +371,13 @@ export async function clearMusicDefaultIfTrack(credentials, repo, trackPath) {
   return true;
 }
 
+function missingReleaseArtifact(error) {
+  return error instanceof GitHubError && (
+    error.status === 404 ||
+    (error.status === 422 && /reference does not exist/i.test(String(error.message || '')))
+  );
+}
+
 async function deleteReleaseAndTag(credentials, repo, tag) {
   const { owner, name } = parseRepo(repo);
   try {
@@ -379,12 +386,12 @@ async function deleteReleaseAndTag(credentials, repo, tag) {
       await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/releases/${Number(release.id)}`, { method: 'DELETE' });
     }
   } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+    if (!missingReleaseArtifact(error)) throw error;
   }
   try {
     await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/git/refs/tags/${encodeURIComponent(tag)}`, { method: 'DELETE' });
   } catch (error) {
-    if (!(error instanceof GitHubError && error.status === 404)) throw error;
+    if (!missingReleaseArtifact(error)) throw error;
   }
 }
 
