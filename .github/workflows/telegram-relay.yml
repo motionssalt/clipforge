@@ -65,6 +65,7 @@ jobs:
           test -n "$BOTB_MTPROTO_BOT_TOKEN"
           mkdir -p "${RUNNER_TEMP}/clipforge-telegram-bot-api"
           docker run --detach --name clipforge-local-bot-api --publish 127.0.0.1:8081:8081 \
+            --user "$(id -u):$(id -g)" \
             --volume "${RUNNER_TEMP}/clipforge-telegram-bot-api:/var/lib/telegram-bot-api" \
             --env TELEGRAM_API_ID="$BOTB_MTPROTO_API_ID" \
             --env TELEGRAM_API_HASH="$BOTB_MTPROTO_API_HASH" \
@@ -108,5 +109,5 @@ jobs:
         if: ${{ always() }}
         shell: bash
         run: |
-          rm -rf work/telegram-relay "${RUNNER_TEMP}/clipforge-telegram-bot-api"
           docker rm --force clipforge-local-bot-api >/dev/null 2>&1 || true
+          sudo rm -rf work/telegram-relay "${RUNNER_TEMP}/clipforge-telegram-bot-api"
