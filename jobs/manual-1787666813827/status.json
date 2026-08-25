@@ -1,7 +1,7 @@
 {
   "job_id": "manual-1787666813827",
-  "stage": "awaiting_json_upload",
-  "message": "Stage A complete. Open the Release, hand it to your agent, then upload production.json to start Stage B.",
+  "stage": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, subtitles)",
   "release_tag": "clipforge-manual-1787666813827",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787666813827",
   "assets": {
@@ -13,18 +13,19 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787666813827/transcript.json"
   },
   "created_at_epoch": 1787666942,
-  "updated_at_epoch": 1787667914,
+  "updated_at_epoch": 1787669320,
   "expires_at_epoch": 1787710142,
   "extra": {
-    "workflow_run_id": "32857477596",
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32857477596",
+    "workflow_run_id": "32861560439",
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/32861560439",
     "automatic_mode": "false",
-    "workflow_phase": "stage_a",
+    "workflow_phase": "stage_b",
     "duration_seconds": "1686",
     "screenshot_count": "281",
     "event_frame_count": "60",
     "shot_count": "446",
     "key_moment_count": "60",
-    "original_asset_name": "original.mp4"
+    "original_asset_name": "original.mp4",
+    "music_ref": "path:audio-library/𝐒𝐀𝐃 𝐅𝐔𝐍𝐊 (𝐒𝐔𝐏𝐄𝐑 𝐒𝐋𝐎𝐖𝐄𝐃) 𝐗 𝐘𝐔𝐓𝐀 𝐎𝐊𝐊𝐎𝐓𝐒𝐔.m4a"
   }
 }
