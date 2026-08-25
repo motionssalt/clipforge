@@ -162,6 +162,24 @@ def download_local_bot_api_media(bot_token: str, file_id: str, expected_size: in
         fail(f'Local Telegram Bot API accepted the relay media handle but returned no file path (size {reported_size}).')
     if reported_size and reported_size != expected_size:
         fail('Local Telegram Bot API relay media size does not match the staged source.')
+    files_root = Path(str(os.environ.get('LOCAL_BOT_API_FILES_DIR') or '')).expanduser()
+    if files_root.is_dir():
+        remote_path = Path(file_path)
+        try:
+            relative_path = remote_path.relative_to('/var/lib/telegram-bot-api')
+        except ValueError:
+            fail('Local Telegram Bot API returned an unsafe relay file path.')
+        local_path = (files_root / relative_path).resolve()
+        try:
+            local_path.relative_to(files_root.resolve())
+        except ValueError:
+            fail('Local Telegram Bot API returned a relay file outside its shared storage.')
+        if not local_path.is_file():
+            fail('Local Telegram Bot API did not prepare the relay file in shared storage.')
+        if local_path.stat().st_size != expected_size:
+            fail('Local Telegram Bot API shared relay file size does not match the staged source.')
+        shutil.copyfile(local_path, output_path)
+        return True
     written = 0
     try:
         with requests.get(
