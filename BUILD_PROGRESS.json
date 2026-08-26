@@ -15,21 +15,28 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "automatic_mode",
+  "current_phase": "bot_a_core",
   "current_task": {
-    "stage": "automatic_mode",
-    "task": "Automatic mode — Gemini analysis producing a validated production.json",
-    "status": "complete",
-    "session": "automatic-mode-session-1",
-    "completed": [
-      "pipeline/plan/automatic.py — ported from _legacy/scripts/automatic_analysis.py: bounded native tool-use agent (read_transcript -> read_scene_index/read_key_moments -> open_composite, chronological, <=12 composites), GeminiGateway multi-key rotation from GEMINI_API_KEYS with bounded transient retries + redacted logging, model fallback chain (primary 3.7-flash -> 3.6-flash), narration-coverage + visual-grounding checks, visual_evidence stripped before output, production.json validated via the shared pipeline.plan.schema contract (never the legacy contract module), lazy google-genai import so the module is test-importable without the dep",
-      "pipeline/tests/test_automatic.py — 19 offline tests ported from _legacy/scripts/test_automatic_analysis.py (pytest-style): key parsing, model candidate dedupe, shared-contract acceptance via pipeline.plan.schema, narration 90% coverage, provider error classification/rotation/retry policy, redacted error summaries, gateway transient-503 + malformed-response retries, quota no-retry, evidence tool ordering, full grounded run incl. one bounded correction, non-JSON correction, correction-time exhaustion propagation, malformed-final/malformed-provider/503 fallback-model routing, exhausted-pool fail-closed, screenshots.zip traversal + empty-archive rejection",
-      "pipeline/plan/music.py — adapted port of _legacy/scripts/read_automatic_music.py: resolves the automatic job's music_ref/music_source for the Stage B dispatch from jobs/<job_id>/stage-a-request.json's music block (new §7.1 contract) with the branding/music_default.json saved default as fallback for source=default; safe audio-library basename validation, same-job one-off music.mp3 only, legacy trailing-\\n repair, fail-closed to no music; offline checks all pass",
-      ".github/workflows/stage-a.yml automatic branch — replaced the fail-closed gate with: automatic_analysis_running status + commit, google-genai install (>=1.66,<2), release bundle download (prompt/transcript/scene_index/key_moments/screenshots), pipeline.plan.automatic run gated on non-empty GEMINI_API_KEYS (exit 2 with a safe message when unset), music resolution via pipeline.plan.music, stage_b_queued status with production/automatic_analysis asset refs, rebase-and-retry commits, and stage-b.yml dispatch with code_ref pinned to the fresh default-branch tip after the plan push",
-      "pipeline/requirements.txt — added google-genai>=1.66,<2 (Automatic Mode)"
+    "stage": "bot_a_core",
+    "task": "Bot A — webhook, KV, crypto, home/tasks/settings, New-video wizard, manual handoff, status actions",
+    "status": "in_progress",
+    "session": "automatic-mode-session-1 (continuing)",
+    "completed": [],
+    "remaining": [
+      "bot/package.json + bot/wrangler.bot-a.jsonc",
+      "bot/src/crypto.js (AES-256-GCM credentials, per-chat AAD)",
+      "bot/src/storage.js (KV layer)",
+      "bot/src/github.js (dispatch, files, releases, sealed-secret upload, shadow-clone create/connect)",
+      "bot/src/index.js (webhook + router, private chats only, webhook-secret auth)",
+      "bot/src/commands/* (/start /new /tasks /done /settings /cancel)",
+      "New-video wizard (mode → source → focus → length → music → confirm)",
+      "Manual handoff: Get agent prompt + Upload production.json with validation"
     ],
-    "remaining": [],
-    "resume_from": null
+    "resume_from": {
+      "file": "bot/src/crypto.js",
+      "component": "new module",
+      "next_operation": "start Bot A core per ARCHITECTURE.md §8; port from _legacy/telegram-bot/ where semantics are preserved, reusing bot/src/plan.js (validator) and bot/src/jobs.js (state machine) already built"
+    }
   },
   "phases": [
     {
@@ -91,12 +98,13 @@
     {
       "id": "automatic_mode",
       "title": "Automatic mode — Gemini analysis producing a validated production.json",
-      "status": "next",
+      "status": "complete",
       "deliverables": [
         "pipeline/plan/automatic.py (Gemini bounded tool-use analysis, multi-key rotation, validated against schemas/production_plan.schema.json)",
         "stage-a.yml automatic branch (automatic_analysis_running state; dispatch Stage B on valid plan)"
       ],
-      "notes": "Port from _legacy/scripts/automatic_analysis.py. Reads GEMINI_API_KEYS Actions secret. Safe failure categories preserved."
+      "notes": "pipeline/plan/automatic.py (bounded native tool-use Gemini analysis, multi-key rotation, fallback models, shared-contract validation), pipeline/plan/music.py (music ref resolution from stage-a-request), stage-a.yml automatic branch (automatic_analysis_running -> analysis -> stage_b_queued -> stage-b.yml dispatch), 19 new offline tests. Legacy visual_evidence/narration-coverage safety semantics preserved; validated via pipeline.plan.schema so an automatic plan can never pass here and fail Stage B.",
+      "completed_in_session": "automatic-mode-session-1"
     },
     {
       "id": "bot_a_core",
@@ -289,9 +297,15 @@
       "date_utc": "2026-08-26",
       "summary": "Built the stage_b_render phase in full. New package pipeline/stage_b/: (1) common.py — ffmpeg/ffprobe wrappers, StageBError, load_production_plan() which RE-VALIDATES production.json at the Stage B boundary via the single-source validator (ARCHITECTURE.md §13 invariant #5) and normalizes both accepted shapes (nested series object OR flat series_* siblings; voiceover_text OR legacy raw_narration) exactly as pipeline/plan/schema.py does; branding readers (tts_settings, creator_watermark, music_default) and job-id sanitizer. (2) voiceover.py — Edge TTS synthesis with the curated 12-voice catalog, 24kHz mono PCM WAV contract, two-pass EBU R128 speech-clarity mastering, retry/backoff. (3) render.py — timing reconciliation (per-cut setpts retime, boundaries never move, no stretch ceiling, duration-collapse guard), single-pass mobile-safe merge (H.264 High@L4.0 / yuv420p / 30fps CFR / AAC-LC 48kHz / faststart / mp42 / no B-frames / no edit lists), optional ducked music bed, merged voiceover WAV + cut_timing.json sidecar, and strict output validation. (4) reframe.py — ffmpeg scene detection, per-scene static 1080x1200 crop windows, optional CPU InsightFace prominent-face focus with safe centre fallback. (5) captions.py — faster-whisper word timing (timing only), authoritative script alignment, sentence cards (<=6 words, clause breaks), author keyword #RRGGBB colors, Pillow 3-layer raster (soft shadow + keyline + fills), one-time Coolvetica title banner with eased drop-in/hold/drop-out, fail-closed caption-timeline validation, ASS debug sidecar. (6) watermark.py — screen-blend creator watermark with letter-shaped Gaussian shadow; empty name is an explicit no-op. (7) enhance.py — hqdn3d -> Hald-LUT color cube -> cas -> thresholded unsharp -> gradfun chain with mobile-safe re-validation and atomic in-place swap; --no-enabled is a true no-op. (8) compress.py — terminal CRF-23 delivery pass preserving video invariants, audio stream-copied, never ships a larger file. (9) run.py — orchestrator that writes jobs/<job_id>/status.json via pipeline.status before/after each risky step, plus metadata.txt and final.zip packaging (§7.4). Also added pipeline/requirements.txt, copied required assets (assets/fonts/Coolvetica.ttf, assets/anime_reference_lut_grid.png, assets/anime_reference_color_cube_l8.png) from _legacy, wrote .github/workflows/stage-b.yml (dispatchable by job_id + production_ref; path/asset/url ref resolution; source asset download accepting both the new source_input.bin and legacy original.* names; series cross-check against stage-a-request.json; restart-correct code_ref checkout + HEAD re-attach; terminal-state archiving on restart; rebase-and-retry status pushes; dedicated stage_b_cancelled job; final.mp4 + final.zip + metadata.txt uploaded to the job release; complete/error status persisted with asset URLs). Tests: 33 new unit tests in pipeline/tests/test_stage_b.py (56 Python total, all pass) and pipeline/tests/smoke_stage_b_local.py, a real-ffmpeg end-to-end smoke run of the whole chain on synthetic media (Edge TTS and Whisper stubbed — no network/model downloads in the build environment) that produced and validated a mobile-safe 1080x1200 final MP4. All 15 existing bot JS tests still pass.",
       "commits": "stage-b-session-1 commits on main (2026-08-26)"
+    },
+    {
+      "session": "automatic-mode-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "Built the automatic_mode phase in full. (1) pipeline/plan/automatic.py — ported the bounded Gemini native tool-use analyzer from _legacy/scripts/automatic_analysis.py: ordered evidence retrieval (read_transcript -> scene/key-moments -> chronological open_composite, <=12 images), GeminiGateway with multi-key rotation from GEMINI_API_KEYS, bounded transient retries, secret-redacted logging, primary->fallback model routing, narration 90%-coverage + visual-grounding gates, visual_evidence stripped before output, and validation through the shared pipeline.plan.schema contract (never the legacy contract module). (2) pipeline/plan/music.py — music ref resolution for the Stage B dispatch from the stage-a-request music block with the saved default fallback (adapted port of read_automatic_music.py). (3) stage-a.yml automatic branch replacing the fail-closed gate: automatic_analysis_running status, bundle download, analysis run gated on non-empty GEMINI_API_KEYS, stage_b_queued status, and stage-b.yml dispatch with a fresh code_ref. (4) pipeline/tests/test_automatic.py — 19 offline tests with a scripted gateway; full suite green (93 Python tests + 93 JS assertions incl. 52 subtests).",
+      "commits": "automatic-mode-session-1 commits on main (2026-08-26): d877498, 4704269, 86edc50, 073f272"
     }
   ],
-  "next_action": "Build the 'stage_a_ingest_analyze' phase per its deliverables list: pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file source kinds), pipeline/stage_a/transcribe.py (faster-whisper CPU), pipeline/stage_a/scenes.py (shot boundaries, key moments, composites), pipeline/stage_a/bundle.py (analysis bundle + 00_READ_THIS_FIRST.txt prompt generation), and .github/workflows/stage-a.yml (writes status at each step; torrent candidate flow with awaiting_torrent_selection). Port logic from _legacy/scripts/ (download_drive.py url/drive parts, magnet_source.py, torrent_source.py, transcribe.py, scene_index.py, build_key_moments.py, event_frames.py, generate_analysis_prompt.py). Telegram channel and relay sources are LATER phases (preserved subsystems) — do not build them here; ingest.py must accept their source kinds in the schema but route them to the not-yet-built gate. Stage A writes jobs/<job_id>/stage-a-request.json is consumed (bot writes it), and on success publishes the analysis bundle release assets per ARCHITECTURE.md §7.2 (source_input.bin, analysis_720p.mp4, transcript.json, screenshots.zip, event_composites.zip, scene_index.json, key_moments.json, 00_READ_THIS_FIRST.txt, manifest.json) and sets state awaiting_plan (manual) or dispatches automatic analysis (automatic). MUST use pipeline.status.write_status before/after each risky step.",
+  "next_action": "Build the 'bot_a_core' phase per its deliverables list in phases[]: bot/package.json + wrangler.bot-a.jsonc, bot/src/crypto.js, bot/src/storage.js, bot/src/github.js, bot/src/index.js, the six commands, the New-video wizard, and the manual handoff. UX per ARCHITECTURE.md §8; reuse bot/src/plan.js and bot/src/jobs.js. Port semantics from _legacy/telegram-bot/ without redesigning.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
