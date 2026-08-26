@@ -408,7 +408,7 @@
       "tests": "deploy-bots.yml parsed with PyYAML (trigger paths + step order verified); cd bot && npm ci --ignore-scripts && npm test (75 passed, 0 failed)"
     }
   ],
-  "next_action": "BUILD COMPLETE and verified (210 Python + 75 JS tests green, all 10 \u00a715 phases done). Remaining work is operator-facing: (1) architecture_concerns 'series-shape-nested-vs-flat' awaits an operator decision on the canonical production.json series shape (both shapes currently accepted \u2014 do NOT delete either code path without sign-off); (2) human_review_items if any. No further build-order phases remain.",
+  "next_action": "BUILD COMPLETE and verified (210 Python + 78 JS tests green). architecture_concerns 'relay-media-before-confirm-record-silent-drop' resolved (staging-time record creation). Remaining work is operator-facing: 'series-shape-nested-vs-flat' was resolved by operator decision (nested canonical); 'publishing-block-shape-strict-schema' still awaits operator review.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -429,6 +429,19 @@
       "date_utc": "2026-08-26",
       "decision_at_stake": "ARCHITECTURE.md \u00a76 line ~280 says publishing is \"metadata attached to a complete job (status.publishing)\" and \u00a76.2 fixes the block to {status, posts, idempotency_key} with additionalProperties:false. The legacy publishing block carried provider/mode/scheduled_for/timezone/updated_at_epoch and \"requested\"/\"error\" statuses. Resolution chosen: schema wins \u2014 the block is exactly the \u00a76.2 shape; mode/schedule details moved to the branding/zernio_queue.json ledger item (not schema-bound). Bot reads mode/schedule from the queue when needed.",
       "blocking": false
+    },
+    {
+      "id": "relay-media-before-confirm-record-silent-drop",
+      "raised_in_session": "kv-write-amplification-audit (prior session \u2014 its commit never reached origin/main; concern re-derived from code this session)",
+      "date_utc": "2026-08-26",
+      "decision_at_stake": "Ordering race in the \u00a79.2 relay path: Bot A copied the video into the private relay group at staging time, but the KV relay-job record (putRelayJob) was only created at confirm time. Bot B's webhook (relay-worker.js rememberCopiedMedia) could observe the group-copied media before the record existed, silently drop it (no record to attach bot_b_file_id to), and the later ready-signal then failed with 'send the video again'. Rare, self-healing, no data loss \u2014 but a bad user-facing moment. Inherited from the legacy implementation, not introduced by the rewrite.",
+      "why_i_think_this_needs_attention": "The record existed only in the confirm step, so the whole staging\u2192confirm window was a drop window for the copied-media update. Closing it removes the unexplained 'send the video again' resend entirely rather than handling it after the fact.",
+      "what_i_did_for_now": "Fixed: the KV relay-job record is now created at staging time (state 'staged', media coordinates + internal_group_chat_id) BEFORE the group copy/forward call in bot/src/index.js handleWizardRelayVideo; after the copy succeeds the record is updated with internal_group_message_id via a merge that preserves any bot_b_file_id Bot B already attached. startRelayJob (confirm) now upgrades the existing record in place (state 'ready' + sealed_payload) instead of creating it. relay-worker.js rememberCopiedMedia logic unchanged \u2014 it simply always finds the record now; it is additionally exported via __test for the regression tests.",
+      "what_the_right_answer_probably_is": "This is the right answer \u2014 create-then-copy ordering removes the race at the source. The 'staged' state is not routable: routeReadyMarker's sealedRelayPayload still requires state 'ready' plus sealed_payload, so an early/lone ready marker fails closed exactly as before. No dedup, relevance-gate, or KV write-conditionality logic from the prior KV-quota work was touched (net staging\u2192confirm relay-record KV writes are unchanged: 2).",
+      "action_requested": "None \u2014 resolved and verified. 3 new regression tests prove the race is closed (record created at staging lets rememberCopiedMedia attach media before any confirm-time fields exist; pre-fix drop behavior documented; out-of-scope updates still refused).",
+      "status": "resolved",
+      "resolved_at_utc": "2026-08-26",
+      "resolution": "Moved relay-job record creation from confirm time to staging time in bot/src/index.js (handleWizardRelayVideo creates the record before copyMessage; startRelayJob merges/upgrades it). bot/test/relay.test.mjs +3 tests. Full suites green after change: 210 Python + 78 JS (was 75)."
     }
   ],
   "active_blockers": [],
@@ -439,11 +452,12 @@
   "verification": {
     "session": "background-workflows-session-2",
     "date_utc": "2026-08-26",
-    "result": "Post-build full verification after the final phase (background_workflows) completed. (1) Full Python suite: 210 tests, ALL PASS (python -m unittest discover pipeline/tests -p 'test_*.py' with PYTHONPATH=repo root) \u2014 covers contracts/schemas cross-validation, stage_a, stage_b, status, automatic mode, series, publish/zernio, cleanup, telegram relay, and the new diagnostics module (12 tests). (2) Full bot JS suite: 75 tests, ALL PASS (npm test after npm ci --ignore-scripts, Node v22.23.2) \u2014 wizard, plan, jobs, relay, series, zernio. An initial 2-failure run was an environment artifact only: tweetnacl/tweetnacl-sealedbox-js were not yet installed in the sandbox (ERR_MODULE_NOT_FOUND on bot/src/github.js); after npm ci the suite is 75/75 green. No source change was needed. (3) New workflow YAML validated structurally (diagnostics.yml: 2 jobs, secrets referenced by name only, contents:read, no credential material). (4) All 10 phases of ARCHITECTURE.md \u00a715 build order are marked complete; commits dd11253 (diagnostics module) and 3c63ca8 (diagnostics workflow) pushed to main."
+    "result": "Post-build full verification after the final phase (background_workflows) completed. (1) Full Python suite: 210 tests, ALL PASS (python -m unittest discover pipeline/tests -p 'test_*.py' with PYTHONPATH=repo root) \u2014 covers contracts/schemas cross-validation, stage_a, stage_b, status, automatic mode, series, publish/zernio, cleanup, telegram relay, and the new diagnostics module (12 tests). (2) Full bot JS suite: 75 tests, ALL PASS (npm test after npm ci --ignore-scripts, Node v22.23.2) \u2014 wizard, plan, jobs, relay, series, zernio. An initial 2-failure run was an environment artifact only: tweetnacl/tweetnacl-sealedbox-js were not yet installed in the sandbox (ERR_MODULE_NOT_FOUND on bot/src/github.js); after npm ci the suite is 75/75 green. No source change was needed. (3) New workflow YAML validated structurally (diagnostics.yml: 2 jobs, secrets referenced by name only, contents:read, no credential material). (4) All 10 phases of ARCHITECTURE.md \u00a715 build order are marked complete; commits dd11253 (diagnostics module) and 3c63ca8 (diagnostics workflow) pushed to main.",
+    "note_after_relay_fix": "relay-ordering-fix-session-1: 210 Python (unittest discover pipeline/tests) + 78 JS (npm test) all green after the staging-time relay record fix."
   },
   "last_session": {
-    "id": "background-workflows-session-2",
-    "note": "background_workflows complete (3a: pipeline/diagnostics/gemini.py + 12 tests; 3b: .github/workflows/diagnostics.yml) and full post-build verification pushed: 210 Python + 75 JS tests green. All 10 \u00a715 phases done."
+    "id": "relay-ordering-fix-session-1",
+    "note": "Targeted fix for architecture_concerns 'relay-media-before-confirm-record-silent-drop': relay-job KV record is created at staging time (before the group copy) instead of confirm time, closing the Bot B rememberCopiedMedia silent-drop race. The prior audit commit that recorded this concern never reached origin/main \u2014 the entry was (re)created here. +3 JS regression tests; suites green: 210 Python + 78 JS."
   },
   "architecture_concerns_closed": [
     {
@@ -451,6 +465,12 @@
       "raised_in_session": "relay-session-1",
       "closed_in_session": "telegram-channel-session-1",
       "resolution": "Replaced with _relay_asset_metadata + _download_relay_asset: validates release_tag/expected_size_bytes/sha256 per legacy stage-a.yml checks (1800 MiB cap), prefetches disk, streams source_input.bin from the clipforge-relay-input-<job> release via GH_TOKEN with octet-stream Accept, verifies exact size + SHA-256, deletes partial files on mismatch. 6 new tests cover missing metadata, bad tag/size/checksum, happy path, tamper path, 404."
+    },
+    {
+      "concern": "relay-media-before-confirm-record-silent-drop (relay staging/confirm ordering race)",
+      "raised_in_session": "kv-write-amplification-audit (prior session; commit unpushed/lost)",
+      "closed_in_session": "relay-ordering-fix-session-1",
+      "resolution": "KV relay-job record now created at staging time before the group copy; confirm upgrades it in place. rememberCopiedMedia can no longer observe copied media without a record. 3 regression tests; 210 Python + 78 JS green."
     }
   ]
 }

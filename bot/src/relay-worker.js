@@ -135,4 +135,4 @@ export default {
   }
 };
 
-export const __test = { configuredInteger, isRelevantRelayUpdate, parseRelayCaption, parseRelayReadySignal, relayMediaFileId, sealedRelayPayload };
+export const __test = { configuredInteger, isRelevantRelayUpdate, parseRelayCaption, parseRelayReadySignal, relayMediaFileId, rememberCopiedMedia, sealedRelayPayload };
