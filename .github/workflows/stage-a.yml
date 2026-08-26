@@ -1,0 +1,434 @@
+name: Stage A — Ingest, Transcribe, Analyze (new pipeline)
+
+# New-architecture Stage A. Driven by jobs/<job_id>/stage-a-request.json
+# (written by the bot before dispatch — ARCHITECTURE.md §7.1), NOT by a wall
+# of workflow inputs. Writes jobs/<job_id>/status.json via pipeline/status.py
+# before and after every risky step. Publishes the §7.2 analysis bundle to
+# release clipforge-<job_id>.
+#
+# The two preserved subsystems (telegram_channel §9.1, telegram_relay §9.2)
+# are intentionally NOT handled here yet — pipeline/stage_a/ingest.py fails
+# closed for those source kinds until their own phases land.
+run-name: Stage A — ${{ inputs.job_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "Job id (must have jobs/<job_id>/stage-a-request.json committed by the bot)"
+        required: true
+        type: string
+      code_ref:
+        description: "Optional current default-branch SHA to run THIS execution from (restart-correctness). Empty = current default branch."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: clipforge-stage-a-${{ inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  stage_a:
+    name: Stage A
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+
+    steps:
+      # RESTART CORRECTNESS — a restart pins the CURRENT default-branch tip,
+      # never the original run's commit (mirrors stage-b.yml).
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.code_ref != '' && inputs.code_ref || github.event.repository.default_branch }}
+
+      - name: Re-attach HEAD to the dispatch branch when the checkout pinned a SHA
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if git symbolic-ref -q HEAD > /dev/null; then exit 0; fi
+          branch="${DEFAULT_BRANCH:?}"
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch"
+          git checkout -B "$branch" HEAD
+          git branch --set-upstream-to="origin/$branch" "$branch"
+
+      - name: Resolve job + read the Stage A request
+        id: req
+        shell: bash
+        run: |
+          set -euo pipefail
+          job_id="${{ inputs.job_id }}"
+          if ! [[ "$job_id" =~ ^[A-Za-z0-9._-]{1,120}$ ]]; then
+            echo "Invalid job_id" >&2; exit 1
+          fi
+          req="jobs/$job_id/stage-a-request.json"
+          test -f "$req" || { echo "Missing $req — the bot must write it before dispatch" >&2; exit 1; }
+          python - "$req" >> "$GITHUB_OUTPUT" <<'PY'
+          import json, re, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          def put(k, v): print(f"{k}={v}")
+          mode = data.get("mode", "manual")
+          put("mode", mode if mode in ("manual", "automatic") else "manual")
+          src = data.get("source", {})
+          kind = src.get("kind", "")
+          put("source_kind", kind if re.fullmatch(r"[a-z_]{1,32}", kind) else "unknown")
+          opts = data.get("options", {})
+          wm = opts.get("whisper_model", "base")
+          put("whisper_model", wm if wm in ("tiny", "base", "small") else "base")
+          lang = str(opts.get("language", "auto"))
+          put("language", lang if re.fullmatch(r"[A-Za-z-]{2,12}", lang) else "auto")
+          put("vision_assist", "true" if opts.get("enable_vision_assist", True) else "false")
+          series = data.get("series", {})
+          put("series_enabled", "true" if series.get("enabled") else "false")
+          src_job = str(series.get("source_job_id", ""))
+          put("series_source_job_id", src_job if re.fullmatch(r"[A-Za-z0-9._-]{1,120}", src_job) else "")
+          put("target_duration_seconds", str(int(opts.get("target_duration_seconds", 120) or 120)))
+          PY
+          echo "release_tag=clipforge-$job_id" >> "$GITHUB_OUTPUT"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system + minimal ingest deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg aria2 file
+          python -m pip install --upgrade -q pip
+          python -m pip install -q "requests>=2.32,<3"
+          ffmpeg -version | head -n 1
+
+      - name: Write initial status (stage_a_running)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
+            --state stage_a_running --mode "${{ steps.req.outputs.mode }}" \
+            --message "Stage A starting — ingesting source (${{ steps.req.outputs.source_kind }})" \
+            --release-tag "${{ steps.req.outputs.release_tag }}" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --code-ref "$(git rev-parse HEAD)"
+
+      - name: Commit initial status
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.req.outputs.job_id }}/"
+          git commit -m "clipforge: job ${{ steps.req.outputs.job_id }} stage A running" || echo "nothing to commit"
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase --autostash || true; sleep 2
+          done
+          echo "WARN: initial status push failed; the final status commit will carry it." >&2
+
+      # ---------------------------------------------------------------------
+      # SERIES CONTINUATION — reuse the source job's Stage A evidence
+      # (§11: later parts reuse Part 1's transcript/indexes/screenshots and
+      # the same original video).
+      # ---------------------------------------------------------------------
+      - name: Reuse original Stage A evidence for a Series continuation
+        id: series_reuse
+        if: ${{ steps.req.outputs.series_enabled == 'true' && steps.req.outputs.series_source_job_id != '' && steps.req.outputs.series_source_job_id != steps.req.outputs.job_id }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source_job="${{ steps.req.outputs.series_source_job_id }}"
+          mkdir -p work/series-source
+          gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
+            --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
+            --pattern 'screenshots.zip' --pattern 'source_input.bin'
+          mkdir -p work/screenshots
+          cp work/series-source/transcript.json work/transcript.json
+          cp work/series-source/scene_index.json work/scene_index.json
+          cp work/series-source/key_moments.json work/key_moments.json
+          unzip -q work/series-source/screenshots.zip -d work/screenshots
+          cp work/series-source/source_input.bin work/original.bin
+          python - <<'PY'
+          import json
+          rec = {"version": 1, "job_id": "${{ steps.req.outputs.job_id }}",
+                 "source_kind": "series_reuse",
+                 "original_path": "work/original.bin",
+                 "original_asset_name": "source_input.bin",
+                 "size_bytes": __import__("os").path.getsize("work/original.bin"),
+                 "container": "bin", "ingested_at_epoch": int(__import__("time").time())}
+          import os, pathlib
+          pathlib.Path("jobs/${{ steps.req.outputs.job_id }}").mkdir(parents=True, exist_ok=True)
+          pathlib.Path("jobs/${{ steps.req.outputs.job_id }}/ingest.json").write_text(json.dumps(rec, indent=2) + "\n")
+          tx = json.load(open("work/transcript.json", encoding="utf-8"))
+          dur = int(round(float(tx.get("audio_duration_seconds") or 0)))
+          if dur <= 0:
+              dur = int(round(float(json.load(open("work/scene_index.json")).get("video_duration_seconds") or 0)))
+          if dur <= 0: raise SystemExit("Could not recover source duration from reused evidence.")
+          print(f"DURATION_SECONDS={dur}")
+          PY
+          echo "reused=true" >> "$GITHUB_OUTPUT"
+
+      # ---------------------------------------------------------------------
+      # INGEST — resolve the source into work/original.<ext>.
+      # Exit codes: 0 ok · 3 awaiting_torrent_selection (clean stop) ·
+      # 4 preserved-subsystem gate · 2 ingest error.
+      # ---------------------------------------------------------------------
+      - name: Ingest source (url, drive, magnet, torrent_file)
+        id: ingest
+        if: ${{ steps.series_reuse.outputs.reused != 'true' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p work
+          python -m pipeline.stage_a.ingest "${{ steps.req.outputs.job_id }}" work
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "result=ok" >> "$GITHUB_OUTPUT" ;;
+            3) echo "result=awaiting_torrent" >> "$GITHUB_OUTPUT" ;;
+            *) echo "result=failed" >> "$GITHUB_OUTPUT"; exit "$code" ;;
+          esac
+
+      - name: Park for torrent selection (multi-file source, user pick needed)
+        if: ${{ steps.ingest.outputs.result == 'awaiting_torrent' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.req.outputs.job_id }}/"
+          git commit -m "clipforge: job ${{ steps.req.outputs.job_id }} awaiting torrent selection" || echo "nothing to commit"
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase --autostash || true; sleep 2
+          done
+          echo "FATAL: could not persist awaiting_torrent_selection status" >&2; exit 1
+
+      - name: Install full analysis deps
+        if: ${{ steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -q "faster-whisper==1.0.3" "onnxruntime>=1.17,<2" "numpy>=1.24,<3"
+          python - <<'PY'
+          import onnxruntime  # noqa: F401 — surface ABI failures here, not in VAD
+          print("onnxruntime import: OK")
+          PY
+
+      - name: Probe duration + build 720p analysis copy
+        if: ${{ steps.ingest.outputs.result == 'ok' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGINAL_PATH="$(python -c "import json; print(json.load(open('jobs/${{ steps.req.outputs.job_id }}/ingest.json'))['original_path'])")"
+          dur="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$ORIGINAL_PATH")"
+          dur_int="$(python -c "import sys; print(int(round(float(sys.argv[1]))))" "$dur")"
+          echo "DURATION_SECONDS=$dur_int" >> "$GITHUB_ENV"
+          echo "Duration: $dur ($dur_int s)"
+          mkdir -p work/analysis
+          ffmpeg -y -i "$ORIGINAL_PATH" \
+            -vf "scale='min(1280,iw)':'-2'" \
+            -c:v libx264 -preset veryfast -crf 28 \
+            -c:a aac -b:a 96k \
+            work/analysis/analysis_720p.mp4
+
+      - name: Recover duration from reused evidence
+        if: ${{ steps.series_reuse.outputs.reused == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dur="$(python -c "import json; print(int(round(float(json.load(open('work/scene_index.json')).get('video_duration_seconds') or 0))))")"
+          test "$dur" -gt 0
+          echo "DURATION_SECONDS=$dur" >> "$GITHUB_ENV"
+
+      - name: Extract audio + transcribe (faster-whisper, CPU)
+        if: ${{ steps.ingest.outputs.result == 'ok' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGINAL_PATH="$(python -c "import json; print(json.load(open('jobs/${{ steps.req.outputs.job_id }}/ingest.json'))['original_path'])")"
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
+            --state stage_a_running --message "Transcribing audio (faster-whisper CPU)"
+          ffmpeg -y -i "$ORIGINAL_PATH" -vn -ac 1 -ar 16000 -c:a pcm_s16le work/audio.wav
+          python -m pipeline.stage_a.transcribe work/audio.wav work/transcript.json \
+            --model "${{ steps.req.outputs.whisper_model }}" \
+            --lang "${{ steps.req.outputs.language }}"
+
+      - name: Local vision-assist stack (shots, key moments, composites)
+        if: ${{ steps.ingest.outputs.result == 'ok' && steps.req.outputs.vision_assist == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
+            --state stage_a_running --message "Building local vision-assist indexes"
+          python -m pipeline.stage_a.scenes all \
+            work/analysis/analysis_720p.mp4 \
+            work/transcript.json \
+            "$DURATION_SECONDS" \
+            work \
+            --window-seconds 6 --threshold 0.35 --max-moments 60
+
+      - name: Vision-assist disabled — write empty stub indexes
+        if: ${{ steps.ingest.outputs.result == 'ok' && steps.req.outputs.vision_assist == 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/screenshots
+          ffmpeg -y -i work/analysis/analysis_720p.mp4 \
+            -vf "fps=1,scale='min(640,iw)':'-2',tile=3x2:padding=2:margin=2:color=black" \
+            -vsync vfr -qscale:v 5 -start_number 0 work/screenshots_tmp/grid_%05d.jpg
+          python - "$DURATION_SECONDS" <<'PY'
+          import json, sys
+          for path, extra in [("work/scene_index.json", {"shot_count": 0, "shots": []}),
+                              ("work/key_moments.json", {"moment_count": 0, "moments": []})]:
+              payload = {"video_duration_seconds": float(sys.argv[1])}
+              payload.update(extra)
+              open(path, "w").write(json.dumps(payload, indent=2))
+          PY
+
+      - name: Assemble the analysis bundle (prompt + zips + manifest)
+        if: ${{ steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
+            --state stage_a_running --message "Assembling analysis bundle"
+          python -m pipeline.stage_a.bundle "${{ steps.req.outputs.job_id }}" work \
+            --release-tag "${{ steps.req.outputs.release_tag }}" \
+            --duration-seconds "$DURATION_SECONDS"
+          ls -lh work/bundle/
+
+      - name: Create GitHub Release with the analysis bundle
+        if: ${{ steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.req.outputs.release_tag }}
+          name: "ClipForge job ${{ steps.req.outputs.job_id }}"
+          body: |
+            ClipForge Stage A analysis bundle (ARCHITECTURE.md §7.2).
+
+            clipforge-job-id: ${{ steps.req.outputs.job_id }}
+            stage: awaiting_plan
+
+            Assets: 00_READ_THIS_FIRST.txt (agent prompt), transcript.json,
+            scene_index.json, key_moments.json, screenshots.zip,
+            event_composites.zip (when vision assist produced events),
+            analysis_720p.mp4, source_input.bin (full-quality source for Stage B),
+            manifest.json.
+
+            This release is automatically deleted ~12 hours after creation.
+          make_latest: "false"
+          prerelease: true
+          files: work/bundle/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve release asset URLs
+        id: assets
+        if: ${{ steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.req.outputs.release_tag }}"
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" | python -c '
+          import json, os, sys
+          data = json.load(sys.stdin)
+          out = {a["name"]: a["browser_download_url"] for a in data.get("assets", [])}
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write("release_url=" + data.get("html_url", "") + "\n")
+              f.write("assets_json=" + json.dumps(out) + "\n")
+          '
+
+      - name: Write awaiting_plan status (manual mode)
+        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'manual' }}
+        shell: bash
+        env:
+          ASSETS_JSON: ${{ steps.assets.outputs.assets_json }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          assets = json.loads(os.environ["ASSETS_JSON"])
+          PY
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
+            --state awaiting_plan \
+            --message "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B." \
+            --release-url "${{ steps.assets.outputs.release_url }}"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          p = Path("jobs/${{ steps.req.outputs.job_id }}/status.json")
+          data = json.loads(p.read_text())
+          data.setdefault("assets", {}).update(json.loads(os.environ["ASSETS_JSON"]))
+          data["assets"]["analysis_bundle_url"] = os.environ.get("RELEASE_URL", "")
+          p.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+          PY
+
+      # Automatic mode's analysis step is built in the NEXT phase
+      # (automatic_mode). Until then Stage A fails closed for automatic jobs
+      # rather than parking them in a state nothing will ever advance.
+      - name: Automatic mode not built yet — fail closed
+        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::error::Automatic mode analysis is not built yet (automatic_mode phase). The bundle IS published; rerun as manual or wait for the next phase."
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
+            --state error \
+            --message "Stage A bundle published, but automatic analysis is not built yet (automatic_mode phase). Restart as manual, or re-dispatch after the automatic_mode phase lands." \
+            --release-url "${{ steps.assets.outputs.release_url }}"
+          exit 2
+
+      - name: Commit final status
+        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'manual' }}
+        shell: bash
+        env:
+          RELEASE_URL: ${{ steps.assets.outputs.release_url }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.req.outputs.job_id }}/"
+          git commit -m "clipforge: job ${{ steps.req.outputs.job_id }} awaiting production.json" || echo "nothing to commit"
+          for attempt in 1 2 3; do
+            git push && exit 0
+            echo "final status push attempt $attempt failed — rebasing and retrying…" >&2
+            git pull --rebase --autostash; sleep 2
+          done
+          echo "FATAL: could not persist the awaiting_plan status to origin after 3 attempts." >&2
+          exit 1
+
+      - name: On failure, write error status
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          python -m pipeline.status "${{ steps.req.outputs.job_id }}" --state error \
+            --message "Stage A failed. See workflow run for logs." \
+            --release-tag "${{ steps.req.outputs.release_tag }}" || true
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/${{ steps.req.outputs.job_id }}/" || true
+          git commit -m "clipforge: job ${{ steps.req.outputs.job_id }} stage A error" || true
+          for attempt in 1 2 3; do
+            git push && break
+            git pull --rebase --autostash || true; sleep 2
+          done
+          true

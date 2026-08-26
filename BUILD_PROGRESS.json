@@ -15,27 +15,27 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "stage_a_ingest_analyze",
+  "current_phase": "automatic_mode",
   "current_task": {
     "stage": "stage_a_ingest_analyze",
     "task": "Stage A ingest + analyze build-out",
-    "status": "partially_complete",
+    "status": "complete",
     "session": "stage-a-session-1",
     "completed": [
       "pipeline/stage_a/__init__.py",
-      "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file; telegram_channel + telegram_relay routed to fail-closed NotBuiltGate; offline magnet/torrent validators ported; torrent-selection flow with SystemExit(3) -> awaiting_torrent_selection; unit-checked offline)"
+      "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file; telegram_channel + telegram_relay routed to fail-closed NotBuiltGate; offline magnet/torrent validators ported; torrent-selection flow with SystemExit(3) -> awaiting_torrent_selection; aria2 magnet-metadata + selected-file download drivers)",
+      "pipeline/stage_a/transcribe.py (faster-whisper CPU; VAD segment-end correction preserved verbatim; lazy faster-whisper import so the module is test-importable without the dep)",
+      "pipeline/stage_a/scenes.py (shot boundaries + key-moment fusion + baseline 6s composites + dense event composites, ported from scene_index/build_key_moments/event_frames + the legacy workflow's inline ffmpeg tile step; zero AI-vision tokens)",
+      "pipeline/plan/prompt.py (00_READ_THIS_FIRST.txt generator ported VERBATIM from _legacy/scripts/generate_analysis_prompt.py — FOCUS/NO_FOCUS/SERIES directives + TEMPLATE unchanged; only the module path/usage header edited)",
+      "pipeline/stage_a/bundle.py (bundle assembly per §7.2: contract-named staging incl. source_input.bin + analysis_720p.mp4, screenshots.zip holding BOTH frame_+event_ files (keeps the prompt wording true), optional event_composites.zip dense-only view, manifest.json per schemas/analysis_bundle.schema.json with size+sha256, url left for the workflow)",
+      ".github/workflows/stage-a.yml (request-driven via jobs/<job_id>/stage-a-request.json, restart-correct code_ref, status before/after risky steps, torrent-selection clean stop, series-evidence reuse, vision-assist opt-out stubs, bundle release upload, awaiting_plan final status for manual; automatic mode FAILS CLOSED with a clear status until the automatic_mode phase lands)",
+      "pipeline/tests/test_stage_a.py (offline unit tests: host/URL classification, drive id extraction, magnet validation, torrent bencode roundtrip + candidates + traversal rejection, preserved-subsystem gates fail closed + error status, shot-index flicker folding, emotional scoring, transcript density, visual-tail bounds, bundle assembly incl. zip contents and manifest shape)"
     ],
-    "remaining": [
-      "pipeline/stage_a/transcribe.py",
-      "pipeline/stage_a/scenes.py",
-      "pipeline/plan/prompt.py + pipeline/stage_a/bundle.py",
-      ".github/workflows/stage-a.yml",
-      "pipeline/tests/test_stage_a.py"
-    ],
+    "remaining": [],
     "resume_from": {
-      "file": "pipeline/stage_a/transcribe.py",
+      "file": "pipeline/plan/automatic.py",
       "component": "module",
-      "next_operation": "port _legacy/scripts/transcribe.py verbatim into pipeline/stage_a/transcribe.py"
+      "next_operation": "build the automatic_mode phase: port _legacy/scripts/automatic_analysis.py into pipeline/plan/automatic.py (Gemini bounded tool-use, multi-key rotation from GEMINI_API_KEYS, validate output via pipeline/plan/schema.py) and add the stage-a.yml automatic branch (automatic_analysis_running -> dispatch stage-b on valid plan) replacing the current fail-closed gate"
     }
   },
   "phases": [
@@ -84,8 +84,8 @@
     {
       "id": "stage_a_ingest_analyze",
       "title": "Stage A — ingest + analyze (all source kinds EXCEPT the two preserved subsystems)",
-      "status": "in_progress",
-      "started_in_session": "stage-a-session-1",
+      "status": "complete",
+      "completed_in_session": "stage-a-session-1",
       "deliverables": [
         "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file)",
         "pipeline/stage_a/transcribe.py (faster-whisper CPU)",
@@ -98,7 +98,7 @@
     {
       "id": "automatic_mode",
       "title": "Automatic mode — Gemini analysis producing a validated production.json",
-      "status": "pending",
+      "status": "next",
       "deliverables": [
         "pipeline/plan/automatic.py (Gemini bounded tool-use analysis, multi-key rotation, validated against schemas/production_plan.schema.json)",
         "stage-a.yml automatic branch (automatic_analysis_running state; dispatch Stage B on valid plan)"
