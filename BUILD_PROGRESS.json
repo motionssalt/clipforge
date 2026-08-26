@@ -25,20 +25,19 @@
       "bot/src/constants.js — new-architecture constants: §6.1 state names shared with jobs.js, §8.2 command surface (/start /help /new /tasks /done /settings /cancel), stage-a/b/publish workflow names, branding paths, voice catalog, escapeHtml + token redaction",
       "bot/src/crypto.js — ported verbatim from legacy: AES-256-GCM credential envelopes with per-chat AAD (clipforge-telegram-credentials:v1:<chat>) and relay AAD (clipforge-telegram-relay:v1:<job>) unchanged; roundtrip + AAD enforcement verified",
       "bot/src/storage.js — ported verbatim from legacy: state/credentials/tasks/relay KV records, write-avoidance in putState (KV quota), update dedupe",
-      "bot/src/telegram.js — ported verbatim from legacy: fetch-based Bot API client, sendMessage/editMessage/deleteMessage/answerCallback/copyMessage, multipart audio/document send, bounded torrent download"
+      "bot/src/telegram.js — ported verbatim from legacy: fetch-based Bot API client, sendMessage/editMessage/deleteMessage/answerCallback/copyMessage, multipart audio/document send, bounded torrent download",
+      "bot/src/github.js — ported from legacy github.js and adapted to the new contracts: buildStageARequest() emits the §7.1 NESTED request shape (source/options/mode/series/music) and saveStageARequest writes it (cross-validated against schemas/stage_a_request.schema.json with jsonschema — passes); legacy flat request writer + automatic_music.json writer dropped (music lives in the request, resolved by pipeline/plan/music.py); preserved: shadow-clone create/connect with excludes, libsodium sealed Actions secret upload (48-byte overhead check kept), masked-fingerprint metadata, releases, job/release cleanup, dispatch + cancel + currentBranchSha (code_ref restart support), branding readers/writers (narrator, watermark, music default, series, Zernio). tweetnacl + tweetnacl-sealedbox-js added to bot/package.json"
     ],
     "remaining": [
-      "bot/package.json + bot/wrangler.bot-a.jsonc",
-      "bot/src/github.js (dispatch, files, releases, sealed-secret upload, shadow-clone create/connect)",
       "bot/src/index.js (webhook + router, private chats only, webhook-secret auth)",
       "bot/src/commands/* (/start /new /tasks /done /settings /cancel)",
       "New-video wizard (mode → source → focus → length → music → confirm)",
       "Manual handoff: Get agent prompt + Upload production.json with validation"
     ],
     "resume_from": {
-      "file": "bot/src/github.js",
-      "component": "new module",
-      "next_operation": "port _legacy/telegram-bot/src/github.js adapted to the new contracts: saveStageARequest writes the §7.1 nested request shape (source/options/mode/series/music), drop legacy flat shape + automatic_music.json writer, keep shadow-clone create/connect, sealed-secret upload, releases, dispatch with code_ref"
+      "file": "bot/src/index.js",
+      "component": "Bot A worker entry",
+      "next_operation": "build the webhook + router (private chats only, X-Telegram-Bot-Api-Secret-Token auth), self-editing activeViewId views, home/tasks/done/settings screens, New-video wizard (mode -> source -> focus -> length -> music -> confirm), task status screens with per-state actions, manual handoff (Get agent prompt + Upload production.json via bot/src/plan.js validation), restart with fresh code_ref; wire telegram_channel source kind to the clone UX gate (§9.1) and telegram_relay to a not-yet-built notice until the relay phase"
     }
   },
   "phases": [
