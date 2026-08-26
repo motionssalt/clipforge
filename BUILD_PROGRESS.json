@@ -25,15 +25,17 @@
       "pipeline/cleanup/{__init__,__main__,expired}.py — port of _legacy/scripts/cleanup.py onto stdlib urllib (no requests dep): release+tag deletion, jobs/<id>/ folder removal, per-job branch deletion, RFC 5988 pagination, expiry driven by §6.2 expires_at_epoch with created_at_epoch+ttl and release-created_at fallbacks preserved",
       "pipeline/tests/test_cleanup.py — 21 offline tests (expiry matrix, tag->job mapping, Link-header pagination, full mocked-API end-to-end incl. branch/folder deletion) — all green",
       ".github/workflows/cleanup.yml — hourly cron (:07) + manual ttl_seconds override; stdlib-only module so no dependency install; push retry loop on the folder-deletion commit",
-      ".github/workflows/deploy-bots.yml — port of _legacy/.github/workflows/deploy-telegram-workers.yml onto the new bot/ layout: bot/** path trigger + manual dispatch, Node 22 + npm ci --ignore-scripts, npm test gate (75 passed locally), wrangler-action deploy of wrangler.bot-a.jsonc and wrangler.bot-b.jsonc; Cloudflare credentials referenced by secret name only, worker runtime secrets remain wrangler-managed"
+      ".github/workflows/deploy-bots.yml — port of _legacy/.github/workflows/deploy-telegram-workers.yml onto the new bot/ layout: bot/** path trigger + manual dispatch, Node 22 + npm ci --ignore-scripts, npm test gate (75 passed locally), wrangler-action deploy of wrangler.bot-a.jsonc and wrangler.bot-b.jsonc; Cloudflare credentials referenced by secret name only, worker runtime secrets remain wrangler-managed",
+      "pipeline/diagnostics/{__init__,gemini}.py — port of _legacy/scripts/gemini_api_capability_diagnostic.py onto the package layout (redacted capability report: key fingerprints only, native function-calling + inline-image probe); model candidates now shared with pipeline.plan.automatic (DEFAULT_PRIMARY_MODEL + DEFAULT_FALLBACK_MODELS) so the diagnostic probes exactly what Automatic mode would use",
+      "pipeline/tests/test_diagnostics.py — 12 offline tests (key splitting/dedup, fingerprinting, redaction matrix, fake-SDK probe_key success/no-model/error paths, report writing + exit codes) — all green"
     ],
     "remaining": [
-      ".github/workflows/diagnostics.yml (manual Gemini capability + Telegram intake checks) — port from _legacy/.github/workflows/gemini-api-diagnostic.yml + telegram-intake-check.yml"
+      ".github/workflows/diagnostics.yml — single workflow_dispatch workflow running the Gemini capability check (python -m pipeline.diagnostics.gemini) and the Telegram intake positive/negative checks via pipeline.stage_a.ingest (secrets by name only)"
     ],
     "resume_from": {
-      "file": "_legacy/.github/workflows/gemini-api-diagnostic.yml",
-      "component": "diagnostics workflow port",
-      "next_operation": "Read the two legacy diagnostic workflows plus _legacy/scripts/gemini_api_capability_diagnostic.py and the telegram intake check they drive, then write .github/workflows/diagnostics.yml as a single manual workflow running the Gemini capability check and the Telegram intake positive/negative checks (ARCHITECTURE.md §12), secrets by name only. Then the background_workflows phase is complete."
+      "file": ".github/workflows/diagnostics.yml",
+      "component": "diagnostics workflow",
+      "next_operation": "Write .github/workflows/diagnostics.yml: job 1 runs the Gemini capability check (google-genai SDK install, python -m pipeline.diagnostics.gemini, artifact upload); job 2 runs the Telegram intake positive check (t.me channel post via pipeline.stage_a.ingest with a synthetic jobs/<id>/stage-a-request.json, ffprobe duration validation) and negative check (public group link must fail). Secrets by name only per §13. Then mark background_workflows complete."
     }
   },
   "phases": [
@@ -441,8 +443,8 @@
     "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
   },
   "last_session": {
-    "id": "background-workflows-session-1",
-    "note": "background_workflows step 2/3 pushed: deploy-bots.yml (bot tests green 75/0, wrangler deploy of Bot A + Bot B). Next: step 3/3 diagnostics.yml — the final workflow of the final phase."
+    "id": "background-workflows-session-2",
+    "note": "background_workflows step 3a/3 pushed: pipeline/diagnostics/gemini.py port + 12 offline tests green. Next: 3b/3 diagnostics.yml — the final workflow of the final phase."
   },
   "architecture_concerns_closed": [
     {
