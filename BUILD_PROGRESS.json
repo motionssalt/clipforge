@@ -23,19 +23,19 @@
     "session": "publish-zernio-session-1",
     "completed": [
       "pipeline/publish/__init__.py",
-      "pipeline/publish/zernio.py (port of legacy zernio_publish.py + zernio_state.py + zernio_targets.py + zernio_schedule.py + zernio_workflow_state.py + zernio_manual_resolve.py into one module; unified CLI subcommand set; syntax-checked and importable)"
+      "pipeline/publish/zernio.py (port of legacy zernio_publish.py + zernio_state.py + zernio_targets.py + zernio_schedule.py + zernio_workflow_state.py + zernio_manual_resolve.py into one module; unified CLI subcommand set; syntax-checked and importable)",
+      "pipeline/tests/test_publish_zernio.py (72 offline tests: validation helpers, metadata/hashtag/tag normalization, targets encode/decode + settings.auto_publish, queue helpers, plan_smart_schedule daily/hourly/collision/custom-start, aggregate_publishing_status, post_summary, reconcile_post_status polling via mock opener, HTTP transport error sanitization, publish_video happy path + 409 dedup + per-platform partial failure + missing media, retry/update/cancel, write_publishing_state/publishing_error_state/read_json_object_safely, resolve_manual_dispatch retry-vs-fresh; full pipeline suite 164 green)"
     ],
     "remaining": [
-      "unit tests for pipeline.publish.zernio (queue/schedule/targets/publish helpers)",
       ".github/workflows/publish.yml (discover/publish/retry/update/cancel + manual-resolve; durable serial queue)",
       "Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle)",
       "Bot per-post actions on complete task status (task:pub wiring: publish/retry/update/cancel dispatch)",
       "Stage B automatic-publish dispatch step when settings enable auto_publish"
     ],
     "resume_from": {
-      "file": "pipeline/tests/test_publish_zernio.py",
-      "component": "unit tests for pipeline.publish.zernio",
-      "next_operation": "author unit tests covering queue helpers, smart-schedule slot search, target normalization, metadata normalization, aggregate_publishing_status, publish_video via a mock opener, and resolve_manual_dispatch"
+      "file": ".github/workflows/publish.yml",
+      "component": "publish.yml combined workflow",
+      "next_operation": "author unified publish.yml (dispatch inputs incl. action=manual for retry-vs-fresh resolve; durable concurrency group; Stage-B complete gate; commit publishing state + queue back)"
     }
   },
   "phases": [
