@@ -22,18 +22,18 @@
     "status": "partially_complete",
     "session": "automatic-mode-session-1",
     "completed": [
-      "pipeline/plan/automatic.py — ported from _legacy/scripts/automatic_analysis.py: bounded native tool-use agent (read_transcript -> read_scene_index/read_key_moments -> open_composite, chronological, <=12 composites), GeminiGateway multi-key rotation from GEMINI_API_KEYS with bounded transient retries + redacted logging, model fallback chain (primary 3.7-flash -> 3.6-flash), narration-coverage + visual-grounding checks, visual_evidence stripped before output, production.json validated via the shared pipeline.plan.schema contract (never the legacy contract module), lazy google-genai import so the module is test-importable without the dep"
+      "pipeline/plan/automatic.py — ported from _legacy/scripts/automatic_analysis.py: bounded native tool-use agent (read_transcript -> read_scene_index/read_key_moments -> open_composite, chronological, <=12 composites), GeminiGateway multi-key rotation from GEMINI_API_KEYS with bounded transient retries + redacted logging, model fallback chain (primary 3.7-flash -> 3.6-flash), narration-coverage + visual-grounding checks, visual_evidence stripped before output, production.json validated via the shared pipeline.plan.schema contract (never the legacy contract module), lazy google-genai import so the module is test-importable without the dep",
+      "pipeline/tests/test_automatic.py — 19 offline tests ported from _legacy/scripts/test_automatic_analysis.py (pytest-style): key parsing, model candidate dedupe, shared-contract acceptance via pipeline.plan.schema, narration 90% coverage, provider error classification/rotation/retry policy, redacted error summaries, gateway transient-503 + malformed-response retries, quota no-retry, evidence tool ordering, full grounded run incl. one bounded correction, non-JSON correction, correction-time exhaustion propagation, malformed-final/malformed-provider/503 fallback-model routing, exhausted-pool fail-closed, screenshots.zip traversal + empty-archive rejection"
     ],
     "remaining": [
-      "pipeline/tests/test_automatic.py — offline unit tests with scripted gateway (tool ordering, correction retry, fallback routing, key rotation, narration coverage, visual grounding, zip safety)",
       "pipeline/plan/music.py — port read_automatic_music.py (automatic music_ref resolution for Stage B dispatch)",
       ".github/workflows/stage-a.yml automatic branch — automatic_analysis_running status, run analysis, stage_b_queued, dispatch stage-b.yml (replaces the fail-closed gate)",
       "pipeline/requirements.txt — add google-genai"
     ],
     "resume_from": {
-      "file": "pipeline/tests/test_automatic.py",
-      "component": "new test module",
-      "next_operation": "port _legacy/scripts/test_automatic_analysis.py against pipeline.plan.automatic (scripted gateway, no google-genai dependency in tests)"
+      "file": "pipeline/plan/music.py",
+      "component": "new module",
+      "next_operation": "port _legacy/scripts/read_automatic_music.py into pipeline/plan/music.py (safe library-ref validation, per-job selection file, persistent default fallback) for the stage-a.yml automatic branch's Stage B dispatch"
     }
   },
   "phases": [
