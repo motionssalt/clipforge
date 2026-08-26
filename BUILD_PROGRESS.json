@@ -15,7 +15,7 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "contracts_and_schemas",
+  "current_phase": "stage_b_render",
   "phases": [
     {
       "id": "architecture",
@@ -27,7 +27,8 @@
     {
       "id": "contracts_and_schemas",
       "title": "Schemas + shared validators + job state machine",
-      "status": "next",
+      "status": "complete",
+      "completed_in_session": "contracts-session-1",
       "deliverables": [
         "schemas/job_status.schema.json",
         "schemas/stage_a_request.schema.json",
@@ -35,16 +36,16 @@
         "schemas/analysis_bundle.schema.json",
         "pipeline/plan/schema.py (single production.json validator)",
         "bot/src/plan.js (JS port of the same validator — must agree with schema.py)",
-        "pipeline/ status-writer module for jobs/<job_id>/status.json (schema per ARCHITECTURE.md §6.2)",
+        "pipeline/status.py status-writer module for jobs/<job_id>/status.json (schema per ARCHITECTURE.md §6.2)",
         "bot/src/jobs.js job state machine read/write helpers (states per ARCHITECTURE.md §6.1)",
         "unit tests proving schema.py and plan.js accept/reject identical documents"
       ],
-      "notes": "Build first. Everything else depends on these contracts. production.json validation rules are in ARCHITECTURE.md §7.3 and are NOT negotiable."
+      "notes": "All deliverables built and tested. See completed_work[1] for the full summary. Both validators pass 26 shared fixture cases with identical error sets. See architecture_concerns[0] for the one flag raised during this phase."
     },
     {
       "id": "stage_b_render",
       "title": "Stage B — render pipeline (voiceover, render, reframe, captions, watermark, enhance, compress)",
-      "status": "pending",
+      "status": "next",
       "deliverables": [
         "pipeline/stage_b/voiceover.py (Edge TTS, curated voice catalog, 24kHz mono PCM contract)",
         "pipeline/stage_b/render.py (mobile-safe single-pass render — see ARCHITECTURE.md §14)",
@@ -55,7 +56,7 @@
         "pipeline/stage_b/compress.py",
         ".github/workflows/stage-b.yml (dispatchable by job_id + production_ref; writes status; publishes final.mp4/final.zip to the job release)"
       ],
-      "notes": "Testable end-to-end with a hand-written valid production.json and any sample video — no bot required. Port logic from _legacy/scripts/ (generate_voiceover.py, cut_and_produce.py, cinematic_reframe.py, generate_subtitles_cinematic.py, apply_creator_watermark.py, enhance_scenes.py, compress_final_video.py)."
+      "notes": "Testable end-to-end with a hand-written valid production.json and any sample video — no bot required. Port logic from _legacy/scripts/ (generate_voiceover.py, cut_and_produce.py, cinematic_reframe.py, generate_subtitles_cinematic.py, apply_creator_watermark.py, enhance_scenes.py, compress_final_video.py). MUST call pipeline.status.write_status before/after each risky step so a crashed run leaves a resumable status.json. MUST re-run pipeline.plan.schema.validate_production_plan at the Stage B boundary (§13 invariant #5) — do not trust that the bot validated it. Read the production.json using the accepted-shapes rules already implemented (nested `series` object OR flat `series_*` siblings; `voiceover_text` OR legacy `raw_narration`)."
     },
     {
       "id": "stage_a_ingest_analyze",
@@ -94,7 +95,7 @@
         "New-video wizard (mode → source → focus → length → music → confirm)",
         "Manual handoff: Get agent prompt + Upload production.json with validation"
       ],
-      "notes": "UX per ARCHITECTURE.md §8. Single self-editing status message (activeViewId mechanic from _legacy/telegram-bot/src/index.js). Secrets typed in chat are deleted immediately."
+      "notes": "UX per ARCHITECTURE.md §8. Single self-editing status message (activeViewId mechanic from _legacy/telegram-bot/src/index.js). Secrets typed in chat are deleted immediately. Reuse the already-built bot/src/plan.js (validator) and bot/src/jobs.js (state machine helpers)."
     },
     {
       "id": "relay_subsystem",
@@ -160,15 +161,32 @@
       "date_utc": "2026-08-26",
       "summary": "Stage 1 architecture phase. Read the entire legacy codebase. Moved every pre-existing file into _legacy/ preserving internal structure (nothing deleted). Wrote ARCHITECTURE.md (full new design: stage boundaries, state machine, all handoff contracts, bot UX, modes, preserved-subsystem integration), BUILD_PROGRESS.json (this file), NEXT_SESSION_PROMPT.md (reusable handoff prompt with credential placeholders), fresh README.md and .gitignore at root.",
       "commits": "see git log around 2026-08-26"
+    },
+    {
+      "session": "contracts-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "Built the contracts_and_schemas phase — every downstream phase now has a stable foundation to import. (1) Four JSON Schemas at schemas/: job_status.schema.json, stage_a_request.schema.json, production_plan.schema.json, analysis_bundle.schema.json — all four validated as well-formed Draft 2020-12. (2) pipeline/plan/schema.py — the single Python production.json validator (ARCHITECTURE.md §7.3 rules). (3) bot/src/plan.js — the JS port. Both accept the ARCHITECTURE.md nested `series` object AND the legacy flat `series_*` siblings, and both accept `voiceover_text` OR legacy `raw_narration`. (4) pipeline/status.py — atomic status.json writer + ten-state state machine (ARCHITECTURE.md §6). Refuses to leave terminal states (complete/error/cancelled) except into another terminal state. CLI entry point for GitHub Actions. (5) bot/src/jobs.js — pure JS state-machine helpers (newStatus / mergeStatus / canTransition / serializeStatus / statusPath) that share constants with the Python side. (6) Tests: pipeline/tests/test_status.py (13 cases), pipeline/tests/test_plan_cross_validation.py (2 cases including the JS/Python equivalence check driven by a 26-document language-neutral fixture at pipeline/tests/fixtures/plan_cases.json via a Node shim at pipeline/tests/run_js_validator.mjs), bot/test/plan.test.mjs + bot/test/jobs.test.mjs (15 JS cases). All 15 Python tests and 15 JS tests pass locally; the Python↔JS cross-language equivalence check passes on every fixture. Recorded one architecture_concern (nested-vs-flat series shape) — resolved for now by accepting both, but the operator should decide the canonical form before Automatic mode is built.",
+      "commits": "four commits on main (2026-08-26): (a) schemas, (b) shared validators, (c) job state machine helpers, (d) tests + package.json"
     }
   ],
-  "next_action": "Build the 'contracts_and_schemas' phase exactly as specified in its deliverables list. This is the foundation every other phase imports. Do not start any other phase first.",
-  "architecture_concerns": [],
+  "next_action": "Build the 'stage_b_render' phase per its deliverables list. Start with pipeline/stage_b/voiceover.py (Edge TTS, 24kHz mono PCM contract) and pipeline/stage_b/render.py (mobile-safe single-pass H.264 High@L4.0 / yuv420p / 30fps CFR / AAC-LC 48kHz / faststart / no B-frames, per ARCHITECTURE.md §14). MUST import pipeline.status.write_status and call it before and after each risky step. MUST import pipeline.plan.schema.validate_production_plan and re-validate the incoming production.json at the Stage B boundary (§13 invariant #5). MUST handle both accepted plan shapes (nested `series` object OR flat `series_*` siblings; `voiceover_text` OR legacy `raw_narration`) — see pipeline/plan/schema.py for how normalization works. Port logic from _legacy/scripts/{generate_voiceover.py, cut_and_produce.py, cinematic_reframe.py, generate_subtitles_cinematic.py, apply_creator_watermark.py, enhance_scenes.py, compress_final_video.py}. Testable end-to-end with a hand-written valid production.json — no bot required.",
+  "architecture_concerns": [
+    {
+      "id": "series-shape-nested-vs-flat",
+      "raised_in_session": "contracts-session-1",
+      "date_utc": "2026-08-26",
+      "decision_at_stake": "ARCHITECTURE.md §7.3 documents production.json's series data as a NESTED object (`series.series_id`, `series.part`, `series.start_seconds`, `series.end_seconds`, `series.is_final`, `series.summary`). The legacy contract (_legacy/schemas/production_plan_contract.json and _legacy/scripts/production_plan_contract.py) uses FLAT sibling fields (`series_id`, `series_part`, `series_start_seconds`, `series_end_seconds`, `series_final`, `series_summary`). ARCHITECTURE.md §14 also states 'the production.json field names and validation semantics' are intentionally NOT changing — which is in tension with the nested rewrite in §7.3. Existing legacy plans, and the legacy manual browser tool that users still paste output from, all use the flat shape.",
+      "why_i_think_this_needs_attention": "Two producers (external agents pasted by the user in Manual mode, and any tool referencing the old browser validator) will keep emitting the flat shape. If Stage B were coded to accept only the nested shape it would reject every legacy plan on sight; if the flat shape were coded to be the only accepted shape, we would drift from ARCHITECTURE.md §7.3. Only the operator can decide which is canonical.",
+      "what_i_did_for_now": "Applied the closest-analog policy: accepted BOTH shapes in schema.py and plan.js (nested wins per-field when both are present), mirroring the already-established precedent of accepting `raw_narration` alongside `voiceover_text`. Continued to build against ARCHITECTURE.md as written — the nested shape is preferred and documented as such. This does not silently redesign anything: both shapes validate to identical semantics.",
+      "what_the_right_answer_probably_is": "Pick one. If Stage B ports cleanly from the legacy scripts (which read `series_id`, `series_part`, …), the FLAT shape is the pragmatic canonical and ARCHITECTURE.md §7.3 should be revised to match. If the nested shape is genuinely preferred, add a note in §7.3 that legacy flat form is accepted for input but is deprecated on output — and update 00_READ_THIS_FIRST.txt (the analysis prompt) so external agents emit the nested shape.",
+      "action_requested": "Operator: pick a canonical shape and update ARCHITECTURE.md §7.3 / §14 accordingly. Until then future sessions should keep accepting both — do NOT delete either code path in schema.py or plan.js without operator sign-off."
+    }
+  ],
   "active_blockers": [],
   "last_session": {
-    "id": "architecture-session-1",
+    "id": "contracts-session-1",
     "date_utc": "2026-08-26",
-    "ended_at_phase": "architecture",
-    "final_note": "Design complete and pushed. No new-version implementation code exists yet — that is intentional. Start with contracts_and_schemas."
+    "ended_at_phase": "contracts_and_schemas",
+    "final_note": "contracts_and_schemas is complete and pushed. Every later phase can now `from pipeline.plan.schema import validate_production_plan`, `from pipeline import status`, `import { validateProductionPlan } from '../src/plan.js'`, and `import { newStatus, mergeStatus, canTransition } from '../src/jobs.js'`. The cross-language equivalence test guarantees the two validators stay honest — a change to one that isn't mirrored in the other will fail CI as soon as the test is added to a workflow. Next session starts stage_b_render."
   }
 }
