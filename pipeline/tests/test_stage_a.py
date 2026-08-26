@@ -141,15 +141,129 @@ def _write_request(jobs_root: Path, job_id: str, kind: str, value: str) -> None:
     }), encoding="utf-8")
 
 
-def test_gated_kinds_fail_closed(tmp_path, monkeypatch):
+def test_telegram_relay_fails_closed_without_relay_metadata(tmp_path, monkeypatch):
+    """§9.2: a relay source without the workflow-written relay block is refused."""
     monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
-    # telegram_relay remains gated until its ingest follow-up lands.
     kind = "telegram_relay"
-    _write_request(tmp_path, f"job-{kind}", kind, "whatever")
-    with pytest.raises(ingest.NotBuiltGate):
+    _write_request(tmp_path, f"job-{kind}", kind, "relay:private")
+    with pytest.raises(ingest.IngestError, match="relay metadata"):
         ingest.ingest(f"job-{kind}", str(tmp_path / "work"), root=tmp_path)
-    status = json.loads((tmp_path / f"job-{kind}" / "status.json").read_text())
-    assert status["state"] == "error"
+
+
+def _relay_request(tmp_path, job_id, relay):
+    _write_request(tmp_path, job_id, "telegram_relay", "relay:private")
+    req_path = tmp_path / job_id / "stage-a-request.json"
+    doc = json.loads(req_path.read_text())
+    doc["source"]["relay"] = relay
+    req_path.write_text(json.dumps(doc), encoding="utf-8")
+
+
+def test_telegram_relay_rejects_bad_tag(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+    _relay_request(tmp_path, "job-r1", {
+        "release_tag": "evil-tag", "expected_size_bytes": "100",
+        "sha256": "a" * 64,
+    })
+    with pytest.raises(ingest.IngestError, match="release tag"):
+        ingest.ingest("job-r1", str(tmp_path / "work"), root=tmp_path)
+
+
+def test_telegram_relay_rejects_oversize(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+    _relay_request(tmp_path, "job-r2", {
+        "release_tag": "clipforge-relay-input-job-r2",
+        "expected_size_bytes": str(1800 * 1024 * 1024 + 1),
+        "sha256": "a" * 64,
+    })
+    with pytest.raises(ingest.IngestError, match="source size"):
+        ingest.ingest("job-r2", str(tmp_path / "work"), root=tmp_path)
+
+
+def test_telegram_relay_rejects_bad_checksum_format(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+    _relay_request(tmp_path, "job-r3", {
+        "release_tag": "clipforge-relay-input-job-r3",
+        "expected_size_bytes": "100",
+        "sha256": "zzzz",
+    })
+    with pytest.raises(ingest.IngestError, match="checksum"):
+        ingest.ingest("job-r3", str(tmp_path / "work"), root=tmp_path)
+
+
+def test_telegram_relay_download_and_integrity_verification(tmp_path, monkeypatch):
+    """Happy path + tamper path, with the GitHub API stubbed offline."""
+    import hashlib as _hl
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+    payload = b"\x1a\x45\xdf\xa3" + b"relay-video-bytes" * 64
+    digest = _hl.sha256(payload).hexdigest()
+
+    class FakeResponse:
+        def __init__(self, status=200, body=None, raw=None):
+            self.status_code = status
+            self._body = body or {}
+            self._raw = raw or b""
+        def json(self):
+            return self._body
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise ingest.requests.HTTPError(f"http {self.status_code}")
+        def iter_content(self, size):
+            yield self._raw
+
+    def fake_get(url, headers=None, stream=False, timeout=None):
+        if url.endswith("/releases/tags/clipforge-relay-input-job-r4"):
+            return FakeResponse(200, {"assets": [{"name": "source_input.bin", "url": "https://api.github.com/asset/1"}]})
+        if url == "https://api.github.com/asset/1":
+            assert headers.get("Accept") == "application/octet-stream"
+            return FakeResponse(200, raw=payload)
+        raise AssertionError(f"unexpected url {url}")
+
+    monkeypatch.setattr(ingest.requests, "get", fake_get)
+    monkeypatch.setattr(ingest, "detect_container_ext", lambda path: "mkv")
+
+    _relay_request(tmp_path, "job-r4", {
+        "release_tag": "clipforge-relay-input-job-r4",
+        "expected_size_bytes": str(len(payload)),
+        "sha256": digest,
+    })
+    record = ingest.ingest("job-r4", str(tmp_path / "work"), root=tmp_path)
+    assert record["source_kind"] == "telegram_relay"
+    assert record["size_bytes"] == len(payload)
+
+    # Tampered checksum must fail closed and remove the partial file.
+    _relay_request(tmp_path, "job-r5", {
+        "release_tag": "clipforge-relay-input-job-r4",
+        "expected_size_bytes": str(len(payload)),
+        "sha256": "0" * 64,
+    })
+    with pytest.raises(ingest.IngestError, match="integrity"):
+        ingest.ingest("job-r5", str(tmp_path / "work"), root=tmp_path)
+    assert not (tmp_path / "work" / "source_input.bin").exists()
+
+
+def test_telegram_relay_missing_release_404(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+
+    class FakeResponse:
+        status_code = 404
+        def raise_for_status(self):
+            raise ingest.requests.HTTPError("404")
+        def json(self):
+            return {}
+
+    monkeypatch.setattr(ingest.requests, "get", lambda *a, **k: FakeResponse())
+    _relay_request(tmp_path, "job-r6", {
+        "release_tag": "clipforge-relay-input-job-r6",
+        "expected_size_bytes": "100",
+        "sha256": "a" * 64,
+    })
+    with pytest.raises(ingest.IngestError, match="not found"):
+        ingest.ingest("job-r6", str(tmp_path / "work"), root=tmp_path)
 
 
 def test_telegram_channel_kind_fails_closed_off_original_repo(tmp_path, monkeypatch):

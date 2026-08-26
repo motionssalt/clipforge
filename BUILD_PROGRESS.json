@@ -24,16 +24,17 @@
     "completed": [
       "pipeline/stage_a/telegram_channel.py — port of the legacy MTProto public-channel download (require_original_repo + fail-closed secrets gate, verbatim _download_telegram_mtproto wrapper, yt-dlp public-post fallback helper preserved for parity, reuses relay/mtproto_transfer.py)",
       "ingest.py wiring — telegram_channel kind + t.me post URLs handed in as url kind both route to telegram_channel.download_channel_post (legacy dispatch semantics preserved); 5 new tests green (23 total in test_stage_a.py)",
-      "stage-a.yml — ingest step now receives CLIPFORGE_TELEGRAM_API_ID/HASH/SESSION env (secrets referenced by name only; absent on clones = fail-closed layer 2) and installs telethon/cryptg; header comment updated; YAML re-validated"
+      "stage-a.yml — ingest step now receives CLIPFORGE_TELEGRAM_API_ID/HASH/SESSION env (secrets referenced by name only; absent on clones = fail-closed layer 2) and installs telethon/cryptg; header comment updated; YAML re-validated",
+      "RELAY FOLLOW-UP closed — ingest.py _gate_telegram_relay replaced with the real relay-asset download: _relay_asset_metadata (tag/size/sha256 validation per legacy stage-a.yml checks, 1800 MiB cap) + _download_relay_asset (disk preflight, GitHub releases-by-tag + octet-stream asset fetch via GH_TOKEN, streaming sha256, exact size+checksum verify, partial-file cleanup on mismatch). NotBuiltGate retained for API compat but no kind routes to it. 6 new relay tests green (28 total in test_stage_a.py)."
     ],
     "remaining": [
-      "RELAY FOLLOW-UP (architecture_concerns): replace _gate_telegram_relay in ingest.py with the real relay-asset download (release clipforge-relay-input-<job> source_input.bin fetch + size/sha256 verification)",
-      "Tests for the relay ingest hook + full suite green (Python + JS)"
+      "Full test suite (all Python tests + bot JS tests) green",
+      "Mark telegram_channel_subsystem phase complete in phases[]; advance current_phase to series_mode; close the two relay architecture_concerns"
     ],
     "resume_from": {
-      "file": "pipeline/stage_a/ingest.py",
-      "component": "_gate_telegram_relay",
-      "next_operation": "implement relay-asset download: fetch source_input.bin from release source.relay.release_tag, verify size == expected_size_bytes and sha256, then proceed like the url kind"
+      "file": "BUILD_PROGRESS.json",
+      "component": "phase transition",
+      "next_operation": "run full Python + JS test suites, then mark telegram_channel_subsystem complete and advance to series_mode"
     }
   },
   "phases": [

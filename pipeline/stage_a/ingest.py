@@ -17,15 +17,18 @@ Supported here (all clones):
                        (``awaiting_torrent_selection``).
   * ``torrent_file`` — an uploaded ``.torrent`` manifest, same selection flow.
 
-The two PRESERVED subsystems are intentionally NOT implemented in this phase:
+Both PRESERVED subsystems are now wired in:
 
   * ``telegram_channel`` (§9.1) — original-repo-only MTProto public channel
-    download. Routed to :class:`NotBuiltGate` here; the real port lands in
-    ``pipeline/stage_a/telegram_channel.py`` in its own phase.
-  * ``telegram_relay`` (§9.2) — Bot A → group → Bot B relay. Routed to the
-    same gate; the relay workflow rewrites this record with real
-    ``relay.release_tag`` / ``expected_size_bytes`` / ``sha256`` before
-    dispatching Stage A in the relay phase.
+    download, delegated to ``pipeline/stage_a/telegram_channel.py`` (which
+    enforces the original-repo gate + fail-closed MTProto secrets itself).
+  * ``telegram_relay`` (§9.2) — Bot A → group → Bot B relay. The central
+    relay workflow rewrites the request with real ``relay.release_tag`` /
+    ``expected_size_bytes`` / ``sha256`` before dispatching Stage A; here we
+    fetch the temporary prerelease asset and verify size + SHA-256.
+
+``NotBuiltGate`` is retained for API compatibility but no source kind routes
+to it anymore.
 
 This module is import-safe with no heavy third-party deps: magnet/torrent
 inspection is pure-python; url/drive download uses ``requests``; the actual
@@ -40,6 +43,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 import time
 import urllib.parse
@@ -86,9 +90,16 @@ _BASE32_INFOHASH_RE = re.compile(r"[A-Z2-7a-z2-7]{32}\Z")
 
 # Source kinds this module fully resolves itself.
 _SELF_SERVE_KINDS = ("url", "drive", "magnet", "torrent_file")
-# Source kinds gated to their own (later, preserved-subsystem) phases.
-_GATED_KINDS = ("telegram_channel", "telegram_relay")
-ALL_KINDS = _SELF_SERVE_KINDS + _GATED_KINDS
+# Preserved subsystems (§9.1 / §9.2), wired to their own download paths.
+_PRESERVED_KINDS = ("telegram_channel", "telegram_relay")
+ALL_KINDS = _SELF_SERVE_KINDS + _PRESERVED_KINDS
+
+# §9.2 relay-asset contract (mirrors relay/telegram_relay.py write-back and
+# the legacy stage-a.yml fetch checks).
+RELAY_RELEASE_TAG_RE = re.compile(r"^clipforge-relay-input-[A-Za-z0-9._-]+$")
+RELAY_SHA256_RE = re.compile(r"^[a-f0-9]{64}$")
+MAX_RELAY_SOURCE_BYTES = 1800 * 1024 * 1024  # 1800 MiB (preserved cap)
+GITHUB_API = "https://api.github.com"
 
 
 class IngestError(RuntimeError):
@@ -643,14 +654,121 @@ def _download_telegram_channel(value: str, output_path: str) -> str:
     return telegram_channel.download_channel_post(value, output_path)
 
 
-def _gate_telegram_relay(request: dict[str, Any]) -> None:
-    """§9.2: direct-video relay is a preserved subsystem built in its own
-    phase. The relay workflow rewrites the request with real relay metadata
-    before dispatching Stage A; until then this source kind is not servable."""
-    raise NotBuiltGate(
-        "source kind 'telegram_relay' is a preserved subsystem (ARCHITECTURE.md §9.2) "
-        "handled by the Bot A → group → Bot B relay workflow, which is not built in "
-        "this phase. This gate fails closed until the relay subsystem lands."
+def _relay_asset_metadata(source: dict[str, Any]) -> tuple[str, int, str]:
+    """Validate the §9.2 relay block and return (release_tag, size, sha256).
+
+    Mirrors the legacy stage-a.yml checks exactly: tag shape, positive size
+    bounded by the preserved 1800 MiB cap, and a 64-hex lowercase checksum.
+    Fails closed with a user-facing error on any deviation.
+    """
+    relay = source.get("relay")
+    if not isinstance(relay, dict):
+        raise IngestError(
+            "telegram_relay source is missing its relay metadata block — the central "
+            "relay workflow must write source.relay.{release_tag,expected_size_bytes,sha256} "
+            "before dispatching Stage A."
+        )
+    tag = str(relay.get("release_tag") or "")
+    if not RELAY_RELEASE_TAG_RE.fullmatch(tag):
+        raise IngestError("Invalid temporary relay release tag")
+    try:
+        expected_size = int(relay.get("expected_size_bytes"))
+    except (TypeError, ValueError):
+        raise IngestError("Invalid temporary relay source size")
+    if expected_size < 1 or expected_size > MAX_RELAY_SOURCE_BYTES:
+        raise IngestError("Invalid temporary relay source size")
+    digest = str(relay.get("sha256") or "").strip().lower()
+    if not RELAY_SHA256_RE.fullmatch(digest):
+        raise IngestError("Invalid temporary relay source checksum")
+    return tag, expected_size, digest
+
+
+def _github_api_headers(token: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "clipforge-stage-a/1.0",
+    }
+
+
+def _download_relay_asset(job_id: str, source: dict[str, Any], output_path: str) -> None:
+    """Fetch the temporary prerelease relay asset and verify its integrity.
+
+    Ported from the legacy stage-a.yml ``telegram_bot_forward`` fetch block:
+    validate the relay metadata, preflight disk space, stream the asset from
+    the job's ``clipforge-relay-input-<job_id>`` release (private repos
+    require the asset API endpoint with an octet-stream Accept), then verify
+    the exact size and SHA-256. Deletes the partial file on any mismatch.
+    """
+    tag, expected_size, expected_sha = _relay_asset_metadata(source)
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise IngestError(
+            "telegram_relay source needs GH_TOKEN to fetch its temporary release asset."
+        )
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        raise IngestError("telegram_relay source needs GITHUB_REPOSITORY to locate its release.")
+
+    # Disk preflight (preserved: 2x expected + 1 GiB headroom).
+    out_dir = os.path.dirname(os.path.abspath(output_path)) or "."
+    os.makedirs(out_dir, exist_ok=True)
+    free_bytes = shutil.disk_usage(out_dir).free
+    required_bytes = expected_size * 2 + 1024 ** 3
+    if free_bytes < required_bytes:
+        raise IngestError("Insufficient runner disk space for the private relay source")
+
+    headers = _github_api_headers(token)
+    base = f"{GITHUB_API}/repos/{repo}"
+    try:
+        release = requests.get(f"{base}/releases/tags/{tag}", headers=headers, timeout=REQUEST_TIMEOUT)
+        if release.status_code == 404:
+            raise IngestError(
+                f"relay release {tag} not found — the central relay workflow has not "
+                "delivered the source asset (or already cleaned it up)."
+            )
+        release.raise_for_status()
+        assets = release.json().get("assets") or []
+        asset = next((a for a in assets if a.get("name") == "source_input.bin"), None)
+        if asset is None:
+            raise IngestError(f"relay release {tag} has no source_input.bin asset")
+        asset_url = asset["url"]
+        download = requests.get(
+            asset_url,
+            headers={**headers, "Accept": "application/octet-stream"},
+            stream=True, timeout=REQUEST_TIMEOUT,
+        )
+        download.raise_for_status()
+        written = 0
+        digest = hashlib.sha256()
+        with open(output_path, "wb") as handle:
+            for chunk in download.iter_content(CHUNK_SIZE):
+                if not chunk:
+                    continue
+                handle.write(chunk)
+                digest.update(chunk)
+                written += len(chunk)
+                if written > expected_size:
+                    raise IngestError("relay source exceeded its declared size")
+    except IngestError:
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        raise
+    except requests.RequestException as exc:
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+        raise IngestError(f"relay asset download failed: {exc}") from exc
+
+    actual_size = os.path.getsize(output_path)
+    actual_sha = digest.hexdigest()
+    if actual_size != expected_size or actual_sha != expected_sha:
+        os.unlink(output_path)
+        raise IngestError("Temporary relay source integrity validation failed")
+    print(
+        f"Relay asset verified: {tag} source_input.bin "
+        f"({actual_size} bytes, sha256 {actual_sha[:12]}…)",
+        flush=True,
     )
 
 
@@ -699,14 +817,6 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
 
     Path(work_dir).mkdir(parents=True, exist_ok=True)
 
-    if kind == "telegram_relay":
-        job_status.write_status(
-            job_id, state="error",
-            message=f"Source kind '{kind}' is a preserved subsystem not built in this phase.",
-            mode=mode, root=root,
-        )
-        _gate_telegram_relay(request)
-
     job_status.write_status(
         job_id, state="stage_a_running",
         message=f"Downloading source video ({kind})",
@@ -728,7 +838,6 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
             print(f"Telegram channel post ingested via §9.1 path: {canonical}")
             ext = detect_container_ext(tmp_source)
             original_path = os.path.join(work_dir, f"original.{ext}")
-            import shutil
             shutil.copyfile(tmp_source, original_path)
             size_bytes = os.path.getsize(original_path)
             record = {
@@ -767,6 +876,9 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
     elif kind == "telegram_channel":
         canonical = _download_telegram_channel(value, tmp_source)
         print(f"Telegram channel post ingested via §9.1 path: {canonical}")
+
+    elif kind == "telegram_relay":
+        _download_relay_asset(job_id, source, tmp_source)
 
     elif kind in ("magnet", "torrent_file"):
         # Resolve to a .torrent manifest, then decide single vs multi-file.
@@ -818,13 +930,11 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
         torrent_dir = Path(work_dir) / "torrent"
         _download_torrent_payload(torrent_path, torrent_dir, chosen["index"])
         downloaded = select_video(torrent_dir, chosen["path"])
-        import shutil
         shutil.copyfile(str(downloaded), tmp_source)
         print(f"Selected torrent video: {downloaded}")
 
     ext = detect_container_ext(tmp_source)
     original_path = os.path.join(work_dir, f"original.{ext}")
-    import shutil
     shutil.copyfile(tmp_source, original_path)
     size_bytes = os.path.getsize(original_path)
 
