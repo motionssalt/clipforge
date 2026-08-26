@@ -16,6 +16,28 @@
     ]
   },
   "current_phase": "stage_a_ingest_analyze",
+  "current_task": {
+    "stage": "stage_a_ingest_analyze",
+    "task": "Stage A ingest + analyze build-out",
+    "status": "partially_complete",
+    "session": "stage-a-session-1",
+    "completed": [
+      "pipeline/stage_a/__init__.py",
+      "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file; telegram_channel + telegram_relay routed to fail-closed NotBuiltGate; offline magnet/torrent validators ported; torrent-selection flow with SystemExit(3) -> awaiting_torrent_selection; unit-checked offline)"
+    ],
+    "remaining": [
+      "pipeline/stage_a/transcribe.py",
+      "pipeline/stage_a/scenes.py",
+      "pipeline/plan/prompt.py + pipeline/stage_a/bundle.py",
+      ".github/workflows/stage-a.yml",
+      "pipeline/tests/test_stage_a.py"
+    ],
+    "resume_from": {
+      "file": "pipeline/stage_a/transcribe.py",
+      "component": "module",
+      "next_operation": "port _legacy/scripts/transcribe.py verbatim into pipeline/stage_a/transcribe.py"
+    }
+  },
   "phases": [
     {
       "id": "architecture",
@@ -62,7 +84,8 @@
     {
       "id": "stage_a_ingest_analyze",
       "title": "Stage A — ingest + analyze (all source kinds EXCEPT the two preserved subsystems)",
-      "status": "next",
+      "status": "in_progress",
+      "started_in_session": "stage-a-session-1",
       "deliverables": [
         "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file)",
         "pipeline/stage_a/transcribe.py (faster-whisper CPU)",
