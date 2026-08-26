@@ -8,11 +8,14 @@ equivalence is enforced by the cross-validator tests in
 
 Design notes for future sessions:
 
-* ARCHITECTURE.md §7.3 documents a nested ``series`` object shape while the
-  legacy contract used flat ``series_*`` sibling fields. This validator accepts
-  BOTH, normalizing internally. The precedent for accepting two shapes is
-  already established in the architecture (``raw_narration`` accepted alongside
-  ``voiceover_text``). The concern is recorded in ``BUILD_PROGRESS.json``.
+* ARCHITECTURE.md §7.3's nested ``series`` object is canonical (operator
+  decision, 2026-08-26 — see resolved concern ``series-shape-nested-vs-flat``
+  in ``BUILD_PROGRESS.json``). The legacy flat ``series_*`` sibling fields are
+  accepted here as input only, for plans already in flight and legacy tooling
+  — never emitted by current prompts. Do not remove flat-input acceptance
+  without a separate operator call; it's still live back-compat, not dead
+  code. Same precedent as accepting ``raw_narration`` alongside
+  ``voiceover_text``.
 * Unknown top-level fields are permitted (forward compatibility).
 * This validator NEVER trusts the producer. Stage B re-runs it before render
   even though the bot ran it at upload time (§13 invariant #5).

@@ -7,10 +7,13 @@
  *
  * See ARCHITECTURE.md §7.3 for the rules. Notes for future sessions:
  *
- * - The ARCHITECTURE.md nested ``series`` shape is preferred; the legacy flat
- *   ``series_*`` sibling fields are also accepted (mirrors the accepted
- *   ``raw_narration`` alongside ``voiceover_text`` compatibility precedent).
- *   The concern is recorded in ``BUILD_PROGRESS.json``.
+ * - ARCHITECTURE.md §7.3's nested ``series`` shape is canonical (operator
+ *   decision, 2026-08-26 — see resolved concern ``series-shape-nested-vs-flat``
+ *   in ``BUILD_PROGRESS.json``). Legacy flat ``series_*`` sibling fields are
+ *   accepted as input only, for plans already in flight and legacy tooling —
+ *   never emitted by current prompts. Do not remove flat-input acceptance
+ *   without a separate operator call. Mirrors the ``raw_narration`` alongside
+ *   ``voiceover_text`` precedent.
  * - Unknown top-level fields are permitted.
  * - No external dependencies. Runs inside the Cloudflare Worker.
  */

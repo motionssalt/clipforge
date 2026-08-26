@@ -192,9 +192,9 @@ or replay earlier material. Prior-part continuity notes are private guidance:
 
 Start with a strong standalone hook. For every non-final part, choose an honest
 cliffhanger rather than forcing a target timestamp. In production.json include
-series_id, series_part, series_start_seconds ({series_start_seconds}),
-series_end_seconds, series_final (boolean), and a concise non-empty
-series_summary. Put "Part {series_part}" directly in title.
+a nested "series" object with fields: series_id, part ({series_part}),
+start_seconds ({series_start_seconds}), end_seconds, is_final (boolean), and a
+concise non-empty summary. Put "Part {series_part}" directly in title.
 ################################################################################
 
 """

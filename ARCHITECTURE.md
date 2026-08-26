@@ -742,7 +742,10 @@ such fix in your session summary and in `BUILD_PROGRESS.json`.
 - Edge TTS for narration and the curated voice catalog (with previews).
 - The mobile-safe single-pass render policy (H.264 High@L4.0 / yuv420p /
   30fps CFR / AAC-LC 48kHz / faststart, no B-frames). These are hard-won.
-- The `production.json` field names and validation semantics (§7.3).
+- The `production.json` core contract — cut/hashtag/tag field names and
+  validation semantics (§7.3). Series data uses the nested `series` object
+  per §7.3; the legacy flat `series_*` siblings are accepted as input only,
+  for backward compatibility with plans already in flight, never emitted.
 - The series continuation derivation semantics.
 - The Zernio publishing model (discover/publish/retry/update/cancel, smart
   schedule, per-post management, durable serial queue).
