@@ -20,12 +20,15 @@
     "stage": "bot_a_core",
     "task": "Bot A — webhook, KV, crypto, home/tasks/settings, New-video wizard, manual handoff, status actions",
     "status": "in_progress",
-    "session": "automatic-mode-session-1 (continuing)",
-    "completed": [],
+    "session": "bot-a-session-1",
+    "completed": [
+      "bot/src/constants.js — new-architecture constants: §6.1 state names shared with jobs.js, §8.2 command surface (/start /help /new /tasks /done /settings /cancel), stage-a/b/publish workflow names, branding paths, voice catalog, escapeHtml + token redaction",
+      "bot/src/crypto.js — ported verbatim from legacy: AES-256-GCM credential envelopes with per-chat AAD (clipforge-telegram-credentials:v1:<chat>) and relay AAD (clipforge-telegram-relay:v1:<job>) unchanged; roundtrip + AAD enforcement verified",
+      "bot/src/storage.js — ported verbatim from legacy: state/credentials/tasks/relay KV records, write-avoidance in putState (KV quota), update dedupe",
+      "bot/src/telegram.js — ported verbatim from legacy: fetch-based Bot API client, sendMessage/editMessage/deleteMessage/answerCallback/copyMessage, multipart audio/document send, bounded torrent download"
+    ],
     "remaining": [
       "bot/package.json + bot/wrangler.bot-a.jsonc",
-      "bot/src/crypto.js (AES-256-GCM credentials, per-chat AAD)",
-      "bot/src/storage.js (KV layer)",
       "bot/src/github.js (dispatch, files, releases, sealed-secret upload, shadow-clone create/connect)",
       "bot/src/index.js (webhook + router, private chats only, webhook-secret auth)",
       "bot/src/commands/* (/start /new /tasks /done /settings /cancel)",
@@ -33,9 +36,9 @@
       "Manual handoff: Get agent prompt + Upload production.json with validation"
     ],
     "resume_from": {
-      "file": "bot/src/crypto.js",
+      "file": "bot/src/github.js",
       "component": "new module",
-      "next_operation": "start Bot A core per ARCHITECTURE.md §8; port from _legacy/telegram-bot/ where semantics are preserved, reusing bot/src/plan.js (validator) and bot/src/jobs.js (state machine) already built"
+      "next_operation": "port _legacy/telegram-bot/src/github.js adapted to the new contracts: saveStageARequest writes the §7.1 nested request shape (source/options/mode/series/music), drop legacy flat shape + automatic_music.json writer, keep shadow-clone create/connect, sealed-secret upload, releases, dispatch with code_ref"
     }
   },
   "phases": [
