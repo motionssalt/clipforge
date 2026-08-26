@@ -632,16 +632,15 @@ def write_torrent_selection(
 ORIGINAL_CLIPFORGE_REPOSITORY = "motionssalt/clipforge"
 
 
-def _gate_telegram_channel(request: dict[str, Any]) -> None:
-    """§9.1: public Telegram channel MTProto download is a preserved subsystem
-    built in its own phase AND restricted to the original repo. Fail closed."""
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    raise NotBuiltGate(
-        "source kind 'telegram_channel' is a preserved subsystem (ARCHITECTURE.md §9.1) "
-        "that is not built in this phase, and is restricted to the original repo "
-        f"({ORIGINAL_CLIPFORGE_REPOSITORY}). Running repo: {repo or '(unknown)'}. "
-        "This gate fails closed; the real port lands in pipeline/stage_a/telegram_channel.py."
-    )
+def _download_telegram_channel(value: str, output_path: str) -> str:
+    """§9.1 preserved subsystem: public Telegram channel-post download.
+
+    Delegates to pipeline/stage_a/telegram_channel.py, which enforces both
+    restriction layers itself (original-repo check + fail-closed MTProto
+    secrets) and performs the download. Returns the canonical post URL.
+    """
+    from . import telegram_channel
+    return telegram_channel.download_channel_post(value, output_path)
 
 
 def _gate_telegram_relay(request: dict[str, Any]) -> None:
@@ -700,16 +699,13 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
 
     Path(work_dir).mkdir(parents=True, exist_ok=True)
 
-    if kind in _GATED_KINDS:
+    if kind == "telegram_relay":
         job_status.write_status(
             job_id, state="error",
             message=f"Source kind '{kind}' is a preserved subsystem not built in this phase.",
             mode=mode, root=root,
         )
-        if kind == "telegram_channel":
-            _gate_telegram_channel(request)
-        else:
-            _gate_telegram_relay(request)
+        _gate_telegram_relay(request)
 
     job_status.write_status(
         job_id, state="stage_a_running",
@@ -724,9 +720,32 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
         if "%" in raw and "http" in raw:
             raw = urllib.parse.unquote(raw)
         # A Telegram public-post link handed in as a plain URL is still the
-        # preserved-subsystem path — gate it rather than silently downloading.
+        # §9.1 preserved-subsystem path (legacy dispatch semantics preserved:
+        # download_drive.py's main() routes any t.me post URL to the MTProto
+        # path regardless of how the source was classified).
         if telegram_public_post_url(raw):
-            _gate_telegram_channel(request)
+            canonical = _download_telegram_channel(raw, tmp_source)
+            print(f"Telegram channel post ingested via §9.1 path: {canonical}")
+            ext = detect_container_ext(tmp_source)
+            original_path = os.path.join(work_dir, f"original.{ext}")
+            import shutil
+            shutil.copyfile(tmp_source, original_path)
+            size_bytes = os.path.getsize(original_path)
+            record = {
+                "version": 1,
+                "job_id": job_id,
+                "source_kind": "telegram_channel",
+                "original_path": original_path,
+                "original_asset_name": f"original.{ext}",
+                "size_bytes": size_bytes,
+                "container": ext,
+                "ingested_at_epoch": int(time.time()),
+            }
+            (Path(root) / job_id).mkdir(parents=True, exist_ok=True)
+            (Path(root) / job_id / "ingest.json").write_text(
+                json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print(f"Ingested telegram_channel source -> {original_path} ({size_bytes} bytes)")
+            return record
         disabled = disabled_social_host(raw)
         if disabled:
             raise IngestError(
@@ -744,6 +763,10 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
     elif kind == "drive":
         file_id = extract_file_id(value)
         download_drive(file_id, tmp_source)
+
+    elif kind == "telegram_channel":
+        canonical = _download_telegram_channel(value, tmp_source)
+        print(f"Telegram channel post ingested via §9.1 path: {canonical}")
 
     elif kind in ("magnet", "torrent_file"):
         # Resolve to a .torrent manifest, then decide single vs multi-file.

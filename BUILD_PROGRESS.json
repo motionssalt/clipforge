@@ -22,18 +22,18 @@
     "status": "partially_complete",
     "session": "telegram-channel-session-1",
     "completed": [
-      "pipeline/stage_a/telegram_channel.py — port of the legacy MTProto public-channel download (require_original_repo + fail-closed secrets gate, verbatim _download_telegram_mtproto wrapper, yt-dlp public-post fallback helper preserved for parity, reuses relay/mtproto_transfer.py)"
+      "pipeline/stage_a/telegram_channel.py — port of the legacy MTProto public-channel download (require_original_repo + fail-closed secrets gate, verbatim _download_telegram_mtproto wrapper, yt-dlp public-post fallback helper preserved for parity, reuses relay/mtproto_transfer.py)",
+      "ingest.py wiring — telegram_channel kind + t.me post URLs handed in as url kind both route to telegram_channel.download_channel_post (legacy dispatch semantics preserved); 5 new tests green (23 total in test_stage_a.py)"
     ],
     "remaining": [
-      "Wire ingest.py: replace _gate_telegram_channel with telegram_channel.download_channel_post (telegram_channel kind + t.me post links handed in as url kind)",
       "stage-a.yml: install telethon/cryptg + pass CLIPFORGE_TELEGRAM_* secrets env to the ingest step",
       "RELAY FOLLOW-UP (architecture_concerns): replace _gate_telegram_relay in ingest.py with the real relay-asset download (release clipforge-relay-input-<job> source_input.bin fetch + size/sha256 verification)",
-      "Tests for both ingest wirings + full suite green"
+      "Tests for the relay ingest hook + full suite green"
     ],
     "resume_from": {
-      "file": "pipeline/stage_a/ingest.py",
-      "component": "_gate_telegram_channel / ingest() gated-kinds branch",
-      "next_operation": "route telegram_channel kind to telegram_channel.download_channel_post; then close the telegram_relay ingest gap"
+      "file": ".github/workflows/stage-a.yml",
+      "component": "ingest step env + install step",
+      "next_operation": "pass CLIPFORGE_TELEGRAM_API_ID/HASH/SESSION to the ingest step and install telethon/cryptg/yt-dlp; then close the telegram_relay ingest gap"
     }
   },
   "phases": [

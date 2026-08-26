@@ -143,12 +143,95 @@ def _write_request(jobs_root: Path, job_id: str, kind: str, value: str) -> None:
 
 def test_gated_kinds_fail_closed(tmp_path, monkeypatch):
     monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
-    for kind in ("telegram_channel", "telegram_relay"):
-        _write_request(tmp_path, f"job-{kind}", kind, "whatever")
-        with pytest.raises(ingest.NotBuiltGate):
-            ingest.ingest(f"job-{kind}", str(tmp_path / "work"), root=tmp_path)
-        status = json.loads((tmp_path / f"job-{kind}" / "status.json").read_text())
-        assert status["state"] == "error"
+    # telegram_relay remains gated until its ingest follow-up lands.
+    kind = "telegram_relay"
+    _write_request(tmp_path, f"job-{kind}", kind, "whatever")
+    with pytest.raises(ingest.NotBuiltGate):
+        ingest.ingest(f"job-{kind}", str(tmp_path / "work"), root=tmp_path)
+    status = json.loads((tmp_path / f"job-{kind}" / "status.json").read_text())
+    assert status["state"] == "error"
+
+
+def test_telegram_channel_kind_fails_closed_off_original_repo(tmp_path, monkeypatch):
+    """§9.1 layer 1: the wired-in channel download refuses a non-original repo."""
+    monkeypatch.setenv("GITHUB_REPOSITORY", "someuser/clone")
+    for name in ("CLIPFORGE_TELEGRAM_API_ID", "CLIPFORGE_TELEGRAM_API_HASH", "CLIPFORGE_TELEGRAM_SESSION"):
+        monkeypatch.setenv(name, "present")
+    _write_request(tmp_path, "job-tg", "telegram_channel", "https://t.me/somechannel/1")
+    with pytest.raises(ingest.IngestError, match="original ClipForge"):
+        ingest.ingest("job-tg", str(tmp_path / "work"), root=tmp_path)
+
+
+def test_telegram_channel_kind_fails_closed_without_secrets(tmp_path, monkeypatch):
+    """§9.1 layer 2: even on the original repo, missing MTProto secrets fail closed."""
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    for name in ("CLIPFORGE_TELEGRAM_API_ID", "CLIPFORGE_TELEGRAM_API_HASH", "CLIPFORGE_TELEGRAM_SESSION"):
+        monkeypatch.delenv(name, raising=False)
+    _write_request(tmp_path, "job-tg2", "telegram_channel", "https://t.me/somechannel/1")
+    with pytest.raises(ingest.IngestError, match="MTProto"):
+        ingest.ingest("job-tg2", str(tmp_path / "work"), root=tmp_path)
+
+
+def test_telegram_channel_kind_rejects_non_post_link(tmp_path, monkeypatch):
+    """Channel kind rejects groups/private/non-post links before any network I/O."""
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    for name in ("CLIPFORGE_TELEGRAM_API_ID", "CLIPFORGE_TELEGRAM_API_HASH", "CLIPFORGE_TELEGRAM_SESSION"):
+        monkeypatch.setenv(name, "present")
+    _write_request(tmp_path, "job-tg3", "telegram_channel", "https://t.me/c/123/456")
+    with pytest.raises(ingest.IngestError, match="public Telegram channel post link"):
+        ingest.ingest("job-tg3", str(tmp_path / "work"), root=tmp_path)
+
+
+def test_telegram_channel_kind_routes_to_mtproto_download(tmp_path, monkeypatch):
+    """With both gates satisfied, the kind delegates to telegram_channel.download_channel_post."""
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    for name in ("CLIPFORGE_TELEGRAM_API_ID", "CLIPFORGE_TELEGRAM_API_HASH", "CLIPFORGE_TELEGRAM_SESSION"):
+        monkeypatch.setenv(name, "present")
+    called = {}
+
+    def fake_download(url, output_path, *, environ=None):
+        called["url"] = url
+        from pipeline.stage_a import telegram_channel as tc
+        canonical = tc.download_channel_post.__wrapped__ if hasattr(tc.download_channel_post, "__wrapped__") else None
+        # Simulate the download producing a tiny mkv-looking payload.
+        import pathlib
+        pathlib.Path(output_path).write_bytes(b"\x1a\x45\xdf\xa3" + b"0" * 32)
+        return "https://t.me/somechannel/1"
+
+    monkeypatch.setattr(
+        "pipeline.stage_a.telegram_channel.download_channel_post", fake_download
+    )
+    monkeypatch.setattr(ingest, "detect_container_ext", lambda path: "mkv")
+    _write_request(tmp_path, "job-tg4", "telegram_channel", "https://t.me/somechannel/1")
+    record = ingest.ingest("job-tg4", str(tmp_path / "work"), root=tmp_path)
+    assert called["url"] == "https://t.me/somechannel/1"
+    assert record["source_kind"] == "telegram_channel"
+    assert record["container"] == "mkv"
+    assert record["size_bytes"] > 0
+
+
+def test_url_kind_telegram_post_routes_to_channel_download(tmp_path, monkeypatch):
+    """A t.me post link handed in as a plain URL follows the §9.1 path (legacy semantics)."""
+    monkeypatch.setenv("GITHUB_REPOSITORY", "motionssalt/clipforge")
+    for name in ("CLIPFORGE_TELEGRAM_API_ID", "CLIPFORGE_TELEGRAM_API_HASH", "CLIPFORGE_TELEGRAM_SESSION"):
+        monkeypatch.setenv(name, "present")
+    called = {}
+
+    def fake_download(url, output_path, *, environ=None):
+        called["url"] = url
+        import pathlib
+        pathlib.Path(output_path).write_bytes(b"\x1a\x45\xdf\xa3" + b"0" * 32)
+        return "https://t.me/somechannel/7"
+
+    monkeypatch.setattr(
+        "pipeline.stage_a.telegram_channel.download_channel_post", fake_download
+    )
+    monkeypatch.setattr(ingest, "detect_container_ext", lambda path: "mp4")
+    _write_request(tmp_path, "job-tg5", "url", "https://t.me/s/somechannel/7")
+    record = ingest.ingest("job-tg5", str(tmp_path / "work"), root=tmp_path)
+    assert called["url"] == "https://t.me/s/somechannel/7"
+    assert record["source_kind"] == "telegram_channel"
+    assert record["container"] == "mp4"
 
 
 def test_load_request_rejects_unknown_kind(tmp_path):
