@@ -17,25 +17,23 @@
   },
   "current_phase": "automatic_mode",
   "current_task": {
-    "stage": "stage_a_ingest_analyze",
-    "task": "Stage A ingest + analyze build-out",
-    "status": "complete",
-    "session": "stage-a-session-1",
+    "stage": "automatic_mode",
+    "task": "Automatic mode — Gemini analysis producing a validated production.json",
+    "status": "partially_complete",
+    "session": "automatic-mode-session-1",
     "completed": [
-      "pipeline/stage_a/__init__.py",
-      "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file; telegram_channel + telegram_relay routed to fail-closed NotBuiltGate; offline magnet/torrent validators ported; torrent-selection flow with SystemExit(3) -> awaiting_torrent_selection; aria2 magnet-metadata + selected-file download drivers)",
-      "pipeline/stage_a/transcribe.py (faster-whisper CPU; VAD segment-end correction preserved verbatim; lazy faster-whisper import so the module is test-importable without the dep)",
-      "pipeline/stage_a/scenes.py (shot boundaries + key-moment fusion + baseline 6s composites + dense event composites, ported from scene_index/build_key_moments/event_frames + the legacy workflow's inline ffmpeg tile step; zero AI-vision tokens)",
-      "pipeline/plan/prompt.py (00_READ_THIS_FIRST.txt generator ported VERBATIM from _legacy/scripts/generate_analysis_prompt.py — FOCUS/NO_FOCUS/SERIES directives + TEMPLATE unchanged; only the module path/usage header edited)",
-      "pipeline/stage_a/bundle.py (bundle assembly per §7.2: contract-named staging incl. source_input.bin + analysis_720p.mp4, screenshots.zip holding BOTH frame_+event_ files (keeps the prompt wording true), optional event_composites.zip dense-only view, manifest.json per schemas/analysis_bundle.schema.json with size+sha256, url left for the workflow)",
-      ".github/workflows/stage-a.yml (request-driven via jobs/<job_id>/stage-a-request.json, restart-correct code_ref, status before/after risky steps, torrent-selection clean stop, series-evidence reuse, vision-assist opt-out stubs, bundle release upload, awaiting_plan final status for manual; automatic mode FAILS CLOSED with a clear status until the automatic_mode phase lands)",
-      "pipeline/tests/test_stage_a.py (offline unit tests: host/URL classification, drive id extraction, magnet validation, torrent bencode roundtrip + candidates + traversal rejection, preserved-subsystem gates fail closed + error status, shot-index flicker folding, emotional scoring, transcript density, visual-tail bounds, bundle assembly incl. zip contents and manifest shape)"
+      "pipeline/plan/automatic.py — ported from _legacy/scripts/automatic_analysis.py: bounded native tool-use agent (read_transcript -> read_scene_index/read_key_moments -> open_composite, chronological, <=12 composites), GeminiGateway multi-key rotation from GEMINI_API_KEYS with bounded transient retries + redacted logging, model fallback chain (primary 3.7-flash -> 3.6-flash), narration-coverage + visual-grounding checks, visual_evidence stripped before output, production.json validated via the shared pipeline.plan.schema contract (never the legacy contract module), lazy google-genai import so the module is test-importable without the dep"
     ],
-    "remaining": [],
+    "remaining": [
+      "pipeline/tests/test_automatic.py — offline unit tests with scripted gateway (tool ordering, correction retry, fallback routing, key rotation, narration coverage, visual grounding, zip safety)",
+      "pipeline/plan/music.py — port read_automatic_music.py (automatic music_ref resolution for Stage B dispatch)",
+      ".github/workflows/stage-a.yml automatic branch — automatic_analysis_running status, run analysis, stage_b_queued, dispatch stage-b.yml (replaces the fail-closed gate)",
+      "pipeline/requirements.txt — add google-genai"
+    ],
     "resume_from": {
-      "file": "pipeline/plan/automatic.py",
-      "component": "module",
-      "next_operation": "build the automatic_mode phase: port _legacy/scripts/automatic_analysis.py into pipeline/plan/automatic.py (Gemini bounded tool-use, multi-key rotation from GEMINI_API_KEYS, validate output via pipeline/plan/schema.py) and add the stage-a.yml automatic branch (automatic_analysis_running -> dispatch stage-b on valid plan) replacing the current fail-closed gate"
+      "file": "pipeline/tests/test_automatic.py",
+      "component": "new test module",
+      "next_operation": "port _legacy/scripts/test_automatic_analysis.py against pipeline.plan.automatic (scripted gateway, no google-genai dependency in tests)"
     }
   },
   "phases": [
@@ -321,10 +319,5 @@
     "date_utc": "2026-08-26",
     "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
   },
-  "last_session": {
-    "id": "stage-b-session-1",
-    "date_utc": "2026-08-26",
-    "ended_at_phase": "stage_b_render complete; stage_a_ingest_analyze is next",
-    "final_note": "Stage B render pipeline fully built, unit-tested (56 Python + 15 JS tests green), and smoke-tested end-to-end with real ffmpeg on synthetic media. No new architecture concerns raised; the series-shape concern remains open for the operator (both shapes still accepted everywhere). Next session should be a building session executing next_action (Stage A ingest + analyze)."
-  }
+  "last_session": "automatic-mode-session-1"
 }
