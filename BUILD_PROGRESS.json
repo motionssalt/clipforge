@@ -19,18 +19,21 @@
   "current_task": {
     "stage": "background_workflows",
     "task": "Background workflows — cleanup, deploy-bots, diagnostics",
-    "status": "pending",
-    "session": null,
-    "completed": [],
+    "status": "in_progress",
+    "session": "background-workflows-session-1",
+    "completed": [
+      "pipeline/cleanup/{__init__,__main__,expired}.py — port of _legacy/scripts/cleanup.py onto stdlib urllib (no requests dep): release+tag deletion, jobs/<id>/ folder removal, per-job branch deletion, RFC 5988 pagination, expiry driven by §6.2 expires_at_epoch with created_at_epoch+ttl and release-created_at fallbacks preserved",
+      "pipeline/tests/test_cleanup.py — 21 offline tests (expiry matrix, tag->job mapping, Link-header pagination, full mocked-API end-to-end incl. branch/folder deletion) — all green",
+      ".github/workflows/cleanup.yml — hourly cron (:07) + manual ttl_seconds override; stdlib-only module so no dependency install; push retry loop on the folder-deletion commit"
+    ],
     "remaining": [
-      ".github/workflows/cleanup.yml (hourly TTL-based job+release expiry) — port from _legacy/.github/workflows/cleanup.yml",
       ".github/workflows/deploy-bots.yml (deploy Bot A + Bot B Workers on bot/** changes) — port from _legacy/.github/workflows/deploy-telegram-workers.yml",
       ".github/workflows/diagnostics.yml (manual Gemini capability + Telegram intake checks) — port from _legacy/.github/workflows/gemini-api-diagnostic.yml + telegram-intake-check.yml"
     ],
     "resume_from": {
-      "file": "_legacy/.github/workflows/cleanup.yml",
-      "component": "cleanup workflow port",
-      "next_operation": "Read the legacy cleanup/deploy/diagnostic workflows, port them onto the new repo layout (jobs/<id>/ state, schemas, bot/ workers with wrangler.bot-a.jsonc + wrangler.bot-b.jsonc), one workflow per commit per the per-step push protocol."
+      "file": "_legacy/.github/workflows/deploy-telegram-workers.yml",
+      "component": "deploy-bots workflow port",
+      "next_operation": "Read the legacy deploy workflow and the two wrangler configs (bot/wrangler.bot-a.jsonc, bot/wrangler.bot-b.jsonc), then write .github/workflows/deploy-bots.yml: on bot/** push, run bot tests (npm test / node --test) and deploy Bot A + Bot B via wrangler with the Cloudflare secrets by name only. Then diagnostics.yml."
     }
   },
   "phases": [
@@ -377,9 +380,25 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "PYTHONPATH=. python3 -m unittest pipeline.tests.test_publish_zernio (85 passed, 12 new); stage-b.yml re-parsed with PyYAML (19 steps, new step between series continuation and failure handler)"
+    },
+    {
+      "session": "background-workflows-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "background_workflows step 1/3: cleanup.yml ported. pipeline/cleanup/expired.py replaces _legacy/scripts/cleanup.py — same scope (releases+tags by clipforge-/clipforge-relay-input- prefix or clipforge-job-id body marker, jobs/<id>/ folders, clipforge-job/<id> branches) with three adaptations: (1) stdlib urllib instead of the requests dependency (the cleanup job now installs nothing), (2) expiry honors the new §6.2 expires_at_epoch field first, falling back to created_at_epoch+ttl and then the release created_at (legacy chain preserved), (3) the module is importable and testable offline via an injectable opener. The new cleanup.yml drops the legacy pkuseg/chatterbox dependency-build block entirely.",
+      "files_created": [
+        "pipeline/cleanup/__init__.py",
+        "pipeline/cleanup/__main__.py",
+        "pipeline/cleanup/expired.py",
+        "pipeline/tests/test_cleanup.py",
+        ".github/workflows/cleanup.yml"
+      ],
+      "files_modified": [
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "PYTHONPATH=. python3 -m unittest pipeline.tests.test_cleanup (21 passed); cleanup.yml parsed with PyYAML; python -m pipeline.cleanup correctly refuses to run without GITHUB_TOKEN/GITHUB_REPOSITORY"
     }
   ],
-  "next_action": "Begin background_workflows phase: port cleanup.yml (hourly TTL expiry of jobs + releases per ARCHITECTURE.md §12), then deploy-bots.yml (bot/** push -> tests -> deploy Bot A + Bot B Workers), then diagnostics.yml (manual Gemini + Telegram intake checks). Commit+push each workflow as its own step with BUILD_PROGRESS.json updated per step.",
+  "next_action": "background_workflows step 2/3: port _legacy/.github/workflows/deploy-telegram-workers.yml to .github/workflows/deploy-bots.yml (bot/** path trigger, bot test suite gate, wrangler deploy for Bot A and Bot B, Cloudflare credentials via GitHub Actions secrets by name only). Then step 3/3: diagnostics.yml.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -410,8 +429,8 @@
     "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
   },
   "last_session": {
-    "id": "publish-zernio-session-3",
-    "note": "publish_zernio phase COMPLETE (step 6/6 pushed): Stage B automatic-publish dispatch implemented (automatic_dispatch helper + automatic-dispatch CLI + stage-b.yml dispatch step). Next phase: background_workflows (cleanup.yml, deploy-bots.yml, diagnostics.yml)."
+    "id": "background-workflows-session-1",
+    "note": "background_workflows step 1/3 pushed: cleanup subsystem (pipeline/cleanup/* + cleanup.yml + 21 green tests). Next: step 2/3 deploy-bots.yml, then step 3/3 diagnostics.yml."
   },
   "architecture_concerns_closed": [
     {

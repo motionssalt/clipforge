@@ -1,0 +1,82 @@
+name: Cleanup — Delete jobs whose TTL has passed
+
+# ARCHITECTURE.md §12 (preserved behavior): hourly sweep that deletes jobs —
+# their releases, git tags, jobs/<id>/ folders, and per-job branches — once
+# their TTL has passed. Expiry is driven by status.json's expires_at_epoch
+# (§6.2); CLIPFORGE_TTL_SECONDS (default 43200 = 12h) overrides it as
+# created_at_epoch + ttl, matching the legacy "older than N hours" rule.
+#
+# The cleanup module (pipeline/cleanup/expired.py, ported from
+# _legacy/scripts/cleanup.py) is stdlib-only, so this job installs nothing.
+
+on:
+  schedule:
+    # Hourly, on the :07 minute to avoid the top-of-hour scheduler surge.
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      ttl_seconds:
+        description: "Override TTL in seconds (default 43200 = 12h)"
+        required: false
+        type: string
+        default: "43200"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clipforge-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Cleanup expired jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run cleanup
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CLIPFORGE_TTL_SECONDS: ${{ github.event.inputs.ttl_seconds || '43200' }}
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          python -m pipeline.cleanup
+
+      - name: Commit removed job folders (if any)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain jobs/ 2>/dev/null || true)" ]; then
+            git add -A jobs/
+            git commit -m "clipforge: cleanup expired job folders" || echo "nothing to commit"
+            # The sweep races Stage A/B status commits; rebase-and-retry like
+            # every other workflow so a collision never loses the cleanup.
+            pushed=false
+            for attempt in 1 2 3; do
+              if git push; then pushed=true; break; fi
+              echo "cleanup push attempt $attempt failed — rebasing and retrying…" >&2
+              git pull --rebase --autostash || true
+              sleep 2
+            done
+            if [ "$pushed" != "true" ]; then
+              echo "WARN: could not push job-folder deletions; the next hourly run will retry." >&2
+            fi
+          else
+            echo "No job-folder changes to commit."
+          fi
