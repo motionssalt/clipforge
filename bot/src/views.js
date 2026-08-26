@@ -1,0 +1,111 @@
+/**
+ * Bot A view layer — the single self-editing status message
+ * (ARCHITECTURE.md §8.1 principle 1, activeViewId mechanic preserved from
+ * _legacy/telegram-bot/src/index.js) plus the §8.3 home screen and §8.6
+ * settings screen composers.
+ */
+
+import { buttons, editMessage, sendMessage } from './telegram.js';
+import { getState, putState } from './storage.js';
+import { DEFAULT_VOICE, VOICES, escapeHtml } from './constants.js';
+
+export function callbackMessageId(callback) {
+  const value = callback && callback.message && callback.message.message_id;
+  return Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
+}
+
+/**
+ * Render a view into the chat's single active message: edit when we have one,
+ * send a fresh one otherwise. Ported verbatim from the legacy bot.
+ */
+export async function renderInteractiveView(env, chatId, text, options = {}, messageId = null) {
+  const state = await getState(env, chatId);
+  const targetId = Number(messageId || state.activeViewId || 0);
+  if (targetId > 0) {
+    try {
+      await editMessage(env, chatId, targetId, text, options);
+      state.activeViewId = targetId;
+      await putState(env, chatId, state);
+      return { message_id: targetId, edited: true };
+    } catch (error) {
+      if (/message is not modified/i.test(String(error && error.message || ''))) {
+        return { message_id: targetId, edited: true };
+      }
+    }
+  }
+  const sent = await sendMessage(env, chatId, text, options);
+  state.activeViewId = Number(sent && sent.message_id) || null;
+  await putState(env, chatId, state);
+  return sent;
+}
+
+/**
+ * Used right after the human supplied free text or a document: their message
+ * sits between the old menu and the next screen, so the next screen starts a
+ * fresh message instead of editing a stale one. Preserved from legacy.
+ */
+export async function renderFreshView(env, chatId, text, options = {}) {
+  const state = await getState(env, chatId);
+  state.activeViewId = null;
+  await putState(env, chatId, state);
+  return renderInteractiveView(env, chatId, text, options, null);
+}
+
+export function onboardingKeyboard() {
+  return buttons([
+    [{ text: 'Create private Shadow Clone', callback_data: 'clone:new' }],
+    [{ text: 'Connect existing clone', callback_data: 'clone:connect' }]
+  ]);
+}
+
+export function homeKeyboard() {
+  return buttons([
+    [{ text: '🎬 New video', callback_data: 'menu:new' }],
+    [{ text: '📋 Tasks', callback_data: 'menu:tasks' }, { text: '✅ Completed', callback_data: 'menu:done' }],
+    [{ text: '⚙️ Settings', callback_data: 'menu:settings' }]
+  ]);
+}
+
+/**
+ * §8.3 home screen. `snapshot` is { repo, narratorVoice, seriesEnabled,
+ * geminiCount, zernioEnabled }.
+ */
+export function homeText(snapshot) {
+  const voice = VOICES[snapshot.narratorVoice] ? snapshot.narratorVoice : DEFAULT_VOICE;
+  const lines = [
+    '<b>ClipForge</b>',
+    `Connected to: <code>${escapeHtml(snapshot.repo)}</code>   ·   Narrator: ${escapeHtml(VOICES[voice].label)}   ·   Series: ${snapshot.seriesEnabled ? 'on' : 'off'}`,
+    `Gemini: ${snapshot.geminiCount ? `${snapshot.geminiCount} key${snapshot.geminiCount === 1 ? '' : 's'} configured` : 'not configured'}   ·   Zernio: ${snapshot.zernioEnabled ? 'on' : 'off'}`
+  ];
+  return lines.join('\n');
+}
+
+export const ONBOARDING_TEXT = '<b>ClipForge</b>\n\nThis shared bot turns a source video into a short, narrated, captioned vertical clip. Your private chat operates only the GitHub clone connected to it.\n\nCreate your own private Shadow Clone, or connect a clone you already have.';
+
+export function settingsKeyboard() {
+  return buttons([
+    [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini keys', callback_data: 'set:gemini' }],
+    [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music library', callback_data: 'set:music' }],
+    [{ text: 'Watermark', callback_data: 'set:watermark' }, { text: 'Series Mode', callback_data: 'set:series' }],
+    [{ text: 'Zernio publishing', callback_data: 'set:zernio' }],
+    [{ text: 'Back to menu', callback_data: 'menu:home' }]
+  ]);
+}
+
+/**
+ * §8.6 settings summary lines. `snapshot` is { repo, narratorVoice,
+ * seriesEnabled, geminiCount, watermarkName, musicDefaultPath, zernioEnabled }.
+ */
+export function settingsText(snapshot) {
+  const voice = VOICES[snapshot.narratorVoice] ? snapshot.narratorVoice : DEFAULT_VOICE;
+  return [
+    '<b>Settings</b>',
+    `GitHub clone: ${snapshot.repo ? `<code>${escapeHtml(snapshot.repo)}</code>` : 'not connected'}`,
+    `Gemini keys: ${snapshot.geminiCount ? `${snapshot.geminiCount} configured` : 'not configured'}`,
+    `Narrator: ${escapeHtml(VOICES[voice].label)} (Edge TTS)`,
+    `Music default: ${snapshot.musicDefaultPath ? `<code>${escapeHtml(String(snapshot.musicDefaultPath).replace(/^audio-library\//, ''))}</code>` : 'not set'}`,
+    `Watermark: ${snapshot.watermarkName ? escapeHtml(snapshot.watermarkName) : 'not set'}`,
+    `Series Mode default: ${snapshot.seriesEnabled ? 'on' : 'off'}`,
+    `Zernio publishing: ${snapshot.zernioEnabled ? 'on' : 'off'}`
+  ].join('\n');
+}

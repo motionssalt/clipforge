@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clipforge-bot-a",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": true,
+  "vars": {
+    "ORIGINAL_CLIPFORGE_REPOSITORY": "motionssalt/clipforge",
+    "INTERNAL_RELAY_GROUP_CHAT_ID": "-5405387856",
+    "BOT_B_TELEGRAM_USERNAME": "Clipforgedl_bot"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "CLIPFORGE_BOT_KV",
+      "id": "b09957b233c247deb40cc703ffadc95d"
+    }
+  ]
+  // Secret bindings (set via `wrangler secret put`, never committed):
+  //   TELEGRAM_BOT_TOKEN        — Bot A's Telegram bot token
+  //   KV_ENCRYPTION_KEY         — base64 32-byte AES-256-GCM key for credential envelopes
+  //   TELEGRAM_WEBHOOK_SECRET   — X-Telegram-Bot-Api-Secret-Token value (§13 invariant #3)
+  //   RELAY_ENCRYPTION_KEY      — relay sealed-envelope key (§9.2; used when the relay phase lands)
+}

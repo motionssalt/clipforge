@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "clipforge-rebuild",
-  "purpose": "Resumable checkpoint for the multi-session ClipForge rebuild. A fresh session reads this file (after ARCHITECTURE.md) and knows exactly what is done, what is next, and what to watch out for — without any memory of prior sessions.",
+  "purpose": "Resumable checkpoint for the multi-session ClipForge rebuild. A fresh session reads this file (after ARCHITECTURE.md) and knows exactly what is done, what is next, and what to watch out for \u2014 without any memory of prior sessions.",
   "rules_for_future_sessions": {
     "read_first": [
       "ARCHITECTURE.md (in full)",
@@ -12,38 +12,33 @@
     "never_edit": [
       "ARCHITECTURE.md decisions (record disagreements in architecture_concerns instead)",
       "_legacy/ contents",
-      "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
+      "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md \u00a79)"
     ]
   },
-  "current_phase": "bot_a_core",
+  "current_phase": "relay_subsystem",
   "current_task": {
-    "stage": "bot_a_core",
-    "task": "Bot A — webhook, KV, crypto, home/tasks/settings, New-video wizard, manual handoff, status actions",
-    "status": "in_progress",
-    "session": "bot-a-session-1",
-    "completed": [
-      "bot/src/constants.js — new-architecture constants: §6.1 state names shared with jobs.js, §8.2 command surface (/start /help /new /tasks /done /settings /cancel), stage-a/b/publish workflow names, branding paths, voice catalog, escapeHtml + token redaction",
-      "bot/src/crypto.js — ported verbatim from legacy: AES-256-GCM credential envelopes with per-chat AAD (clipforge-telegram-credentials:v1:<chat>) and relay AAD (clipforge-telegram-relay:v1:<job>) unchanged; roundtrip + AAD enforcement verified",
-      "bot/src/storage.js — ported verbatim from legacy: state/credentials/tasks/relay KV records, write-avoidance in putState (KV quota), update dedupe",
-      "bot/src/telegram.js — ported verbatim from legacy: fetch-based Bot API client, sendMessage/editMessage/deleteMessage/answerCallback/copyMessage, multipart audio/document send, bounded torrent download",
-      "bot/src/github.js — ported from legacy github.js and adapted to the new contracts: buildStageARequest() emits the §7.1 NESTED request shape (source/options/mode/series/music) and saveStageARequest writes it (cross-validated against schemas/stage_a_request.schema.json with jsonschema — passes); legacy flat request writer + automatic_music.json writer dropped (music lives in the request, resolved by pipeline/plan/music.py); preserved: shadow-clone create/connect with excludes, libsodium sealed Actions secret upload (48-byte overhead check kept), masked-fingerprint metadata, releases, job/release cleanup, dispatch + cancel + currentBranchSha (code_ref restart support), branding readers/writers (narrator, watermark, music default, series, Zernio). tweetnacl + tweetnacl-sealedbox-js added to bot/package.json"
-    ],
+    "stage": "relay_subsystem",
+    "task": "PRESERVED SUBSYSTEM #2 \u2014 direct-video relay (Bot A \u2192 group \u2192 Bot B \u2192 telegram-relay.yml \u2192 MTProto download \u2192 clone handoff)",
+    "status": "not_started",
+    "session": null,
+    "completed": [],
     "remaining": [
-      "bot/src/index.js (webhook + router, private chats only, webhook-secret auth)",
-      "bot/src/commands/* (/start /new /tasks /done /settings /cancel)",
-      "New-video wizard (mode → source → focus → length → music → confirm)",
-      "Manual handoff: Get agent prompt + Upload production.json with validation"
+      "bot/src/relay.js + bot/src/relay-worker.js (Bot B) \u2014 port essentially verbatim from _legacy/telegram-bot/src/relay.js and relay-worker.js",
+      "bot/wrangler.bot-b.jsonc",
+      ".github/workflows/telegram-relay.yml \u2014 port from _legacy/.github/workflows/telegram-relay.yml",
+      "relay/telegram_relay.py \u2014 port from _legacy/scripts/telegram_relay.py",
+      "Bot A direct-video source kind wired into the New-video wizard (replace the RELAY_NOTICE stub in bot/src/index.js handleWizardMessage with the sealed-envelope copyMessage flow)"
     ],
     "resume_from": {
-      "file": "bot/src/index.js",
-      "component": "Bot A worker entry",
-      "next_operation": "build the webhook + router (private chats only, X-Telegram-Bot-Api-Secret-Token auth), self-editing activeViewId views, home/tasks/done/settings screens, New-video wizard (mode -> source -> focus -> length -> music -> confirm), task status screens with per-state actions, manual handoff (Get agent prompt + Upload production.json via bot/src/plan.js validation), restart with fresh code_ref; wire telegram_channel source kind to the clone UX gate (§9.1) and telegram_relay to a not-yet-built notice until the relay phase"
+      "file": "bot/src/relay.js",
+      "component": "relay caption/marker codecs",
+      "next_operation": "port _legacy/telegram-bot/src/relay.js essentially verbatim; preserve the \u00a79.2 security boundary (AES-256-GCM envelope, AAD clipforge-telegram-relay:v1:<job>, 1800 MiB cap, clone receives only a temporary prerelease checksummed asset)"
     }
   },
   "phases": [
     {
       "id": "architecture",
-      "title": "Stage 1 — Architecture design, legacy move, handoff artifacts",
+      "title": "Stage 1 \u2014 Architecture design, legacy move, handoff artifacts",
       "status": "complete",
       "completed_in_session": "architecture-session-1",
       "notes": "All pre-existing files moved to _legacy/ with structure preserved. ARCHITECTURE.md, BUILD_PROGRESS.json, NEXT_SESSION_PROMPT.md written at repo root."
@@ -59,20 +54,20 @@
         "schemas/production_plan.schema.json",
         "schemas/analysis_bundle.schema.json",
         "pipeline/plan/schema.py (single production.json validator)",
-        "bot/src/plan.js (JS port of the same validator — must agree with schema.py)",
-        "pipeline/status.py status-writer module for jobs/<job_id>/status.json (schema per ARCHITECTURE.md §6.2)",
-        "bot/src/jobs.js job state machine read/write helpers (states per ARCHITECTURE.md §6.1)",
+        "bot/src/plan.js (JS port of the same validator \u2014 must agree with schema.py)",
+        "pipeline/status.py status-writer module for jobs/<job_id>/status.json (schema per ARCHITECTURE.md \u00a76.2)",
+        "bot/src/jobs.js job state machine read/write helpers (states per ARCHITECTURE.md \u00a76.1)",
         "unit tests proving schema.py and plan.js accept/reject identical documents"
       ],
       "notes": "All deliverables built and tested. See completed_work[1] for the full summary. Both validators pass 26 shared fixture cases with identical error sets. See architecture_concerns[0] for the one flag raised during this phase."
     },
     {
       "id": "stage_b_render",
-      "title": "Stage B — render pipeline (voiceover, render, reframe, captions, watermark, enhance, compress)",
+      "title": "Stage B \u2014 render pipeline (voiceover, render, reframe, captions, watermark, enhance, compress)",
       "status": "complete",
       "deliverables": [
         "pipeline/stage_b/voiceover.py (Edge TTS, curated voice catalog, 24kHz mono PCM contract)",
-        "pipeline/stage_b/render.py (mobile-safe single-pass render — see ARCHITECTURE.md §14)",
+        "pipeline/stage_b/render.py (mobile-safe single-pass render \u2014 see ARCHITECTURE.md \u00a714)",
         "pipeline/stage_b/reframe.py",
         "pipeline/stage_b/captions.py",
         "pipeline/stage_b/watermark.py",
@@ -85,7 +80,7 @@
     },
     {
       "id": "stage_a_ingest_analyze",
-      "title": "Stage A — ingest + analyze (all source kinds EXCEPT the two preserved subsystems)",
+      "title": "Stage A \u2014 ingest + analyze (all source kinds EXCEPT the two preserved subsystems)",
       "status": "complete",
       "completed_in_session": "stage-a-session-1",
       "deliverables": [
@@ -99,7 +94,7 @@
     },
     {
       "id": "automatic_mode",
-      "title": "Automatic mode — Gemini analysis producing a validated production.json",
+      "title": "Automatic mode \u2014 Gemini analysis producing a validated production.json",
       "status": "complete",
       "deliverables": [
         "pipeline/plan/automatic.py (Gemini bounded tool-use analysis, multi-key rotation, validated against schemas/production_plan.schema.json)",
@@ -110,23 +105,24 @@
     },
     {
       "id": "bot_a_core",
-      "title": "Bot A — webhook, KV, crypto, home/tasks/settings, New-video wizard, manual handoff, status actions",
-      "status": "pending",
+      "title": "Bot A \u2014 webhook, KV, crypto, home/tasks/settings, New-video wizard, manual handoff, status actions",
+      "status": "complete",
       "deliverables": [
         "bot/package.json, bot/wrangler.bot-a.jsonc",
         "bot/src/index.js (webhook + router, private chats only, webhook-secret auth)",
         "bot/src/crypto.js (AES-256-GCM credentials, per-chat AAD)",
         "bot/src/storage.js (KV layer)",
         "bot/src/github.js (dispatch, files, releases, sealed-secret upload, shadow-clone create/connect)",
-        "bot/src/commands/* per ARCHITECTURE.md §8 (exactly 6 commands: /start /new /tasks /done /settings /cancel)",
-        "New-video wizard (mode → source → focus → length → music → confirm)",
+        "bot/src/commands/* per ARCHITECTURE.md \u00a78 (exactly 6 commands: /start /new /tasks /done /settings /cancel)",
+        "New-video wizard (mode \u2192 source \u2192 focus \u2192 length \u2192 music \u2192 confirm)",
         "Manual handoff: Get agent prompt + Upload production.json with validation"
       ],
-      "notes": "UX per ARCHITECTURE.md §8. Single self-editing status message (activeViewId mechanic from _legacy/telegram-bot/src/index.js). Secrets typed in chat are deleted immediately. Reuse the already-built bot/src/plan.js (validator) and bot/src/jobs.js (state machine helpers)."
+      "notes": "All remaining steps built and tested. bot/src/wizard.js (pure wizard state machine: mode \u2192 source \u2192 focus \u2192 length \u2192 music \u2192 confirm, focus skipped for series per \u00a78.4, source classification incl. \u00a75 disabled-host rejection, library picker, \u00a77.1 projection), bot/src/views.js (activeViewId self-editing view mechanic + \u00a78.3 home + \u00a78.6 settings composers), bot/src/runtime.js (userError, requireCredentials gate, \u00a78.5 task status screen + state-valid contextual buttons), bot/src/commands/{start,new,tasks,done,settings,cancel}.js (all six \u00a78.2 commands), bot/src/index.js (webhook entry: X-Telegram-Bot-Api-Secret-Token auth with 401 otherwise, private chats only, update dedupe; full wizard router incl. mode gate for Automatic without a Gemini key, .torrent staging \u22641 MB to jobs/<id>/source.torrent, \u00a79.1 telegram_channel clone gate at source step AND re-checked at confirm, telegram_relay stubbed with a not-yet-built notice until the relay phase; confirm writes stage-a-request.json + queued status.json and dispatches stage-a.yml with code_ref; task actions: Get agent prompt (\u00a78.7) + Upload production.json (paste or .json file, bot/src/plan.js \u00a77.3 validation with specific errors, stage-b.yml dispatch with production_ref/music_ref/code_ref, stage_b_queued status write), restart Stage A / restart Stage B with fresh currentBranchSha (\u00a78.5), Cancel Stage B (confirm \u2192 workflow cancel or terminal-state merge when no run id), Delete task (confirm \u2192 github.js deleteClipforgeJob + label removal), Download links, paginated torrent-file selection from jobs/<id>/torrent-selection.json (\u00a75 preserved flow), onboarding (create Shadow Clone / connect existing with immediate secret-message deletion), settings sub-screens (Gemini sealed-secret upload + masked fingerprints, narrator select/preview, music library upload/preview/default/delete, watermark, series default; Zernio stubbed for its phase), bot/wrangler.bot-a.jsonc. Tests: bot/test/wizard.test.mjs 16 new cases (73 JS total, all pass); 56 Python tests all pass.",
+      "completed_in_session": "bot-a-session-2"
     },
     {
       "id": "relay_subsystem",
-      "title": "PRESERVED SUBSYSTEM #2 — direct-video relay (Bot A → group → Bot B → telegram-relay.yml → MTProto download → clone handoff)",
+      "title": "PRESERVED SUBSYSTEM #2 \u2014 direct-video relay (Bot A \u2192 group \u2192 Bot B \u2192 telegram-relay.yml \u2192 MTProto download \u2192 clone handoff)",
       "status": "pending",
       "deliverables": [
         "bot/src/relay.js + bot/src/relay-worker.js (Bot B)",
@@ -135,22 +131,22 @@
         "relay/telegram_relay.py",
         "Bot A direct-video source kind wired into the New-video wizard"
       ],
-      "notes": "Port essentially verbatim from _legacy/telegram-bot/src/relay.js, relay-worker.js, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml. Do NOT redesign. Security boundaries per ARCHITECTURE.md §9.2: Bot-B/MTProto/RELAY_ENCRYPTION_KEY secrets exist only on the central repo and the bots; clones receive only a temporary prerelease checksummed asset. 1800 MiB cap."
+      "notes": "Port essentially verbatim from _legacy/telegram-bot/src/relay.js, relay-worker.js, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml. Do NOT redesign. Security boundaries per ARCHITECTURE.md \u00a79.2: Bot-B/MTProto/RELAY_ENCRYPTION_KEY secrets exist only on the central repo and the bots; clones receive only a temporary prerelease checksummed asset. 1800 MiB cap."
     },
     {
       "id": "telegram_channel_subsystem",
-      "title": "PRESERVED SUBSYSTEM #1 — public Telegram channel-link MTProto download (original repo only)",
+      "title": "PRESERVED SUBSYSTEM #1 \u2014 public Telegram channel-link MTProto download (original repo only)",
       "status": "pending",
       "deliverables": [
         "pipeline/stage_a/telegram_channel.py (MTProto download incl. bounded parallel transfer + single-connection fallback)",
         "original-repo gate: Stage A re-verifies github.repository == motionssalt/clipforge and fails closed without the MTProto secrets",
         "Bot A intake gate rejecting telegram_channel sources for clones (UX layer only)"
       ],
-      "notes": "Port from _legacy/scripts/download_drive.py Telegram path. Do NOT redesign. Both enforcement layers (missing secrets + server-side repo check) per ARCHITECTURE.md §9.1."
+      "notes": "Port from _legacy/scripts/download_drive.py Telegram path. Do NOT redesign. Both enforcement layers (missing secrets + server-side repo check) per ARCHITECTURE.md \u00a79.1."
     },
     {
       "id": "series_mode",
-      "title": "Series mode — continuation derivation + manual next-part button",
+      "title": "Series mode \u2014 continuation derivation + manual next-part button",
       "status": "pending",
       "deliverables": [
         "pipeline/plan/series.py (next-part derivation from persisted series state)",
@@ -161,7 +157,7 @@
     },
     {
       "id": "publish_zernio",
-      "title": "Publish — Zernio workflow + settings + per-post management",
+      "title": "Publish \u2014 Zernio workflow + settings + per-post management",
       "status": "pending",
       "deliverables": [
         "pipeline/publish/zernio.py",
@@ -172,7 +168,7 @@
     },
     {
       "id": "background_workflows",
-      "title": "Background workflows — cleanup, deploy-bots, diagnostics",
+      "title": "Background workflows \u2014 cleanup, deploy-bots, diagnostics",
       "status": "pending",
       "deliverables": [
         ".github/workflows/cleanup.yml (hourly, TTL-based job+release expiry)",
@@ -187,7 +183,7 @@
       "name": "CLIPFORGE_TELEGRAM_API_ID",
       "store": "github_actions_secrets",
       "repo_scope": "central repo ONLY (motionssalt/clipforge)",
-      "used_by": "Stage A public Telegram channel-link MTProto download (preserved subsystem #1, ARCHITECTURE.md §9.1); already referenced via ${{ secrets.NAME }} in _legacy/.github/workflows/stage-a.yml. Never provision on clones."
+      "used_by": "Stage A public Telegram channel-link MTProto download (preserved subsystem #1, ARCHITECTURE.md \u00a79.1); already referenced via ${{ secrets.NAME }} in _legacy/.github/workflows/stage-a.yml. Never provision on clones."
     },
     {
       "name": "CLIPFORGE_TELEGRAM_API_HASH",
@@ -199,13 +195,13 @@
       "name": "CLIPFORGE_TELEGRAM_SESSION",
       "store": "github_actions_secrets",
       "repo_scope": "central repo ONLY",
-      "used_by": "User-authorized Telethon session for §9.1; already in stage-a.yml."
+      "used_by": "User-authorized Telethon session for \u00a79.1; already in stage-a.yml."
     },
     {
       "name": "BOTB_MTPROTO_API_ID",
       "store": "github_actions_secrets",
       "repo_scope": "central repo ONLY",
-      "used_by": "Direct-video relay (preserved subsystem #2, ARCHITECTURE.md §9.2): Bot-B-authorized MTProto download inside telegram-relay.yml; already referenced in _legacy/.github/workflows/telegram-relay.yml. Never reachable from clones."
+      "used_by": "Direct-video relay (preserved subsystem #2, ARCHITECTURE.md \u00a79.2): Bot-B-authorized MTProto download inside telegram-relay.yml; already referenced in _legacy/.github/workflows/telegram-relay.yml. Never reachable from clones."
     },
     {
       "name": "BOTB_MTPROTO_API_HASH",
@@ -223,7 +219,7 @@
       "name": "RELAY_ENCRYPTION_KEY",
       "store": "github_actions_secrets (central repo) AND cloudflare_worker_secret (Bot A and Bot B)",
       "repo_scope": "central repo + the two bot Workers ONLY",
-      "used_by": "AES-256-GCM key for the relay sealed envelope, AAD 'clipforge-telegram-relay:v1:<job_id>' (§9.2). Shared secret between Bot A, Bot B, and telegram-relay.yml. Never on clones."
+      "used_by": "AES-256-GCM key for the relay sealed envelope, AAD 'clipforge-telegram-relay:v1:<job_id>' (\u00a79.2). Shared secret between Bot A, Bot B, and telegram-relay.yml. Never on clones."
     },
     {
       "name": "GEMINI_API_KEYS",
@@ -258,7 +254,7 @@
     {
       "name": "Main Bot A Telegram bot token",
       "store": "cloudflare_worker_secret (Bot A worker)",
-      "repo_scope": "Bot A Cloudflare Worker ONLY — never a GitHub secret",
+      "repo_scope": "Bot A Cloudflare Worker ONLY \u2014 never a GitHub secret",
       "used_by": "Bot A webhook + Telegram Bot API calls. Name chosen at deploy; recorded in wrangler.bot-a.jsonc when built."
     },
     {
@@ -270,8 +266,8 @@
     {
       "name": "RELAY_GROUP_CHAT_ID",
       "store": "cloudflare_worker_var_or_secret (Bot A and Bot B workers)",
-      "repo_scope": "Bot A + Bot B Workers ONLY — the internal relay group's chat ID is not itself a credential but must never point at a public group",
-      "used_by": "Relay routing (§9.2). Legacy wrangler configs already carry the bot ids/usernames as plain vars; follow that pattern."
+      "repo_scope": "Bot A + Bot B Workers ONLY \u2014 the internal relay group's chat ID is not itself a credential but must never point at a public group",
+      "used_by": "Relay routing (\u00a79.2). Legacy wrangler configs already carry the bot ids/usernames as plain vars; follow that pattern."
     },
     {
       "name": "Bot B central-repo PAT",
@@ -291,44 +287,50 @@
     {
       "session": "contracts-session-1",
       "date_utc": "2026-08-26",
-      "summary": "Built the contracts_and_schemas phase — every downstream phase now has a stable foundation to import. (1) Four JSON Schemas at schemas/: job_status.schema.json, stage_a_request.schema.json, production_plan.schema.json, analysis_bundle.schema.json — all four validated as well-formed Draft 2020-12. (2) pipeline/plan/schema.py — the single Python production.json validator (ARCHITECTURE.md §7.3 rules). (3) bot/src/plan.js — the JS port. Both accept the ARCHITECTURE.md nested `series` object AND the legacy flat `series_*` siblings, and both accept `voiceover_text` OR legacy `raw_narration`. (4) pipeline/status.py — atomic status.json writer + ten-state state machine (ARCHITECTURE.md §6). Refuses to leave terminal states (complete/error/cancelled) except into another terminal state. CLI entry point for GitHub Actions. (5) bot/src/jobs.js — pure JS state-machine helpers (newStatus / mergeStatus / canTransition / serializeStatus / statusPath) that share constants with the Python side. (6) Tests: pipeline/tests/test_status.py (13 cases), pipeline/tests/test_plan_cross_validation.py (2 cases including the JS/Python equivalence check driven by a 26-document language-neutral fixture at pipeline/tests/fixtures/plan_cases.json via a Node shim at pipeline/tests/run_js_validator.mjs), bot/test/plan.test.mjs + bot/test/jobs.test.mjs (15 JS cases). All 15 Python tests and 15 JS tests pass locally; the Python↔JS cross-language equivalence check passes on every fixture. Recorded one architecture_concern (nested-vs-flat series shape) — resolved for now by accepting both, but the operator should decide the canonical form before Automatic mode is built.",
+      "summary": "Built the contracts_and_schemas phase \u2014 every downstream phase now has a stable foundation to import. (1) Four JSON Schemas at schemas/: job_status.schema.json, stage_a_request.schema.json, production_plan.schema.json, analysis_bundle.schema.json \u2014 all four validated as well-formed Draft 2020-12. (2) pipeline/plan/schema.py \u2014 the single Python production.json validator (ARCHITECTURE.md \u00a77.3 rules). (3) bot/src/plan.js \u2014 the JS port. Both accept the ARCHITECTURE.md nested `series` object AND the legacy flat `series_*` siblings, and both accept `voiceover_text` OR legacy `raw_narration`. (4) pipeline/status.py \u2014 atomic status.json writer + ten-state state machine (ARCHITECTURE.md \u00a76). Refuses to leave terminal states (complete/error/cancelled) except into another terminal state. CLI entry point for GitHub Actions. (5) bot/src/jobs.js \u2014 pure JS state-machine helpers (newStatus / mergeStatus / canTransition / serializeStatus / statusPath) that share constants with the Python side. (6) Tests: pipeline/tests/test_status.py (13 cases), pipeline/tests/test_plan_cross_validation.py (2 cases including the JS/Python equivalence check driven by a 26-document language-neutral fixture at pipeline/tests/fixtures/plan_cases.json via a Node shim at pipeline/tests/run_js_validator.mjs), bot/test/plan.test.mjs + bot/test/jobs.test.mjs (15 JS cases). All 15 Python tests and 15 JS tests pass locally; the Python\u2194JS cross-language equivalence check passes on every fixture. Recorded one architecture_concern (nested-vs-flat series shape) \u2014 resolved for now by accepting both, but the operator should decide the canonical form before Automatic mode is built.",
       "commits": "four commits on main (2026-08-26): (a) schemas, (b) shared validators, (c) job state machine helpers, (d) tests + package.json"
     },
     {
       "session": "stage-b-session-1",
       "date_utc": "2026-08-26",
-      "summary": "Built the stage_b_render phase in full. New package pipeline/stage_b/: (1) common.py — ffmpeg/ffprobe wrappers, StageBError, load_production_plan() which RE-VALIDATES production.json at the Stage B boundary via the single-source validator (ARCHITECTURE.md §13 invariant #5) and normalizes both accepted shapes (nested series object OR flat series_* siblings; voiceover_text OR legacy raw_narration) exactly as pipeline/plan/schema.py does; branding readers (tts_settings, creator_watermark, music_default) and job-id sanitizer. (2) voiceover.py — Edge TTS synthesis with the curated 12-voice catalog, 24kHz mono PCM WAV contract, two-pass EBU R128 speech-clarity mastering, retry/backoff. (3) render.py — timing reconciliation (per-cut setpts retime, boundaries never move, no stretch ceiling, duration-collapse guard), single-pass mobile-safe merge (H.264 High@L4.0 / yuv420p / 30fps CFR / AAC-LC 48kHz / faststart / mp42 / no B-frames / no edit lists), optional ducked music bed, merged voiceover WAV + cut_timing.json sidecar, and strict output validation. (4) reframe.py — ffmpeg scene detection, per-scene static 1080x1200 crop windows, optional CPU InsightFace prominent-face focus with safe centre fallback. (5) captions.py — faster-whisper word timing (timing only), authoritative script alignment, sentence cards (<=6 words, clause breaks), author keyword #RRGGBB colors, Pillow 3-layer raster (soft shadow + keyline + fills), one-time Coolvetica title banner with eased drop-in/hold/drop-out, fail-closed caption-timeline validation, ASS debug sidecar. (6) watermark.py — screen-blend creator watermark with letter-shaped Gaussian shadow; empty name is an explicit no-op. (7) enhance.py — hqdn3d -> Hald-LUT color cube -> cas -> thresholded unsharp -> gradfun chain with mobile-safe re-validation and atomic in-place swap; --no-enabled is a true no-op. (8) compress.py — terminal CRF-23 delivery pass preserving video invariants, audio stream-copied, never ships a larger file. (9) run.py — orchestrator that writes jobs/<job_id>/status.json via pipeline.status before/after each risky step, plus metadata.txt and final.zip packaging (§7.4). Also added pipeline/requirements.txt, copied required assets (assets/fonts/Coolvetica.ttf, assets/anime_reference_lut_grid.png, assets/anime_reference_color_cube_l8.png) from _legacy, wrote .github/workflows/stage-b.yml (dispatchable by job_id + production_ref; path/asset/url ref resolution; source asset download accepting both the new source_input.bin and legacy original.* names; series cross-check against stage-a-request.json; restart-correct code_ref checkout + HEAD re-attach; terminal-state archiving on restart; rebase-and-retry status pushes; dedicated stage_b_cancelled job; final.mp4 + final.zip + metadata.txt uploaded to the job release; complete/error status persisted with asset URLs). Tests: 33 new unit tests in pipeline/tests/test_stage_b.py (56 Python total, all pass) and pipeline/tests/smoke_stage_b_local.py, a real-ffmpeg end-to-end smoke run of the whole chain on synthetic media (Edge TTS and Whisper stubbed — no network/model downloads in the build environment) that produced and validated a mobile-safe 1080x1200 final MP4. All 15 existing bot JS tests still pass.",
+      "summary": "Built the stage_b_render phase in full. New package pipeline/stage_b/: (1) common.py \u2014 ffmpeg/ffprobe wrappers, StageBError, load_production_plan() which RE-VALIDATES production.json at the Stage B boundary via the single-source validator (ARCHITECTURE.md \u00a713 invariant #5) and normalizes both accepted shapes (nested series object OR flat series_* siblings; voiceover_text OR legacy raw_narration) exactly as pipeline/plan/schema.py does; branding readers (tts_settings, creator_watermark, music_default) and job-id sanitizer. (2) voiceover.py \u2014 Edge TTS synthesis with the curated 12-voice catalog, 24kHz mono PCM WAV contract, two-pass EBU R128 speech-clarity mastering, retry/backoff. (3) render.py \u2014 timing reconciliation (per-cut setpts retime, boundaries never move, no stretch ceiling, duration-collapse guard), single-pass mobile-safe merge (H.264 High@L4.0 / yuv420p / 30fps CFR / AAC-LC 48kHz / faststart / mp42 / no B-frames / no edit lists), optional ducked music bed, merged voiceover WAV + cut_timing.json sidecar, and strict output validation. (4) reframe.py \u2014 ffmpeg scene detection, per-scene static 1080x1200 crop windows, optional CPU InsightFace prominent-face focus with safe centre fallback. (5) captions.py \u2014 faster-whisper word timing (timing only), authoritative script alignment, sentence cards (<=6 words, clause breaks), author keyword #RRGGBB colors, Pillow 3-layer raster (soft shadow + keyline + fills), one-time Coolvetica title banner with eased drop-in/hold/drop-out, fail-closed caption-timeline validation, ASS debug sidecar. (6) watermark.py \u2014 screen-blend creator watermark with letter-shaped Gaussian shadow; empty name is an explicit no-op. (7) enhance.py \u2014 hqdn3d -> Hald-LUT color cube -> cas -> thresholded unsharp -> gradfun chain with mobile-safe re-validation and atomic in-place swap; --no-enabled is a true no-op. (8) compress.py \u2014 terminal CRF-23 delivery pass preserving video invariants, audio stream-copied, never ships a larger file. (9) run.py \u2014 orchestrator that writes jobs/<job_id>/status.json via pipeline.status before/after each risky step, plus metadata.txt and final.zip packaging (\u00a77.4). Also added pipeline/requirements.txt, copied required assets (assets/fonts/Coolvetica.ttf, assets/anime_reference_lut_grid.png, assets/anime_reference_color_cube_l8.png) from _legacy, wrote .github/workflows/stage-b.yml (dispatchable by job_id + production_ref; path/asset/url ref resolution; source asset download accepting both the new source_input.bin and legacy original.* names; series cross-check against stage-a-request.json; restart-correct code_ref checkout + HEAD re-attach; terminal-state archiving on restart; rebase-and-retry status pushes; dedicated stage_b_cancelled job; final.mp4 + final.zip + metadata.txt uploaded to the job release; complete/error status persisted with asset URLs). Tests: 33 new unit tests in pipeline/tests/test_stage_b.py (56 Python total, all pass) and pipeline/tests/smoke_stage_b_local.py, a real-ffmpeg end-to-end smoke run of the whole chain on synthetic media (Edge TTS and Whisper stubbed \u2014 no network/model downloads in the build environment) that produced and validated a mobile-safe 1080x1200 final MP4. All 15 existing bot JS tests still pass.",
       "commits": "stage-b-session-1 commits on main (2026-08-26)"
     },
     {
       "session": "automatic-mode-session-1",
       "date_utc": "2026-08-26",
-      "summary": "Built the automatic_mode phase in full. (1) pipeline/plan/automatic.py — ported the bounded Gemini native tool-use analyzer from _legacy/scripts/automatic_analysis.py: ordered evidence retrieval (read_transcript -> scene/key-moments -> chronological open_composite, <=12 images), GeminiGateway with multi-key rotation from GEMINI_API_KEYS, bounded transient retries, secret-redacted logging, primary->fallback model routing, narration 90%-coverage + visual-grounding gates, visual_evidence stripped before output, and validation through the shared pipeline.plan.schema contract (never the legacy contract module). (2) pipeline/plan/music.py — music ref resolution for the Stage B dispatch from the stage-a-request music block with the saved default fallback (adapted port of read_automatic_music.py). (3) stage-a.yml automatic branch replacing the fail-closed gate: automatic_analysis_running status, bundle download, analysis run gated on non-empty GEMINI_API_KEYS, stage_b_queued status, and stage-b.yml dispatch with a fresh code_ref. (4) pipeline/tests/test_automatic.py — 19 offline tests with a scripted gateway; full suite green (93 Python tests + 93 JS assertions incl. 52 subtests).",
+      "summary": "Built the automatic_mode phase in full. (1) pipeline/plan/automatic.py \u2014 ported the bounded Gemini native tool-use analyzer from _legacy/scripts/automatic_analysis.py: ordered evidence retrieval (read_transcript -> scene/key-moments -> chronological open_composite, <=12 images), GeminiGateway with multi-key rotation from GEMINI_API_KEYS, bounded transient retries, secret-redacted logging, primary->fallback model routing, narration 90%-coverage + visual-grounding gates, visual_evidence stripped before output, and validation through the shared pipeline.plan.schema contract (never the legacy contract module). (2) pipeline/plan/music.py \u2014 music ref resolution for the Stage B dispatch from the stage-a-request music block with the saved default fallback (adapted port of read_automatic_music.py). (3) stage-a.yml automatic branch replacing the fail-closed gate: automatic_analysis_running status, bundle download, analysis run gated on non-empty GEMINI_API_KEYS, stage_b_queued status, and stage-b.yml dispatch with a fresh code_ref. (4) pipeline/tests/test_automatic.py \u2014 19 offline tests with a scripted gateway; full suite green (93 Python tests + 93 JS assertions incl. 52 subtests).",
       "commits": "automatic-mode-session-1 commits on main (2026-08-26): d877498, 4704269, 86edc50, 073f272"
+    },
+    {
+      "session": "bot-a-session-2",
+      "date_utc": "2026-08-26",
+      "summary": "Completed the bot_a_core phase (steps 3-8 of 8). Added bot/src/wizard.js (pure, fully unit-tested wizard state machine implementing \u00a78.4 verbatim: fixed step order, series toggle skips focus, source classification with \u00a75 disabled-social-host rejection and t.me public-post regex, paginated music library picker, \u00a77.1 nested request projection), bot/src/views.js (the \u00a78.1 activeViewId self-editing single-message mechanic ported verbatim from legacy, plus \u00a78.3 home-screen and \u00a78.6 settings-screen composers), bot/src/runtime.js (secret-redacting userError, requireCredentials onboarding gate, \u00a78.5 task status screen with contextual per-state buttons), the six \u00a78.2 command modules under bot/src/commands/, and bot/src/index.js \u2014 the Bot A worker: webhook entry authenticating X-Telegram-Bot-Api-Secret-Token (401 otherwise, \u00a713.3), private chats only, KV update dedupe; wizard callbacks (mode with Automatic-needs-Gemini gate and Settings shortcut, series toggle, source text/document handling incl. 1 MB .torrent staging, duration, music none/default/library, confirm); job start writes the nested stage-a-request.json + version-2 queued status.json and dispatches stage-a.yml with the current default-branch SHA as code_ref; \u00a78.7 manual handoff (Get agent prompt + Open release button, Upload production.json with bot/src/plan.js validation and specific error feedback while staying in the upload state, valid plans committed and stage-b.yml dispatched with music_ref resolved exactly like pipeline/plan/music.py); \u00a78.5 status actions (restart A/B with fresh code_ref, cancel Stage B with confirm, delete task with confirm, download links, paginated \u00a75 torrent selection that re-writes the request and re-dispatches Stage A); \u00a710 onboarding (Shadow Clone create + connect with immediate PAT message deletion and encrypted KV storage); settings sub-screens (Gemini sealed-secret add/clear with masked fingerprints only, narrator with previews from assets/tts-previews/, music library upload/preview/default/delete, watermark, series-mode default). telegram_relay sources are gated with a not-yet-built notice (relay is the next phase); Zernio publishing stubbed for its phase. Added bot/wrangler.bot-a.jsonc (vars per legacy; secret names documented in comments only). Tests: bot/test/wizard.test.mjs adds 16 cases \u2014 73 JS tests + 56 Python tests all pass.",
+      "commits": "bot-a-session-2 commits on main (2026-08-26)"
     }
   ],
-  "next_action": "Build the 'bot_a_core' phase per its deliverables list in phases[]: bot/package.json + wrangler.bot-a.jsonc, bot/src/crypto.js, bot/src/storage.js, bot/src/github.js, bot/src/index.js, the six commands, the New-video wizard, and the manual handoff. UX per ARCHITECTURE.md §8; reuse bot/src/plan.js and bot/src/jobs.js. Port semantics from _legacy/telegram-bot/ without redesigning.",
+  "next_action": "Build the 'bot_a_core' phase per its deliverables list in phases[]: bot/package.json + wrangler.bot-a.jsonc, bot/src/crypto.js, bot/src/storage.js, bot/src/github.js, bot/src/index.js, the six commands, the New-video wizard, and the manual handoff. UX per ARCHITECTURE.md \u00a78; reuse bot/src/plan.js and bot/src/jobs.js. Port semantics from _legacy/telegram-bot/ without redesigning.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
       "raised_in_session": "contracts-session-1",
       "date_utc": "2026-08-26",
-      "decision_at_stake": "ARCHITECTURE.md §7.3 documents production.json's series data as a NESTED object (`series.series_id`, `series.part`, `series.start_seconds`, `series.end_seconds`, `series.is_final`, `series.summary`). The legacy contract (_legacy/schemas/production_plan_contract.json and _legacy/scripts/production_plan_contract.py) uses FLAT sibling fields (`series_id`, `series_part`, `series_start_seconds`, `series_end_seconds`, `series_final`, `series_summary`). ARCHITECTURE.md §14 also states 'the production.json field names and validation semantics' are intentionally NOT changing — which is in tension with the nested rewrite in §7.3. Existing legacy plans, and the legacy manual browser tool that users still paste output from, all use the flat shape.",
-      "why_i_think_this_needs_attention": "Two producers (external agents pasted by the user in Manual mode, and any tool referencing the old browser validator) will keep emitting the flat shape. If Stage B were coded to accept only the nested shape it would reject every legacy plan on sight; if the flat shape were coded to be the only accepted shape, we would drift from ARCHITECTURE.md §7.3. Only the operator can decide which is canonical.",
-      "what_i_did_for_now": "Applied the closest-analog policy: accepted BOTH shapes in schema.py and plan.js (nested wins per-field when both are present), mirroring the already-established precedent of accepting `raw_narration` alongside `voiceover_text`. Continued to build against ARCHITECTURE.md as written — the nested shape is preferred and documented as such. This does not silently redesign anything: both shapes validate to identical semantics.",
-      "what_the_right_answer_probably_is": "Pick one. If Stage B ports cleanly from the legacy scripts (which read `series_id`, `series_part`, …), the FLAT shape is the pragmatic canonical and ARCHITECTURE.md §7.3 should be revised to match. If the nested shape is genuinely preferred, add a note in §7.3 that legacy flat form is accepted for input but is deprecated on output — and update 00_READ_THIS_FIRST.txt (the analysis prompt) so external agents emit the nested shape.",
-      "action_requested": "Operator: pick a canonical shape and update ARCHITECTURE.md §7.3 / §14 accordingly. Until then future sessions should keep accepting both — do NOT delete either code path in schema.py or plan.js without operator sign-off."
+      "decision_at_stake": "ARCHITECTURE.md \u00a77.3 documents production.json's series data as a NESTED object (`series.series_id`, `series.part`, `series.start_seconds`, `series.end_seconds`, `series.is_final`, `series.summary`). The legacy contract (_legacy/schemas/production_plan_contract.json and _legacy/scripts/production_plan_contract.py) uses FLAT sibling fields (`series_id`, `series_part`, `series_start_seconds`, `series_end_seconds`, `series_final`, `series_summary`). ARCHITECTURE.md \u00a714 also states 'the production.json field names and validation semantics' are intentionally NOT changing \u2014 which is in tension with the nested rewrite in \u00a77.3. Existing legacy plans, and the legacy manual browser tool that users still paste output from, all use the flat shape.",
+      "why_i_think_this_needs_attention": "Two producers (external agents pasted by the user in Manual mode, and any tool referencing the old browser validator) will keep emitting the flat shape. If Stage B were coded to accept only the nested shape it would reject every legacy plan on sight; if the flat shape were coded to be the only accepted shape, we would drift from ARCHITECTURE.md \u00a77.3. Only the operator can decide which is canonical.",
+      "what_i_did_for_now": "Applied the closest-analog policy: accepted BOTH shapes in schema.py and plan.js (nested wins per-field when both are present), mirroring the already-established precedent of accepting `raw_narration` alongside `voiceover_text`. Continued to build against ARCHITECTURE.md as written \u2014 the nested shape is preferred and documented as such. This does not silently redesign anything: both shapes validate to identical semantics.",
+      "what_the_right_answer_probably_is": "Pick one. If Stage B ports cleanly from the legacy scripts (which read `series_id`, `series_part`, \u2026), the FLAT shape is the pragmatic canonical and ARCHITECTURE.md \u00a77.3 should be revised to match. If the nested shape is genuinely preferred, add a note in \u00a77.3 that legacy flat form is accepted for input but is deprecated on output \u2014 and update 00_READ_THIS_FIRST.txt (the analysis prompt) so external agents emit the nested shape.",
+      "action_requested": "Operator: pick a canonical shape and update ARCHITECTURE.md \u00a77.3 / \u00a714 accordingly. Until then future sessions should keep accepting both \u2014 do NOT delete either code path in schema.py or plan.js without operator sign-off."
     }
   ],
   "active_blockers": [],
   "human_review_items": [
-    "architecture_concerns[0] (series-shape-nested-vs-flat): operator must pick the canonical production.json series shape (nested per §7.3 vs flat legacy) before the automatic_mode phase is built. Until decided, both validators accept both shapes — do not delete either code path.",
+    "architecture_concerns[0] (series-shape-nested-vs-flat): operator must pick the canonical production.json series shape (nested per \u00a77.3 vs flat legacy) before the automatic_mode phase is built. Until decided, both validators accept both shapes \u2014 do not delete either code path.",
     "Operator must fill GITHUB_REPO_PAT in NEXT_SESSION_PROMPT.md per-run (never committed) and confirm all required_secrets above are set in their stores before the phases that need them (relay/telegram_channel need the central-only secrets; bot deploys need the Cloudflare ones)."
   ],
   "verification": {
     "session": "architecture-session-2",
     "date_utc": "2026-08-26",
-    "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
+    "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete \u2014 commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md \u00a79 preserved-subsystem claims verified against _legacy code \u2014 the \u00a79.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the \u00a79.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint \u2014 now recorded under required_secrets (names + storage locations only, no values)."
   },
   "last_session": "automatic-mode-session-1"
 }
