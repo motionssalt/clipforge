@@ -15,26 +15,22 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "telegram_channel_subsystem",
+  "current_phase": "series_mode",
   "current_task": {
-    "stage": "telegram_channel_subsystem",
-    "task": "PRESERVED SUBSYSTEM #1 — public Telegram channel-link MTProto download (original repo only)",
-    "status": "partially_complete",
-    "session": "telegram-channel-session-1",
-    "completed": [
-      "pipeline/stage_a/telegram_channel.py — port of the legacy MTProto public-channel download (require_original_repo + fail-closed secrets gate, verbatim _download_telegram_mtproto wrapper, yt-dlp public-post fallback helper preserved for parity, reuses relay/mtproto_transfer.py)",
-      "ingest.py wiring — telegram_channel kind + t.me post URLs handed in as url kind both route to telegram_channel.download_channel_post (legacy dispatch semantics preserved); 5 new tests green (23 total in test_stage_a.py)",
-      "stage-a.yml — ingest step now receives CLIPFORGE_TELEGRAM_API_ID/HASH/SESSION env (secrets referenced by name only; absent on clones = fail-closed layer 2) and installs telethon/cryptg; header comment updated; YAML re-validated",
-      "RELAY FOLLOW-UP closed — ingest.py _gate_telegram_relay replaced with the real relay-asset download: _relay_asset_metadata (tag/size/sha256 validation per legacy stage-a.yml checks, 1800 MiB cap) + _download_relay_asset (disk preflight, GitHub releases-by-tag + octet-stream asset fetch via GH_TOKEN, streaming sha256, exact size+checksum verify, partial-file cleanup on mismatch). NotBuiltGate retained for API compat but no kind routes to it. 6 new relay tests green (28 total in test_stage_a.py)."
-    ],
+    "stage": "series_mode",
+    "task": "Series mode — continuation derivation + manual next-part button",
+    "status": "not_started",
+    "session": null,
+    "completed": [],
     "remaining": [
-      "Full test suite (all Python tests + bot JS tests) green",
-      "Mark telegram_channel_subsystem phase complete in phases[]; advance current_phase to series_mode; close the two relay architecture_concerns"
+      "pipeline/plan/series.py — next-part derivation from persisted series state (port _legacy/scripts/series_state.py)",
+      "Stage B continuation step for automatic series",
+      "Bot 'Start next part' action for manual series (port manualSeriesContinuation/startNextSeriesPart from _legacy/telegram-bot/src/index.js)"
     ],
     "resume_from": {
-      "file": "BUILD_PROGRESS.json",
-      "component": "phase transition",
-      "next_operation": "run full Python + JS test suites, then mark telegram_channel_subsystem complete and advance to series_mode"
+      "file": "pipeline/plan/series.py",
+      "component": "next-part derivation",
+      "next_operation": "read _legacy/scripts/series_state.py and the legacy bot series logic, then port per ARCHITECTURE.md §11"
     }
   },
   "phases": [
@@ -139,13 +135,14 @@
     {
       "id": "telegram_channel_subsystem",
       "title": "PRESERVED SUBSYSTEM #1 — public Telegram channel-link MTProto download (original repo only)",
-      "status": "pending",
+      "status": "complete",
       "deliverables": [
         "pipeline/stage_a/telegram_channel.py (MTProto download incl. bounded parallel transfer + single-connection fallback)",
         "original-repo gate: Stage A re-verifies github.repository == motionssalt/clipforge and fails closed without the MTProto secrets",
         "Bot A intake gate rejecting telegram_channel sources for clones (UX layer only)"
       ],
-      "notes": "Port from _legacy/scripts/download_drive.py Telegram path. Do NOT redesign. Both enforcement layers (missing secrets + server-side repo check) per ARCHITECTURE.md §9.1."
+      "notes": "All three deliverables built and verified. pipeline/stage_a/telegram_channel.py ports the legacy MTProto public-channel download essentially verbatim (_download_telegram_mtproto wrapper, yt-dlp public-post fallback helper preserved for parity, bounded parallel transfer reused unchanged from relay/mtproto_transfer.py). Both §9.1 enforcement layers: server-side github.repository == motionssalt/clipforge check AND fail-closed on missing CLIPFORGE_TELEGRAM_* secrets. Bot A intake gate (source step + confirm re-check) was already built in bot_a_core. stage-a.yml passes the three secrets by name only to the ingest step and installs telethon/cryptg. ALSO closed the recorded relay follow-up: ingest.py _gate_telegram_relay replaced with the real relay-asset download (release clipforge-relay-input-<job> source_input.bin fetch, size + sha256 verification, partial-file cleanup). Full suite green: 116 Python tests (52 subtests) + 37 JS tests.",
+      "completed_in_session": "telegram-channel-session-1"
     },
     {
       "id": "series_mode",
@@ -322,9 +319,15 @@
       "date_utc": "2026-08-26",
       "summary": "Built the relay_subsystem phase. (1) bot/src/relay.js — verbatim port of the caption/marker codecs (CFRELAY1/CFRELAY_READY1 formats, 1800 MiB cap, relayVideoMetadata). (2) bot/src/relay-worker.js — verbatim Bot B worker (webhook-secret auth, group+Bot-A+shape relevance gate before any KV access, media file_id capture, ready-marker -> telegram-relay.yml dispatch on the central repo with the sealed payload). (3) bot/wrangler.bot-b.jsonc. (4) relay/mtproto_transfer.py — the bounded 4-connection MTProto transfer extracted verbatim for reuse by the relay and the upcoming telegram_channel phase. (5) relay/telegram_relay.py + relay/requirements.txt + .github/workflows/telegram-relay.yml — the central-runner relay: decrypts the Bot A sealed envelope (AES-256-GCM, AAD clipforge-telegram-relay:v1:<job>), downloads the copied group media (local Bot API server first, MTProto fallback with parallel transfer + single-connection fallback), uploads it to the target clone as a temporary prerelease release asset, rewrites the clone's §7.1 nested stage-a-request.json source.relay block with release_tag/expected_size_bytes/sha256, and dispatches the clone's stage-a.yml with job_id+code_ref only. handoff_token rule preserved (central repo substitutes its own workflow token). Bot A: direct video at the wizard source step is staged via copyMessage with the relay caption (supergroup-migration retry preserved); confirm seals the envelope carrying the nested request and the user's own PAT, parks the ready record, posts the ready marker. Tests: bot/test/relay.test.mjs (8 cases: codec round-trips, 1800 MiB cap enforcement, Bot B relevance gate incl. wrong-group/wrong-sender/non-bot/missing-config, sealed-payload state+message matching) and pipeline/tests/test_telegram_relay.py (13 cases: envelope round-trip/wrong-job/wrong-key/malformed, payload validation incl. per-field omission, handoff_token both repos, nested request metadata write-back + wrong-job/wrong-kind rejection).",
       "commits": "relay-session-1 commits on main (2026-08-26)"
+    },
+    {
+      "session": "telegram-channel-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "Built the telegram_channel_subsystem phase in full AND closed the relay ingest gap. (1) pipeline/stage_a/telegram_channel.py — verbatim port of the legacy MTProto public-channel download: require_original_repo (server-side github.repository check) + fail-closed mtproto_credentials_available gate, the _download_telegram_mtproto flow (entity validation rejecting groups, media/video checks, 5 GiB cap, 45-minute timeouts, parallel transfer with single-connection fallback via the already-extracted relay/mtproto_transfer.py), plus the yt-dlp public-post helpers preserved for parity. (2) ingest.py wiring — telegram_channel kind and t.me post URLs handed in as url kind both route to the §9.1 path (legacy download_drive.py main() dispatch semantics preserved). (3) stage-a.yml — ingest step receives CLIPFORGE_TELEGRAM_API_ID/HASH/SESSION by name only (absent on clones = the security boundary's second layer) and installs telethon/cryptg. (4) Relay follow-up closed — ingest.py _gate_telegram_relay replaced with the real relay-asset download: metadata validation (tag regex, 1800 MiB cap, 64-hex checksum), disk preflight, GitHub releases-by-tag + octet-stream asset fetch, streaming SHA-256 verification, partial-file cleanup. Tests: 11 new Stage A tests (28 total in test_stage_a.py); full suite 116 Python + 37 JS all green.",
+      "commits": "telegram-channel-session-1 commits on main (2026-08-26): 45cfb94, 35b5a56, e0a1d85, baaf385"
     }
   ],
-  "next_action": "Build the 'bot_a_core' phase per its deliverables list in phases[]: bot/package.json + wrangler.bot-a.jsonc, bot/src/crypto.js, bot/src/storage.js, bot/src/github.js, bot/src/index.js, the six commands, the New-video wizard, and the manual handoff. UX per ARCHITECTURE.md §8; reuse bot/src/plan.js and bot/src/jobs.js. Port semantics from _legacy/telegram-bot/ without redesigning.",
+  "next_action": "Build the 'series_mode' phase per its deliverables list in phases[]: pipeline/plan/series.py (next-part derivation from persisted series state), the Stage B continuation step for automatic series, and the Bot 'Start next part' action for manual series. Port semantics from _legacy/scripts/series_state.py and the manualSeriesContinuation/startNextSeriesPart logic in _legacy/telegram-bot/src/index.js per ARCHITECTURE.md §11 without redesigning.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -335,14 +338,6 @@
       "what_i_did_for_now": "Applied the closest-analog policy: accepted BOTH shapes in schema.py and plan.js (nested wins per-field when both are present), mirroring the already-established precedent of accepting `raw_narration` alongside `voiceover_text`. Continued to build against ARCHITECTURE.md as written — the nested shape is preferred and documented as such. This does not silently redesign anything: both shapes validate to identical semantics.",
       "what_the_right_answer_probably_is": "Pick one. If Stage B ports cleanly from the legacy scripts (which read `series_id`, `series_part`, …), the FLAT shape is the pragmatic canonical and ARCHITECTURE.md §7.3 should be revised to match. If the nested shape is genuinely preferred, add a note in §7.3 that legacy flat form is accepted for input but is deprecated on output — and update 00_READ_THIS_FIRST.txt (the analysis prompt) so external agents emit the nested shape.",
       "action_requested": "Operator: pick a canonical shape and update ARCHITECTURE.md §7.3 / §14 accordingly. Until then future sessions should keep accepting both — do NOT delete either code path in schema.py or plan.js without operator sign-off."
-    },
-    {
-      "session": "relay-session-1",
-      "concern": "pipeline/stage_a/ingest.py still raises NotBuiltGate for source.kind == 'telegram_relay' (_gate_telegram_relay). ARCHITECTURE.md §9.2 assigns Stage A's relay-asset download to the relay phase implicitly (the relay workflow 'hands it to the target clone's Stage A as a temporary private release asset'), but the ingest-side fetch of clipforge-relay-input-<job> source_input.bin with sha256 verification is not yet implemented. Next session should replace _gate_telegram_relay with: download the asset from release source.relay.release_tag, verify size == expected_size_bytes and sha256 matches, then proceed like the url kind. telegram-relay.yml and the bot side are fully built and tested; only this ingest hook remains."
-    },
-    {
-      "session": "relay-session-1",
-      "concern": "pipeline/stage_a/ingest.py still raises NotBuiltGate for source.kind == 'telegram_relay' (_gate_telegram_relay). The relay workflow + bot side are fully built; only the Stage A ingest hook remains: download the asset from release source.relay.release_tag (clipforge-relay-input-<job_id>, asset source_input.bin), verify size == expected_size_bytes and the sha256 matches, then proceed exactly like the url kind. This should be closed in the next session (it is small and unblocks the relay end-to-end)."
     }
   ],
   "active_blockers": [],
@@ -355,5 +350,13 @@
     "date_utc": "2026-08-26",
     "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
   },
-  "last_session": "telegram-channel-session-1"
+  "last_session": "telegram-channel-session-1",
+  "architecture_concerns_closed": [
+    {
+      "concern": "ingest.py _gate_telegram_relay fail-closed stub (relay-asset download gap)",
+      "raised_in_session": "relay-session-1",
+      "closed_in_session": "telegram-channel-session-1",
+      "resolution": "Replaced with _relay_asset_metadata + _download_relay_asset: validates release_tag/expected_size_bytes/sha256 per legacy stage-a.yml checks (1800 MiB cap), prefetches disk, streams source_input.bin from the clipforge-relay-input-<job> release via GH_TOKEN with octet-stream Accept, verifies exact size + SHA-256, deletes partial files on mismatch. 6 new tests cover missing metadata, bad tag/size/checksum, happy path, tamper path, 404."
+    }
+  ]
 }
