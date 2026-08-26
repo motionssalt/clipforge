@@ -1,34 +1,44 @@
-# ClipForge
+# ClipForge (rebuild in progress)
 
-ClipForge is an automated video-production pipeline built around GitHub Actions, Python media-processing scripts, and Telegram bot workflows. It stages approved source media, prepares production artifacts, renders finished videos, and maintains task state inside the repository and GitHub Releases.
+This repository is being **rebuilt from scratch** as a cleaner, more coherent
+version of the original ClipForge tool. It is a multi-session rebuild where
+each session is a fresh, memoryless AI instance. Progress is coordinated
+entirely through files committed to this repository.
 
-## Operation
+The three files that matter most:
 
-The supported entry points are the Telegram bots and GitHub Actions workflows. Telegram bot users configure and start jobs through the bot interface; the bot creates task metadata and dispatches the relevant pipeline workflow. The workflows run the processing stages and publish task artifacts to the corresponding GitHub Release.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — the single source of truth for the
+  new design. Every session builds against this document verbatim.
+- **[BUILD_PROGRESS.json](BUILD_PROGRESS.json)** — the resumable checkpoint.
+  Every session reads it first and updates it on every push.
+- **[NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md)** — the reusable prompt
+  handed to every future building session. Do not edit it between sessions.
 
-| Component | Responsibility |
-| --- | --- |
-| `telegram-bot/` | Telegram bot interfaces, encrypted task credentials, and workflow-dispatch logic. |
-| `.github/workflows/` | Stage execution, private Telegram relay, Worker deployment, and repository automation. |
-| `scripts/` | Source handling, transcription, subtitle alignment, rendering, and media utilities. |
-| `jobs/` | Per-task request and status metadata created by the active automation. |
+The complete previous implementation is preserved under **[`_legacy/`](_legacy/)**
+in its original layout. Nothing has been deleted. `_legacy/` is retained for
+two reasons:
 
-## Pipeline
+1. Two subsystems in it — the public Telegram channel-link MTProto download
+   path and the direct-video-to-bot relay path (Bot A → private group → Bot B
+   → GitHub Actions → bot-authorized MTProto download) — must be carried
+   forward into the new architecture without being redesigned. See
+   `ARCHITECTURE.md § "Two subsystems that must not be redesigned"`.
+2. To let anyone compare old and new behavior at any time.
 
-Stage A ingests a supported source, produces its analysis artifacts, and stages the approved input in a GitHub Release. Stage B validates the production plan, creates voiceover and subtitles, renders the final video, and updates the task artifacts. Cleanup automation removes expired job data and temporary releases according to the configured retention policy.
+## What the new ClipForge is going to do
 
-## Development checks
+Same purpose as the old one: **a Telegram bot turns a source video into a
+short, narrated, edited, published clip.** Manual mode, Automatic mode, and
+Series mode all remain. The pipeline, the Telegram UX, and the module
+boundaries are being redesigned from first principles — see `ARCHITECTURE.md`.
 
-Run focused checks after changing pipeline code:
+## For the operator / human running future sessions
 
-```bash
-python3 scripts/test_subtitle_alignment.py
-python3 scripts/test_telegram_relay.py
-node --test telegram-bot/test/core.test.js
-```
+Feed **`NEXT_SESSION_PROMPT.md`** unchanged to every future session, after
+filling in the credential placeholders at its top for that run only. Never
+commit filled-in credentials.
 
-Changes beneath `telegram-bot/` automatically deploy the two Telegram Workers through the repository deployment workflow.
+## Current phase
 
-## Security
-
-Use repository and Worker secrets for credentials. Do not commit personal access tokens, Telegram bot tokens, API keys, encrypted task payloads, or private release URLs.
+Stage 1 — Architecture — is **complete**. No new-version implementation code
+exists yet. `BUILD_PROGRESS.json` names the next unbuilt piece.

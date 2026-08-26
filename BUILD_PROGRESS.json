@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "project": "clipforge-rebuild",
+  "purpose": "Resumable checkpoint for the multi-session ClipForge rebuild. A fresh session reads this file (after ARCHITECTURE.md) and knows exactly what is done, what is next, and what to watch out for — without any memory of prior sessions.",
+  "rules_for_future_sessions": {
+    "read_first": [
+      "ARCHITECTURE.md (in full)",
+      "BUILD_PROGRESS.json (this file, in full)"
+    ],
+    "update_on_every_push": true,
+    "update_policy": "After every meaningful increment you push, update current_phase, the matching phases[] entry, completed_work, next_action, and last_session. Never leave the repo pushed with a stale BUILD_PROGRESS.json.",
+    "never_edit": [
+      "ARCHITECTURE.md decisions (record disagreements in architecture_concerns instead)",
+      "_legacy/ contents",
+      "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
+    ]
+  },
+  "current_phase": "contracts_and_schemas",
+  "phases": [
+    {
+      "id": "architecture",
+      "title": "Stage 1 — Architecture design, legacy move, handoff artifacts",
+      "status": "complete",
+      "completed_in_session": "architecture-session-1",
+      "notes": "All pre-existing files moved to _legacy/ with structure preserved. ARCHITECTURE.md, BUILD_PROGRESS.json, NEXT_SESSION_PROMPT.md written at repo root."
+    },
+    {
+      "id": "contracts_and_schemas",
+      "title": "Schemas + shared validators + job state machine",
+      "status": "next",
+      "deliverables": [
+        "schemas/job_status.schema.json",
+        "schemas/stage_a_request.schema.json",
+        "schemas/production_plan.schema.json",
+        "schemas/analysis_bundle.schema.json",
+        "pipeline/plan/schema.py (single production.json validator)",
+        "bot/src/plan.js (JS port of the same validator — must agree with schema.py)",
+        "pipeline/ status-writer module for jobs/<job_id>/status.json (schema per ARCHITECTURE.md §6.2)",
+        "bot/src/jobs.js job state machine read/write helpers (states per ARCHITECTURE.md §6.1)",
+        "unit tests proving schema.py and plan.js accept/reject identical documents"
+      ],
+      "notes": "Build first. Everything else depends on these contracts. production.json validation rules are in ARCHITECTURE.md §7.3 and are NOT negotiable."
+    },
+    {
+      "id": "stage_b_render",
+      "title": "Stage B — render pipeline (voiceover, render, reframe, captions, watermark, enhance, compress)",
+      "status": "pending",
+      "deliverables": [
+        "pipeline/stage_b/voiceover.py (Edge TTS, curated voice catalog, 24kHz mono PCM contract)",
+        "pipeline/stage_b/render.py (mobile-safe single-pass render — see ARCHITECTURE.md §14)",
+        "pipeline/stage_b/reframe.py",
+        "pipeline/stage_b/captions.py",
+        "pipeline/stage_b/watermark.py",
+        "pipeline/stage_b/enhance.py",
+        "pipeline/stage_b/compress.py",
+        ".github/workflows/stage-b.yml (dispatchable by job_id + production_ref; writes status; publishes final.mp4/final.zip to the job release)"
+      ],
+      "notes": "Testable end-to-end with a hand-written valid production.json and any sample video — no bot required. Port logic from _legacy/scripts/ (generate_voiceover.py, cut_and_produce.py, cinematic_reframe.py, generate_subtitles_cinematic.py, apply_creator_watermark.py, enhance_scenes.py, compress_final_video.py)."
+    },
+    {
+      "id": "stage_a_ingest_analyze",
+      "title": "Stage A — ingest + analyze (all source kinds EXCEPT the two preserved subsystems)",
+      "status": "pending",
+      "deliverables": [
+        "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file)",
+        "pipeline/stage_a/transcribe.py (faster-whisper CPU)",
+        "pipeline/stage_a/scenes.py (shot boundaries, key moments, composites)",
+        "pipeline/stage_a/bundle.py (analysis bundle + 00_READ_THIS_FIRST.txt prompt generation)",
+        ".github/workflows/stage-a.yml (writes status at each step; torrent candidate flow with awaiting_torrent_selection)"
+      ],
+      "notes": "Port from _legacy/scripts/ (download_drive.py url/drive parts, magnet_source.py, torrent_source.py, transcribe.py, scene_index.py, build_key_moments.py, event_frames.py, generate_analysis_prompt.py). Telegram channel + relay sources are later phases."
+    },
+    {
+      "id": "automatic_mode",
+      "title": "Automatic mode — Gemini analysis producing a validated production.json",
+      "status": "pending",
+      "deliverables": [
+        "pipeline/plan/automatic.py (Gemini bounded tool-use analysis, multi-key rotation, validated against schemas/production_plan.schema.json)",
+        "stage-a.yml automatic branch (automatic_analysis_running state; dispatch Stage B on valid plan)"
+      ],
+      "notes": "Port from _legacy/scripts/automatic_analysis.py. Reads GEMINI_API_KEYS Actions secret. Safe failure categories preserved."
+    },
+    {
+      "id": "bot_a_core",
+      "title": "Bot A — webhook, KV, crypto, home/tasks/settings, New-video wizard, manual handoff, status actions",
+      "status": "pending",
+      "deliverables": [
+        "bot/package.json, bot/wrangler.bot-a.jsonc",
+        "bot/src/index.js (webhook + router, private chats only, webhook-secret auth)",
+        "bot/src/crypto.js (AES-256-GCM credentials, per-chat AAD)",
+        "bot/src/storage.js (KV layer)",
+        "bot/src/github.js (dispatch, files, releases, sealed-secret upload, shadow-clone create/connect)",
+        "bot/src/commands/* per ARCHITECTURE.md §8 (exactly 6 commands: /start /new /tasks /done /settings /cancel)",
+        "New-video wizard (mode → source → focus → length → music → confirm)",
+        "Manual handoff: Get agent prompt + Upload production.json with validation"
+      ],
+      "notes": "UX per ARCHITECTURE.md §8. Single self-editing status message (activeViewId mechanic from _legacy/telegram-bot/src/index.js). Secrets typed in chat are deleted immediately."
+    },
+    {
+      "id": "relay_subsystem",
+      "title": "PRESERVED SUBSYSTEM #2 — direct-video relay (Bot A → group → Bot B → telegram-relay.yml → MTProto download → clone handoff)",
+      "status": "pending",
+      "deliverables": [
+        "bot/src/relay.js + bot/src/relay-worker.js (Bot B)",
+        "bot/wrangler.bot-b.jsonc",
+        ".github/workflows/telegram-relay.yml",
+        "relay/telegram_relay.py",
+        "Bot A direct-video source kind wired into the New-video wizard"
+      ],
+      "notes": "Port essentially verbatim from _legacy/telegram-bot/src/relay.js, relay-worker.js, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml. Do NOT redesign. Security boundaries per ARCHITECTURE.md §9.2: Bot-B/MTProto/RELAY_ENCRYPTION_KEY secrets exist only on the central repo and the bots; clones receive only a temporary prerelease checksummed asset. 1800 MiB cap."
+    },
+    {
+      "id": "telegram_channel_subsystem",
+      "title": "PRESERVED SUBSYSTEM #1 — public Telegram channel-link MTProto download (original repo only)",
+      "status": "pending",
+      "deliverables": [
+        "pipeline/stage_a/telegram_channel.py (MTProto download incl. bounded parallel transfer + single-connection fallback)",
+        "original-repo gate: Stage A re-verifies github.repository == motionssalt/clipforge and fails closed without the MTProto secrets",
+        "Bot A intake gate rejecting telegram_channel sources for clones (UX layer only)"
+      ],
+      "notes": "Port from _legacy/scripts/download_drive.py Telegram path. Do NOT redesign. Both enforcement layers (missing secrets + server-side repo check) per ARCHITECTURE.md §9.1."
+    },
+    {
+      "id": "series_mode",
+      "title": "Series mode — continuation derivation + manual next-part button",
+      "status": "pending",
+      "deliverables": [
+        "pipeline/plan/series.py (next-part derivation from persisted series state)",
+        "Stage B continuation step for automatic series",
+        "Bot 'Start next part' action for manual series"
+      ],
+      "notes": "Port semantics from _legacy/scripts/series_state.py and the manualSeriesContinuation/startNextSeriesPart logic in _legacy/telegram-bot/src/index.js."
+    },
+    {
+      "id": "publish_zernio",
+      "title": "Publish — Zernio workflow + settings + per-post management",
+      "status": "pending",
+      "deliverables": [
+        "pipeline/publish/zernio.py",
+        ".github/workflows/publish.yml (discover/publish/retry/update/cancel; durable serial queue)",
+        "Bot Zernio settings screens + per-post actions on completed tasks"
+      ],
+      "notes": "Port from _legacy/scripts/zernio_*.py and _legacy/.github/workflows/zernio-publish.yml / zernio-manual-publish.yml. Publishing state lives in status.publishing, never moves a job out of complete."
+    },
+    {
+      "id": "background_workflows",
+      "title": "Background workflows — cleanup, deploy-bots, diagnostics",
+      "status": "pending",
+      "deliverables": [
+        ".github/workflows/cleanup.yml (hourly, TTL-based job+release expiry)",
+        ".github/workflows/deploy-bots.yml (deploy Bot A + Bot B on bot/** changes)",
+        ".github/workflows/diagnostics.yml (Gemini capability + Telegram intake checks)"
+      ],
+      "notes": "Port from _legacy/.github/workflows/cleanup.yml, deploy-telegram-workers.yml, gemini-api-diagnostic.yml, telegram-intake-check.yml."
+    }
+  ],
+  "completed_work": [
+    {
+      "session": "architecture-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "Stage 1 architecture phase. Read the entire legacy codebase. Moved every pre-existing file into _legacy/ preserving internal structure (nothing deleted). Wrote ARCHITECTURE.md (full new design: stage boundaries, state machine, all handoff contracts, bot UX, modes, preserved-subsystem integration), BUILD_PROGRESS.json (this file), NEXT_SESSION_PROMPT.md (reusable handoff prompt with credential placeholders), fresh README.md and .gitignore at root.",
+      "commits": "see git log around 2026-08-26"
+    }
+  ],
+  "next_action": "Build the 'contracts_and_schemas' phase exactly as specified in its deliverables list. This is the foundation every other phase imports. Do not start any other phase first.",
+  "architecture_concerns": [],
+  "active_blockers": [],
+  "last_session": {
+    "id": "architecture-session-1",
+    "date_utc": "2026-08-26",
+    "ended_at_phase": "architecture",
+    "final_note": "Design complete and pushed. No new-version implementation code exists yet — that is intentional. Start with contracts_and_schemas."
+  }
+}

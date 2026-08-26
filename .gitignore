@@ -1,22 +1,24 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
-.DS_Store
-work/
-work_release.json
-*.mkv
-*.mp4
-*.wav
-*.zip
-!scripts/*.py
-# Voice-character reference clip is a committed asset (see
-# scripts/generate_voiceover.py). The blanket *.wav rule above is meant
-# for generated per-cut voiceover WAVs under work/, not this repo asset.
-!assets/voice/*.wav
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
 
-# Cloudflare Telegram Worker local secrets and generated artifacts
-telegram-bot/.dev.vars*
-telegram-bot/.env
-telegram-bot/.env.*
-telegram-bot/.wrangler/
-telegram-bot/node_modules/
+# Node
+node_modules/
+
+# Local scratch / media work directories
+work/
+tmp/
+*.log
+
+# OS
+.DS_Store
+
+# Secrets and local environment files — never commit these
+.env
+.env.*
+*.pem
+*.session
+secrets*.json
