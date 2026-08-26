@@ -1,0 +1,655 @@
+"""Stage B step 2 — reconcile per-cut timing against its voiceover, cut the
+ORIGINAL full-quality video at the reconciled ranges, mute the source audio,
+mix in the synthesized voiceover (plus optional background music), and
+concatenate everything into ONE merged, mobile-safe final MP4.
+
+---------------------------------------------------------------------------
+Mobile-compatibility policy (ARCHITECTURE.md §14 — intentionally unchanged)
+---------------------------------------------------------------------------
+One ffmpeg pass that:
+
+* Uses the concat FILTER (not the concat demuxer) so cuts are joined inside
+  the filter graph with fresh, contiguous, zero-based timestamps — no edit
+  lists, no per-segment container quirks.
+* Re-encodes video to H.264 High@L4.0, yuv420p 8-bit, fixed 30 fps CFR, SAR=1.
+* Re-encodes audio to AAC-LC, 48 kHz, stereo, 192 kbps.
+* Writes MP4 with ``+faststart`` and mp42 brand; no B-frames, no subtitle/data
+  tracks, stripped global metadata/chapters.
+
+---------------------------------------------------------------------------
+Timing reconciliation (no drift)
+---------------------------------------------------------------------------
+The final video's total length MUST equal the total voiceover length, and each
+cut's video stays in lockstep with its own voiceover. Every cut is reconciled
+against its measured voiceover duration by retiming the cut's own footage ONLY
+(``setpts`` multiplier). Cut boundaries never move, no footage is borrowed from
+an adjacent cut, and there is no stretch-factor ceiling.
+
+---------------------------------------------------------------------------
+Audio
+---------------------------------------------------------------------------
+The source video's audio is ALWAYS muted. Each cut's audio track is its
+loudness-normalized voiceover at unity (no arbitrary gain), padded with silence
+to the cut's reconciled video length so concat sees equal-length A/V per
+segment. Optional background music is trimmed/looped to the merged duration,
+scaled down to MUSIC_VOLUME, side-chain ducked under the narration, and a
+wide-ceiling limiter catches only true digital-clip peaks.
+
+A standalone merged voiceover-only WAV is written for the caption step, which
+transcribes it for word-level timestamps.
+
+Ported from ``_legacy/scripts/cut_and_produce.py``.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import wave
+from pathlib import Path
+from typing import Any
+
+from pipeline.stage_b import common
+
+# ---------- Mobile-safe encoding parameters ----------
+TARGET_FPS = 30             # phones/WhatsApp are happiest with CFR 30
+TARGET_PIX_FMT = "yuv420p"  # 8-bit 4:2:0 is the ONLY universally-decoded pixfmt
+X264_PROFILE = "high"
+X264_LEVEL = "4.0"          # covers up to 1080p30, accepted everywhere
+X264_PRESET = "veryfast"    # good speed/quality tradeoff on GH runners
+X264_CRF = "18"             # visually lossless for practical purposes
+AAC_BITRATE = "192k"
+AAC_SAMPLE_RATE = "48000"
+AAC_CHANNELS = "2"
+
+# ---------- Timing reconciliation ----------
+# Post-reconciliation assertion tolerance: |total_video - total_voiceover|.
+DURATION_TOLERANCE_S = 0.25
+# Defense-in-depth lower bound for a reconciled edit relative to the original
+# production-plan timeline. The prompt asks for at least 90% narration coverage
+# at the configured TTS pace; 75% leaves normal synthesis variation headroom
+# while refusing a dramatic duration collapse.
+MIN_RECONCILED_TO_PLANNED_RATIO = 0.75
+
+# ---------- Audio level policy ----------
+# Each TTS WAV is loudness-normalized by voiceover.py to a dialogue target
+# before this step sees it, so the voice path stays at unity. The music bed is
+# reduced to one third of its uploaded amplitude and side-chain ducked only
+# while narration is present.
+VOICEOVER_VOLUME = 1.00
+MUSIC_VOLUME = 0.33
+MUSIC_DUCK_THRESHOLD = 0.015
+MUSIC_DUCK_RATIO = 10
+MUSIC_DUCK_ATTACK_MS = 20
+MUSIC_DUCK_RELEASE_MS = 350
+MIX_LIMITER_CEILING = 0.99
+
+
+def final_wav_timing(path: str | Path) -> tuple[float, int]:
+    """Return final-WAV duration plus its exact 48 kHz trim-frame target.
+
+    The final WAV is the authoritative post-processing artifact, so both the
+    video retiming duration and the atrim endpoint derive from its container
+    frame count (never a manifest duration rounded to milliseconds, which can
+    round DOWN and truncate final phoneme samples).
+    """
+    try:
+        with wave.open(str(path), "rb") as wav:
+            input_frames = wav.getnframes()
+            input_rate = wav.getframerate()
+    except (wave.Error, EOFError) as exc:
+        raise common.StageBError(f"Voiceover WAV is unreadable: {path}") from exc
+    if input_frames <= 0 or input_rate <= 0:
+        raise common.StageBError(f"Voiceover WAV has invalid timing: {path}")
+    output_rate = int(AAC_SAMPLE_RATE)
+    output_frames = round(input_frames * output_rate / input_rate)
+    if output_frames <= 0:
+        raise common.StageBError(f"Voiceover WAV has no renderable samples: {path}")
+    return output_frames / output_rate, output_frames
+
+
+# --------------------------------------------------------------------------- #
+# Timing reconciliation                                                        #
+# --------------------------------------------------------------------------- #
+
+def reconcile_cuts(cuts: list[dict], vo_durations: list[float],
+                   src_duration: float) -> list[dict]:
+    """Adjust every cut so its planned video duration matches its voiceover
+    duration EXACTLY, by retiming the cut's own footage — never by changing
+    start/end seconds, borrowing from another cut, or trimming footage away.
+
+    Returns a NEW list of cut dicts carrying the original boundaries (untouched)
+    plus a per-cut ``stretch`` factor (setpts multiplier: <1.0 speeds the video
+    up, >1.0 slows it down) and ``video_seconds`` (the planned output duration,
+    equal to its voiceover duration).
+    """
+    plan = [
+        {
+            "start_seconds": float(c["start_seconds"]),
+            "end_seconds": float(c["end_seconds"]),
+            "stretch": 1.0,
+        }
+        for c in cuts
+    ]
+
+    for i in range(len(plan)):
+        vo = vo_durations[i]
+        video_len = plan[i]["end_seconds"] - plan[i]["start_seconds"]
+        plan[i]["video_seconds"] = vo
+
+        if video_len <= 0 or abs(vo - video_len) < 0.01:
+            continue  # already matches (or a degenerate zero-length cut)
+
+        # video_len * stretch = vo  =>  stretch = vo / video_len
+        stretch = vo / video_len
+        plan[i]["stretch"] = stretch
+        direction = "slowing down" if stretch > 1.0 else "speeding up"
+        print(
+            f"  [reconcile] cut #{i}: footage {video_len:.2f}s vs voiceover "
+            f"{vo:.2f}s — {direction} the clip by {stretch:.3f}x to match "
+            f"exactly (no boundary change, no borrowed footage).",
+            flush=True,
+        )
+
+    return plan
+
+
+def assert_reconciled_duration_coverage(cuts: list[dict], plan: list[dict]) -> None:
+    """Reject narration-driven duration collapse before rendering output.
+
+    ``reconcile_cuts`` intentionally makes each output duration equal its
+    voiceover duration, so comparing reconciled totals alone is tautological.
+    This guard compares every reconciled duration — and their total — against
+    the ORIGINAL production.json ranges.
+    """
+    if len(cuts) != len(plan):
+        raise common.StageBError("planned cuts and reconciled plan must match 1:1")
+
+    planned_durations = [
+        float(cut["end_seconds"]) - float(cut["start_seconds"]) for cut in cuts
+    ]
+    reconciled_durations = [float(item["video_seconds"]) for item in plan]
+    planned_total = sum(planned_durations)
+    reconciled_total = sum(reconciled_durations)
+    if planned_total <= 0:
+        raise common.StageBError("production plan has no positive planned duration")
+
+    total_ratio = reconciled_total / planned_total
+    collapsed = []
+    for index, (cut, planned, reconciled) in enumerate(
+        zip(cuts, planned_durations, reconciled_durations), start=1
+    ):
+        ratio = reconciled / planned if planned > 0 else 0.0
+        if planned <= 0 or ratio < MIN_RECONCILED_TO_PLANNED_RATIO:
+            collapsed.append(
+                f"cut #{index} [{float(cut['start_seconds']):.2f}-{float(cut['end_seconds']):.2f}s]: "
+                f"planned {planned:.2f}s, voiceover/reconciled {reconciled:.2f}s ({ratio:.1%})"
+            )
+
+    if total_ratio < MIN_RECONCILED_TO_PLANNED_RATIO or collapsed:
+        details = "; ".join(collapsed) if collapsed else "no individual cut below threshold"
+        raise common.StageBError(
+            "narration duration collapse: original production plan totals "
+            f"{planned_total:.2f}s but reconciled voiceover-driven output totals "
+            f"{reconciled_total:.2f}s ({total_ratio:.1%}); minimum allowed is "
+            f"{MIN_RECONCILED_TO_PLANNED_RATIO:.0%}. Undersized cuts: {details}. "
+            "Refusing to produce a truncated final video; expand the affected "
+            "voiceover_text and regenerate narration."
+        )
+
+
+# --------------------------------------------------------------------------- #
+# The single ffmpeg pass                                                       #
+# --------------------------------------------------------------------------- #
+
+def produce_merged_video(src: str | Path, plan: list[dict], vo_wavs: list[str],
+                         dst: str | Path, music: str | Path | None) -> None:
+    """Cut every reconciled range from ``src``, retime per-cut video by its
+    stretch factor, mute source audio, lay in the voiceover WAVs (padded to the
+    cut length), concat everything, optionally mix ducked music under the
+    voiceover, and write ONE mobile-safe MP4."""
+    if not plan:
+        raise common.StageBError("produce_merged_video called with no cuts")
+
+    n = len(plan)
+    cmd: list[str] = ["ffmpeg", "-y"]
+
+    # One `-ss <start> -to <end> -i <src>` block per cut. Input-side seek is
+    # fast, and because the concat filter downstream re-encodes with fresh PTS
+    # we inherit none of the edit-list / non-zero-start problems a stream-copy
+    # pipeline would have.
+    for p in plan:
+        cmd += ["-ss", f"{p['start_seconds']:.3f}", "-to", f"{p['end_seconds']:.3f}", "-i", str(src)]
+
+    for w in vo_wavs:
+        cmd += ["-i", str(w)]
+
+    music_idx = None
+    if music:
+        music_idx = 2 * n
+        # `-stream_loop -1` must precede the input it applies to; loop short
+        # music so the atrim below always has enough material to cut from.
+        cmd += ["-stream_loop", "-1", "-i", str(music)]
+
+    parts: list[str] = []
+    concat_inputs: list[str] = []
+    for i, p in enumerate(plan):
+        stretch = p["stretch"]
+        parts.append(
+            f"[{i}:v:0]"
+            f"setpts={stretch:.6f}*PTS,"
+            f"fps={TARGET_FPS},"
+            f"format={TARGET_PIX_FMT},"
+            f"setsar=1"
+            f"[v{i}]"
+        )
+        # Audio: normalized voiceover only — source audio is never mapped.
+        # Pad to the exact post-resample sample count so concat sees equal A/V
+        # segment lengths. end_sample avoids millisecond rounding truncating a
+        # final consonant or vowel.
+        parts.append(
+            f"[{n + i}:a:0]"
+            f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=stereo,"
+            f"aresample=async=1:first_pts=0,"
+            f"apad,atrim=end_sample={p['audio_samples']},"
+            f"volume={VOICEOVER_VOLUME}"
+            f"[a{i}]"
+        )
+        concat_inputs.append(f"[v{i}][a{i}]")
+
+    parts.append("".join(concat_inputs) + f"concat=n={n}:v=1:a=1[vcat][acat]")
+
+    total_seconds = sum(p["video_seconds"] for p in plan)
+
+    if music_idx is not None:
+        parts.append(
+            f"[{music_idx}:a:0]"
+            f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=stereo,"
+            f"aresample=async=1:first_pts=0,"
+            f"atrim=0:{total_seconds:.3f},"
+            f"volume={MUSIC_VOLUME}"
+            f"[music_reduced]"
+        )
+        parts.append("[acat]asplit=2[voice_mix][voice_sidechain]")
+        parts.append(
+            f"[music_reduced][voice_sidechain]"
+            f"sidechaincompress=threshold={MUSIC_DUCK_THRESHOLD}:"
+            f"ratio={MUSIC_DUCK_RATIO}:attack={MUSIC_DUCK_ATTACK_MS}:"
+            f"release={MUSIC_DUCK_RELEASE_MS}:makeup=1"
+            f"[music_ducked]"
+        )
+        parts.append(
+            f"[voice_mix][music_ducked]amix=inputs=2:duration=first:normalize=0,"
+            f"alimiter=limit={MIX_LIMITER_CEILING}"
+            f"[aout]"
+        )
+        audio_map = "[aout]"
+    else:
+        audio_map = "[acat]"
+
+    filter_complex = ";".join(parts)
+
+    cmd += [
+        "-filter_complex", filter_complex,
+        "-map", "[vcat]",
+        "-map", audio_map,
+
+        # Video: H.264 High@L4.0, CRF 18, yuv420p — universally decodable.
+        "-c:v", "libx264",
+        "-profile:v", X264_PROFILE,
+        "-level:v", X264_LEVEL,
+        "-preset", X264_PRESET,
+        "-crf", X264_CRF,
+        "-pix_fmt", TARGET_PIX_FMT,
+        # No B-frames -> PTS==DTS, start_time==0.
+        "-bf", "0",
+        "-g", str(TARGET_FPS * 2),
+        "-keyint_min", str(TARGET_FPS * 2),
+        "-sc_threshold", "0",
+        "-x264-params", "force-cfr=1",
+        "-video_track_timescale", "15360",
+
+        # Audio: AAC-LC stereo 48 kHz 192 kbps.
+        "-c:a", "aac",
+        "-profile:a", "aac_low",
+        "-b:a", AAC_BITRATE,
+        "-ar", AAC_SAMPLE_RATE,
+        "-ac", AAC_CHANNELS,
+
+        # Container: MP4, faststart, mp42 brand, no edit lists; strip
+        # metadata/chapters; drop subtitle/data tracks.
+        "-movflags", "+faststart",
+        "-use_editlist", "0",
+        "-brand", "mp42",
+        "-map_metadata", "-1",
+        "-map_chapters", "-1",
+        "-sn", "-dn", "-ignore_unknown",
+        "-fflags", "+genpts",
+        "-max_muxing_queue_size", "9999",
+        "-f", "mp4",
+        str(dst),
+    ]
+
+    common.sh(cmd)
+
+
+def write_merged_voiceover(vo_wavs: list[str], plan: list[dict], out_wav: str | Path) -> None:
+    """Concatenate the per-cut voiceover WAVs (each padded to its cut's planned
+    video length, matching what's in the video) into one standalone WAV. The
+    caption step transcribes THIS file for word-level timestamps, so it must
+    line up with the video 1:1."""
+    n = len(vo_wavs)
+    cmd: list[str] = ["ffmpeg", "-y"]
+    for w in vo_wavs:
+        cmd += ["-i", str(w)]
+    parts: list[str] = []
+    labels: list[str] = []
+    for i in range(n):
+        parts.append(
+            f"[{i}:a:0]"
+            f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=mono,"
+            f"aresample=async=1:first_pts=0,"
+            f"apad,atrim=end_sample={plan[i]['audio_samples']}"
+            f"[w{i}]"
+        )
+        labels.append(f"[w{i}]")
+    parts.append("".join(labels) + f"concat=n={n}:v=0:a=1[wout]")
+    cmd += [
+        "-filter_complex", ";".join(parts),
+        "-map", "[wout]",
+        "-c:a", "pcm_s16le",
+        # Keep the already-reconciled 48 kHz sample timeline intact.
+        "-ar", AAC_SAMPLE_RATE,
+        "-ac", "1",
+        str(out_wav),
+    ]
+    common.sh(cmd)
+
+
+def validate_merged_voiceover_timeline(path: str | Path, expected_seconds: float) -> float:
+    """Fail closed if the caption timing source is not 1:1 with final video."""
+    try:
+        with wave.open(str(path), "rb") as wav:
+            frames = wav.getnframes()
+            sample_rate = wav.getframerate()
+            channels = wav.getnchannels()
+    except (wave.Error, EOFError) as exc:
+        raise common.StageBError(f"Merged voiceover WAV is unreadable: {path}") from exc
+    if frames <= 0 or sample_rate <= 0 or channels != 1:
+        raise common.StageBError(
+            f"Merged voiceover WAV has invalid audio metadata: "
+            f"frames={frames}, sample_rate={sample_rate}, channels={channels}"
+        )
+    expected_rate = int(AAC_SAMPLE_RATE)
+    if sample_rate != expected_rate:
+        raise common.StageBError(
+            f"Merged voiceover sample rate is {sample_rate} Hz, expected "
+            f"{expected_rate} Hz for the reconciled subtitle timeline."
+        )
+    actual_seconds = frames / sample_rate
+    tolerance_seconds = max(0.05, expected_seconds * 0.0005)
+    drift_seconds = abs(actual_seconds - expected_seconds)
+    if drift_seconds > tolerance_seconds:
+        raise common.StageBError(
+            f"Merged voiceover duration ({actual_seconds:.3f}s) differs from "
+            f"the reconciled final-video plan ({expected_seconds:.3f}s) by "
+            f"{drift_seconds:.3f}s (tolerance {tolerance_seconds:.3f}s). "
+            "Refusing caption generation because captions would not share the "
+            "final video timeline."
+        )
+    print(
+        f"Merged voiceover timeline validated: {actual_seconds:.3f}s at "
+        f"{sample_rate} Hz mono matches the reconciled final video "
+        f"({expected_seconds:.3f}s).",
+        flush=True,
+    )
+    return actual_seconds
+
+
+def validate_mp4(path: str | Path) -> None:
+    """Verify the output is a genuine, valid, mobile-safe MP4 (codec profile,
+    pixel format, stream counts, zero start time). Fails loudly via
+    ``StageBError`` rather than shipping a file that won't play on a phone."""
+    print(f"\nValidating output MP4: {path}", flush=True)
+
+    if not os.path.isfile(path):
+        raise common.StageBError(f"Output file does not exist: {path}")
+
+    with open(path, "rb") as f:
+        head = f.read(32)
+    if len(head) < 12 or head[4:8] != b"ftyp":
+        raise common.StageBError(
+            f"Output file is NOT a valid MP4 (missing ftyp box at offset 4, got: {head[4:8]!r})"
+        )
+
+    major_brand = head[8:12].decode("ascii", errors="replace")
+    print(f"  Major brand: {major_brand}", flush=True)
+
+    probe_data = common.probe_json(path)
+    streams = probe_data.get("streams", [])
+    fmt_info = probe_data.get("format", {})
+
+    print(f"  Format: {fmt_info.get('format_long_name', 'unknown')} ({fmt_info.get('format_name', 'unknown')})", flush=True)
+    print(f"  Duration: {fmt_info.get('duration', 'unknown')}s", flush=True)
+    print(f"  Bit rate: {fmt_info.get('bit_rate', 'unknown')} bps", flush=True)
+    print(f"  Start time: {fmt_info.get('start_time', 'unknown')}", flush=True)
+
+    v_streams = [s for s in streams if s.get("codec_type") == "video"]
+    a_streams = [s for s in streams if s.get("codec_type") == "audio"]
+
+    if not v_streams:
+        raise common.StageBError("Output file has no video stream")
+    if not a_streams:
+        raise common.StageBError("Output file has no audio stream")
+    if len(a_streams) > 1:
+        raise common.StageBError(
+            f"Output file has {len(a_streams)} audio streams, expected exactly 1 "
+            "(voiceover [+ music] mixed). A leaked source track would put "
+            "original audio back into the final video."
+        )
+
+    v = v_streams[0]
+    a = a_streams[0]
+    print(
+        f"  Video: {v.get('codec_name')} profile={v.get('profile')} "
+        f"level={v.get('level')} pix_fmt={v.get('pix_fmt')} "
+        f"{v.get('width')}x{v.get('height')} fps={v.get('r_frame_rate')}",
+        flush=True,
+    )
+    print(f"  Audio: {a.get('codec_name')} sr={a.get('sample_rate')} ch={a.get('channels')}", flush=True)
+
+    if v.get("codec_name") != "h264":
+        raise common.StageBError(f"video codec is {v.get('codec_name')!r}, expected h264")
+    if v.get("pix_fmt") != TARGET_PIX_FMT:
+        raise common.StageBError(
+            f"video pix_fmt is {v.get('pix_fmt')!r}, expected {TARGET_PIX_FMT!r} "
+            "(non-yuv420p pixel formats are the #1 cause of 'won't play on phone' bugs)"
+        )
+    if a.get("codec_name") != "aac":
+        raise common.StageBError(f"audio codec is {a.get('codec_name')!r}, expected aac")
+
+    try:
+        st = float(fmt_info.get("start_time", "0"))
+        if st > 0.05:
+            raise common.StageBError(
+                f"output start_time is {st:.3f}s, expected ~0.0. Non-zero start "
+                "times break WhatsApp / iOS playback."
+            )
+    except (TypeError, ValueError):
+        pass
+
+    print("  Validation PASSED: output is a mobile-safe MP4.\n", flush=True)
+
+
+# --------------------------------------------------------------------------- #
+# Orchestration                                                                #
+# --------------------------------------------------------------------------- #
+
+def render_merged(
+    original_video: str | Path,
+    plan: dict[str, Any],
+    voiceover_manifest_path: str | Path,
+    out_video_mp4: str | Path,
+    *,
+    voiceover_wav: str | Path | None = None,
+    music: str | Path | None = None,
+) -> dict[str, Any]:
+    """Produce the merged mobile-safe MP4 + merged voiceover WAV + cut-timing
+    sidecar. ``plan`` is the normalized, re-validated plan from
+    :func:`pipeline.stage_b.common.load_production_plan`."""
+    original_video = str(original_video)
+    out_video_mp4 = str(out_video_mp4)
+    for req in (original_video, str(voiceover_manifest_path)):
+        if not os.path.exists(req):
+            raise common.StageBError(f"Missing required input: {req}")
+    if music and not os.path.exists(str(music)):
+        raise common.StageBError(f"Missing required input: {music}")
+
+    cuts = plan.get("cuts") or []
+    if not cuts:
+        raise common.StageBError("production plan contains no cuts")
+
+    with open(voiceover_manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+    vo_entries = manifest.get("cuts") or []
+    if len(vo_entries) != len(cuts):
+        raise common.StageBError(
+            f"Voiceover manifest has {len(vo_entries)} entries but production.json "
+            f"has {len(cuts)} cuts — they must match 1:1. Re-run the voiceover "
+            "step against this production.json."
+        )
+    vo_entries = sorted(vo_entries, key=lambda e: int(e["index"]))
+    vo_wavs = [e["wav"] for e in vo_entries]
+    for w in vo_wavs:
+        if not os.path.exists(w):
+            raise common.StageBError(f"Voiceover WAV from manifest does not exist: {w}")
+    vo_timings = [final_wav_timing(w) for w in vo_wavs]
+    vo_durations = [duration for duration, _ in vo_timings]
+
+    src_duration = common.probe_duration_seconds(original_video)
+    print(f"Source video duration: {src_duration:.2f}s", flush=True)
+
+    print("\nReconciling per-cut timing against voiceover durations...", flush=True)
+    reconciled = reconcile_cuts(cuts, vo_durations, src_duration)
+    for item, (_, audio_samples) in zip(reconciled, vo_timings):
+        item["audio_samples"] = audio_samples
+    assert_reconciled_duration_coverage(cuts, reconciled)
+
+    # Persist authoritative per-cut durations as a sidecar next to the merged
+    # voiceover WAV: the caption step uses these REAL cut boundaries instead of
+    # proportional word-count ratios.
+    sidecar_wav = str(voiceover_wav) if voiceover_wav else os.path.join(
+        os.path.dirname(os.path.abspath(out_video_mp4)) or ".", "voiceover.wav",
+    )
+    cut_timing_path = os.path.join(os.path.dirname(os.path.abspath(sidecar_wav)) or ".", "cut_timing.json")
+    with open(cut_timing_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "version": 1,
+                "cuts": [
+                    {"index": index, "video_seconds": float(item["video_seconds"])}
+                    for index, item in enumerate(reconciled)
+                ],
+            },
+            f,
+            indent=2,
+        )
+        f.write("\n")
+    print(f"Cut timing sidecar written: {cut_timing_path}", flush=True)
+
+    total_video = sum(p["video_seconds"] for p in reconciled)
+    total_vo = sum(vo_durations)
+    print(
+        f"Reconciled plan: {len(reconciled)} cut(s), total video "
+        f"{total_video:.2f}s vs total voiceover {total_vo:.2f}s",
+        flush=True,
+    )
+    if abs(total_video - total_vo) > DURATION_TOLERANCE_S:
+        raise common.StageBError(
+            f"total planned video duration ({total_video:.3f}s) differs from total "
+            f"voiceover duration ({total_vo:.3f}s) by more than {DURATION_TOLERANCE_S}s. "
+            "The final video would drift out of sync with its narration — refusing "
+            "to produce it."
+        )
+
+    # Validate the reconciled ranges against the source.
+    prev_end = -1.0
+    for i, p in enumerate(reconciled):
+        s, e = p["start_seconds"], p["end_seconds"]
+        if e <= s:
+            raise common.StageBError(f"Cut #{i}: end ({e}) <= start ({s}) after reconciliation")
+        if s < 0 or e > src_duration + 0.5:
+            raise common.StageBError(
+                f"Cut #{i}: range [{s}, {e}] outside source [0, {src_duration:.2f}] after reconciliation"
+            )
+        if s < prev_end:
+            raise common.StageBError(
+                f"Cut #{i}: overlaps previous cut ({s} < prev end {prev_end}) after "
+                "reconciliation — footage would be double-used"
+            )
+        prev_end = e
+
+    print(
+        f"\nProducing ONE merged video from {len(reconciled)} cut(s) with "
+        f"normalized voiceover at unity (source audio muted"
+        f"{', background music at ' + str(int(MUSIC_VOLUME * 100)) + '% and ducked beneath speech' if music else ''}) "
+        f"— mobile-safe encoding (H.264 High@L{X264_LEVEL} {TARGET_PIX_FMT} CRF{X264_CRF}, "
+        f"AAC-LC {AAC_SAMPLE_RATE}Hz stereo {AAC_BITRATE}, +faststart, no edit lists).",
+        flush=True,
+    )
+
+    os.makedirs(os.path.dirname(os.path.abspath(out_video_mp4)) or ".", exist_ok=True)
+    produce_merged_video(original_video, reconciled, vo_wavs, out_video_mp4, music)
+    print(f"Merged video written: {out_video_mp4}", flush=True)
+
+    validate_mp4(out_video_mp4)
+
+    write_merged_voiceover(vo_wavs, reconciled, sidecar_wav)
+    expected_voiceover_seconds = sum(float(item["video_seconds"]) for item in reconciled)
+    validate_merged_voiceover_timeline(sidecar_wav, expected_voiceover_seconds)
+    print(f"Merged voiceover written: {sidecar_wav}", flush=True)
+
+    return {
+        "merged_mp4": out_video_mp4,
+        "merged_voiceover_wav": sidecar_wav,
+        "cut_timing_json": cut_timing_path,
+        "total_seconds": total_video,
+        "cut_count": len(reconciled),
+        "music_applied": bool(music),
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Stage B merged render (mobile-safe single pass).")
+    ap.add_argument("original_video")
+    ap.add_argument("production_json")
+    ap.add_argument("voiceover_manifest_json")
+    ap.add_argument("out_video_mp4")
+    ap.add_argument("--voiceover-wav", default=None,
+                    help="where to write the merged voiceover-only WAV "
+                         "(default: <out_video_dir>/voiceover.wav)")
+    ap.add_argument("--music", default=None,
+                    help="optional background music file; trimmed/looped to the "
+                         "merged duration and ducked under the voiceover")
+    args = ap.parse_args(argv)
+
+    plan = common.load_production_plan(args.production_json)
+    render_merged(
+        args.original_video,
+        plan,
+        args.voiceover_manifest_json,
+        args.out_video_mp4,
+        voiceover_wav=args.voiceover_wav,
+        music=args.music,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    try:
+        raise SystemExit(main())
+    except common.StageBError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr, flush=True)
+        raise SystemExit(3)

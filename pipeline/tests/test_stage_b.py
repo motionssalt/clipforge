@@ -1,0 +1,416 @@
+"""Unit tests for pipeline.stage_b — plan normalization, boundary validation,
+timing reconciliation, caption carding, watermark/compress guards, and zip
+packaging. These tests never invoke ffmpeg/Edge TTS/Whisper; media steps are
+exercised through their pure-Python decision logic only.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+import tempfile
+import unittest
+import wave
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from pipeline.stage_b import captions, common, render, run as stage_b_run  # noqa: E402
+
+
+# --------------------------------------------------------------------------- #
+# Fixtures                                                                     #
+# --------------------------------------------------------------------------- #
+
+def _valid_plan_document(**overrides) -> dict:
+    doc = {
+        "version": 2,
+        "job_id": "manual-1787692652625",
+        "title": "A Test Video",
+        "video_duration_seconds": 300,
+        "target_total_duration_seconds": 60,
+        "cuts": [
+            {"start_seconds": 10, "end_seconds": 40, "voiceover_text": "First line of narration."},
+            {"start_seconds": 50, "end_seconds": 90, "voiceover_text": "Second line, with a clause. And more."},
+        ],
+        "hashtags": ["#one", "#two", "#three", "#four", "#five"],
+        "youtube_tags": [f"tag{i}" for i in range(10)],
+    }
+    doc.update(overrides)
+    return doc
+
+
+def _write_wav(path: Path, *, seconds: float = 1.0, rate: int = 48000, channels: int = 1) -> None:
+    frames = int(seconds * rate)
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(channels)
+        wav.setsampwidth(2)
+        wav.setframerate(rate)
+        wav.writeframes(b"\x00\x00" * frames * channels)
+
+
+# --------------------------------------------------------------------------- #
+# common.normalize_plan / load_production_plan                                 #
+# --------------------------------------------------------------------------- #
+
+class NormalizePlanTests(unittest.TestCase):
+    def test_voiceover_text_passthrough(self) -> None:
+        plan = common.normalize_plan(_valid_plan_document())
+        self.assertEqual(plan["cuts"][0]["voiceover_text"], "First line of narration.")
+        self.assertEqual(plan["title"], "A Test Video")
+        self.assertEqual(len(plan["cuts"]), 2)
+
+    def test_raw_narration_fallback(self) -> None:
+        doc = _valid_plan_document()
+        for cut in doc["cuts"]:
+            cut["raw_narration"] = cut.pop("voiceover_text")
+        plan = common.normalize_plan(doc)
+        self.assertEqual(plan["cuts"][0]["voiceover_text"], "First line of narration.")
+
+    def test_flat_series_siblings_normalized(self) -> None:
+        doc = _valid_plan_document(
+            series_id="abc", series_part=2, series_start_seconds=5,
+            series_end_seconds=95, series_final=False, series_summary="prior part",
+        )
+        plan = common.normalize_plan(doc)
+        self.assertEqual(plan["series"]["series_id"], "abc")
+        self.assertEqual(plan["series"]["part"], 2)
+        self.assertEqual(plan["series"]["start_seconds"], 5)
+        self.assertEqual(plan["series"]["end_seconds"], 95)
+        self.assertFalse(plan["series"]["is_final"])
+        self.assertEqual(plan["series"]["summary"], "prior part")
+
+    def test_nested_series_wins_per_field(self) -> None:
+        doc = _valid_plan_document(
+            series={"series_id": "nested-id", "part": 3, "start_seconds": 7,
+                    "end_seconds": 100, "is_final": True, "summary": "nested"},
+            series_id="flat-id", series_part=9,
+        )
+        plan = common.normalize_plan(doc)
+        self.assertEqual(plan["series"]["series_id"], "nested-id")
+        self.assertEqual(plan["series"]["part"], 3)
+        self.assertTrue(plan["series"]["is_final"])
+
+    def test_cuts_sorted_by_start(self) -> None:
+        doc = _valid_plan_document()
+        doc["cuts"] = list(reversed(doc["cuts"]))
+        plan = common.normalize_plan(doc)
+        self.assertEqual(plan["cuts"][0]["start_seconds"], 10)
+        self.assertEqual(plan["cuts"][1]["start_seconds"], 50)
+
+    def test_unknown_top_level_fields_preserved_in_extra(self) -> None:
+        doc = _valid_plan_document(some_future_field={"x": 1})
+        plan = common.normalize_plan(doc)
+        self.assertEqual(plan["_extra"]["some_future_field"], {"x": 1})
+
+
+class LoadProductionPlanTests(unittest.TestCase):
+    def test_valid_plan_loads(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "production.json"
+            p.write_text(json.dumps(_valid_plan_document()), encoding="utf-8")
+            plan = common.load_production_plan(p)
+            self.assertEqual(plan["video_duration_seconds"], 300)
+
+    def test_invalid_plan_refused_at_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "production.json"
+            bad = _valid_plan_document()
+            bad["cuts"] = []  # no cuts -> invalid
+            p.write_text(json.dumps(bad), encoding="utf-8")
+            with self.assertRaises(common.StageBError):
+                common.load_production_plan(p)
+
+    def test_unparseable_json_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "production.json"
+            p.write_text("{not json", encoding="utf-8")
+            with self.assertRaises(common.StageBError):
+                common.load_production_plan(p)
+
+    def test_missing_file_refused(self) -> None:
+        with self.assertRaises(common.StageBError):
+            common.load_production_plan("/nonexistent/production.json")
+
+    def test_overlapping_cuts_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "production.json"
+            doc = _valid_plan_document()
+            doc["cuts"][1]["start_seconds"] = 20  # overlaps cut 0 (10-40)
+            p.write_text(json.dumps(doc), encoding="utf-8")
+            with self.assertRaises(common.StageBError):
+                common.load_production_plan(p)
+
+
+# --------------------------------------------------------------------------- #
+# render.reconcile_cuts / coverage guard                                       #
+# --------------------------------------------------------------------------- #
+
+class ReconcileTests(unittest.TestCase):
+    def test_exact_match_needs_no_stretch(self) -> None:
+        cuts = [{"start_seconds": 0, "end_seconds": 10}]
+        plan = render.reconcile_cuts(cuts, [10.0], 300.0)
+        self.assertEqual(plan[0]["stretch"], 1.0)
+        self.assertEqual(plan[0]["video_seconds"], 10.0)
+
+    def test_voiceover_longer_slows_video(self) -> None:
+        cuts = [{"start_seconds": 0, "end_seconds": 10}]
+        plan = render.reconcile_cuts(cuts, [20.0], 300.0)
+        self.assertAlmostEqual(plan[0]["stretch"], 2.0)
+        self.assertAlmostEqual(plan[0]["video_seconds"], 20.0)
+
+    def test_voiceover_shorter_speeds_video(self) -> None:
+        cuts = [{"start_seconds": 0, "end_seconds": 20}]
+        plan = render.reconcile_cuts(cuts, [10.0], 300.0)
+        self.assertAlmostEqual(plan[0]["stretch"], 0.5)
+
+    def test_boundaries_never_move(self) -> None:
+        cuts = [{"start_seconds": 7, "end_seconds": 13}]
+        plan = render.reconcile_cuts(cuts, [3.0], 300.0)
+        self.assertEqual(plan[0]["start_seconds"], 7.0)
+        self.assertEqual(plan[0]["end_seconds"], 13.0)
+
+    def test_duration_collapse_guard_trips(self) -> None:
+        cuts = [{"start_seconds": 0, "end_seconds": 100}]
+        plan = [{"start_seconds": 0.0, "end_seconds": 100.0, "stretch": 1.0, "video_seconds": 40.0}]
+        with self.assertRaises(common.StageBError):
+            render.assert_reconciled_duration_coverage(cuts, plan)
+
+    def test_duration_collapse_guard_passes(self) -> None:
+        cuts = [{"start_seconds": 0, "end_seconds": 100}]
+        plan = [{"start_seconds": 0.0, "end_seconds": 100.0, "stretch": 1.0, "video_seconds": 90.0}]
+        render.assert_reconciled_duration_coverage(cuts, plan)  # no raise
+
+
+class FinalWavTimingTests(unittest.TestCase):
+    def test_timing_from_wav_frames(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            wav_path = Path(td) / "vo.wav"
+            _write_wav(wav_path, seconds=2.0, rate=24000)
+            duration, out_frames = render.final_wav_timing(wav_path)
+            self.assertAlmostEqual(duration, 2.0, places=3)
+            self.assertEqual(out_frames, 2 * 48000)
+
+    def test_unreadable_wav_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            bad = Path(td) / "bad.wav"
+            bad.write_bytes(b"not a wav")
+            with self.assertRaises(common.StageBError):
+                render.final_wav_timing(bad)
+
+
+# --------------------------------------------------------------------------- #
+# captions: sentence carding + keyword colors + ASS escaping                   #
+# --------------------------------------------------------------------------- #
+
+def _w(word: str, start: float, end: float) -> dict:
+    return {"word": word, "start": start, "end": end}
+
+
+class CaptionCardTests(unittest.TestCase):
+    def test_sentence_split_on_terminal_punctuation(self) -> None:
+        events = [_w("Hello.", 0.0, 0.4), _w("World.", 0.5, 0.9)]
+        cards = captions.split_sentences(events)
+        self.assertEqual(len(cards), 2)
+
+    def test_long_sentence_chunked_at_clause_break(self) -> None:
+        words = "one two three four, five six seven eight nine ten.".split()
+        events = [_w(w, i * 0.3, i * 0.3 + 0.25) for i, w in enumerate(words)]
+        cards = captions.split_sentences(events)
+        self.assertTrue(all(len(c["words"]) <= captions.MAX_CAPTION_WORDS for c in cards))
+        self.assertGreater(len(cards), 1)
+        # Reassembly preserves every word in order.
+        flat = [w["word"] for c in cards for w in c["words"]]
+        self.assertEqual(flat, words)
+
+    def test_trailing_single_word_merged_back(self) -> None:
+        events = [_w("Done.", 0.0, 0.4), _w("wait", 0.5, 0.8)]
+        cards = captions.split_sentences(events)
+        self.assertEqual(len(cards), 1)
+
+    def test_validate_timeline_rejects_internal_gap(self) -> None:
+        sentences = [
+            {"words": [_w("a", 0.0, 0.5)], "start": 0.0, "speak_end": 0.5},
+            {"words": [_w("b", 10.0, 10.5)], "start": 10.0, "speak_end": 10.5},
+        ]
+        with self.assertRaises(common.StageBError):
+            captions.validate_caption_timeline(sentences, 12.0)
+
+    def test_validate_timeline_rejects_uncaptained_tail(self) -> None:
+        sentences = [{"words": [_w("a", 0.0, 0.5)], "start": 0.0, "speak_end": 0.5}]
+        with self.assertRaises(common.StageBError):
+            captions.validate_caption_timeline(sentences, 30.0)
+
+    def test_internal_coverage_holds_card_across_gap(self) -> None:
+        sentences = [
+            {"words": [_w("a", 0.0, 0.5)], "start": 0.0, "speak_end": 0.5},
+            {"words": [_w("b", 6.0, 6.5)], "start": 6.0, "speak_end": 6.5},
+        ]
+        captions.normalize_caption_internal_coverage(sentences)
+        self.assertEqual(sentences[0]["speak_end"], 6.0)
+
+
+class KeywordColorTests(unittest.TestCase):
+    def test_list_and_dict_keyword_shapes(self) -> None:
+        plan = _valid_plan_document()
+        plan["cuts"][0]["keywords"] = [{"word": "First", "color": "#ff5c5c"}]
+        plan["cuts"][1]["keywords"] = {"Second": "00FF00"}
+        texts, kw = captions.script_texts_and_keywords(common.normalize_plan(plan))
+        self.assertEqual(kw["first"], "#FF5C5C")
+        self.assertEqual(kw["second"], "#00FF00")
+        self.assertEqual(len(texts), 2)
+
+    def test_invalid_color_rejected(self) -> None:
+        plan = _valid_plan_document()
+        plan["cuts"][0]["keywords"] = [{"word": "First", "color": "red"}]
+        with self.assertRaises(common.StageBError):
+            captions.script_texts_and_keywords(common.normalize_plan(plan))
+
+    def test_ass_escaping(self) -> None:
+        self.assertEqual(captions._ass_escape("a{b}\\c"), "a\\{b\\}\\\\c")
+        self.assertEqual(captions._ass_time(65.25), "0:01:05.25")
+
+
+class AlignWordsTests(unittest.TestCase):
+    def test_alignment_preserves_script_wording(self) -> None:
+        timed = [_w("the", 0.0, 0.2), _w("quick", 0.2, 0.5), _w("fox", 0.5, 0.9)]
+        events = captions.align_words_to_script(timed, ["The quick fox!"])
+        self.assertEqual([e["word"] for e in events], ["The", "quick", "fox!"])
+
+    def test_real_cut_boundaries_partition_words(self) -> None:
+        timed = [_w(f"w{i}", i * 0.5, i * 0.5 + 0.4) for i in range(6)]
+        scripts = ["w0 w1 w2", "w3 w4 w5"]
+        events = captions.align_words_to_script(timed, scripts, [1.5, 1.5])
+        self.assertEqual(len(events), 6)
+        # Words of cut 2 must start at/after the first cut boundary.
+        self.assertGreaterEqual(events[3]["start"], 1.5)
+
+
+# --------------------------------------------------------------------------- #
+# reframe: crop filter graph                                                   #
+# --------------------------------------------------------------------------- #
+
+class ReframeFilterTests(unittest.TestCase):
+    def test_single_scene_filter(self) -> None:
+        plan = {
+            "target_width": 1080, "target_height": 1200,
+            "scenes": [{"start_seconds": 0.0, "end_seconds": 5.0,
+                        "crop_offset_x": 0.5, "crop_offset_y": 0.5}],
+        }
+        filters, out = __import__("pipeline.stage_b.reframe", fromlist=["scene_crop_filter"]).scene_crop_filter(plan)
+        self.assertEqual(out, "reframed")
+        self.assertTrue(any("crop=1080:1200" in f for f in filters))
+
+    def test_multi_scene_filter_uses_concat(self) -> None:
+        from pipeline.stage_b import reframe as reframe_mod
+        plan = {
+            "target_width": 1080, "target_height": 1200,
+            "scenes": [
+                {"start_seconds": 0.0, "end_seconds": 2.0, "crop_offset_x": 0.3, "crop_offset_y": 0.5},
+                {"start_seconds": 2.0, "end_seconds": 5.0, "crop_offset_x": 0.8, "crop_offset_y": 0.5},
+            ],
+        }
+        filters, out = reframe_mod.scene_crop_filter(plan)
+        joined = ";".join(filters)
+        self.assertIn("split=2", joined)
+        self.assertIn("concat=n=2", joined)
+
+    def test_empty_plan_rejected(self) -> None:
+        from pipeline.stage_b import reframe as reframe_mod
+        with self.assertRaises(common.StageBError):
+            reframe_mod.scene_crop_filter({"scenes": []})
+
+    def test_shot_index_covers_full_duration(self) -> None:
+        from pipeline.stage_b import reframe as reframe_mod
+        shots = reframe_mod.build_shot_index([4.0, 9.5], 12.0)
+        self.assertEqual(shots[0]["start_seconds"], 0.0)
+        self.assertEqual(shots[-1]["end_seconds"], 12.0)
+        self.assertEqual(len(shots), 3)
+        self.assertEqual(shots[0]["cause"], "video_start")
+
+
+# --------------------------------------------------------------------------- #
+# run: metadata + zip packaging                                                #
+# --------------------------------------------------------------------------- #
+
+class PackagingTests(unittest.TestCase):
+    def test_metadata_txt_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            plan = common.normalize_plan(_valid_plan_document())
+            out = Path(td) / "metadata.txt"
+            stage_b_run.write_metadata_txt(plan, out)
+            text = out.read_text(encoding="utf-8")
+            self.assertIn("TITLE:\nA Test Video", text)
+            self.assertIn("#one #two #three #four #five", text)
+            self.assertIn("tag0, tag1", text)
+
+    def test_metadata_blank_sections_when_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            doc = _valid_plan_document()
+            del doc["hashtags"]
+            del doc["youtube_tags"]
+            del doc["title"]
+            plan = common.normalize_plan(doc)
+            out = Path(td) / "metadata.txt"
+            stage_b_run.write_metadata_txt(plan, out)
+            text = out.read_text(encoding="utf-8")
+            # Structure stays predictable: each section header is followed by
+            # its (blank) content line and a separator blank line.
+            self.assertIn("TITLE:", text)
+            self.assertIn("HASHTAGS:", text)
+            self.assertIn("YOUTUBE TAGS:", text)
+            lines = text.splitlines()
+            self.assertEqual(lines[lines.index("TITLE:") + 1], "")
+            self.assertEqual(lines[lines.index("HASHTAGS:") + 1], "")
+            self.assertEqual(lines[lines.index("YOUTUBE TAGS:") + 1], "")
+
+    def test_zip_packaging_verified(self) -> None:
+        import zipfile
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            mp4 = td / "final.mp4"
+            mp4.write_bytes(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64)
+            meta = td / "metadata.txt"
+            meta.write_text("TITLE:\nx\n", encoding="utf-8")
+            prod = td / "production.json"
+            prod.write_text("{}", encoding="utf-8")
+            out_zip = td / "final.zip"
+            stage_b_run.package_final_zip(mp4, meta, prod, out_zip)
+            with zipfile.ZipFile(out_zip) as zf:
+                self.assertEqual(set(zf.namelist()), {"final.mp4", "metadata.txt", "production.json"})
+
+    def test_zip_refuses_missing_mp4(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            with self.assertRaises(common.StageBError):
+                stage_b_run.package_final_zip(
+                    td / "nope.mp4", td / "metadata.txt", td / "production.json", td / "z.zip"
+                )
+
+
+# --------------------------------------------------------------------------- #
+# branding helpers                                                             #
+# --------------------------------------------------------------------------- #
+
+class BrandingTests(unittest.TestCase):
+    def test_watermark_name_missing_file(self) -> None:
+        self.assertEqual(common.load_creator_watermark_name(Path("/nonexistent/wm.json")), "")
+
+    def test_watermark_name_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "creator_watermark.json"
+            p.write_text(json.dumps({"creator_name": "  Jane   Doe  "}), encoding="utf-8")
+            self.assertEqual(common.load_creator_watermark_name(p), "Jane Doe")
+
+    def test_sanitize_job_id(self) -> None:
+        self.assertEqual(common.sanitize_job_id(" manual-123 "), "manual-123")
+        self.assertEqual(common.sanitize_job_id("job/with space"), "job-with-space")
+        with self.assertRaises(common.StageBError):
+            common.sanitize_job_id("!!!")
+        with self.assertRaises(common.StageBError):
+            common.sanitize_job_id("x" * 121)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -15,7 +15,7 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "stage_b_render",
+  "current_phase": "stage_a_ingest_analyze",
   "phases": [
     {
       "id": "architecture",
@@ -45,7 +45,7 @@
     {
       "id": "stage_b_render",
       "title": "Stage B — render pipeline (voiceover, render, reframe, captions, watermark, enhance, compress)",
-      "status": "next",
+      "status": "complete",
       "deliverables": [
         "pipeline/stage_b/voiceover.py (Edge TTS, curated voice catalog, 24kHz mono PCM contract)",
         "pipeline/stage_b/render.py (mobile-safe single-pass render — see ARCHITECTURE.md §14)",
@@ -56,12 +56,13 @@
         "pipeline/stage_b/compress.py",
         ".github/workflows/stage-b.yml (dispatchable by job_id + production_ref; writes status; publishes final.mp4/final.zip to the job release)"
       ],
-      "notes": "Testable end-to-end with a hand-written valid production.json and any sample video — no bot required. Port logic from _legacy/scripts/ (generate_voiceover.py, cut_and_produce.py, cinematic_reframe.py, generate_subtitles_cinematic.py, apply_creator_watermark.py, enhance_scenes.py, compress_final_video.py). MUST call pipeline.status.write_status before/after each risky step so a crashed run leaves a resumable status.json. MUST re-run pipeline.plan.schema.validate_production_plan at the Stage B boundary (§13 invariant #5) — do not trust that the bot validated it. Read the production.json using the accepted-shapes rules already implemented (nested `series` object OR flat `series_*` siblings; `voiceover_text` OR legacy `raw_narration`)."
+      "notes": "All eight deliverables built and verified. Stage B boundary re-validates production.json via pipeline.plan.schema.validate_production_plan and accepts both plan shapes (nested series object OR flat series_* siblings; voiceover_text OR legacy raw_narration). Status written via pipeline.status before/after each risky step. Verified by 33 new unit tests plus a real-ffmpeg end-to-end smoke test (pipeline/tests/smoke_stage_b_local.py) that ran render -> enhance -> captions -> watermark -> compress -> package on synthetic media and produced a valid 1080x1200 H.264/yuv420p/30fps/AAC-LC faststart MP4. See completed_work entry.",
+      "completed_in_session": "stage-b-session-1"
     },
     {
       "id": "stage_a_ingest_analyze",
       "title": "Stage A — ingest + analyze (all source kinds EXCEPT the two preserved subsystems)",
-      "status": "pending",
+      "status": "next",
       "deliverables": [
         "pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file)",
         "pipeline/stage_a/transcribe.py (faster-whisper CPU)",
@@ -156,22 +157,102 @@
     }
   ],
   "required_secrets": [
-    {"name": "CLIPFORGE_TELEGRAM_API_ID", "store": "github_actions_secrets", "repo_scope": "central repo ONLY (motionssalt/clipforge)", "used_by": "Stage A public Telegram channel-link MTProto download (preserved subsystem #1, ARCHITECTURE.md §9.1); already referenced via ${{ secrets.NAME }} in _legacy/.github/workflows/stage-a.yml. Never provision on clones."},
-    {"name": "CLIPFORGE_TELEGRAM_API_HASH", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Same as CLIPFORGE_TELEGRAM_API_ID."},
-    {"name": "CLIPFORGE_TELEGRAM_SESSION", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "User-authorized Telethon session for §9.1; already in stage-a.yml."},
-    {"name": "BOTB_MTPROTO_API_ID", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Direct-video relay (preserved subsystem #2, ARCHITECTURE.md §9.2): Bot-B-authorized MTProto download inside telegram-relay.yml; already referenced in _legacy/.github/workflows/telegram-relay.yml. Never reachable from clones."},
-    {"name": "BOTB_MTPROTO_API_HASH", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Same as BOTB_MTPROTO_API_ID."},
-    {"name": "BOTB_MTPROTO_BOT_TOKEN", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Relay Bot B's Telegram bot token consumed by telegram-relay.yml."},
-    {"name": "RELAY_ENCRYPTION_KEY", "store": "github_actions_secrets (central repo) AND cloudflare_worker_secret (Bot A and Bot B)", "repo_scope": "central repo + the two bot Workers ONLY", "used_by": "AES-256-GCM key for the relay sealed envelope, AAD 'clipforge-telegram-relay:v1:<job_id>' (§9.2). Shared secret between Bot A, Bot B, and telegram-relay.yml. Never on clones."},
-    {"name": "GEMINI_API_KEYS", "store": "github_actions_secrets", "repo_scope": "per-clone (uploaded by Bot A as a libsodium sealed secret; masked fingerprints only in branding/gemini_keys.json)", "used_by": "Automatic mode Gemini analysis (pipeline/plan/automatic.py) and diagnostics.yml."},
-    {"name": "ZERNIO_API_KEY", "store": "github_actions_secrets", "repo_scope": "per-clone", "used_by": "Publish phase (pipeline/publish/zernio.py + publish.yml)."},
-    {"name": "CLOUDFLARE_ACCOUNT_ID", "store": "github_actions_secrets", "repo_scope": "central repo (and any clone that deploys its own bots)", "used_by": "deploy-bots.yml (wrangler deploy of Bot A + Bot B)."},
-    {"name": "CLOUDFLARE_API_TOKEN", "store": "github_actions_secrets", "repo_scope": "central repo (and any clone that deploys its own bots)", "used_by": "deploy-bots.yml."},
-    {"name": "GITHUB_TOKEN", "store": "built-in per-workflow token", "repo_scope": "every repo automatically", "used_by": "All workflows; no configuration needed."},
-    {"name": "Main Bot A Telegram bot token", "store": "cloudflare_worker_secret (Bot A worker)", "repo_scope": "Bot A Cloudflare Worker ONLY — never a GitHub secret", "used_by": "Bot A webhook + Telegram Bot API calls. Name chosen at deploy; recorded in wrangler.bot-a.jsonc when built."},
-    {"name": "Bot B Telegram bot token (bot-side)", "store": "cloudflare_worker_secret (Bot B worker)", "repo_scope": "Bot B Cloudflare Worker ONLY", "used_by": "Bot B (bot/src/relay-worker.js) Telegram intake in the internal relay group."},
-    {"name": "RELAY_GROUP_CHAT_ID", "store": "cloudflare_worker_var_or_secret (Bot A and Bot B workers)", "repo_scope": "Bot A + Bot B Workers ONLY — the internal relay group's chat ID is not itself a credential but must never point at a public group", "used_by": "Relay routing (§9.2). Legacy wrangler configs already carry the bot ids/usernames as plain vars; follow that pattern."},
-    {"name": "Bot B central-repo PAT", "store": "cloudflare_worker_secret (Bot B worker)", "repo_scope": "Bot B Cloudflare Worker ONLY", "used_by": "Bot B dispatching telegram-relay.yml on the central repo. Fine-grained PAT scoped to motionssalt/clipforge only."}
+    {
+      "name": "CLIPFORGE_TELEGRAM_API_ID",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo ONLY (motionssalt/clipforge)",
+      "used_by": "Stage A public Telegram channel-link MTProto download (preserved subsystem #1, ARCHITECTURE.md §9.1); already referenced via ${{ secrets.NAME }} in _legacy/.github/workflows/stage-a.yml. Never provision on clones."
+    },
+    {
+      "name": "CLIPFORGE_TELEGRAM_API_HASH",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo ONLY",
+      "used_by": "Same as CLIPFORGE_TELEGRAM_API_ID."
+    },
+    {
+      "name": "CLIPFORGE_TELEGRAM_SESSION",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo ONLY",
+      "used_by": "User-authorized Telethon session for §9.1; already in stage-a.yml."
+    },
+    {
+      "name": "BOTB_MTPROTO_API_ID",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo ONLY",
+      "used_by": "Direct-video relay (preserved subsystem #2, ARCHITECTURE.md §9.2): Bot-B-authorized MTProto download inside telegram-relay.yml; already referenced in _legacy/.github/workflows/telegram-relay.yml. Never reachable from clones."
+    },
+    {
+      "name": "BOTB_MTPROTO_API_HASH",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo ONLY",
+      "used_by": "Same as BOTB_MTPROTO_API_ID."
+    },
+    {
+      "name": "BOTB_MTPROTO_BOT_TOKEN",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo ONLY",
+      "used_by": "Relay Bot B's Telegram bot token consumed by telegram-relay.yml."
+    },
+    {
+      "name": "RELAY_ENCRYPTION_KEY",
+      "store": "github_actions_secrets (central repo) AND cloudflare_worker_secret (Bot A and Bot B)",
+      "repo_scope": "central repo + the two bot Workers ONLY",
+      "used_by": "AES-256-GCM key for the relay sealed envelope, AAD 'clipforge-telegram-relay:v1:<job_id>' (§9.2). Shared secret between Bot A, Bot B, and telegram-relay.yml. Never on clones."
+    },
+    {
+      "name": "GEMINI_API_KEYS",
+      "store": "github_actions_secrets",
+      "repo_scope": "per-clone (uploaded by Bot A as a libsodium sealed secret; masked fingerprints only in branding/gemini_keys.json)",
+      "used_by": "Automatic mode Gemini analysis (pipeline/plan/automatic.py) and diagnostics.yml."
+    },
+    {
+      "name": "ZERNIO_API_KEY",
+      "store": "github_actions_secrets",
+      "repo_scope": "per-clone",
+      "used_by": "Publish phase (pipeline/publish/zernio.py + publish.yml)."
+    },
+    {
+      "name": "CLOUDFLARE_ACCOUNT_ID",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo (and any clone that deploys its own bots)",
+      "used_by": "deploy-bots.yml (wrangler deploy of Bot A + Bot B)."
+    },
+    {
+      "name": "CLOUDFLARE_API_TOKEN",
+      "store": "github_actions_secrets",
+      "repo_scope": "central repo (and any clone that deploys its own bots)",
+      "used_by": "deploy-bots.yml."
+    },
+    {
+      "name": "GITHUB_TOKEN",
+      "store": "built-in per-workflow token",
+      "repo_scope": "every repo automatically",
+      "used_by": "All workflows; no configuration needed."
+    },
+    {
+      "name": "Main Bot A Telegram bot token",
+      "store": "cloudflare_worker_secret (Bot A worker)",
+      "repo_scope": "Bot A Cloudflare Worker ONLY — never a GitHub secret",
+      "used_by": "Bot A webhook + Telegram Bot API calls. Name chosen at deploy; recorded in wrangler.bot-a.jsonc when built."
+    },
+    {
+      "name": "Bot B Telegram bot token (bot-side)",
+      "store": "cloudflare_worker_secret (Bot B worker)",
+      "repo_scope": "Bot B Cloudflare Worker ONLY",
+      "used_by": "Bot B (bot/src/relay-worker.js) Telegram intake in the internal relay group."
+    },
+    {
+      "name": "RELAY_GROUP_CHAT_ID",
+      "store": "cloudflare_worker_var_or_secret (Bot A and Bot B workers)",
+      "repo_scope": "Bot A + Bot B Workers ONLY — the internal relay group's chat ID is not itself a credential but must never point at a public group",
+      "used_by": "Relay routing (§9.2). Legacy wrangler configs already carry the bot ids/usernames as plain vars; follow that pattern."
+    },
+    {
+      "name": "Bot B central-repo PAT",
+      "store": "cloudflare_worker_secret (Bot B worker)",
+      "repo_scope": "Bot B Cloudflare Worker ONLY",
+      "used_by": "Bot B dispatching telegram-relay.yml on the central repo. Fine-grained PAT scoped to motionssalt/clipforge only."
+    }
   ],
   "secrets_rule": "Actual values are never written to this repo, ARCHITECTURE.md, BUILD_PROGRESS.json, NEXT_SESSION_PROMPT.md, code, logs, commits, issues, artifacts, or chat. Every credential is referenced by name only via ${{ secrets.NAME }} (GitHub Actions) or a Cloudflare Worker secret binding. The single exception is the operator-filled GITHUB_REPO_PAT placeholder in NEXT_SESSION_PROMPT.md, used only for git/gh operations and never printed or persisted.",
   "completed_work": [
@@ -186,9 +267,15 @@
       "date_utc": "2026-08-26",
       "summary": "Built the contracts_and_schemas phase — every downstream phase now has a stable foundation to import. (1) Four JSON Schemas at schemas/: job_status.schema.json, stage_a_request.schema.json, production_plan.schema.json, analysis_bundle.schema.json — all four validated as well-formed Draft 2020-12. (2) pipeline/plan/schema.py — the single Python production.json validator (ARCHITECTURE.md §7.3 rules). (3) bot/src/plan.js — the JS port. Both accept the ARCHITECTURE.md nested `series` object AND the legacy flat `series_*` siblings, and both accept `voiceover_text` OR legacy `raw_narration`. (4) pipeline/status.py — atomic status.json writer + ten-state state machine (ARCHITECTURE.md §6). Refuses to leave terminal states (complete/error/cancelled) except into another terminal state. CLI entry point for GitHub Actions. (5) bot/src/jobs.js — pure JS state-machine helpers (newStatus / mergeStatus / canTransition / serializeStatus / statusPath) that share constants with the Python side. (6) Tests: pipeline/tests/test_status.py (13 cases), pipeline/tests/test_plan_cross_validation.py (2 cases including the JS/Python equivalence check driven by a 26-document language-neutral fixture at pipeline/tests/fixtures/plan_cases.json via a Node shim at pipeline/tests/run_js_validator.mjs), bot/test/plan.test.mjs + bot/test/jobs.test.mjs (15 JS cases). All 15 Python tests and 15 JS tests pass locally; the Python↔JS cross-language equivalence check passes on every fixture. Recorded one architecture_concern (nested-vs-flat series shape) — resolved for now by accepting both, but the operator should decide the canonical form before Automatic mode is built.",
       "commits": "four commits on main (2026-08-26): (a) schemas, (b) shared validators, (c) job state machine helpers, (d) tests + package.json"
+    },
+    {
+      "session": "stage-b-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "Built the stage_b_render phase in full. New package pipeline/stage_b/: (1) common.py — ffmpeg/ffprobe wrappers, StageBError, load_production_plan() which RE-VALIDATES production.json at the Stage B boundary via the single-source validator (ARCHITECTURE.md §13 invariant #5) and normalizes both accepted shapes (nested series object OR flat series_* siblings; voiceover_text OR legacy raw_narration) exactly as pipeline/plan/schema.py does; branding readers (tts_settings, creator_watermark, music_default) and job-id sanitizer. (2) voiceover.py — Edge TTS synthesis with the curated 12-voice catalog, 24kHz mono PCM WAV contract, two-pass EBU R128 speech-clarity mastering, retry/backoff. (3) render.py — timing reconciliation (per-cut setpts retime, boundaries never move, no stretch ceiling, duration-collapse guard), single-pass mobile-safe merge (H.264 High@L4.0 / yuv420p / 30fps CFR / AAC-LC 48kHz / faststart / mp42 / no B-frames / no edit lists), optional ducked music bed, merged voiceover WAV + cut_timing.json sidecar, and strict output validation. (4) reframe.py — ffmpeg scene detection, per-scene static 1080x1200 crop windows, optional CPU InsightFace prominent-face focus with safe centre fallback. (5) captions.py — faster-whisper word timing (timing only), authoritative script alignment, sentence cards (<=6 words, clause breaks), author keyword #RRGGBB colors, Pillow 3-layer raster (soft shadow + keyline + fills), one-time Coolvetica title banner with eased drop-in/hold/drop-out, fail-closed caption-timeline validation, ASS debug sidecar. (6) watermark.py — screen-blend creator watermark with letter-shaped Gaussian shadow; empty name is an explicit no-op. (7) enhance.py — hqdn3d -> Hald-LUT color cube -> cas -> thresholded unsharp -> gradfun chain with mobile-safe re-validation and atomic in-place swap; --no-enabled is a true no-op. (8) compress.py — terminal CRF-23 delivery pass preserving video invariants, audio stream-copied, never ships a larger file. (9) run.py — orchestrator that writes jobs/<job_id>/status.json via pipeline.status before/after each risky step, plus metadata.txt and final.zip packaging (§7.4). Also added pipeline/requirements.txt, copied required assets (assets/fonts/Coolvetica.ttf, assets/anime_reference_lut_grid.png, assets/anime_reference_color_cube_l8.png) from _legacy, wrote .github/workflows/stage-b.yml (dispatchable by job_id + production_ref; path/asset/url ref resolution; source asset download accepting both the new source_input.bin and legacy original.* names; series cross-check against stage-a-request.json; restart-correct code_ref checkout + HEAD re-attach; terminal-state archiving on restart; rebase-and-retry status pushes; dedicated stage_b_cancelled job; final.mp4 + final.zip + metadata.txt uploaded to the job release; complete/error status persisted with asset URLs). Tests: 33 new unit tests in pipeline/tests/test_stage_b.py (56 Python total, all pass) and pipeline/tests/smoke_stage_b_local.py, a real-ffmpeg end-to-end smoke run of the whole chain on synthetic media (Edge TTS and Whisper stubbed — no network/model downloads in the build environment) that produced and validated a mobile-safe 1080x1200 final MP4. All 15 existing bot JS tests still pass.",
+      "commits": "stage-b-session-1 commits on main (2026-08-26)"
     }
   ],
-  "next_action": "Build the 'stage_b_render' phase per its deliverables list. Start with pipeline/stage_b/voiceover.py (Edge TTS, 24kHz mono PCM contract) and pipeline/stage_b/render.py (mobile-safe single-pass H.264 High@L4.0 / yuv420p / 30fps CFR / AAC-LC 48kHz / faststart / no B-frames, per ARCHITECTURE.md §14). MUST import pipeline.status.write_status and call it before and after each risky step. MUST import pipeline.plan.schema.validate_production_plan and re-validate the incoming production.json at the Stage B boundary (§13 invariant #5). MUST handle both accepted plan shapes (nested `series` object OR flat `series_*` siblings; `voiceover_text` OR legacy `raw_narration`) — see pipeline/plan/schema.py for how normalization works. Port logic from _legacy/scripts/{generate_voiceover.py, cut_and_produce.py, cinematic_reframe.py, generate_subtitles_cinematic.py, apply_creator_watermark.py, enhance_scenes.py, compress_final_video.py}. Testable end-to-end with a hand-written valid production.json — no bot required.",
+  "next_action": "Build the 'stage_a_ingest_analyze' phase per its deliverables list: pipeline/stage_a/ingest.py (url, drive, magnet, torrent_file source kinds), pipeline/stage_a/transcribe.py (faster-whisper CPU), pipeline/stage_a/scenes.py (shot boundaries, key moments, composites), pipeline/stage_a/bundle.py (analysis bundle + 00_READ_THIS_FIRST.txt prompt generation), and .github/workflows/stage-a.yml (writes status at each step; torrent candidate flow with awaiting_torrent_selection). Port logic from _legacy/scripts/ (download_drive.py url/drive parts, magnet_source.py, torrent_source.py, transcribe.py, scene_index.py, build_key_moments.py, event_frames.py, generate_analysis_prompt.py). Telegram channel and relay sources are LATER phases (preserved subsystems) — do not build them here; ingest.py must accept their source kinds in the schema but route them to the not-yet-built gate. Stage A writes jobs/<job_id>/stage-a-request.json is consumed (bot writes it), and on success publishes the analysis bundle release assets per ARCHITECTURE.md §7.2 (source_input.bin, analysis_720p.mp4, transcript.json, screenshots.zip, event_composites.zip, scene_index.json, key_moments.json, 00_READ_THIS_FIRST.txt, manifest.json) and sets state awaiting_plan (manual) or dispatches automatic analysis (automatic). MUST use pipeline.status.write_status before/after each risky step.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -212,9 +299,9 @@
     "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
   },
   "last_session": {
-    "id": "architecture-session-2",
+    "id": "stage-b-session-1",
     "date_utc": "2026-08-26",
-    "ended_at_phase": "stage_b_render (still next)",
-    "final_note": "Architecture-phase verification session. Stage 1 confirmed complete; legacy move, ARCHITECTURE.md, NEXT_SESSION_PROMPT.md, and both preserved subsystems all verified against the actual repo and git history. Added the missing required_secrets inventory (names + storage locations only) and human_review_items. current_phase unchanged: stage_b_render is still the next unbuilt piece — the next session should be a building session executing next_action, not another architecture session."
+    "ended_at_phase": "stage_b_render complete; stage_a_ingest_analyze is next",
+    "final_note": "Stage B render pipeline fully built, unit-tested (56 Python + 15 JS tests green), and smoke-tested end-to-end with real ffmpeg on synthetic media. No new architecture concerns raised; the series-shape concern remains open for the operator (both shapes still accepted everywhere). Next session should be a building session executing next_action (Stage A ingest + analyze)."
   }
 }

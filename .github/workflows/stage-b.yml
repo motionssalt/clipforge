@@ -1,0 +1,579 @@
+name: Stage B — Render Final Video (voiceover + captions, one merged MP4)
+
+# Keyed by job id so a run is easy to identify and concurrent jobs never
+# confuse each other's status.
+run-name: Stage B — ${{ inputs.job_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "Job id (must match an existing Stage A release: clipforge-<job_id>)"
+        required: true
+        type: string
+      production_ref:
+        description: "Where production.json lives. One of: path:<repo-path> | asset:<asset-name> | url:<https-url>"
+        required: true
+        type: string
+        default: "path:jobs/<JOB_ID>/production.json"
+      music_ref:
+        description: "Optional background music for this job. Empty = no music. One of: path:<repo-path> | asset:<asset-name> | url:<https-url>"
+        required: false
+        type: string
+        default: ""
+      enhance:
+        description: "Apply the tuned quality enhancement filter chain (denoise + color grade + sharpen) to the merged video. Default true."
+        required: false
+        type: string
+        default: "true"
+      code_ref:
+        description: "Optional current default-branch SHA to check out and run THIS Stage B execution from. Every start/restart dispatch passes the freshly resolved tip so a failed job never reuses stale code. Empty = current default branch."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: clipforge-stage-b-${{ github.event.inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  stage_b:
+    name: Stage B
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      # ---------------------------------------------------------------------
+      # RESTART CORRECTNESS — always run the NEWEST code on a restart.
+      # A restart is a fresh workflow_dispatch pinned to the CURRENT default-
+      # branch tip SHA (passed as `code_ref`), never a GitHub "re-run" (which
+      # would pin the ORIGINAL run's commit). Empty input falls back to the
+      # repository's current default branch.
+      # ---------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.code_ref != '' && github.event.inputs.code_ref || github.event.repository.default_branch }}
+
+      - name: Log the exact code revision this run is executing
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "dispatch ref (github.ref)     : ${{ github.ref }}"
+          echo "dispatch sha (github.sha)     : ${{ github.sha }}"
+          echo "code_ref input (current pin)  : ${{ github.event.inputs.code_ref }}"
+          echo "checked-out commit (HEAD)     : $(git rev-parse HEAD)"
+          echo "checked-out commit subject    : $(git log -1 --pretty=%s)"
+
+      # ---------------------------------------------------------------------
+      # STATUS-PUBLISH CORRECTNESS — never run the status-commit steps from a
+      # detached HEAD. A SHA-pinned checkout (code_ref restart) is re-attached
+      # to the dispatch branch AT THE SAME COMMIT (no content change) so the
+      # status steps below can commit and push.
+      # ---------------------------------------------------------------------
+      - name: Re-attach HEAD to the dispatch branch when the checkout pinned a SHA
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if git symbolic-ref -q HEAD > /dev/null; then
+            echo "HEAD is on branch '$(git symbolic-ref --short HEAD)' — nothing to do."
+            exit 0
+          fi
+          branch="${DEFAULT_BRANCH:?repository default branch is required}"
+          echo "HEAD is detached at $(git rev-parse HEAD) (code_ref-pinned restart checkout)."
+          echo "Re-attaching branch '$branch' at this exact commit so status commits can be pushed."
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch"
+          git checkout -B "$branch" HEAD
+          git branch --set-upstream-to="origin/$branch" "$branch"
+          echo "Now on branch '$branch' at $(git rev-parse HEAD)."
+
+      - name: Resolve inputs
+        id: jid
+        shell: bash
+        run: |
+          set -euo pipefail
+          jid="${{ github.event.inputs.job_id }}"
+          jid="$(echo "$jid" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
+          if [ -z "$jid" ]; then echo "job_id resolved to empty string" >&2; exit 1; fi
+          echo "job_id=$jid" >> "$GITHUB_OUTPUT"
+          echo "release_tag=clipforge-$jid" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: pipeline/requirements.txt
+
+      - name: Install ffmpeg
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version | head -n 1
+
+      - name: Install Python deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip wheel setuptools
+          pip install -r pipeline/requirements.txt
+
+      # ---------------------------------------------------------------------
+      # STATUS: stage_b_running. Written BEFORE any risky work so a crashed
+      # run always leaves a resumable record (ARCHITECTURE.md §6.2).
+      #
+      # RESTART NOTE: the job state machine refuses to leave a terminal state
+      # (complete/error/cancelled) for a non-terminal one. A Stage B restart
+      # is a deliberate operator/bot action that SUPERSEDES the prior run's
+      # terminal record, so when the existing status is terminal we archive it
+      # inline (message + prior_state) and start a fresh status file for this
+      # run. This is the only place that reset is permitted.
+      # ---------------------------------------------------------------------
+      - name: Write stage_b_running status
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          JID="${{ steps.jid.outputs.job_id }}"
+          STATUS_FILE="jobs/$JID/status.json"
+          mkdir -p "jobs/$JID"
+          if [ -f "$STATUS_FILE" ]; then
+            PRIOR_STATE="$(python -c "import json; print(json.load(open('$STATUS_FILE')).get('state',''))" || true)"
+            case "$PRIOR_STATE" in
+              complete|error|cancelled)
+                echo "Prior status is terminal ($PRIOR_STATE); archiving it for this Stage B restart."
+                mv "$STATUS_FILE" "jobs/$JID/status.superseded-$PRIOR_STATE.$(date +%s).json"
+                ;;
+            esac
+          fi
+          python -m pipeline.status "$JID" --state stage_b_running \
+            --message "Stage B started: producing final video (voiceover, music, captions)" \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --code-ref "$(git rev-parse HEAD)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$JID/"
+          git commit -m "clipforge: job $JID stage B running" || echo "nothing to commit"
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "stage_b_running status push attempt $attempt failed — rebasing and retrying…" >&2
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "WARN: stage_b_running status push failed after 3 attempts; the final status commit will carry it." >&2
+          fi
+
+      - name: Load release metadata (find source video asset)
+        id: relmeta
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.jid.outputs.release_tag }}"
+          json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}")"
+          echo "$json" > work_release.json
+          rurl="$(python -c "import json; print(json.load(open('work_release.json')).get('html_url',''))")"
+          echo "release_url=$rurl" >> "$GITHUB_OUTPUT"
+
+          # The new Stage A publishes the original source as
+          # `source_input.bin` (ARCHITECTURE.md §7.2); legacy Stage A releases
+          # used `original.<ext>`. Accept both so Stage B works against either.
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("work_release.json"))
+          assets = data.get("assets", [])
+          pick = None
+          for a in assets:
+              if a["name"] == "source_input.bin":
+                  pick = a
+                  break
+          if pick is None:
+              for a in assets:
+                  if a["name"].startswith("original."):
+                      pick = a
+                      break
+          if pick is not None:
+              print(f"orig_name={pick['name']}")
+              print(f"orig_id={pick['id']}")
+          PY
+
+      - name: Download source video from release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          orig_id="${{ steps.relmeta.outputs.orig_id }}"
+          orig_name="${{ steps.relmeta.outputs.orig_name }}"
+          if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
+            echo "Could not find the source video asset (source_input.bin / original.*) in release ${{ steps.jid.outputs.release_tag }}" >&2
+            exit 1
+          fi
+          gh api -H "Accept: application/octet-stream" \
+            "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" \
+            > "work/${orig_name}"
+          ls -lh "work/${orig_name}"
+          echo "ORIGINAL_PATH=work/${orig_name}" >> "$GITHUB_ENV"
+
+      - name: Resolve production.json
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ref="${{ github.event.inputs.production_ref }}"
+          jid="${{ steps.jid.outputs.job_id }}"
+          ref="${ref//<JOB_ID>/$jid}"
+
+          case "$ref" in
+            path:*)
+              src="${ref#path:}"
+              if [ ! -f "$src" ]; then
+                echo "production.json not found at repo path: $src" >&2
+                exit 1
+              fi
+              cp "$src" work/production.json
+              ;;
+            url:*)
+              src="${ref#url:}"
+              curl -fSL --retry 3 -o work/production.json "$src"
+              ;;
+            asset:*)
+              name="${ref#asset:}"
+              tag="${{ steps.jid.outputs.release_tag }}"
+              aid="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                    --jq ".assets[] | select(.name==\"$name\") | .id")"
+              if [ -z "$aid" ]; then
+                echo "asset not found: $name" >&2; exit 1
+              fi
+              gh api -H "Accept: application/octet-stream" \
+                "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" \
+                > work/production.json
+              ;;
+            *)
+              echo "Unknown production_ref format: $ref" >&2; exit 1;;
+          esac
+
+          echo "production.json head:"
+          head -c 400 work/production.json; echo
+
+          # BOUNDARY VALIDATION (§13 invariant #5): the plan is untrusted even
+          # though the bot validated it at upload. This runs the single source
+          # of truth validator AND the Series cross-check against the durable
+          # Stage A request before any render work begins.
+          JID="$jid" PYTHONPATH="$GITHUB_WORKSPACE" python - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          from pipeline.plan.schema import validate_production_plan
+          from pipeline.stage_b.common import normalize_plan
+
+          jid = os.environ["JID"]
+          plan = json.loads(Path("work/production.json").read_text(encoding="utf-8"))
+          errors = validate_production_plan(plan)
+
+          # Series cross-check: when the durable Stage A request says this job
+          # is a series part, the plan must carry matching boundary metadata.
+          request_path = Path("jobs") / jid / "stage-a-request.json"
+          if request_path.exists():
+              try:
+                  request = json.loads(request_path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  request = {}
+              series_req = request.get("series") or {}
+              if isinstance(series_req, dict) and series_req.get("enabled"):
+                  normalized = normalize_plan(plan)
+                  plan_series = normalized.get("series") or {}
+                  expected = {
+                      "series_id": series_req.get("series_id"),
+                      "part": int(series_req.get("part") or 0),
+                      "start_seconds": int(series_req.get("start_seconds") or 0),
+                  }
+                  actual = {
+                      "series_id": plan_series.get("series_id"),
+                      "part": int(plan_series.get("part") or 0),
+                      "start_seconds": int(plan_series.get("start_seconds") or 0),
+                  }
+                  for key, value in expected.items():
+                      if actual.get(key) != value:
+                          errors.append(
+                              f"Series metadata mismatch for {key}: expected {value!r}, got {actual.get(key)!r}."
+                          )
+          if errors:
+              sys.stderr.write("Invalid production.json:\n- " + "\n- ".join(errors) + "\n")
+              raise SystemExit(1)
+          print("production.json passed the Stage B boundary validation.")
+          PY
+
+      - name: Resolve optional background music
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ref="${{ github.event.inputs.music_ref }}"
+          jid="${{ steps.jid.outputs.job_id }}"
+          if [ -z "$ref" ]; then
+            echo "No music_ref supplied — final video ships without background music."
+            exit 0
+          fi
+          ref="${ref//<JOB_ID>/$jid}"
+          case "$ref" in
+            path:*)
+              src="${ref#path:}"
+              if [ ! -f "$src" ]; then
+                echo "music file not found at repo path: $src" >&2
+                exit 1
+              fi
+              cp "$src" work/music_input
+              ;;
+            url:*)
+              src="${ref#url:}"
+              curl -fSL --retry 3 -o work/music_input "$src"
+              ;;
+            asset:*)
+              name="${ref#asset:}"
+              tag="${{ steps.jid.outputs.release_tag }}"
+              aid="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                    --jq ".assets[] | select(.name==\"$name\") | .id")"
+              if [ -z "$aid" ]; then
+                echo "music asset not found: $name" >&2; exit 1
+              fi
+              gh api -H "Accept: application/octet-stream" \
+                "repos/${GITHUB_REPOSITORY}/releases/assets/${aid}" \
+                > work/music_input
+              ;;
+            *)
+              echo "Unknown music_ref format: $ref" >&2; exit 1;;
+          esac
+          ls -lh work/music_input
+          echo "MUSIC_PATH=work/music_input" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------------------------
+      # THE RENDER. One module invocation runs the whole chain —
+      #   validate → voiceover → render/merge → enhance → captions →
+      #   watermark → compress → package
+      # and writes jobs/<job_id>/status.json before/after each risky step.
+      # ---------------------------------------------------------------------
+      - name: Run the Stage B pipeline
+        shell: bash
+        env:
+          ENHANCE_FLAG: ${{ github.event.inputs.enhance }}
+          MUSIC_PATH: ${{ env.MUSIC_PATH }}
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          export GITHUB_WORKFLOW_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          ENHANCE_ARG="--enhance"
+          case "${ENHANCE_FLAG:-true}" in
+            true|1|yes|on|True|TRUE)  ENHANCE_ARG="--enhance" ;;
+            false|0|no|off|False|FALSE) ENHANCE_ARG="--no-enhance" ;;
+            *) echo "Unrecognised enhance flag: '${ENHANCE_FLAG}' — defaulting to enabled." >&2 ;;
+          esac
+
+          MUSIC_ARGS=()
+          if [ -n "${MUSIC_PATH:-}" ]; then
+            MUSIC_ARGS=(--music "$MUSIC_PATH")
+          fi
+
+          python -m pipeline.stage_b.run \
+            --job-id "${{ steps.jid.outputs.job_id }}" \
+            --production-json work/production.json \
+            --original-video "$ORIGINAL_PATH" \
+            --work-dir work \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --release-url "${{ steps.relmeta.outputs.release_url }}" \
+            $ENHANCE_ARG \
+            "${MUSIC_ARGS[@]}"
+
+          ls -lh work/out/
+
+      # ---------------------------------------------------------------------
+      # NOTE: the source_input.bin release asset is intentionally NOT deleted.
+      # It is the ONLY input a Stage B restart has to work with (the runner
+      # filesystem is ephemeral and there is no committed copy of the source).
+      # The hourly cleanup workflow removes the whole release at job expiry.
+      # ---------------------------------------------------------------------
+
+      - name: Upload final zip + the finished video to the SAME release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.jid.outputs.release_tag }}
+          name: "ClipForge job ${{ steps.jid.outputs.job_id }}"
+          body: |
+            ClipForge output.
+
+            clipforge-job-id: ${{ steps.jid.outputs.job_id }}
+            stage: complete
+
+            Final artifacts (ONE finished, ready-to-post video + posting package):
+              - final.mp4 — the merged vertical video: all cuts concatenated,
+                voiceover mixed in (source audio muted), cinematic captions and
+                title banner burned in, optional background music ducked under
+                the voiceover when one was supplied.
+              - metadata.txt — title, hashtags, and YouTube tags sourced
+                verbatim from production.json.
+              - clipforge-${{ steps.jid.outputs.job_id }}-final.zip
+                (contains final.mp4 + metadata.txt + production.json)
+
+            This release is automatically deleted when the job expires.
+          make_latest: "false"
+          prerelease: true
+          files: |
+            work/out/clipforge-${{ steps.jid.outputs.job_id }}-final.zip
+            work/out/final.mp4
+            work/out/metadata.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve final asset URLs
+        id: finalasset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.jid.outputs.release_tag }}"
+          url="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                --jq ".assets[] | select(.name | endswith(\"-final.zip\")) | .browser_download_url")"
+          echo "final_url=$url" >> "$GITHUB_OUTPUT"
+          mp4="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" \
+                --jq ".assets[] | select(.name == \"final.mp4\") | .browser_download_url")"
+          echo "final_mp4_url=$mp4" >> "$GITHUB_OUTPUT"
+
+      - name: Write complete status
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          JID="${{ steps.jid.outputs.job_id }}"
+          python -m pipeline.status "$JID" --state complete \
+            --message "Final video is ready (one merged MP4 with voiceover and cinematic captions)." \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" \
+            --release-url "${{ steps.relmeta.outputs.release_url }}" \
+            --asset "final_zip=${{ steps.finalasset.outputs.final_url }}" \
+            --asset "final_mp4=${{ steps.finalasset.outputs.final_mp4_url }}" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --code-ref "$(git rev-parse HEAD)"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$JID/status.json"
+          git commit -m "clipforge: job $JID complete" || echo "nothing to commit"
+          # Persisting the complete status is a HARD requirement — rebase onto
+          # the latest branch tip and retry; only fail loudly if the status
+          # truly cannot be persisted.
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            echo "status push attempt $attempt failed — rebasing onto latest origin and retrying…" >&2
+            git pull --rebase --autostash
+            sleep 2
+          done
+          if [ "$pushed" != "true" ]; then
+            echo "FATAL: could not persist the complete status to origin after 3 attempts." >&2
+            exit 1
+          fi
+
+      - name: On failure, write error status
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          JID="${{ steps.jid.outputs.job_id }}"
+          # The pipeline already writes a precise error status when it fails in
+          # a known way; this CLI write covers catastrophic failures (checkout,
+          # dependency install, runner kill) where the pipeline never ran. A
+          # terminal -> terminal write is idempotent, so this never clobbers a
+          # more precise error with a generic one.
+          python -m pipeline.status "$JID" --state error \
+            --message "Stage B failed. See workflow run for logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --release-tag "${{ steps.jid.outputs.release_tag }}" || true
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$JID/status.json" || true
+          git commit -m "clipforge: job $JID error (stage B)" || true
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          true
+
+  stage_b_cancelled:
+    name: Record Stage B cancellation
+    needs: stage_b
+    if: ${{ cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure HEAD is on a branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git symbolic-ref -q HEAD > /dev/null; then
+            echo "HEAD is on branch '$(git symbolic-ref --short HEAD)' — nothing to do."
+            exit 0
+          fi
+          branch="${GITHUB_REF#refs/heads/}"
+          if [ "$branch" = "$GITHUB_REF" ] || [ -z "$branch" ]; then
+            branch="main"
+          fi
+          git fetch origin "+refs/heads/$branch:refs/remotes/origin/$branch"
+          git checkout -B "$branch" HEAD
+          git branch --set-upstream-to="origin/$branch" "$branch"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Write cancelled status
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          jid="${{ github.event.inputs.job_id }}"
+          jid="$(echo "$jid" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//;s/-*$//')"
+          python -m pipeline.status "$jid" --state cancelled \
+            --message "Stage B was cancelled." \
+            --release-tag "clipforge-$jid" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$jid/status.json"
+          git commit -m "clipforge: job $jid stage B cancelled" || echo "nothing to commit"
+          pushed=false
+          for attempt in 1 2 3; do
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
+          done
+          true
