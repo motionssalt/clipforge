@@ -408,7 +408,7 @@
       "tests": "deploy-bots.yml parsed with PyYAML (trigger paths + step order verified); cd bot && npm ci --ignore-scripts && npm test (75 passed, 0 failed)"
     }
   ],
-  "next_action": "BUILD COMPLETE: all 10 phases of ARCHITECTURE.md §15 are done. Next session should run full verification (python -m unittest discover pipeline/tests + bot npm test), reconcile BUILD_PROGRESS.json verification block with reality, and address the open architecture_concerns entries (series-shape-nested-vs-flat awaits operator decision).",
+  "next_action": "BUILD COMPLETE and verified (210 Python + 75 JS tests green, all 10 §15 phases done). Remaining work is operator-facing: (1) architecture_concerns 'series-shape-nested-vs-flat' awaits an operator decision on the canonical production.json series shape (both shapes currently accepted — do NOT delete either code path without sign-off); (2) human_review_items if any. No further build-order phases remain.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -434,13 +434,13 @@
     "Operator must fill GITHUB_REPO_PAT in NEXT_SESSION_PROMPT.md per-run (never committed) and confirm all required_secrets above are set in their stores before the phases that need them (relay/telegram_channel need the central-only secrets; bot deploys need the Cloudflare ones)."
   ],
   "verification": {
-    "session": "architecture-session-2",
+    "session": "background-workflows-session-2",
     "date_utc": "2026-08-26",
-    "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
+    "result": "Post-build full verification after the final phase (background_workflows) completed. (1) Full Python suite: 210 tests, ALL PASS (python -m unittest discover pipeline/tests -p 'test_*.py' with PYTHONPATH=repo root) — covers contracts/schemas cross-validation, stage_a, stage_b, status, automatic mode, series, publish/zernio, cleanup, telegram relay, and the new diagnostics module (12 tests). (2) Full bot JS suite: 75 tests, ALL PASS (npm test after npm ci --ignore-scripts, Node v22.23.2) — wizard, plan, jobs, relay, series, zernio. An initial 2-failure run was an environment artifact only: tweetnacl/tweetnacl-sealedbox-js were not yet installed in the sandbox (ERR_MODULE_NOT_FOUND on bot/src/github.js); after npm ci the suite is 75/75 green. No source change was needed. (3) New workflow YAML validated structurally (diagnostics.yml: 2 jobs, secrets referenced by name only, contents:read, no credential material). (4) All 10 phases of ARCHITECTURE.md §15 build order are marked complete; commits dd11253 (diagnostics module) and 3c63ca8 (diagnostics workflow) pushed to main."
   },
   "last_session": {
     "id": "background-workflows-session-2",
-    "note": "background_workflows step 3b/3 pushed: diagnostics.yml — final workflow of the final phase. All 10 §15 build-order phases complete."
+    "note": "background_workflows complete (3a: pipeline/diagnostics/gemini.py + 12 tests; 3b: .github/workflows/diagnostics.yml) and full post-build verification pushed: 210 Python + 75 JS tests green. All 10 §15 phases done."
   },
   "architecture_concerns_closed": [
     {
