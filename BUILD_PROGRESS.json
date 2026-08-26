@@ -25,7 +25,9 @@
       "pipeline/publish/__init__.py",
       "pipeline/publish/zernio.py (port of legacy zernio_*.py into one module; unified CLI; NOW §6.2-schema-conformant: aggregate_publishing_status maps provider states onto the {not_requested,publishing,scheduled,published,partial,failed,cancelled} enum, publish_video returns exactly {status, posts, idempotency_key}, publishing_error_state maps failure to \"failed\")",
       "pipeline/tests/test_publish_zernio.py (74 offline tests incl. §6.2 conformance assertions) — all green",
-      ".github/workflows/publish.yml (unified discover/publish/retry/update/cancel + action=manual in-run resolve; serial queue; Stage-B complete gate on §6.2 state field; status.publishing + queue ledger committed back schema-conformant; YAML-validated)"
+      ".github/workflows/publish.yml (unified discover/publish/retry/update/cancel + action=manual in-run resolve; serial queue; Stage-B complete gate on §6.2 state field; status.publishing + queue ledger committed back schema-conformant; YAML-validated)",
+      "bot/src/zernio.js — pure Zernio helper module ported from _legacy/telegram-bot: settings normalization (incl. legacy interval_days carry-over), timezone/time/datetime validators, applySmartScheduleField, active account filtering, target derivation + toggle, §6.2 publishing summary, request-id reuse-on-failure, settings/schedule/targets/publish keyboards, settings+publish screen text (secrets never echoed)",
+      "bot/test/zernio.test.mjs — 27 unit tests covering all of the above — green"
     ],
     "remaining": [
       "Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle)",
@@ -33,9 +35,9 @@
       "Stage B automatic-publish dispatch step when settings enable auto_publish"
     ],
     "resume_from": {
-      "file": "bot/src/commands/",
-      "component": "Zernio settings screens + task:pub per-post actions",
-      "next_operation": "port bot Zernio settings sub-screens from _legacy/telegram-bot onto the new bot/src command/view structure (accounts, mode, smart schedule, target selection, auto-publish toggle), then wire task:pub publish/retry/update/cancel dispatches to publish.yml"
+      "file": "bot/src/index.js",
+      "component": "Zernio settings router + message flows",
+      "next_operation": "wire set:zernio (replace stub), zernio:*, zsch:*, ztarget:* callbacks plus zernio_key / zsch_field / task:pubmanual / task:pubpostmanual message flows into handleSettingsCallback/routeCallback/handleMessage using bot/src/zernio.js"
     }
   },
   "phases": [
@@ -355,6 +357,19 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "pytest pipeline/tests/test_publish_zernio.py (74 passed); pytest pipeline/tests/ (210 passed, 2 pre-existing stage_a env failures); YAML parse check"
+    },
+    {
+      "session": "publish-zernio-session-2",
+      "date_utc": "2026-08-26",
+      "summary": "publish_zernio step 4a/6: bot/src/zernio.js pure helpers + 27 green unit tests. Ports the legacy bot Zernio logic verbatim where it is logic (validators, interval_days->hours, active-account filtering, target toggle, summary labels, idempotency reuse) and adapts the publishing summary to the §6.2 enum. Keyboards use the new task:pub* callback namespace (task:pubnow/pubsmart/pubmanual for new publishes; task:pubretry/pubpostnow/pubpostmanual/pubcancel for per-post actions) instead of the legacy zpub:/zpost: prefixes so the whole publish surface hangs off the existing task: router branch.",
+      "files_created": [
+        "bot/src/zernio.js",
+        "bot/test/zernio.test.mjs"
+      ],
+      "files_modified": [
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "node --test test/zernio.test.mjs (27 passed)"
     }
   ],
   "next_action": "Continue publish_zernio step 4/6: Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle) ported from _legacy/telegram-bot onto bot/src, then step 5/6 task:pub per-post actions dispatching publish.yml, then step 6/6 Stage B automatic-publish dispatch step.",
