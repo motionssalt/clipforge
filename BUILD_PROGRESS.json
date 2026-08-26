@@ -155,6 +155,25 @@
       "notes": "Port from _legacy/.github/workflows/cleanup.yml, deploy-telegram-workers.yml, gemini-api-diagnostic.yml, telegram-intake-check.yml."
     }
   ],
+  "required_secrets": [
+    {"name": "CLIPFORGE_TELEGRAM_API_ID", "store": "github_actions_secrets", "repo_scope": "central repo ONLY (motionssalt/clipforge)", "used_by": "Stage A public Telegram channel-link MTProto download (preserved subsystem #1, ARCHITECTURE.md §9.1); already referenced via ${{ secrets.NAME }} in _legacy/.github/workflows/stage-a.yml. Never provision on clones."},
+    {"name": "CLIPFORGE_TELEGRAM_API_HASH", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Same as CLIPFORGE_TELEGRAM_API_ID."},
+    {"name": "CLIPFORGE_TELEGRAM_SESSION", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "User-authorized Telethon session for §9.1; already in stage-a.yml."},
+    {"name": "BOTB_MTPROTO_API_ID", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Direct-video relay (preserved subsystem #2, ARCHITECTURE.md §9.2): Bot-B-authorized MTProto download inside telegram-relay.yml; already referenced in _legacy/.github/workflows/telegram-relay.yml. Never reachable from clones."},
+    {"name": "BOTB_MTPROTO_API_HASH", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Same as BOTB_MTPROTO_API_ID."},
+    {"name": "BOTB_MTPROTO_BOT_TOKEN", "store": "github_actions_secrets", "repo_scope": "central repo ONLY", "used_by": "Relay Bot B's Telegram bot token consumed by telegram-relay.yml."},
+    {"name": "RELAY_ENCRYPTION_KEY", "store": "github_actions_secrets (central repo) AND cloudflare_worker_secret (Bot A and Bot B)", "repo_scope": "central repo + the two bot Workers ONLY", "used_by": "AES-256-GCM key for the relay sealed envelope, AAD 'clipforge-telegram-relay:v1:<job_id>' (§9.2). Shared secret between Bot A, Bot B, and telegram-relay.yml. Never on clones."},
+    {"name": "GEMINI_API_KEYS", "store": "github_actions_secrets", "repo_scope": "per-clone (uploaded by Bot A as a libsodium sealed secret; masked fingerprints only in branding/gemini_keys.json)", "used_by": "Automatic mode Gemini analysis (pipeline/plan/automatic.py) and diagnostics.yml."},
+    {"name": "ZERNIO_API_KEY", "store": "github_actions_secrets", "repo_scope": "per-clone", "used_by": "Publish phase (pipeline/publish/zernio.py + publish.yml)."},
+    {"name": "CLOUDFLARE_ACCOUNT_ID", "store": "github_actions_secrets", "repo_scope": "central repo (and any clone that deploys its own bots)", "used_by": "deploy-bots.yml (wrangler deploy of Bot A + Bot B)."},
+    {"name": "CLOUDFLARE_API_TOKEN", "store": "github_actions_secrets", "repo_scope": "central repo (and any clone that deploys its own bots)", "used_by": "deploy-bots.yml."},
+    {"name": "GITHUB_TOKEN", "store": "built-in per-workflow token", "repo_scope": "every repo automatically", "used_by": "All workflows; no configuration needed."},
+    {"name": "Main Bot A Telegram bot token", "store": "cloudflare_worker_secret (Bot A worker)", "repo_scope": "Bot A Cloudflare Worker ONLY — never a GitHub secret", "used_by": "Bot A webhook + Telegram Bot API calls. Name chosen at deploy; recorded in wrangler.bot-a.jsonc when built."},
+    {"name": "Bot B Telegram bot token (bot-side)", "store": "cloudflare_worker_secret (Bot B worker)", "repo_scope": "Bot B Cloudflare Worker ONLY", "used_by": "Bot B (bot/src/relay-worker.js) Telegram intake in the internal relay group."},
+    {"name": "RELAY_GROUP_CHAT_ID", "store": "cloudflare_worker_var_or_secret (Bot A and Bot B workers)", "repo_scope": "Bot A + Bot B Workers ONLY — the internal relay group's chat ID is not itself a credential but must never point at a public group", "used_by": "Relay routing (§9.2). Legacy wrangler configs already carry the bot ids/usernames as plain vars; follow that pattern."},
+    {"name": "Bot B central-repo PAT", "store": "cloudflare_worker_secret (Bot B worker)", "repo_scope": "Bot B Cloudflare Worker ONLY", "used_by": "Bot B dispatching telegram-relay.yml on the central repo. Fine-grained PAT scoped to motionssalt/clipforge only."}
+  ],
+  "secrets_rule": "Actual values are never written to this repo, ARCHITECTURE.md, BUILD_PROGRESS.json, NEXT_SESSION_PROMPT.md, code, logs, commits, issues, artifacts, or chat. Every credential is referenced by name only via ${{ secrets.NAME }} (GitHub Actions) or a Cloudflare Worker secret binding. The single exception is the operator-filled GITHUB_REPO_PAT placeholder in NEXT_SESSION_PROMPT.md, used only for git/gh operations and never printed or persisted.",
   "completed_work": [
     {
       "session": "architecture-session-1",
@@ -183,10 +202,19 @@
     }
   ],
   "active_blockers": [],
-  "last_session": {
-    "id": "contracts-session-1",
+  "human_review_items": [
+    "architecture_concerns[0] (series-shape-nested-vs-flat): operator must pick the canonical production.json series shape (nested per §7.3 vs flat legacy) before the automatic_mode phase is built. Until decided, both validators accept both shapes — do not delete either code path.",
+    "Operator must fill GITHUB_REPO_PAT in NEXT_SESSION_PROMPT.md per-run (never committed) and confirm all required_secrets above are set in their stores before the phases that need them (relay/telegram_channel need the central-only secrets; bot deploys need the Cloudflare ones)."
+  ],
+  "verification": {
+    "session": "architecture-session-2",
     "date_utc": "2026-08-26",
-    "ended_at_phase": "contracts_and_schemas",
-    "final_note": "contracts_and_schemas is complete and pushed. Every later phase can now `from pipeline.plan.schema import validate_production_plan`, `from pipeline import status`, `import { validateProductionPlan } from '../src/plan.js'`, and `import { newStatus, mergeStatus, canTransition } from '../src/jobs.js'`. The cross-language equivalence test guarantees the two validators stay honest — a change to one that isn't mirrored in the other will fail CI as soon as the test is added to a workflow. Next session starts stage_b_render."
+    "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
+  },
+  "last_session": {
+    "id": "architecture-session-2",
+    "date_utc": "2026-08-26",
+    "ended_at_phase": "stage_b_render (still next)",
+    "final_note": "Architecture-phase verification session. Stage 1 confirmed complete; legacy move, ARCHITECTURE.md, NEXT_SESSION_PROMPT.md, and both preserved subsystems all verified against the actual repo and git history. Added the missing required_secrets inventory (names + storage locations only) and human_review_items. current_phase unchanged: stage_b_render is still the next unbuilt piece — the next session should be a building session executing next_action, not another architecture session."
   }
 }
