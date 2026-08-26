@@ -28,16 +28,16 @@
       ".github/workflows/publish.yml (unified discover/publish/retry/update/cancel + action=manual in-run resolve; serial queue; Stage-B complete gate on \u00a76.2 state field; status.publishing + queue ledger committed back schema-conformant; YAML-validated)",
       "bot/src/zernio.js \u2014 pure Zernio helper module ported from _legacy/telegram-bot: settings normalization (incl. legacy interval_days carry-over), timezone/time/datetime validators, applySmartScheduleField, active account filtering, target derivation + toggle, \u00a76.2 publishing summary, request-id reuse-on-failure, settings/schedule/targets/publish keyboards, settings+publish screen text (secrets never echoed)",
       "bot/test/zernio.test.mjs \u2014 27 unit tests covering all of the above \u2014 green",
-      "bot/src/index.js \u2014 Zernio settings sub-screens wired: set:zernio replaces the stub with showZernioSettingsScreen, new zernio:*/zsch:*/ztarget: callback routers (refresh accounts \u2192 publish.yml action=discover, targets keyboard w/ toggleZernioTarget persist, smart-schedule field editing via zsch_field flow + applySmartScheduleField, publishing controls / auto-publish / mode toggles, clear-API-key confirm), plus new zernio_key / zsch_field message flows in handleMessage; ZERNIO_API_KEY only ever handled via updateZernioSecret / deleteZernioSecret (never echoed) [step 4b/6]"
+      "bot/src/index.js \u2014 Zernio settings sub-screens wired: set:zernio replaces the stub with showZernioSettingsScreen, new zernio:*/zsch:*/ztarget: callback routers (refresh accounts \u2192 publish.yml action=discover, targets keyboard w/ toggleZernioTarget persist, smart-schedule field editing via zsch_field flow + applySmartScheduleField, publishing controls / auto-publish / mode toggles, clear-API-key confirm), plus new zernio_key / zsch_field message flows in handleMessage; ZERNIO_API_KEY only ever handled via updateZernioSecret / deleteZernioSecret (never echoed) [step 4b/6]",
+      "bot/src/index.js \u2014 Zernio per-task publish actions wired: task:pub replaces the stub with showZernioPublishMenu (zernioPublishText + zernioPublishKeyboard, gated on state==complete + secretConfigured + settings.enabled + targets); new task:pubnow / task:pubsmart / task:pubmanual dispatch publish.yml action=publish (with zernioRequestId reuse-on-failure); task:pubretry / task:pubpostnow / task:pubcancel dispatch action=retry|update|cancel; task:pubpostmanual + task:pubmanual open the task_pubpostmanual / task_pubmanual message flows (YYYY-MM-DDTHH:MM via validZernioDateTime) already declared in handleMessage [step 5/6]"
     ],
     "remaining": [
-      "Bot per-post actions on complete task status (task:pub wiring: publish/retry/update/cancel dispatch)",
       "Stage B automatic-publish dispatch step when settings enable auto_publish"
     ],
     "resume_from": {
-      "file": "bot/src/index.js",
-      "component": "handleTaskCallback \u2014 task:pub wiring",
-      "next_operation": "replace the task:pub stub with the per-post publish menu (zernioPublishKeyboard/zernioPublishText) and wire task:pubnow / task:pubsmart / task:pubmanual (+ task:pubretry / task:pubpostnow / task:pubpostmanual / task:pubcancel) dispatching publish.yml (action=publish|retry|update|cancel) using zernioRequestId, plus the task_pubmanual and task_pubpostmanual message flows already declared in handleMessage"
+      "file": ".github/workflows/stage-b.yml",
+      "component": "automatic-publish dispatch step at the end of Stage B",
+      "next_operation": "After stage-b.yml has committed the terminal complete status, add a step that reads branding/zernio_settings.json + branding/zernio_accounts.json and, when settings.enabled && settings.auto_publish && targets (via active accounts) is non-empty and ZERNIO_API_KEY is configured, dispatches publish.yml (action=publish, mode = settings.automatic_mode, targets_json, request_id via the same zernioRequestId reuse-on-failure logic Python uses in pipeline/publish/zernio.py). Must be a no-op when settings.auto_publish is off or when Stage B did not reach complete."
     }
   },
   "phases": [
@@ -404,7 +404,7 @@
   },
   "last_session": {
     "id": "publish-zernio-session-2",
-    "note": "Continued publish_zernio step 4/6: bot Zernio settings sub-screens (accounts refresh, publishing/auto-publish/mode toggles, smart-schedule field editing, target selection, clear-key) wired onto bot/src/index.js using the pure helpers in bot/src/zernio.js. All 27 zernio unit tests remain green; 53/53 non-sandbox tests pass (the 2 pre-existing failures are only due to a missing tweetnacl package in the local sandbox, unrelated to this step)."
+    "note": "publish_zernio step 5/6 pushed: bot task:pub* per-post publish actions wired onto bot/src/index.js \u2014 showZernioPublishMenu, publish/retry/update/cancel dispatches to publish.yml, manual scheduling via task_pubmanual and task_pubpostmanual flows. All 53 non-sandbox bot tests remain green; the 2 pre-existing failures are only a missing tweetnacl package in the local sandbox (unrelated to publish_zernio)."
   },
   "architecture_concerns_closed": [
     {
