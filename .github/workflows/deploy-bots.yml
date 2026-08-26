@@ -1,0 +1,71 @@
+name: Deploy Bots — Cloudflare Workers
+
+# ARCHITECTURE.md §12 (preserved behavior): on every bot/** change, run the
+# bot test suite and then deploy Bot A and Bot B Workers. Ported from
+# _legacy/.github/workflows/deploy-telegram-workers.yml with the layout
+# updated: the workers now live in bot/ (npm + package-lock.json, Node >=20,
+# ESM tests via `npm test`), and the two wrangler configs are
+# bot/wrangler.bot-a.jsonc / bot/wrangler.bot-b.jsonc.
+#
+# Secrets are referenced by name only (§13 invariant #1):
+#   CLOUDFLARE_API_TOKEN   — Cloudflare API token with Workers edit rights
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare account id
+# Worker runtime secrets (TELEGRAM_BOT_TOKEN, KV_ENCRYPTION_KEY, …) are NOT
+# set here — they are managed with `wrangler secret put` per the comments in
+# each wrangler config and are never touched by CI.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bot/**'
+      - '.github/workflows/deploy-bots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-bots
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test and deploy Bot A + Bot B
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+
+      - name: Install bot dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run bot test suite
+        run: npm test
+
+      - name: Deploy Bot A Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: bot
+          command: deploy --config wrangler.bot-a.jsonc
+
+      - name: Deploy Bot B relay Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: bot
+          command: deploy --config wrangler.bot-b.jsonc

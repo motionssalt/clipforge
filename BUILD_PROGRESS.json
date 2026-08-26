@@ -24,16 +24,16 @@
     "completed": [
       "pipeline/cleanup/{__init__,__main__,expired}.py — port of _legacy/scripts/cleanup.py onto stdlib urllib (no requests dep): release+tag deletion, jobs/<id>/ folder removal, per-job branch deletion, RFC 5988 pagination, expiry driven by §6.2 expires_at_epoch with created_at_epoch+ttl and release-created_at fallbacks preserved",
       "pipeline/tests/test_cleanup.py — 21 offline tests (expiry matrix, tag->job mapping, Link-header pagination, full mocked-API end-to-end incl. branch/folder deletion) — all green",
-      ".github/workflows/cleanup.yml — hourly cron (:07) + manual ttl_seconds override; stdlib-only module so no dependency install; push retry loop on the folder-deletion commit"
+      ".github/workflows/cleanup.yml — hourly cron (:07) + manual ttl_seconds override; stdlib-only module so no dependency install; push retry loop on the folder-deletion commit",
+      ".github/workflows/deploy-bots.yml — port of _legacy/.github/workflows/deploy-telegram-workers.yml onto the new bot/ layout: bot/** path trigger + manual dispatch, Node 22 + npm ci --ignore-scripts, npm test gate (75 passed locally), wrangler-action deploy of wrangler.bot-a.jsonc and wrangler.bot-b.jsonc; Cloudflare credentials referenced by secret name only, worker runtime secrets remain wrangler-managed"
     ],
     "remaining": [
-      ".github/workflows/deploy-bots.yml (deploy Bot A + Bot B Workers on bot/** changes) — port from _legacy/.github/workflows/deploy-telegram-workers.yml",
       ".github/workflows/diagnostics.yml (manual Gemini capability + Telegram intake checks) — port from _legacy/.github/workflows/gemini-api-diagnostic.yml + telegram-intake-check.yml"
     ],
     "resume_from": {
-      "file": "_legacy/.github/workflows/deploy-telegram-workers.yml",
-      "component": "deploy-bots workflow port",
-      "next_operation": "Read the legacy deploy workflow and the two wrangler configs (bot/wrangler.bot-a.jsonc, bot/wrangler.bot-b.jsonc), then write .github/workflows/deploy-bots.yml: on bot/** push, run bot tests (npm test / node --test) and deploy Bot A + Bot B via wrangler with the Cloudflare secrets by name only. Then diagnostics.yml."
+      "file": "_legacy/.github/workflows/gemini-api-diagnostic.yml",
+      "component": "diagnostics workflow port",
+      "next_operation": "Read the two legacy diagnostic workflows plus _legacy/scripts/gemini_api_capability_diagnostic.py and the telegram intake check they drive, then write .github/workflows/diagnostics.yml as a single manual workflow running the Gemini capability check and the Telegram intake positive/negative checks (ARCHITECTURE.md §12), secrets by name only. Then the background_workflows phase is complete."
     }
   },
   "phases": [
@@ -396,9 +396,21 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "PYTHONPATH=. python3 -m unittest pipeline.tests.test_cleanup (21 passed); cleanup.yml parsed with PyYAML; python -m pipeline.cleanup correctly refuses to run without GITHUB_TOKEN/GITHUB_REPOSITORY"
+    },
+    {
+      "session": "background-workflows-session-1",
+      "date_utc": "2026-08-26",
+      "summary": "background_workflows step 2/3: deploy-bots.yml ported. Replaces the legacy telegram-bot/pnpm layout with bot/ + npm: actions/setup-node@v4 (node 22, npm cache on bot/package-lock.json), npm ci --ignore-scripts, npm test (node --test test/*.mjs; verified locally: 75 passed / 0 failed), then cloudflare/wrangler-action@v3 deploys for wrangler.bot-a.jsonc and wrangler.bot-b.jsonc. Secrets are name-only (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID); per-worker runtime secrets stay out of CI per each wrangler config's comments.",
+      "files_created": [
+        ".github/workflows/deploy-bots.yml"
+      ],
+      "files_modified": [
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "deploy-bots.yml parsed with PyYAML (trigger paths + step order verified); cd bot && npm ci --ignore-scripts && npm test (75 passed, 0 failed)"
     }
   ],
-  "next_action": "background_workflows step 2/3: port _legacy/.github/workflows/deploy-telegram-workers.yml to .github/workflows/deploy-bots.yml (bot/** path trigger, bot test suite gate, wrangler deploy for Bot A and Bot B, Cloudflare credentials via GitHub Actions secrets by name only). Then step 3/3: diagnostics.yml.",
+  "next_action": "background_workflows step 3/3 (final): port gemini-api-diagnostic.yml + telegram-intake-check.yml into one .github/workflows/diagnostics.yml (workflow_dispatch only; Gemini capability check + Telegram intake positive/negative checks per ARCHITECTURE.md §12). Commit+push, mark the phase complete, then determine whether any build-order item remains.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -430,7 +442,7 @@
   },
   "last_session": {
     "id": "background-workflows-session-1",
-    "note": "background_workflows step 1/3 pushed: cleanup subsystem (pipeline/cleanup/* + cleanup.yml + 21 green tests). Next: step 2/3 deploy-bots.yml, then step 3/3 diagnostics.yml."
+    "note": "background_workflows step 2/3 pushed: deploy-bots.yml (bot tests green 75/0, wrangler deploy of Bot A + Bot B). Next: step 3/3 diagnostics.yml — the final workflow of the final phase."
   },
   "architecture_concerns_closed": [
     {
