@@ -15,25 +15,17 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md \u00a79)"
     ]
   },
-  "current_phase": "series_mode",
+  "current_phase": "publish_zernio",
   "current_task": {
-    "stage": "series_mode",
-    "task": "Series mode \u2014 continuation derivation + manual next-part button",
-    "status": "partially_complete",
-    "session": "series-mode-session-1",
-    "completed": [
-      "pipeline/plan/series.py \u2014 next-part derivation from persisted series state (port of _legacy/scripts/series_state.py onto the nested \u00a77.1 request + \u00a77.3/legacy-flat plan shapes, gap-proof history check, music carry-forward policy, CLI exit codes 2/1/0)",
-      "pipeline/tests/test_series.py \u2014 23 offline tests, all green; full Python suite 92 green",
-      ".github/workflows/stage-b.yml \u2014 'Continue the next validated Series Mode part' step after 'Write complete status' (automatic mode only; derives via pipeline.plan.series, schema-validated persistence of the nested \u00a77.1 request + queued status.json, duplicate-dispatch guard, rebase-retry push, dispatches stage-a.yml with job_id + code_ref). Persisted request verified against schemas/stage_a_request.schema.json and status against schemas/job_status.schema.json; workflow YAML parses."
-    ],
+    "stage": "publish_zernio",
+    "task": "Zernio publishing subsystem",
+    "status": "not_started",
+    "session": null,
+    "completed": [],
     "remaining": [
-      "Bot 'Start next part' action for manual series (port manualSeriesContinuation/startNextSeriesPart from _legacy/telegram-bot/src/index.js onto bot/src \u2014 replaces the task:next stub in index.js)"
+      "(read phases[].publish_zernio.deliverables and ARCHITECTURE.md \u00a710 first)"
     ],
-    "resume_from": {
-      "file": "bot/src/index.js",
-      "component": "handleTaskCallback 'next' action stub",
-      "next_operation": "port manualSeriesContinuation (request.series.enabled + manual + plan not final) and startNextSeriesPart (seriesContextSummaries + duplicate guard + buildStageARequest/saveStageARequest + newStatus queued + dispatchWorkflow stage-a.yml) into bot/src \u2014 pure derivation helpers go in a new bot/src/series.js with tests in bot/test/series.test.mjs"
-    }
+    "resume_from": null
   },
   "phases": [
     {
@@ -149,13 +141,14 @@
     {
       "id": "series_mode",
       "title": "Series mode \u2014 continuation derivation + manual next-part button",
-      "status": "in_progress",
+      "status": "complete",
       "deliverables": [
         "pipeline/plan/series.py (next-part derivation from persisted series state)",
         "Stage B continuation step for automatic series",
         "Bot 'Start next part' action for manual series"
       ],
-      "notes": "Steps 1-2/3 done (series-mode-session-1): pipeline/plan/series.py + 23 tests green; stage-b.yml automatic continuation step (schema-validated). Remaining: bot task:next action."
+      "notes": "All three deliverables built and verified. pipeline/plan/series.py (port of _legacy/scripts/series_state.py onto the nested \u00a77.1 request + \u00a77.3/legacy-flat plan shapes, gap-proof 1..N history check, \u00a76.3 id guard, music carry-forward policy mirroring the legacy automatic_music.json rule). stage-b.yml 'Continue the next validated Series Mode part' (automatic mode only; schema-validated request+status persistence, duplicate guard, rebase-retry push, stage-a.yml {job_id, code_ref} dispatch). Bot: bot/src/series.js + startNextSeriesPart replacing the task:next stub (manual mode). Tests: 23 new Python tests (115 total green) + 10 new JS tests (48 total green).",
+      "completed_in_session": "series-mode-session-1"
     },
     {
       "id": "publish_zernio",
@@ -329,7 +322,7 @@
       "commits": "telegram-channel-session-1 commits on main (2026-08-26): 45cfb94, 35b5a56, e0a1d85, baaf385"
     }
   ],
-  "next_action": "Build the 'series_mode' phase per its deliverables list in phases[]: pipeline/plan/series.py (next-part derivation from persisted series state), the Stage B continuation step for automatic series, and the Bot 'Start next part' action for manual series. Port semantics from _legacy/scripts/series_state.py and the manualSeriesContinuation/startNextSeriesPart logic in _legacy/telegram-bot/src/index.js per ARCHITECTURE.md \u00a711 without redesigning.",
+  "next_action": "Build the 'publish_zernio' phase per its deliverables list in phases[]: port the Zernio publishing subsystem (discover/publish/retry/update/cancel, smart schedule, per-post management, durable serial queue) from _legacy/scripts/zernio_*.py and the zernio workflows per ARCHITECTURE.md \u00a710/\u00a714 without redesigning. Wire Bot A's task:pub action (currently a 'publish phase of the rebuild' stub) to it.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
