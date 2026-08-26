@@ -1121,6 +1121,108 @@ def resolve_manual_dispatch(root: str | Path, job_id: str, settings_path: str | 
 
 
 # --------------------------------------------------------------------------- #
+# Stage B automatic-publish dispatch (ARCHITECTURE.md §11 "optional auto-     #
+# Publish"). Stage B's final step evaluates these committed files after the   #
+# job's terminal `complete` status has been pushed and, when publishing is    #
+# armed, dispatches publish.yml action=publish. A skip is ALWAYS a no-op      #
+# success — auto-publish must never fail a completed Stage B run.             #
+# --------------------------------------------------------------------------- #
+
+
+def automatic_dispatch(
+    root: str | Path,
+    job_id: str,
+    *,
+    settings_path: str | Path | None = None,
+    accounts_path: str | Path | None = None,
+    secret_configured: bool = False,
+) -> tuple[str, str, str, str, str, str]:
+    """Return (dispatch, mode, timezone, targets_json, request_id, reason).
+
+    * ``dispatch == "true"`` only when ALL gates pass; otherwise every output
+      field except ``reason`` is empty and the caller must do nothing.
+    * Gates (in order): the job's status.json exists and is ``complete``;
+      settings exist with ``enabled && auto_publish`` and a valid
+      ``automatic_mode``; ``ZERNIO_API_KEY`` is configured (flag only — the
+      secret value is never read here); at least one selected target account
+      is still active in the committed accounts snapshot.
+    * ``request_id`` mirrors the bot's ``zernioRequestId`` reuse-on-failure
+      rule: when the job's last publishing attempt failed, its recorded
+      ``idempotency_key`` is reused so a re-render of the same job recovers
+      the same logical publish; otherwise a fresh key is minted.
+    """
+    root = Path(root)
+    settings_path = Path(settings_path) if settings_path else root / "branding" / "zernio_settings.json"
+    accounts_path = Path(accounts_path) if accounts_path else root / "branding" / "zernio_accounts.json"
+
+    def skip(reason: str) -> tuple[str, str, str, str, str, str]:
+        return "false", "", "", "", "", reason
+
+    status_path = root / "jobs" / job_id / "status.json"
+    if not status_path.exists():
+        return skip("job status.json is missing")
+    try:
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return skip(f"job status.json is unreadable ({exc})")
+    if not isinstance(status, dict) or status.get("state") != "complete":
+        return skip("Stage B did not reach state=complete")
+
+    if not settings_path.exists():
+        return skip("branding/zernio_settings.json is missing")
+    try:
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return skip(f"zernio_settings.json is unreadable ({exc})")
+    if not isinstance(settings, dict):
+        return skip("zernio_settings.json is not a JSON object")
+
+    try:
+        skip_flag, mode, timezone, targets_b64 = automatic_fields(settings)
+    except TargetValidationError as exc:
+        return skip(f"automatic settings are invalid ({exc})")
+    if skip_flag == "true":
+        return skip("Zernio automatic publishing is disabled or has no selected targets")
+
+    if not secret_configured:
+        return skip("ZERNIO_API_KEY is not configured in repository secrets")
+
+    # Targets must still resolve against ACTIVE accounts from the committed
+    # snapshot — a selected account that has since disconnected never
+    # publishes (same rule the bot's zernioTargets applies).
+    accounts_doc: dict[str, Any] = {}
+    if accounts_path.exists():
+        try:
+            loaded = json.loads(accounts_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return skip(f"zernio_accounts.json is unreadable ({exc})")
+        if isinstance(loaded, dict):
+            accounts_doc = loaded
+    active = active_accounts(accounts_doc)
+    selected = normalize_targets(decode_targets(targets_b64))
+    resolved: list[dict[str, Any]] = []
+    for target in selected:
+        platform = str(target.get("platform") or "")
+        wanted = set(target.get("account_ids") or [])
+        ids = [account["id"] for account in active.get(platform, []) if account["id"] in wanted]
+        if ids:
+            resolved.append({"platform": platform, "account_ids": ids})
+    if not resolved:
+        return skip("no selected target account is active in the accounts snapshot")
+    targets_json = serialize_targets(resolved)
+
+    # Reuse-on-failure idempotency, mirroring bot/src/zernio.js zernioRequestId.
+    publishing = status.get("publishing") if isinstance(status.get("publishing"), dict) else {}
+    prior = str(publishing.get("idempotency_key") or "") if str(publishing.get("status") or "").lower() == "failed" else ""
+    if REQUEST_ID_RE.fullmatch(prior):
+        request_id = prior
+    else:
+        request_id = f"clipforge-auto-{job_id}-{uuid.uuid4()}"
+
+    return "true", mode, timezone, targets_json, request_id, "automatic publish armed"
+
+
+# --------------------------------------------------------------------------- #
 # CLI                                                                          #
 # --------------------------------------------------------------------------- #
 
@@ -1201,6 +1303,12 @@ def main(argv: list[str] | None = None) -> None:
     resolve.add_argument("job_id")
     resolve.add_argument("settings_path")
 
+    autodispatch = sub.add_parser("automatic-dispatch")
+    autodispatch.add_argument("root")
+    autodispatch.add_argument("job_id")
+    autodispatch.add_argument("--secret-configured", default="false",
+                              help="'true' when ZERNIO_API_KEY exists in repository secrets; the value itself is never read")
+
     args = ap.parse_args(argv)
 
     if args.command == "metadata":
@@ -1268,6 +1376,13 @@ def main(argv: list[str] | None = None) -> None:
             args.root, args.job_id, args.settings_path,
         )
         print(f"{action}\t{mode}\t{timezone}\t{targets_b64}\t{post_id}")
+    elif args.command == "automatic-dispatch":
+        dispatch, mode, timezone, targets_json, request_id, reason = automatic_dispatch(
+            args.root, args.job_id,
+            secret_configured=str(args.secret_configured).strip().lower() == "true",
+        )
+        # Tab-safe transport: targets_json is compact JSON without tabs/newlines.
+        print(f"{dispatch}\t{mode}\t{timezone}\t{targets_json}\t{request_id}\t{reason}")
     else:  # pragma: no cover — argparse guarantees an above branch
         raise SystemExit(f"Unknown zernio command: {args.command}")
 

@@ -26,6 +26,7 @@ from pipeline.publish.zernio import (
     ZernioError,
     active_accounts,
     aggregate_publishing_status,
+    automatic_dispatch,
     automatic_fields,
     build_platform_payload,
     caption_with_visible_hashtags,
@@ -862,6 +863,163 @@ class ResolveManual(unittest.TestCase):
             })
             with self.assertRaises(SystemExit):
                 resolve_manual_dispatch(td, "job-x", settings_path)
+
+
+# --------------------------------------------------------------------------- #
+# Stage B automatic-publish dispatch (automatic_dispatch)                      #
+# --------------------------------------------------------------------------- #
+
+
+class AutomaticDispatch(unittest.TestCase):
+    """Gate matrix for the Stage B auto-publish step.
+
+    A skip must ALWAYS be a clean no-op (never raises) so it can never fail a
+    completed Stage B run; only a fully armed configuration dispatches.
+    """
+
+    ARMED_SETTINGS = {
+        "enabled": True,
+        "auto_publish": True,
+        "automatic_mode": "publish_now",
+        "target_accounts": {"tiktok": ["A"]},
+        "smart_schedule": {"timezone": "UTC"},
+    }
+
+    def _make_root(self, td: Path, *, state: str | None = "complete",
+                   publishing: dict | None = None,
+                   settings: dict | None = None,
+                   accounts: list[dict] | None = None) -> Path:
+        if state is not None:
+            job = td / "jobs" / "job-y"
+            job.mkdir(parents=True)
+            status: dict[str, Any] = {"state": state}
+            if publishing is not None:
+                status["publishing"] = publishing
+            (job / "status.json").write_text(json.dumps(status), encoding="utf-8")
+        if settings is not None:
+            (td / "branding").mkdir(exist_ok=True)
+            (td / "branding" / "zernio_settings.json").write_text(json.dumps(settings), encoding="utf-8")
+        if accounts is not None:
+            (td / "branding").mkdir(exist_ok=True)
+            (td / "branding" / "zernio_accounts.json").write_text(
+                json.dumps({"version": 1, "provider": "zernio", "accounts": accounts}), encoding="utf-8")
+        return td
+
+    def test_missing_status_skips(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str), state=None,
+                                 settings=self.ARMED_SETTINGS,
+                                 accounts=[{"platform": "tiktok", "id": "A"}])
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("status.json", reason)
+
+    def test_incomplete_job_skips(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str), state="stage_b_running",
+                                 settings=self.ARMED_SETTINGS,
+                                 accounts=[{"platform": "tiktok", "id": "A"}])
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("complete", reason)
+
+    def test_missing_settings_skips(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str))  # complete job, no settings
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("zernio_settings.json", reason)
+
+    def test_auto_publish_off_skips(self):
+        with TemporaryDirectory() as td_str:
+            settings = dict(self.ARMED_SETTINGS, auto_publish=False)
+            td = self._make_root(Path(td_str), settings=settings,
+                                 accounts=[{"platform": "tiktok", "id": "A"}])
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("disabled", reason)
+
+    def test_invalid_automatic_settings_skip_not_raise(self):
+        with TemporaryDirectory() as td_str:
+            settings = dict(self.ARMED_SETTINGS,
+                            smart_schedule={"timezone": "not/a/zone/;rm -rf /"})
+            td = self._make_root(Path(td_str), settings=settings,
+                                 accounts=[{"platform": "tiktok", "id": "A"}])
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("invalid", reason)
+
+    def test_missing_secret_skips(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str), settings=self.ARMED_SETTINGS,
+                                 accounts=[{"platform": "tiktok", "id": "A"}])
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=False)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("ZERNIO_API_KEY", reason)
+
+    def test_no_active_target_skips(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str), settings=self.ARMED_SETTINGS,
+                                 accounts=[{"platform": "tiktok", "id": "A", "isActive": False}])
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("active", reason)
+
+    def test_missing_accounts_snapshot_skips(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str), settings=self.ARMED_SETTINGS)  # no accounts file
+            dispatch, *_rest, reason = automatic_dispatch(td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "false")
+            self.assertIn("active", reason)
+
+    def test_fully_armed_dispatches(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(Path(td_str), settings=self.ARMED_SETTINGS,
+                                 accounts=[{"platform": "tiktok", "id": "A", "username": "u"},
+                                           {"platform": "tiktok", "id": "B"}])
+            dispatch, mode, tz, targets_json, request_id, reason = automatic_dispatch(
+                td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "true")
+            self.assertEqual(mode, "publish_now")
+            self.assertEqual(tz, "UTC")
+            self.assertEqual(json.loads(targets_json), [{"platform": "tiktok", "account_ids": ["A"]}])
+            self.assertTrue(request_id.startswith("clipforge-auto-job-y-"))
+            self.assertIn("armed", reason)
+
+    def test_inactive_selection_filtered_out_of_targets(self):
+        with TemporaryDirectory() as td_str:
+            settings = dict(self.ARMED_SETTINGS,
+                            target_accounts={"tiktok": ["A", "B"]})
+            td = self._make_root(Path(td_str), settings=settings,
+                                 accounts=[{"platform": "tiktok", "id": "A"},
+                                           {"platform": "tiktok", "id": "B", "needsReconnection": True}])
+            dispatch, _mode, _tz, targets_json, _rid, _reason = automatic_dispatch(
+                td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "true")
+            self.assertEqual(json.loads(targets_json), [{"platform": "tiktok", "account_ids": ["A"]}])
+
+    def test_failed_attempt_reuses_idempotency_key(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(
+                Path(td_str), settings=self.ARMED_SETTINGS,
+                accounts=[{"platform": "tiktok", "id": "A"}],
+                publishing={"status": "failed", "idempotency_key": "clipforge-auto-job-y-abc12345", "posts": []})
+            dispatch, _mode, _tz, _targets, request_id, _reason = automatic_dispatch(
+                td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "true")
+            self.assertEqual(request_id, "clipforge-auto-job-y-abc12345")
+
+    def test_non_failed_attempt_mints_fresh_key(self):
+        with TemporaryDirectory() as td_str:
+            td = self._make_root(
+                Path(td_str), settings=self.ARMED_SETTINGS,
+                accounts=[{"platform": "tiktok", "id": "A"}],
+                publishing={"status": "published", "idempotency_key": "clipforge-auto-job-y-abc12345", "posts": []})
+            dispatch, _mode, _tz, _targets, request_id, _reason = automatic_dispatch(
+                td, "job-y", secret_configured=True)
+            self.assertEqual(dispatch, "true")
+            self.assertNotEqual(request_id, "clipforge-auto-job-y-abc12345")
+            self.assertTrue(request_id.startswith("clipforge-auto-job-y-"))
 
 
 # --------------------------------------------------------------------------- #
