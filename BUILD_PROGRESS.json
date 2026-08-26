@@ -19,22 +19,17 @@
   "current_task": {
     "stage": "automatic_mode",
     "task": "Automatic mode — Gemini analysis producing a validated production.json",
-    "status": "partially_complete",
+    "status": "complete",
     "session": "automatic-mode-session-1",
     "completed": [
       "pipeline/plan/automatic.py — ported from _legacy/scripts/automatic_analysis.py: bounded native tool-use agent (read_transcript -> read_scene_index/read_key_moments -> open_composite, chronological, <=12 composites), GeminiGateway multi-key rotation from GEMINI_API_KEYS with bounded transient retries + redacted logging, model fallback chain (primary 3.7-flash -> 3.6-flash), narration-coverage + visual-grounding checks, visual_evidence stripped before output, production.json validated via the shared pipeline.plan.schema contract (never the legacy contract module), lazy google-genai import so the module is test-importable without the dep",
       "pipeline/tests/test_automatic.py — 19 offline tests ported from _legacy/scripts/test_automatic_analysis.py (pytest-style): key parsing, model candidate dedupe, shared-contract acceptance via pipeline.plan.schema, narration 90% coverage, provider error classification/rotation/retry policy, redacted error summaries, gateway transient-503 + malformed-response retries, quota no-retry, evidence tool ordering, full grounded run incl. one bounded correction, non-JSON correction, correction-time exhaustion propagation, malformed-final/malformed-provider/503 fallback-model routing, exhausted-pool fail-closed, screenshots.zip traversal + empty-archive rejection",
-      "pipeline/plan/music.py — adapted port of _legacy/scripts/read_automatic_music.py: resolves the automatic job's music_ref/music_source for the Stage B dispatch from jobs/<job_id>/stage-a-request.json's music block (new §7.1 contract) with the branding/music_default.json saved default as fallback for source=default; safe audio-library basename validation, same-job one-off music.mp3 only, legacy trailing-\\n repair, fail-closed to no music; offline checks all pass"
+      "pipeline/plan/music.py — adapted port of _legacy/scripts/read_automatic_music.py: resolves the automatic job's music_ref/music_source for the Stage B dispatch from jobs/<job_id>/stage-a-request.json's music block (new §7.1 contract) with the branding/music_default.json saved default as fallback for source=default; safe audio-library basename validation, same-job one-off music.mp3 only, legacy trailing-\\n repair, fail-closed to no music; offline checks all pass",
+      ".github/workflows/stage-a.yml automatic branch — replaced the fail-closed gate with: automatic_analysis_running status + commit, google-genai install (>=1.66,<2), release bundle download (prompt/transcript/scene_index/key_moments/screenshots), pipeline.plan.automatic run gated on non-empty GEMINI_API_KEYS (exit 2 with a safe message when unset), music resolution via pipeline.plan.music, stage_b_queued status with production/automatic_analysis asset refs, rebase-and-retry commits, and stage-b.yml dispatch with code_ref pinned to the fresh default-branch tip after the plan push",
+      "pipeline/requirements.txt — added google-genai>=1.66,<2 (Automatic Mode)"
     ],
-    "remaining": [
-      ".github/workflows/stage-a.yml automatic branch — automatic_analysis_running status, run analysis, stage_b_queued, dispatch stage-b.yml (replaces the fail-closed gate)",
-      "pipeline/requirements.txt — add google-genai"
-    ],
-    "resume_from": {
-      "file": ".github/workflows/stage-a.yml",
-      "component": "automatic branch (replaces the 'Automatic mode not built yet — fail closed' step)",
-      "next_operation": "add the automatic branch: write automatic_analysis_running status, install google-genai, download the release bundle, run pipeline.plan.automatic, resolve music via pipeline.plan.music, write stage_b_queued, commit production.json + automatic_analysis.json, dispatch stage-b.yml with code_ref pinned to the fresh default-branch tip"
-    }
+    "remaining": [],
+    "resume_from": null
   },
   "phases": [
     {

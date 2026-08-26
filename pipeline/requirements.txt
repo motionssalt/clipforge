@@ -20,3 +20,6 @@ numpy>=1.24,<3
 
 # --- Voiceover TTS (Microsoft Edge online service; no API key) -----------------
 edge-tts==7.2.8
+
+# --- Automatic Mode analysis (Gemini Developer API; GEMINI_API_KEYS secret) ---
+google-genai>=1.66,<2
