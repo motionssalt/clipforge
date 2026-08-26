@@ -23,16 +23,16 @@
     "session": "series-mode-session-1",
     "completed": [
       "pipeline/plan/series.py \u2014 next-part derivation from persisted series state (port of _legacy/scripts/series_state.py onto the nested \u00a77.1 request + \u00a77.3/legacy-flat plan shapes, gap-proof history check, music carry-forward policy, CLI exit codes 2/1/0)",
-      "pipeline/tests/test_series.py \u2014 23 offline tests, all green; full Python suite 92 green"
+      "pipeline/tests/test_series.py \u2014 23 offline tests, all green; full Python suite 92 green",
+      ".github/workflows/stage-b.yml \u2014 'Continue the next validated Series Mode part' step after 'Write complete status' (automatic mode only; derives via pipeline.plan.series, schema-validated persistence of the nested \u00a77.1 request + queued status.json, duplicate-dispatch guard, rebase-retry push, dispatches stage-a.yml with job_id + code_ref). Persisted request verified against schemas/stage_a_request.schema.json and status against schemas/job_status.schema.json; workflow YAML parses."
     ],
     "remaining": [
-      "Stage B continuation step for automatic series (.github/workflows/stage-b.yml \u2014 derive + validate + persist nested request + duplicate guard + dispatch stage-a.yml {job_id, code_ref})",
       "Bot 'Start next part' action for manual series (port manualSeriesContinuation/startNextSeriesPart from _legacy/telegram-bot/src/index.js onto bot/src \u2014 replaces the task:next stub in index.js)"
     ],
     "resume_from": {
-      "file": ".github/workflows/stage-b.yml",
-      "component": "stage_b job \u2014 new 'Continue the next validated Series Mode part' step after 'Write complete status'",
-      "next_operation": "port the legacy continuation step (lines ~789-849 of _legacy/.github/workflows/stage-b.yml) to the nested contracts: run python -m pipeline.plan.series, persist payload.request as jobs/<next>/stage-a-request.json (version 2, job_id, saved_at_epoch stamped), write queued status.json via pipeline.status with series block, commit+push, dispatch stage-a.yml with job_id + code_ref only"
+      "file": "bot/src/index.js",
+      "component": "handleTaskCallback 'next' action stub",
+      "next_operation": "port manualSeriesContinuation (request.series.enabled + manual + plan not final) and startNextSeriesPart (seriesContextSummaries + duplicate guard + buildStageARequest/saveStageARequest + newStatus queued + dispatchWorkflow stage-a.yml) into bot/src \u2014 pure derivation helpers go in a new bot/src/series.js with tests in bot/test/series.test.mjs"
     }
   },
   "phases": [
@@ -155,7 +155,7 @@
         "Stage B continuation step for automatic series",
         "Bot 'Start next part' action for manual series"
       ],
-      "notes": "Step 1/3 done (series-mode-session-1): pipeline/plan/series.py + 23 tests green. Remaining: stage-b.yml continuation step, bot task:next action."
+      "notes": "Steps 1-2/3 done (series-mode-session-1): pipeline/plan/series.py + 23 tests green; stage-b.yml automatic continuation step (schema-validated). Remaining: bot task:next action."
     },
     {
       "id": "publish_zernio",
