@@ -13,7 +13,6 @@ import os
 import time
 
 
-
 TELEGRAM_PARALLEL_MIN_BYTES = 64 * 1024 * 1024
 TELEGRAM_PARALLEL_WORKERS = 4
 TELEGRAM_PARALLEL_PART_BYTES = 512 * 1024
@@ -143,3 +142,4 @@ async def _download_telegram_parallel(client, message, output_path: str, media_s
         raise _ParallelTelegramTransferError('Parallel Telegram media transfer could not initialize safely.') from error
     finally:
         os.close(file_descriptor)
+        await asyncio.gather(*(child.disconnect() for child in children), return_exceptions=True)
