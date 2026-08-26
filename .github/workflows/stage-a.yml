@@ -6,9 +6,11 @@ name: Stage A — Ingest, Transcribe, Analyze (new pipeline)
 # before and after every risky step. Publishes the §7.2 analysis bundle to
 # release clipforge-<job_id>.
 #
-# The two preserved subsystems (telegram_channel §9.1, telegram_relay §9.2)
-# are intentionally NOT handled here yet — pipeline/stage_a/ingest.py fails
-# closed for those source kinds until their own phases land.
+# Preserved subsystem §9.1 (telegram_channel) is wired: ingest.py routes it to
+# pipeline/stage_a/telegram_channel.py, which enforces the original-repo gate
+# plus fail-closed MTProto secrets (absent on clones — that absence IS the
+# security boundary's second layer). telegram_relay §9.2 still fails closed in
+# ingest.py until the relay-asset ingest follow-up lands.
 run-name: Stage A — ${{ inputs.job_id }}
 
 on:
@@ -107,6 +109,11 @@ jobs:
           sudo apt-get install -y -qq ffmpeg aria2 file
           python -m pip install --upgrade -q pip
           python -m pip install -q "requests>=2.32,<3"
+          # §9.1: MTProto client for public Telegram channel-post downloads.
+          # Present on every runner, but only reachable on the original repo —
+          # telegram_channel.py fails closed on any other repository, and
+          # clones never receive the CLIPFORGE_TELEGRAM_* secrets.
+          python -m pip install -q "telethon>=1.44,<2" "cryptg>=0.4,<1"
           ffmpeg -version | head -n 1
 
       - name: Write initial status (stage_a_running)
@@ -185,10 +192,18 @@ jobs:
       # Exit codes: 0 ok · 3 awaiting_torrent_selection (clean stop) ·
       # 4 preserved-subsystem gate · 2 ingest error.
       # ---------------------------------------------------------------------
-      - name: Ingest source (url, drive, magnet, torrent_file)
+      - name: Ingest source (url, drive, magnet, torrent_file, telegram_channel)
         id: ingest
         if: ${{ steps.series_reuse.outputs.reused != 'true' }}
         shell: bash
+        env:
+          # Dedicated user-authorized MTProto media session for public Telegram
+          # channel posts (§9.1). Original repo ONLY — clones never receive
+          # these secrets, so telegram_channel.py fails closed there. GitHub
+          # masks encrypted secrets; the downloader never logs them.
+          CLIPFORGE_TELEGRAM_API_ID: ${{ secrets.CLIPFORGE_TELEGRAM_API_ID }}
+          CLIPFORGE_TELEGRAM_API_HASH: ${{ secrets.CLIPFORGE_TELEGRAM_API_HASH }}
+          CLIPFORGE_TELEGRAM_SESSION: ${{ secrets.CLIPFORGE_TELEGRAM_SESSION }}
         run: |
           set -uo pipefail
           mkdir -p work
