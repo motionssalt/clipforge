@@ -187,8 +187,9 @@ jobs:
           if not status_path.exists():
               raise SystemExit(f'Missing {status_path}')
           status = json.loads(status_path.read_text(encoding='utf-8'))
-          if status.get('stage') != 'complete':
-              raise SystemExit('Zernio publishing requires Stage B status=complete; Stage B remains independent.')
+          # §6.2: the state field is `state` in the rebuilt schema (legacy was `stage`).
+          if status.get('state') != 'complete':
+              raise SystemExit('Zernio publishing requires Stage B state=complete; Stage B remains independent.')
           if not (Path('jobs') / jid / 'production.json').exists():
               raise SystemExit('Missing the job production.json used to create this output.')
           if not status.get('release_tag'):
@@ -262,13 +263,12 @@ jobs:
           jid = os.environ['JOB_ID']
           p = Path('jobs') / jid / 'status.json'
           status = json.loads(p.read_text(encoding='utf-8'))
+          # §6.2 shape: a fresh request is `publishing` with the idempotency key
+          # recorded; mode/schedule details live on the queue ledger item.
           status['publishing'] = {
-              'provider': 'zernio', 'status': 'requested',
-              'mode': os.environ['MODE'],
-              'scheduled_for': os.environ['SCHEDULED_FOR'] or None,
-              'timezone': os.environ['TIMEZONE'] or None,
-              'idempotency_key': os.environ['REQUEST_ID'] or None,
-              'updated_at_epoch': int(time.time()),
+              'status': 'publishing',
+              'posts': [],
+              'idempotency_key': os.environ['REQUEST_ID'] or '',
           }
           status['updated_at_epoch'] = int(time.time())
           p.write_text(json.dumps(status, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
@@ -345,6 +345,7 @@ jobs:
           SCHEDULED_FOR: ${{ steps.schedule.outputs.scheduled_for || inputs.scheduled_for }}
           TIMEZONE: ${{ steps.schedule.outputs.timezone || steps.resolve.outputs.timezone || inputs.timezone }}
           POST_ID: ${{ inputs.post_id || steps.resolve.outputs.post_id }}
+          REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -371,11 +372,13 @@ jobs:
           result = read_json_object_safely(result_path)
 
           if action == 'publish' and isinstance(result, dict):
-              publishing = result
-              publishing['metadata_source'] = 'jobs/' + jid + '/production.json'
-              publishing['mode'] = os.environ['MODE']
-              publishing['scheduled_for'] = os.environ['SCHEDULED_FOR'] or publishing.get('scheduled_for')
-              publishing['timezone'] = os.environ['TIMEZONE'] or publishing.get('timezone')
+              # publish_video() already returns exactly the §6.2 publishing
+              # shape: {status, posts, idempotency_key}.
+              publishing = {
+                  'status': str(result.get('status') or 'failed'),
+                  'posts': result.get('posts') if isinstance(result.get('posts'), list) else [],
+                  'idempotency_key': str(result.get('idempotency_key') or os.environ.get('REQUEST_ID') or ''),
+              }
           elif action in {'retry', 'update', 'cancel'} and isinstance(result, dict):
               posts = prior.get('posts') if isinstance(prior.get('posts'), list) else []
               replacement = dict(result)
@@ -389,15 +392,11 @@ jobs:
                       updated.append(post)
               if not found:
                   updated.append(replacement)
-              publishing = dict(prior)
-              publishing['provider'] = 'zernio'
-              publishing['posts'] = updated
-              publishing['status'] = aggregate_publishing_status(updated)
-              if action == 'update':
-                  publishing['mode'] = os.environ['MODE']
-                  publishing['scheduled_for'] = result.get('scheduled_for') or os.environ['SCHEDULED_FOR'] or None
-                  publishing['timezone'] = result.get('timezone') or os.environ['TIMEZONE'] or None
-              publishing['updated_at_epoch'] = int(time.time())
+              publishing = {
+                  'status': aggregate_publishing_status(updated),
+                  'posts': updated,
+                  'idempotency_key': str(prior.get('idempotency_key') or ''),
+              }
           else:
               publishing = publishing_error_state(prior)
 
@@ -411,13 +410,17 @@ jobs:
           except json.JSONDecodeError:
               queue = default_queue()
           post_ids = [str(p.get('post_id') or '') for p in publishing.get('posts', []) if isinstance(p, dict) and p.get('post_id')]
-          pstatus = str(publishing.get('status') or 'unknown')
+          pstatus = str(publishing.get('status') or 'not_requested')
           if pstatus in {'scheduled', 'publishing', 'partial'}:
+              # mode/schedule details live on the queue item (the ledger), not
+              # on the §6.2 publishing block; fall back to the first post's
+              # own scheduled_for/timezone for post-action updates.
+              first_post = next((p for p in publishing.get('posts', []) if isinstance(p, dict)), {})
               queue = upsert_queue_item(queue, {
                   'job_id': jid, 'status': pstatus,
-                  'mode': publishing.get('mode') or os.environ['MODE'],
-                  'scheduled_for': publishing.get('scheduled_for') or os.environ['SCHEDULED_FOR'] or None,
-                  'timezone': publishing.get('timezone') or os.environ['TIMEZONE'] or 'UTC',
+                  'mode': os.environ['MODE'],
+                  'scheduled_for': os.environ['SCHEDULED_FOR'] or first_post.get('scheduled_for') or None,
+                  'timezone': os.environ['TIMEZONE'] or first_post.get('timezone') or 'UTC',
                   'post_ids': post_ids, 'updated_at_epoch': int(time.time()),
               })
           elif pstatus in {'published', 'failed', 'cancelled'}:

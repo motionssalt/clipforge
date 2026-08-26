@@ -626,13 +626,20 @@ def load_production(path: str | Path) -> dict[str, Any]:
 
 
 def aggregate_publishing_status(posts: list[dict[str, Any]]) -> str:
-    """Derive the job state from the actual per-platform post states."""
-    statuses = [str(post.get("status") or "unknown").strip().lower()
+    """Derive the job state from the actual per-platform post states.
+
+    The return value must stay within the §6.2 publishing-status enum
+    (schemas/job_status.schema.json): not_requested | publishing | scheduled |
+    published | partial | failed | cancelled. Provider-side per-post states
+    like "requested" or "error" are mapped onto that enum here.
+    """
+    statuses = [str(post.get("status") or "").strip().lower()
                 for post in posts if isinstance(post, dict)]
+    statuses = [value for value in statuses if value]
     if not statuses:
-        return "unknown"
+        return "not_requested"
     active = {"requested", "publishing"}
-    terminal_failures = {"failed", "cancelled", "error", "not_requested"}
+    terminal_failures = {"failed", "cancelled", "error", "not_requested", "unknown"}
     if any(value in active for value in statuses):
         return "publishing"
     if any(value == "scheduled" for value in statuses):
@@ -641,9 +648,11 @@ def aggregate_publishing_status(posts: list[dict[str, Any]]) -> str:
         return "published"
     if any(value == "published" for value in statuses) and any(value in terminal_failures for value in statuses):
         return "partial"
+    if all(value == "cancelled" for value in statuses):
+        return "cancelled"
     if all(value in terminal_failures for value in statuses):
         return "failed"
-    return "partial" if any(value == "partial" for value in statuses) else statuses[0]
+    return "partial"
 
 
 def production_metadata(doc: dict[str, Any]) -> dict[str, Any]:
@@ -959,16 +968,9 @@ def publish_video(
         posts.append(summary)
     overall = aggregate_publishing_status(posts)
     return {
-        "provider": "zernio",
         "status": overall,
-        "mode": mode,
-        "scheduled_for": scheduled_for or None,
-        "timezone": timezone or None,
-        "idempotency_key": logical_request_id,
-        "updated_at_epoch": int(time.time()),
-        "media": {"filename": source.name, "size_bytes": source.stat().st_size, "public_url_present": True},
-        "metadata": metadata,
         "posts": posts,
+        "idempotency_key": logical_request_id,
     }
 
 
@@ -1058,13 +1060,11 @@ def write_publishing_state(path: str | Path, publishing: dict[str, Any]) -> None
 def publishing_error_state(prior: dict[str, Any] | None = None) -> dict[str, Any]:
     """Preserve safe prior details while recording the original publisher failure."""
     publishing = dict(prior) if isinstance(prior, dict) else {}
-    publishing.update({
-        "provider": "zernio",
-        "status": "error",
-        "updated_at_epoch": int(time.time()),
-        "error": "Zernio publishing workflow failed; inspect the earlier publishing step for the original sanitized error.",
-        "result_available": False,
-    })
+    posts = publishing.get("posts")
+    # §6.2: a publisher failure maps to "failed" (there is no "error" status).
+    publishing["status"] = "failed"
+    publishing["posts"] = posts if isinstance(posts, list) else []
+    publishing["idempotency_key"] = str(publishing.get("idempotency_key") or "")
     return publishing
 
 

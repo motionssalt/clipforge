@@ -23,9 +23,9 @@
     "session": "publish-zernio-session-1",
     "completed": [
       "pipeline/publish/__init__.py",
-      "pipeline/publish/zernio.py (port of legacy zernio_publish.py + zernio_state.py + zernio_targets.py + zernio_schedule.py + zernio_workflow_state.py + zernio_manual_resolve.py into one module; unified CLI subcommand set; syntax-checked and importable)",
-      "pipeline/tests/test_publish_zernio.py (72 offline tests: validation helpers, metadata/hashtag/tag normalization, targets encode/decode + settings.auto_publish, queue helpers, plan_smart_schedule daily/hourly/collision/custom-start, aggregate_publishing_status, resolve-manual retry-vs-fresh) — all green",
-      ".github/workflows/publish.yml (unified replacement for legacy zernio-publish.yml + zernio-manual-publish.yml: discover/publish/retry/update/cancel + action=manual resolving retry-vs-fresh in-run; durable serial queue via clipforge-zernio-publishing concurrency group; Stage-B complete gate; final.mp4 release download; smart schedule with external-post collision check; status.publishing + branding/zernio_queue.json committed back; YAML-validated)"
+      "pipeline/publish/zernio.py (port of legacy zernio_*.py into one module; unified CLI; NOW §6.2-schema-conformant: aggregate_publishing_status maps provider states onto the {not_requested,publishing,scheduled,published,partial,failed,cancelled} enum, publish_video returns exactly {status, posts, idempotency_key}, publishing_error_state maps failure to \"failed\")",
+      "pipeline/tests/test_publish_zernio.py (74 offline tests incl. §6.2 conformance assertions) — all green",
+      ".github/workflows/publish.yml (unified discover/publish/retry/update/cancel + action=manual in-run resolve; serial queue; Stage-B complete gate on §6.2 state field; status.publishing + queue ledger committed back schema-conformant; YAML-validated)"
     ],
     "remaining": [
       "Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle)",
@@ -343,6 +343,18 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "python3 -m pytest pipeline/tests/test_publish_zernio.py -q (72 passed); YAML parse check on publish.yml"
+    },
+    {
+      "session": "publish-zernio-session-2",
+      "date_utc": "2026-08-26",
+      "summary": "publish_zernio §6.2 schema conformance fix: publish.yml + zernio.py initially ported the legacy flat status.publishing shape (provider/mode/scheduled_for/timezone/updated_at_epoch keys, \"requested\"/\"error\" statuses), but the new job_status.schema.json is additionalProperties:false and only allows the §6.2 enum. Fixed: publish_video() now returns exactly {status, posts, idempotency_key}; aggregate_publishing_status maps provider-side states (requested/error/unknown) onto the enum (empty -> not_requested, all-cancelled -> cancelled, error -> failed); publishing_error_state emits \"failed\" + preserved posts/idempotency_key; workflow \"mark requested\" step writes {status: publishing, posts: [], idempotency_key}; persist step builds the schema-conformant block and keeps mode/schedule details on the queue ledger item (branding/zernio_queue.json is NOT schema-bound). Tests: 74/74 zernio green; 210 pipeline green (2 pre-existing test_stage_a relay failures reproduce WITHOUT my changes — sandbox disk-preflight environment issue, not a regression).",
+      "files_modified": [
+        ".github/workflows/publish.yml",
+        "pipeline/publish/zernio.py",
+        "pipeline/tests/test_publish_zernio.py",
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "pytest pipeline/tests/test_publish_zernio.py (74 passed); pytest pipeline/tests/ (210 passed, 2 pre-existing stage_a env failures); YAML parse check"
     }
   ],
   "next_action": "Continue publish_zernio step 4/6: Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle) ported from _legacy/telegram-bot onto bot/src, then step 5/6 task:pub per-post actions dispatching publish.yml, then step 6/6 Stage B automatic-publish dispatch step.",
@@ -356,6 +368,13 @@
       "what_i_did_for_now": "Applied the closest-analog policy: accepted BOTH shapes in schema.py and plan.js (nested wins per-field when both are present), mirroring the already-established precedent of accepting `raw_narration` alongside `voiceover_text`. Continued to build against ARCHITECTURE.md as written — the nested shape is preferred and documented as such. This does not silently redesign anything: both shapes validate to identical semantics.",
       "what_the_right_answer_probably_is": "Pick one. If Stage B ports cleanly from the legacy scripts (which read `series_id`, `series_part`, …), the FLAT shape is the pragmatic canonical and ARCHITECTURE.md §7.3 should be revised to match. If the nested shape is genuinely preferred, add a note in §7.3 that legacy flat form is accepted for input but is deprecated on output — and update 00_READ_THIS_FIRST.txt (the analysis prompt) so external agents emit the nested shape.",
       "action_requested": "Operator: pick a canonical shape and update ARCHITECTURE.md §7.3 / §14 accordingly. Until then future sessions should keep accepting both — do NOT delete either code path in schema.py or plan.js without operator sign-off."
+    },
+    {
+      "id": "publishing-block-shape-strict-schema",
+      "raised_in_session": "publish-zernio-session-2",
+      "date_utc": "2026-08-26",
+      "decision_at_stake": "ARCHITECTURE.md §6 line ~280 says publishing is \"metadata attached to a complete job (status.publishing)\" and §6.2 fixes the block to {status, posts, idempotency_key} with additionalProperties:false. The legacy publishing block carried provider/mode/scheduled_for/timezone/updated_at_epoch and \"requested\"/\"error\" statuses. Resolution chosen: schema wins — the block is exactly the §6.2 shape; mode/schedule details moved to the branding/zernio_queue.json ledger item (not schema-bound). Bot reads mode/schedule from the queue when needed.",
+      "blocking": false
     }
   ],
   "active_blockers": [],

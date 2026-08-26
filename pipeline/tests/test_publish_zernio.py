@@ -628,7 +628,9 @@ class PublishVideo(unittest.TestCase):
         self.assertEqual(result["idempotency_key"], "clipforge-test-req-123")
         self.assertEqual(len(result["posts"]), 1)
         self.assertEqual(result["posts"][0]["platform"], "tiktok")
-        self.assertEqual(result["media"]["filename"], "final.mp4")
+        # §6.2 conformance: the result must be storable as status.publishing
+        # verbatim (additionalProperties: false, required status/posts/idempotency_key).
+        self.assertEqual(sorted(result.keys()), ["idempotency_key", "posts", "status"])
 
     def test_publish_video_recovers_on_409_duplicate(self):
         with TemporaryDirectory() as td_str:
@@ -765,10 +767,15 @@ class WorkflowState(unittest.TestCase):
             self.assertEqual(doc["publishing"]["status"], "requested")
 
     def test_publishing_error_state_preserves_prior(self):
+        # §6.2: a publisher failure maps to "failed" (there is no "error" status).
         result = publishing_error_state({"posts": [{"post_id": "P1"}]})
-        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["status"], "failed")
         self.assertEqual(result["posts"], [{"post_id": "P1"}])
-        self.assertFalse(result["result_available"])
+        self.assertEqual(sorted(result.keys()), ["idempotency_key", "posts", "status"])
+
+    def test_publishing_error_state_empty_prior(self):
+        result = publishing_error_state(None)
+        self.assertEqual(result, {"status": "failed", "posts": [], "idempotency_key": ""})
 
     def test_read_json_object_safely(self):
         with TemporaryDirectory() as td_str:
