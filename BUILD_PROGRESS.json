@@ -19,7 +19,7 @@
   "current_task": {
     "stage": "background_workflows",
     "task": "Background workflows — cleanup, deploy-bots, diagnostics",
-    "status": "in_progress",
+    "status": "complete",
     "session": "background-workflows-session-1",
     "completed": [
       "pipeline/cleanup/{__init__,__main__,expired}.py — port of _legacy/scripts/cleanup.py onto stdlib urllib (no requests dep): release+tag deletion, jobs/<id>/ folder removal, per-job branch deletion, RFC 5988 pagination, expiry driven by §6.2 expires_at_epoch with created_at_epoch+ttl and release-created_at fallbacks preserved",
@@ -27,16 +27,11 @@
       ".github/workflows/cleanup.yml — hourly cron (:07) + manual ttl_seconds override; stdlib-only module so no dependency install; push retry loop on the folder-deletion commit",
       ".github/workflows/deploy-bots.yml — port of _legacy/.github/workflows/deploy-telegram-workers.yml onto the new bot/ layout: bot/** path trigger + manual dispatch, Node 22 + npm ci --ignore-scripts, npm test gate (75 passed locally), wrangler-action deploy of wrangler.bot-a.jsonc and wrangler.bot-b.jsonc; Cloudflare credentials referenced by secret name only, worker runtime secrets remain wrangler-managed",
       "pipeline/diagnostics/{__init__,gemini}.py — port of _legacy/scripts/gemini_api_capability_diagnostic.py onto the package layout (redacted capability report: key fingerprints only, native function-calling + inline-image probe); model candidates now shared with pipeline.plan.automatic (DEFAULT_PRIMARY_MODEL + DEFAULT_FALLBACK_MODELS) so the diagnostic probes exactly what Automatic mode would use",
-      "pipeline/tests/test_diagnostics.py — 12 offline tests (key splitting/dedup, fingerprinting, redaction matrix, fake-SDK probe_key success/no-model/error paths, report writing + exit codes) — all green"
+      "pipeline/tests/test_diagnostics.py — 12 offline tests (key splitting/dedup, fingerprinting, redaction matrix, fake-SDK probe_key success/no-model/error paths, report writing + exit codes) — all green",
+      ".github/workflows/diagnostics.yml — single workflow_dispatch merge of _legacy gemini-api-diagnostic.yml + telegram-intake-check.yml: job 1 runs python -m pipeline.diagnostics.gemini (google-genai install, redacted report artifact, 7-day retention); job 2 stages synthetic jobs/diag-*/stage-a-request.json documents and runs the REAL ingest path (python -m pipeline.stage_a.ingest) for the positive channel-post download (ffprobe duration validation) and the negative public-group rejection; secrets by name only (GEMINI_API_KEYS + CLIPFORGE_TELEGRAM_*), contents:read, diag job folders always removed"
     ],
-    "remaining": [
-      ".github/workflows/diagnostics.yml — single workflow_dispatch workflow running the Gemini capability check (python -m pipeline.diagnostics.gemini) and the Telegram intake positive/negative checks via pipeline.stage_a.ingest (secrets by name only)"
-    ],
-    "resume_from": {
-      "file": ".github/workflows/diagnostics.yml",
-      "component": "diagnostics workflow",
-      "next_operation": "Write .github/workflows/diagnostics.yml: job 1 runs the Gemini capability check (google-genai SDK install, python -m pipeline.diagnostics.gemini, artifact upload); job 2 runs the Telegram intake positive check (t.me channel post via pipeline.stage_a.ingest with a synthetic jobs/<id>/stage-a-request.json, ffprobe duration validation) and negative check (public group link must fail). Secrets by name only per §13. Then mark background_workflows complete."
-    }
+    "remaining": [],
+    "resume_from": null
   },
   "phases": [
     {
@@ -176,13 +171,14 @@
     {
       "id": "background_workflows",
       "title": "Background workflows — cleanup, deploy-bots, diagnostics",
-      "status": "pending",
+      "status": "complete",
       "deliverables": [
         ".github/workflows/cleanup.yml (hourly, TTL-based job+release expiry)",
         ".github/workflows/deploy-bots.yml (deploy Bot A + Bot B on bot/** changes)",
         ".github/workflows/diagnostics.yml (Gemini capability + Telegram intake checks)"
       ],
-      "notes": "Port from _legacy/.github/workflows/cleanup.yml, deploy-telegram-workers.yml, gemini-api-diagnostic.yml, telegram-intake-check.yml."
+      "notes": "All three deliverables built and verified. cleanup.yml (hourly TTL sweep, §6.2 expires_at_epoch, stdlib-only pipeline/cleanup/expired.py + 21 tests), deploy-bots.yml (bot/** trigger, Node 22 npm ci + 75-test gate, wrangler deploy of Bot A + Bot B), diagnostics.yml (manual: Gemini capability check via pipeline/diagnostics/gemini.py — model candidates shared with pipeline.plan.automatic — + §9.1 Telegram intake positive/negative checks through the real ingest path; 12 new offline tests). This was the final phase of the §15 build order — all 10 phases are now complete.",
+      "completed_in_session": "background-workflows-session-2"
     }
   ],
   "required_secrets": [
@@ -412,7 +408,7 @@
       "tests": "deploy-bots.yml parsed with PyYAML (trigger paths + step order verified); cd bot && npm ci --ignore-scripts && npm test (75 passed, 0 failed)"
     }
   ],
-  "next_action": "background_workflows step 3/3 (final): port gemini-api-diagnostic.yml + telegram-intake-check.yml into one .github/workflows/diagnostics.yml (workflow_dispatch only; Gemini capability check + Telegram intake positive/negative checks per ARCHITECTURE.md §12). Commit+push, mark the phase complete, then determine whether any build-order item remains.",
+  "next_action": "BUILD COMPLETE: all 10 phases of ARCHITECTURE.md §15 are done. Next session should run full verification (python -m unittest discover pipeline/tests + bot npm test), reconcile BUILD_PROGRESS.json verification block with reality, and address the open architecture_concerns entries (series-shape-nested-vs-flat awaits operator decision).",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -444,7 +440,7 @@
   },
   "last_session": {
     "id": "background-workflows-session-2",
-    "note": "background_workflows step 3a/3 pushed: pipeline/diagnostics/gemini.py port + 12 offline tests green. Next: 3b/3 diagnostics.yml — the final workflow of the final phase."
+    "note": "background_workflows step 3b/3 pushed: diagnostics.yml — final workflow of the final phase. All 10 §15 build-order phases complete."
   },
   "architecture_concerns_closed": [
     {

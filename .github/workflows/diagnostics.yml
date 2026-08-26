@@ -1,0 +1,174 @@
+name: Diagnostics — Gemini capability + Telegram intake
+
+# ARCHITECTURE.md §12 (preserved behavior): manual diagnostics workflow that
+# merges the two legacy checks —
+#   _legacy/.github/workflows/gemini-api-diagnostic.yml
+#   _legacy/.github/workflows/telegram-intake-check.yml
+# into one workflow_dispatch entry point:
+#
+#   Job 1 (gemini-capability): probes the configured Gemini keys with a native
+#     function-calling + inline-image request and uploads a REDACTED report
+#     (key fingerprints only; never raw keys, request bodies, or project ids).
+#     Driven by pipeline/diagnostics/gemini.py, ported from
+#     _legacy/scripts/gemini_api_capability_diagnostic.py.
+#
+#   Job 2 (telegram-intake): verifies §9.1 public Telegram channel intake
+#     end-to-end. POSITIVE: a known public channel post downloads and has a
+#     positive duration. NEGATIVE: a public *group* link is rejected before
+#     media processing. Both go through the real ingest path
+#     (pipeline/stage_a/ingest.py -> pipeline/stage_a/telegram_channel.py)
+#     via a synthetic jobs/<diag>/stage-a-request.json, exactly like a real
+#     job. Secrets are referenced by name only (§13 invariant #1); they exist
+#     only on the original repo, and the module fails closed without them —
+#     which IS the security boundary's second layer.
+
+on:
+  workflow_dispatch:
+    inputs:
+      telegram_post:
+        description: Public Telegram channel post URL containing one video
+        required: true
+        type: string
+        default: https://t.me/yt4clipforge/2
+
+permissions:
+  contents: read
+
+jobs:
+  gemini-capability:
+    name: Verify direct Gemini capabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install official Google Gen AI SDK
+        run: python -m pip install --disable-pip-version-check 'google-genai>=1.66,<2'
+
+      - name: Run redacted direct Gemini capability diagnostic
+        env:
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GEMINI_API_KEYS:-}" ]; then
+            echo 'FATAL: GEMINI_API_KEYS is not configured.' >&2
+            exit 2
+          fi
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          python -m pipeline.diagnostics.gemini \
+            --output gemini-api-capability-diagnostic.json
+
+      - name: Upload redacted diagnostic report
+        if: ${{ always() && hashFiles('gemini-api-capability-diagnostic.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-api-capability-diagnostic
+          path: gemini-api-capability-diagnostic.json
+          if-no-files-found: error
+          retention-days: 7
+
+  telegram-intake:
+    name: Validate public Telegram intake
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Dedicated user-authorized MTProto session. GitHub masks encrypted
+      # secret values, and the downloader never prints them.
+      CLIPFORGE_TELEGRAM_API_ID: ${{ secrets.CLIPFORGE_TELEGRAM_API_ID }}
+      CLIPFORGE_TELEGRAM_API_HASH: ${{ secrets.CLIPFORGE_TELEGRAM_API_HASH }}
+      CLIPFORGE_TELEGRAM_SESSION: ${{ secrets.CLIPFORGE_TELEGRAM_SESSION }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FFmpeg and source downloader dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install 'yt-dlp[default]>=2026.1,<2027' 'requests>=2.32,<3' 'telethon>=1.44,<2' 'cryptg>=0.4,<1'
+
+      - name: Stage a synthetic telegram_channel job request
+        shell: bash
+        env:
+          TELEGRAM_POST: ${{ inputs.telegram_post }}
+        run: |
+          set -euo pipefail
+          mkdir -p jobs/diag-telegram-intake work
+          python - "$TELEGRAM_POST" <<'PY'
+          import json, sys
+          request = {
+              "job_id": "diag-telegram-intake",
+              "mode": "manual",
+              "source": {"kind": "telegram_channel", "value": sys.argv[1]},
+          }
+          with open("jobs/diag-telegram-intake/stage-a-request.json", "w", encoding="utf-8") as fh:
+              json.dump(request, fh, indent=2)
+              fh.write("\n")
+          PY
+
+      - name: Download and verify the requested public Telegram channel source
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          python -m pipeline.stage_a.ingest diag-telegram-intake work
+          test -s work/source_input.bin || test -s work/original.*
+          SOURCE_FILE="$(ls work/original.* 2>/dev/null || echo work/source_input.bin)"
+          duration="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$SOURCE_FILE")"
+          python - "$duration" <<'PY'
+          import sys
+          duration = float(sys.argv[1])
+          if duration <= 0:
+              raise SystemExit('Downloaded Telegram media has no positive duration.')
+          print(f'Validated public Telegram channel video duration: {duration:.3f} seconds')
+          PY
+
+      - name: Verify public Telegram group links fail before media processing
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYTHONPATH="$GITHUB_WORKSPACE"
+          mkdir -p jobs/diag-telegram-group
+          python - <<'PY'
+          import json
+          request = {
+              "job_id": "diag-telegram-group",
+              "mode": "manual",
+              "source": {"kind": "telegram_channel", "value": "https://t.me/motionsaltdownloads/2"},
+          }
+          with open("jobs/diag-telegram-group/stage-a-request.json", "w", encoding="utf-8") as fh:
+              json.dump(request, fh, indent=2)
+              fh.write("\n")
+          PY
+          set +e
+          python -m pipeline.stage_a.ingest diag-telegram-group work-group > work-group/group-source.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected the public Telegram group link to fail.' >&2
+            exit 1
+          fi
+          # Telegram may label a group post as no accessible media in MTProto,
+          # but it must never be accepted as a Stage A source.
+          echo 'Confirmed rejection for unsupported public Telegram group source.'
+
+      - name: Remove synthetic diagnostic job folders
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf jobs/diag-telegram-intake jobs/diag-telegram-group
