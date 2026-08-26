@@ -24,18 +24,18 @@
     "completed": [
       "pipeline/publish/__init__.py",
       "pipeline/publish/zernio.py (port of legacy zernio_publish.py + zernio_state.py + zernio_targets.py + zernio_schedule.py + zernio_workflow_state.py + zernio_manual_resolve.py into one module; unified CLI subcommand set; syntax-checked and importable)",
-      "pipeline/tests/test_publish_zernio.py (72 offline tests: validation helpers, metadata/hashtag/tag normalization, targets encode/decode + settings.auto_publish, queue helpers, plan_smart_schedule daily/hourly/collision/custom-start, aggregate_publishing_status, post_summary, reconcile_post_status polling via mock opener, HTTP transport error sanitization, publish_video happy path + 409 dedup + per-platform partial failure + missing media, retry/update/cancel, write_publishing_state/publishing_error_state/read_json_object_safely, resolve_manual_dispatch retry-vs-fresh; full pipeline suite 164 green)"
+      "pipeline/tests/test_publish_zernio.py (72 offline tests: validation helpers, metadata/hashtag/tag normalization, targets encode/decode + settings.auto_publish, queue helpers, plan_smart_schedule daily/hourly/collision/custom-start, aggregate_publishing_status, resolve-manual retry-vs-fresh) — all green",
+      ".github/workflows/publish.yml (unified replacement for legacy zernio-publish.yml + zernio-manual-publish.yml: discover/publish/retry/update/cancel + action=manual resolving retry-vs-fresh in-run; durable serial queue via clipforge-zernio-publishing concurrency group; Stage-B complete gate; final.mp4 release download; smart schedule with external-post collision check; status.publishing + branding/zernio_queue.json committed back; YAML-validated)"
     ],
     "remaining": [
-      ".github/workflows/publish.yml (discover/publish/retry/update/cancel + manual-resolve; durable serial queue)",
       "Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle)",
       "Bot per-post actions on complete task status (task:pub wiring: publish/retry/update/cancel dispatch)",
       "Stage B automatic-publish dispatch step when settings enable auto_publish"
     ],
     "resume_from": {
-      "file": ".github/workflows/publish.yml",
-      "component": "publish.yml combined workflow",
-      "next_operation": "author unified publish.yml (dispatch inputs incl. action=manual for retry-vs-fresh resolve; durable concurrency group; Stage-B complete gate; commit publishing state + queue back)"
+      "file": "bot/src/commands/",
+      "component": "Zernio settings screens + task:pub per-post actions",
+      "next_operation": "port bot Zernio settings sub-screens from _legacy/telegram-bot onto the new bot/src command/view structure (accounts, mode, smart schedule, target selection, auto-publish toggle), then wire task:pub publish/retry/update/cancel dispatches to publish.yml"
     }
   },
   "phases": [
@@ -331,9 +331,21 @@
       "date_utc": "2026-08-26",
       "summary": "Built the telegram_channel_subsystem phase in full AND closed the relay ingest gap. (1) pipeline/stage_a/telegram_channel.py — verbatim port of the legacy MTProto public-channel download: require_original_repo (server-side github.repository check) + fail-closed mtproto_credentials_available gate, the _download_telegram_mtproto flow (entity validation rejecting groups, media/video checks, 5 GiB cap, 45-minute timeouts, parallel transfer with single-connection fallback via the already-extracted relay/mtproto_transfer.py), plus the yt-dlp public-post helpers preserved for parity. (2) ingest.py wiring — telegram_channel kind and t.me post URLs handed in as url kind both route to the §9.1 path (legacy download_drive.py main() dispatch semantics preserved). (3) stage-a.yml — ingest step receives CLIPFORGE_TELEGRAM_API_ID/HASH/SESSION by name only (absent on clones = the security boundary's second layer) and installs telethon/cryptg. (4) Relay follow-up closed — ingest.py _gate_telegram_relay replaced with the real relay-asset download: metadata validation (tag regex, 1800 MiB cap, 64-hex checksum), disk preflight, GitHub releases-by-tag + octet-stream asset fetch, streaming SHA-256 verification, partial-file cleanup. Tests: 11 new Stage A tests (28 total in test_stage_a.py); full suite 116 Python + 37 JS all green.",
       "commits": "telegram-channel-session-1 commits on main (2026-08-26): 45cfb94, 35b5a56, e0a1d85, baaf385"
+    },
+    {
+      "session": "publish-zernio-session-2",
+      "date_utc": "2026-08-26",
+      "summary": "publish_zernio step 3/6: authored .github/workflows/publish.yml, the unified Zernio workflow replacing legacy zernio-publish.yml and zernio-manual-publish.yml per ARCHITECTURE.md §4. All six actions (discover/publish/retry/update/cancel/manual) run against python -m pipeline.publish.zernio; the legacy manual-publish two-workflow hop (resolve -> dispatch zernio-publish.yml) is folded into action=manual, which resolves retry-vs-fresh via the ported resolve-manual CLI and executes the resolved operation in the same run under the same clipforge-zernio-publishing serial concurrency group. Stage-B complete gate, release final.mp4 download, smart-schedule external-post collision check, and durable commit-back of status.publishing + branding/zernio_queue.json are preserved verbatim from the legacy workflow. YAML validated; 72 zernio tests green.",
+      "files_created": [
+        ".github/workflows/publish.yml"
+      ],
+      "files_modified": [
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "python3 -m pytest pipeline/tests/test_publish_zernio.py -q (72 passed); YAML parse check on publish.yml"
     }
   ],
-  "next_action": "Build the 'publish_zernio' phase per its deliverables list in phases[]: port the Zernio publishing subsystem (discover/publish/retry/update/cancel, smart schedule, per-post management, durable serial queue) from _legacy/scripts/zernio_*.py and the zernio workflows per ARCHITECTURE.md §10/§14 without redesigning. Wire Bot A's task:pub action (currently a 'publish phase of the rebuild' stub) to it.",
+  "next_action": "Continue publish_zernio step 4/6: Bot Zernio settings sub-screens (accounts / mode / smart schedule / target selection / auto-publish toggle) ported from _legacy/telegram-bot onto bot/src, then step 5/6 task:pub per-post actions dispatching publish.yml, then step 6/6 Stage B automatic-publish dispatch step.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -356,7 +368,7 @@
     "date_utc": "2026-08-26",
     "result": "Verified the Stage-1 architecture phase end-to-end against the live repo: (1) legacy move is complete — commit d92ae30 moved every pre-existing path into _legacy/ with zero deletions (pure renames) and internal structure intact; (2) ARCHITECTURE.md §9 preserved-subsystem claims verified against _legacy code — the §9.1 original-repo gate is `ORIGINAL_CLIPFORGE_REPOSITORY` ('motionssalt/clipforge') at _legacy/telegram-bot/src/index.js:582 (permitsLegacyTelegramMtproto) plus central-only MTProto secrets, and the §9.2 relay chain is present in _legacy/telegram-bot/src/{relay.js,relay-worker.js}, _legacy/scripts/telegram_relay.py, _legacy/.github/workflows/telegram-relay.yml; (3) NEXT_SESSION_PROMPT.md contains the required 'repository is the source of truth / always resume from BUILD_PROGRESS.json' clause and the GITHUB_REPO_PAT placeholder; (4) ARCHITECTURE.md is precise enough for parallel sessions and contradicts nothing physically present. No redesign performed. The only gap found and fixed: the required-secrets inventory was missing from this checkpoint — now recorded under required_secrets (names + storage locations only, no values)."
   },
-  "last_session": "publish-zernio-session-1",
+  "last_session": "publish-zernio-session-2",
   "architecture_concerns_closed": [
     {
       "concern": "ingest.py _gate_telegram_relay fail-closed stub (relay-asset download gap)",
