@@ -58,7 +58,18 @@ export async function showHome(env, chatId, messageId = null) {
   return renderInteractiveView(env, chatId, homeText(snapshot), { replyMarkup: homeKeyboard() }, messageId);
 }
 
-/** /start and /help are the same screen (§8.2). */
+/** /start is the home screen. */
 export async function handleStart(env, chatId, messageId = null) {
   return showHome(env, chatId, messageId);
+}
+
+/**
+ * /help — the in-app command reference (bug-06). The command surface had
+ * drifted from the legacy bot with no current reference anywhere; /help now
+ * answers with the actual current command list instead of the home screen.
+ * It is intentionally a fresh message, never an edit of a prior view.
+ */
+export async function handleHelp(env, chatId) {
+  const { HELP_TEXT, renderInteractiveView } = await import('../views.js');
+  return renderInteractiveView(env, chatId, HELP_TEXT, {}, null);
 }
