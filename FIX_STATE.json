@@ -10,7 +10,7 @@
     },
     {
       "id": "bug-02",
-      "title": "Delete confirmation UX \u2014 in-place label toggle",
+      "title": "Delete confirmation UX — in-place label toggle",
       "status": "done",
       "notes": "Tasks list delete button now toggles the row label in-place to \"Confirm Delete?\" instead of switching views. Second tap on that row executes delete. Full-page confirm card kept for task-detail view (no row to toggle there) via new task:delfrom callback. task:del is reserved for the list inline toggle. Confidence: high.",
       "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"
@@ -19,15 +19,15 @@
       "id": "bug-03",
       "title": "Clarify task cleanup (1h) vs task expiry (12h)",
       "status": "done",
-      "notes": "Verified: mechanisms are correctly distinct. Task expiry lives in pipeline/status.py (DEFAULT_TTL_SECONDS = 12*3600) and is written per-job into status.json as expires_at_epoch. Cleanup lives in .github/workflows/cleanup.yml (hourly cron \"7 * * * *\") and pipeline/cleanup/expired.py::job_is_expired, which ONLY deletes when expires_at_epoch <= now (or created_at + CLIPFORGE_TTL_SECONDS <= now, default 43200s = 12h). Hourly cadence does NOT shorten job lifetime to 1h. One benign caveat: a job folder with no readable status.json is treated as expired immediately (legacy fallback) \u2014 Stage A writes status.json as its first commit so this only fires on already-broken jobs. No code change required.",
+      "notes": "Verified: mechanisms are correctly distinct. Task expiry lives in pipeline/status.py (DEFAULT_TTL_SECONDS = 12*3600) and is written per-job into status.json as expires_at_epoch. Cleanup lives in .github/workflows/cleanup.yml (hourly cron \"7 * * * *\") and pipeline/cleanup/expired.py::job_is_expired, which ONLY deletes when expires_at_epoch <= now (or created_at + CLIPFORGE_TTL_SECONDS <= now, default 43200s = 12h). Hourly cadence does NOT shorten job lifetime to 1h. One benign caveat: a job folder with no readable status.json is treated as expired immediately (legacy fallback) — Stage A writes status.json as its first commit so this only fires on already-broken jobs. No code change required.",
       "commit": ""
     },
     {
       "id": "bug-04",
       "title": "Torrent method broken (regression vs _legacy/)",
-      "status": "in_progress",
-      "notes": "Diffing torrent implementation vs _legacy/. Locating both.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: _resolve_magnet_metadata ran aria2 metadata-only fetch with check=True and --max-tries=3, no --bt-stop-timeout/--seed-ratio=0. aria2 saves the .torrent manifest then exits non-zero while stopping, so check=True raised IngestError on every successful fetch. Legacy stage-a.yml used --bt-stop-timeout=120 --seed-ratio=0 --max-tries=1 --file-allocation=none and judged success by whether the metadata file was saved, not the exit code. Fix: restored those exact flags, check=False, and treat success as find_saved_metadata() locating the saved manifest (raises IngestError only if no manifest appears). Payload download flags already matched legacy exactly (verified diff). Index numbering (1-based manifest index passed straight to aria2 --select-file) verified identical in both implementations. Confidence: high on the mechanism; not verified against a live swarm (no aria2/peers in sandbox).",
+      "commit": "83b9c2d99a6fb92daac9eb7037fce904c257356c"
     },
     {
       "id": "bug-05",
@@ -73,7 +73,7 @@
     },
     {
       "id": "bug-11",
-      "title": "Video quality \u2014 CPU sharpening/upscale pass",
+      "title": "Video quality — CPU sharpening/upscale pass",
       "status": "pending",
       "notes": "Add unsharp mask + edge enhancement + detail-preserving upscale to render pipeline. CPU-only (GH Actions). Approximate AE-style crisp pseudo-4K without artifacts.",
       "commit": ""
@@ -82,7 +82,7 @@
       "id": "bug-12",
       "title": "Gemini API key validation false rejection",
       "status": "pending",
-      "notes": "Bot rejects valid Gemini API keys \u2014 likely bad regex/format check. Fix.",
+      "notes": "Bot rejects valid Gemini API keys — likely bad regex/format check. Fix.",
       "commit": ""
     }
   ]
