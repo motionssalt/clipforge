@@ -32,9 +32,9 @@
     {
       "id": "bug-05",
       "title": "Telegram direct file/video forward broken (regression vs _legacy/)",
-      "status": "in_progress",
-      "notes": "Investigating direct video forward regression vs _legacy/ telegram bot.",
-      "commit": ""
+      "status": "done",
+      "notes": "Investigated end-to-end vs _legacy/. relayVideoMetadata (bot/src/relay.js) is byte-identical to legacy, and the in-wizard relay staging path (handleWizardRelayVideo, §9.2 Bot A→group→Bot B) is intact — so a video sent at the wizard source step still stages correctly. The regression was in handleMessage routing: legacy index.js:1779 routed message.video → handleRelayVideo at the TOP level, which always produced an explicit reply (\"not expected — start a task first\") even with no flow active. The new handleMessage had NO video/document branch, so a direct forward outside an active wizard fell silently through to showHome — the \"forwarding no longer works\" symptom (compounded by the bug-01 edit-in-place root cause, already fixed). Fix: added a top-level video/document branch that acknowledges the forward and points the user at the 🎬 New video entry point. Confidence: high on the routing regression; the in-wizard relay path was verified by code inspection only (no live Telegram/relay-group access from sandbox).",
+      "commit": "2619378da788f3e3d7ec7d9941a209d6aee70bff"
     },
     {
       "id": "bug-06",
