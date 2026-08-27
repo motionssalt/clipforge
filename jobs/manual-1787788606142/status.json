@@ -10,9 +10,9 @@
     "is_final": false
   },
   "state": "error",
-  "message": "Stage A failed. See workflow run for logs.",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33090759415",
   "created_at_epoch": 1787788662,
-  "updated_at_epoch": 1787788698,
+  "updated_at_epoch": 1787846357,
   "expires_at_epoch": 1787831862,
   "release_tag": "clipforge-manual-1787788606142",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787788606142",
