@@ -177,40 +177,109 @@ jobs:
             echo "WARN: stage_b_running status push failed after 3 attempts; the final status commit will carry it." >&2
           fi
 
+      # ---------------------------------------------------------------------
+      # bug-20: GitHub's /releases/tags/<tag> endpoint is eventually consistent
+      # relative to a very-recent asset upload. When Stage A dispatches Stage B
+      # via workflow_dispatch immediately after publishing the release, the
+      # first API read here can return the release WITHOUT the source video
+      # asset yet visible (or with an asset entry whose upload state is not
+      # "uploaded"), even though softprops/action-gh-release@v2 has already
+      # completed the upload from the runner's side. Additionally an asset
+      # entry can appear in "starter" state momentarily after creation. We
+      # poll with bounded exponential backoff until source_input.bin (or the
+      # legacy original.* fallback) is present AND its state is "uploaded",
+      # then hand its id + name to the download step. This is a genuine
+      # eventual-consistency race, so a bounded retry IS the correct fix.
+      # ---------------------------------------------------------------------
       - name: Load release metadata (find source video asset)
         id: relmeta
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.jid.outputs.release_tag }}
         run: |
           set -euo pipefail
-          tag="${{ steps.jid.outputs.release_tag }}"
-          json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}")"
-          echo "$json" > work_release.json
-          rurl="$(python -c "import json; print(json.load(open('work_release.json')).get('html_url',''))")"
-          echo "release_url=$rurl" >> "$GITHUB_OUTPUT"
-
-          # The new Stage A publishes the original source as
-          # `source_input.bin` (ARCHITECTURE.md §7.2); legacy Stage A releases
-          # used `original.<ext>`. Accept both so Stage B works against either.
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          data = json.load(open("work_release.json"))
-          assets = data.get("assets", [])
+          # Bounded polling: up to ~90s total wall time (attempts at
+          # 0, 3, 6, 10, 15, 20, 30 seconds cumulative). Enough for the
+          # observed GitHub eventual-consistency lag on release-asset reads
+          # (single-digit seconds in practice), without stalling a real
+          # "release/asset genuinely missing" failure for too long.
+          delays=(0 3 3 4 5 5 10 15 20 25)
+          attempt=0
+          release_url=""
+          orig_name=""
+          orig_id=""
+          for delay in "${delays[@]}"; do
+            attempt=$((attempt + 1))
+            if [ "$delay" -gt 0 ]; then
+              echo "Waiting ${delay}s before release-metadata retry #${attempt}..."
+              sleep "$delay"
+            fi
+            if ! json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" 2>/dev/null)"; then
+              echo "Attempt ${attempt}: release ${RELEASE_TAG} not readable yet (API returned non-zero)."
+              continue
+            fi
+            echo "$json" > work_release.json
+            # Parse the release and choose the source asset. Only accept an
+            # asset whose upload state is "uploaded" — GitHub briefly reports
+            # assets in states like "starter" or "new" while the upload is
+            # still finalizing, and downloading those returns a truncated or
+            # empty body without a hard HTTP error.
+            parsed="$(python - <<'PY'
+          import json, os
+          with open("work_release.json", encoding="utf-8") as fh:
+              data = json.load(fh)
+          assets = data.get("assets") or []
+          def is_ready(asset):
+              state = (asset.get("state") or "").lower()
+              # Older API responses sometimes omit state entirely; treat that
+              # as ready to preserve behavior on releases that predate the
+              # field being surfaced.
+              return state in ("", "uploaded")
           pick = None
           for a in assets:
-              if a["name"] == "source_input.bin":
+              if a.get("name") == "source_input.bin" and is_ready(a):
                   pick = a
                   break
           if pick is None:
               for a in assets:
-                  if a["name"].startswith("original."):
+                  name = a.get("name") or ""
+                  if name.startswith("original.") and is_ready(a):
                       pick = a
                       break
+          summary = {
+              "html_url": data.get("html_url") or "",
+              "asset_count": len(assets),
+              "asset_names": [a.get("name") for a in assets],
+              "asset_states": {a.get("name"): (a.get("state") or "") for a in assets},
+          }
           if pick is not None:
-              print(f"orig_name={pick['name']}")
-              print(f"orig_id={pick['id']}")
+              summary["orig_name"] = pick.get("name") or ""
+              summary["orig_id"] = pick.get("id") or ""
+          print(json.dumps(summary))
           PY
+          )"
+            release_url="$(python -c "import json,sys; print(json.loads(sys.argv[1]).get('html_url',''))" "$parsed")"
+            orig_name="$(python -c "import json,sys; print(json.loads(sys.argv[1]).get('orig_name',''))" "$parsed")"
+            orig_id="$(python -c "import json,sys; print(json.loads(sys.argv[1]).get('orig_id',''))" "$parsed")"
+            asset_count="$(python -c "import json,sys; print(json.loads(sys.argv[1]).get('asset_count',0))" "$parsed")"
+            asset_names="$(python -c "import json,sys; print(', '.join([n for n in json.loads(sys.argv[1]).get('asset_names',[]) if n]))" "$parsed")"
+            echo "Attempt ${attempt}: release ${RELEASE_TAG} has ${asset_count} asset(s) visible: [${asset_names}]"
+            if [ -n "$orig_id" ] && [ -n "$orig_name" ]; then
+              echo "Attempt ${attempt}: found ready source asset '${orig_name}' (id=${orig_id})."
+              break
+            fi
+            echo "Attempt ${attempt}: source asset not yet visible/ready."
+          done
+          if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
+            echo "Could not find the source video asset (source_input.bin / original.*) in release ${RELEASE_TAG} after ${attempt} attempts. Final visible assets: [${asset_names:-none}]" >&2
+            exit 1
+          fi
+          {
+            echo "release_url=${release_url}"
+            echo "orig_name=${orig_name}"
+            echo "orig_id=${orig_id}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Download source video from release
         shell: bash
@@ -222,12 +291,28 @@ jobs:
           orig_id="${{ steps.relmeta.outputs.orig_id }}"
           orig_name="${{ steps.relmeta.outputs.orig_name }}"
           if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
+            # Belt-and-suspenders: relmeta guarantees these are set, but keep
+            # the guard so an accidentally-empty output surfaces cleanly.
             echo "Could not find the source video asset (source_input.bin / original.*) in release ${{ steps.jid.outputs.release_tag }}" >&2
             exit 1
           fi
-          gh api -H "Accept: application/octet-stream" \
-            "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" \
-            > "work/${orig_name}"
+          # Small download retry loop for transient 5xx / connection resets on
+          # the asset download endpoint (unrelated to the metadata race above,
+          # but observed occasionally on large release assets).
+          for attempt in 1 2 3; do
+            if gh api -H "Accept: application/octet-stream" \
+                "repos/${GITHUB_REPOSITORY}/releases/assets/${orig_id}" \
+                > "work/${orig_name}"; then
+              break
+            fi
+            echo "Asset download attempt ${attempt} failed — retrying..." >&2
+            rm -f "work/${orig_name}"
+            sleep $((attempt * 3))
+          done
+          if [ ! -s "work/${orig_name}" ]; then
+            echo "Asset download produced an empty file for ${orig_name} after 3 attempts." >&2
+            exit 1
+          fi
           ls -lh "work/${orig_name}"
           echo "ORIGINAL_PATH=work/${orig_name}" >> "$GITHUB_ENV"
 
