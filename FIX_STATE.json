@@ -60,30 +60,30 @@
     {
       "id": "bug-09",
       "title": "Copy button for agent prompts",
-      "status": "pending",
-      "notes": "Add inline button next to agent prompt output that copies text to clipboard.",
-      "commit": ""
+      "status": "done",
+      "notes": "Added a \"📋 Copy prompt\" inline button to sendAgentPrompt using the Bot API copy_text field (copies to clipboard on tap). copy_text is capped at 256 chars, so the button carries a compact canonical prompt (focus clause dropped only if it would overflow); the FULL prompt remains in the message inside a <pre> block, which Telegram clients copy with one tap. buttons() in telegram.js passes button objects through verbatim, so copy_text reaches the API unmodified. node --check passes. Confidence: high; not verified against a live bot.",
+      "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
     },
     {
       "id": "bug-10",
       "title": "production.json prompt output format",
-      "status": "pending",
-      "notes": "Prompt must instruct: prefer file attachment; fallback to triple-backtick code block for one-tap copy.",
-      "commit": ""
+      "status": "done",
+      "notes": "Agent prompt now instructs: PREFER delivering production.json as a file attachment; if a file cannot be produced, wrap the complete JSON in a single triple-backtick code block for one-action copy, no commentary outside the file/block. Upload guidance text notes multi-bubble pastes are reassembled (bug-08); bug-08 stripCodeFence consumes the fenced fallback. node --check passes.",
+      "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
     },
     {
       "id": "bug-11",
       "title": "Video quality — CPU sharpening/upscale pass",
-      "status": "pending",
-      "notes": "Add unsharp mask + edge enhancement + detail-preserving upscale to render pipeline. CPU-only (GH Actions). Approximate AE-style crisp pseudo-4K without artifacts.",
-      "commit": ""
+      "status": "done",
+      "notes": "Stage B already had a CPU-only quality pass (enhance.py: hqdn3d denoise, Hald color grade, cas edge enhancement, threshold-protected unsharp, gradfun deband; wired into run.py/stage-b.yml with --enhance default true). Missing piece was the upscale: added detail-preserving 2x lanczos upscale capped at 2160x3840 (pseudo-4K) between color grade and sharpeners — the AE-style scale-then-sharpen pass — all CPU filters, no GPU dependency. 2160x3840 exceeds H.264 Level 4.0, so enhance_one probes the source and steps up to Level 5.1 with 20M/40M VBV only when needed; smaller sources keep the 4.0 contract. validate_enhanced checks profile/pix_fmt/fps only, so the mobile-safe contract is untouched; atomic swap and fail-closed validation retained. Verified by ast.parse, not a live render. Confidence: high on the chain; 2x upscale cost on GH runners is real but bounded for short vertical clips.",
+      "commit": "5bc9ba3460796be247aa9fce92e492ca15a5b676"
     },
     {
       "id": "bug-12",
       "title": "Gemini API key validation false rejection",
-      "status": "pending",
-      "notes": "Bot rejects valid Gemini API keys — likely bad regex/format check. Fix.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: handleGeminiKeyMessage validated the RAW pasted text with /^AIza[A-Za-z0-9_-]{10,}$/ — a valid key pasted with surrounding quotes, spaces, or a trailing newline failed the anchored regex. Fix: normalize first (strip quotes and ALL whitespace), validate the normalized key, store the sanitized key. Format check stays strict. node --check passes. Confidence: high on the normalization fix; the exact reported key value was not available, but normalization covers the standard paste-corruption cases.",
+      "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
     }
   ]
 }
