@@ -9,18 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "queued",
-  "message": "Queued for the private Telegram relay — Stage A starts after the source is delivered to this clone.",
+  "state": "stage_a_running",
+  "message": "Stage A starting — ingesting source (telegram_relay)",
   "created_at_epoch": 1787836859,
-  "updated_at_epoch": 1787836859,
+  "updated_at_epoch": 1787836957,
   "expires_at_epoch": 1787880059,
   "release_tag": "clipforge-manual-1787836818485",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787836818485",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 33076421139,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33076421139",
+    "code_ref": "37595fa62b4e0ae622861d869c3d4585fb1469dd"
   },
   "publishing": {
     "status": "not_requested",
