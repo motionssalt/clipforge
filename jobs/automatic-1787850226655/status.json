@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "automatic_analysis_running",
-  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with Gemini.",
+  "state": "awaiting_plan",
+  "message": "Automatic (Gemini) analysis could not complete — quota exhausted or the provider failed. Falling back to manual mode: tap Get agent prompt in the task view for the copyable prompt, generate production.json with your own AI, then tap Upload production.json.",
   "created_at_epoch": 1787853093,
-  "updated_at_epoch": 1787853547,
+  "updated_at_epoch": 1787854456,
   "expires_at_epoch": 1787896293,
   "release_tag": "clipforge-automatic-1787850226655",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787850226655",
