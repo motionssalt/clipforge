@@ -14,7 +14,7 @@
       "title": "Pasted production.json \u2014 spurious 'send the rest' prompt and no chat cleanup",
       "status": "pending",
       "notes": "1) Bot tells user to send remaining parts even when all split bubbles already arrived and full JSON assembled successfully right after \u2014 must not appear if bot will succeed anyway. 2) After full production.json accepted across split bubbles, delete all user message bubbles to avoid chat clutter (only after confirmed successful parse/acceptance).",
-      "commit": ""
+      "commit": "737ab12"
     },
     {
       "id": "bug-28",
