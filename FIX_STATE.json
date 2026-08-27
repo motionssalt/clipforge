@@ -123,9 +123,9 @@
     {
       "id": "bug-17",
       "title": "AI mode should fall back to manual on Gemini failure",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "stage-a.yml gained a failure()-gated step (automatic mode only, requires a persisted status.json): writes state=awaiting_plan with 'Automatic (Gemini) analysis could not complete \u2014 quota exhausted or the provider failed. Falling back to manual mode: tap Get agent prompt in the task view for the copyable prompt, generate production.json with your own AI, then tap Upload production.json.', commits/pushes it, and drops work/automatic_fallback.active so the generic on-failure handler does not overwrite the recovery state. In awaiting_plan the task view already offers Get agent prompt (copyable, with copy_text button) and Upload production.json \u2014 the required recovery path. Validated by yaml parse + inspection; not run live.",
+      "commit": "f328cccbbeb21c9209c5686070c213c4823341f7"
     },
     {
       "id": "bug-18",
