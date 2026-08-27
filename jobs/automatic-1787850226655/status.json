@@ -9,14 +9,24 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (drive)",
+  "state": "automatic_analysis_running",
+  "message": "Stage A complete. Automatic Mode is analyzing the released evidence with Gemini.",
   "created_at_epoch": 1787853093,
-  "updated_at_epoch": 1787853144,
+  "updated_at_epoch": 1787853547,
   "expires_at_epoch": 1787896293,
   "release_tag": "clipforge-automatic-1787850226655",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787850226655",
-  "assets": {},
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/00_READ_THIS_FIRST.txt",
+    "analysis_720p.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/analysis_720p.mp4",
+    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/event_composites.zip",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/key_moments.json",
+    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/manifest.json",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/screenshots.zip",
+    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/source_input.bin",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/transcript.json"
+  },
   "run": {
     "workflow_run_id": 33100555321,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33100555321",
