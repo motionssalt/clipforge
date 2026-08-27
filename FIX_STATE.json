@@ -130,9 +130,9 @@
     {
       "id": "bug-18",
       "title": "Gemini key still rejected (previous fix incomplete \u2014 re-investigate)",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "Re-investigated from scratch (did not reuse prior diagnosis). Three layered findings: (1) bug-12's normalization fix sat in the repo UNDEPLOYED \u2014 Deploy Bots run 33090510465 failed on two stale tests (tasks.test.mjs expected the pre-bug-07 'Active tasks' heading; wizard.test.mjs expected pre-bug-02 'task:del:A' in the detail keyboard), so the live bot still ran the old validator. Both tests fixed; the next deploy ships the fix. (2) The regex ^AIza[A-Za-z0-9_-]{10,}$ hard-rejects Google's CURRENT key format: AI Studio now issues keys with an 'AQ.' prefix (dot included) and Google treats keys as opaque strings it can re-brand \u2014 anchoring on AIza is exactly where the false rejection hides. (3) Replaced with /^[A-Za-z0-9._-]{30,128}$/ \u2014 accepts AIza\u2026 (39 chars) and AQ.\u2026 keys, still rejects whitespace/garbage. Code lives in the same commit as bug-16 (same file, bot/src/index.js).",
+      "commit": "7c6cbb96bf9ea16082f51fd2701b2ee1d013aa8a"
     },
     {
       "id": "bug-19",
