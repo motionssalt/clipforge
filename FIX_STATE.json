@@ -18,8 +18,8 @@
     {
       "id": "bug-03",
       "title": "Clarify task cleanup (1h) vs task expiry (12h)",
-      "status": "in_progress",
-      "notes": "Investigating current cleanup/expiry implementations.",
+      "status": "done",
+      "notes": "Verified: mechanisms are correctly distinct. Task expiry lives in pipeline/status.py (DEFAULT_TTL_SECONDS = 12*3600) and is written per-job into status.json as expires_at_epoch. Cleanup lives in .github/workflows/cleanup.yml (hourly cron \"7 * * * *\") and pipeline/cleanup/expired.py::job_is_expired, which ONLY deletes when expires_at_epoch <= now (or created_at + CLIPFORGE_TTL_SECONDS <= now, default 43200s = 12h). Hourly cadence does NOT shorten job lifetime to 1h. One benign caveat: a job folder with no readable status.json is treated as expired immediately (legacy fallback) \u2014 Stage A writes status.json as its first commit so this only fires on already-broken jobs. No code change required.",
       "commit": ""
     },
     {
