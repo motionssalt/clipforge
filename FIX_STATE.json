@@ -39,9 +39,9 @@
     {
       "id": "bug-06",
       "title": "Command list drift / outdated commands",
-      "status": "in_progress",
-      "notes": "Auditing current commands vs legacy/docs; updating in-app help and README.",
-      "commit": ""
+      "status": "done",
+      "notes": "Current surface (constants.js COMMANDS + index.js dispatch): /start /help /new /tasks /done /settings /cancel. Legacy had /manual /automatic /status — folded into /new and /tasks per §8.2. Drift found: /help rendered the home screen with NO command list anywhere in-app, and README had no command reference. Fix: added HELP_TEXT (views.js) listing every current command + accepted /new sources + explicit note about removed legacy commands; added handleHelp (commands/start.js) as a fresh message; routed /help to it in index.js (/start unchanged). README.md gained a command reference table. node --check passes on all touched files. Confidence: high.",
+      "commit": "2948d943c1df27e31a717f4824107383916f6e62"
     },
     {
       "id": "bug-07",
