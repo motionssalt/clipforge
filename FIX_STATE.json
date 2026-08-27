@@ -102,9 +102,9 @@
     {
       "id": "bug-14",
       "title": "Series mode production.json series_id mismatch (series- vs manual-)",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: neither the Gemini automatic-mode prompt nor the manual agent prompt stated WHICH series_id to embed \u2014 they only said 'include series_id, part, start_seconds'. The agent invented one from context and picked the job-id format (manual-1787840065710); stage-b.yml cross-checks the plan against stage-a-request.json's series id (series-1787840084142) \u2014 exactly the reported pair from the real run. Fix: prompt.py --series-id (passed by bundle.py from the request) + SERIES_DIRECTIVE now reads 'series_id (EXACTLY \"<id>\" \u2014 copy verbatim...)'; bot sendAgentPrompt (manual flow) injects the request's exact series_id/part/start_seconds into the full prompt and the copy_text button. Smoke-tested: generated 00_READ_THIS_FIRST.txt contains the exact series id.",
+      "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
     },
     {
       "id": "bug-15",
@@ -137,9 +137,9 @@
     {
       "id": "bug-19",
       "title": "Script generation \u2014 hook & cliffhanger quality overhaul",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "Applied to pipeline/plan/prompt.py \u2014 the single template (00_READ_THIS_FIRST.txt) governing BOTH the Gemini automatic-mode script and the external-agent manual script. SERIES_DIRECTIVE rewritten with the guide's 10 sections adapted to series parts (hook = central question; cliffhanger = one specific unanswered question grown from the part's escalation; non-final structure Hook->Setup->Escalation->Major Revelation->New Unanswered Question->Cliffhanger vs full-arc resolution for final parts; banned fake-suspense phrases; 10-question checklist referencing the real next part number). Main template's 'last cut' rule extended with earned-ending/information-gap/short-sentence rules so single videos benefit too. Groundedness constraints (no invented events) retained \u2014 the guide layers on top of factuality. Smoke-tested render: series id, part, next-part substituted correctly.",
+      "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
     }
   ]
 }
