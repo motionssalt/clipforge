@@ -1,146 +1,75 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
+  "started_at": "2026-08-27T00:00:00Z",
   "previous_sweeps": [
     {
       "branch": "agent/fix-sweep",
       "bugs": [
-        {
-          "id": "bug-01",
-          "title": "Message edit-vs-new-message dispatch logic",
-          "status": "done",
-          "notes": "Root cause: handleMessage code paths pass messageId=null to renderInteractiveView, but that function still edits state.activeViewId when set. Fix: clear activeViewId at the entry of handleMessage so user-sent messages always trigger sendMessage. Callback handling (button presses) remains unchanged and still edits in place via explicit messageId arg. This same root cause underlies bug-07 (plan upload success calls showTask which was editing away) and bug-08 (paste JSON success path). Confidence: high on the mechanism; will still make bug-07/08 their own separate fixes with additional coverage.",
-          "commit": "c97aa2e16c0a1ee83b22b964e748197d9c6249e5"
-        },
-        {
-          "id": "bug-02",
-          "title": "Delete confirmation UX \u2014 in-place label toggle",
-          "status": "done",
-          "notes": "Tasks list delete button now toggles the row label in-place to \"Confirm Delete?\" instead of switching views. Second tap on that row executes delete. Full-page confirm card kept for task-detail view (no row to toggle there) via new task:delfrom callback. task:del is reserved for the list inline toggle. Confidence: high.",
-          "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"
-        },
-        {
-          "id": "bug-03",
-          "title": "Clarify task cleanup (1h) vs task expiry (12h)",
-          "status": "done",
-          "notes": "Verified: mechanisms are correctly distinct. Task expiry lives in pipeline/status.py (DEFAULT_TTL_SECONDS = 12*3600) and is written per-job into status.json as expires_at_epoch. Cleanup lives in .github/workflows/cleanup.yml (hourly cron \"7 * * * *\") and pipeline/cleanup/expired.py::job_is_expired, which ONLY deletes when expires_at_epoch <= now (or created_at + CLIPFORGE_TTL_SECONDS <= now, default 43200s = 12h). Hourly cadence does NOT shorten job lifetime to 1h. One benign caveat: a job folder with no readable status.json is treated as expired immediately (legacy fallback) \u2014 Stage A writes status.json as its first commit so this only fires on already-broken jobs. No code change required.",
-          "commit": ""
-        },
-        {
-          "id": "bug-04",
-          "title": "Torrent method broken (regression vs _legacy/)",
-          "status": "done",
-          "notes": "Root cause: _resolve_magnet_metadata ran aria2 metadata-only fetch with check=True, --max-tries=3, and no --bt-stop-timeout/--seed-ratio=0. aria2 saves the .torrent manifest then exits non-zero while stopping, so check=True raised IngestError on every successful fetch. Legacy stage-a.yml used --bt-stop-timeout=120 --seed-ratio=0 --max-tries=1 --file-allocation=none and judged success by the saved metadata file, not the exit code. Fix: restored those flags, check=False, success = find_saved_metadata() locates the manifest; raises IngestError only if no manifest appears. Payload-download aria2 flags and 1-based manifest index passed to --select-file verified identical to legacy. Confidence: high on the mechanism; not verified against a live swarm (no aria2/peers in sandbox).",
-          "commit": "e06f5b9f234b595a2478066b39ecd8bb8e26723c"
-        },
-        {
-          "id": "bug-05",
-          "title": "Telegram direct file/video forward broken (regression vs _legacy/)",
-          "status": "done",
-          "notes": "Investigated end-to-end vs _legacy/. relayVideoMetadata (bot/src/relay.js) is byte-identical to legacy, and the in-wizard relay staging path (handleWizardRelayVideo, \u00a79.2 Bot A\u2192group\u2192Bot B) is intact \u2014 so a video sent at the wizard source step still stages correctly. The regression was in handleMessage routing: legacy index.js:1779 routed message.video \u2192 handleRelayVideo at the TOP level, which always produced an explicit reply (\"not expected \u2014 start a task first\") even with no flow active. The new handleMessage had NO video/document branch, so a direct forward outside an active wizard fell silently through to showHome \u2014 the \"forwarding no longer works\" symptom (compounded by the bug-01 edit-in-place root cause, already fixed). Fix: added a top-level video/document branch that acknowledges the forward and points the user at the \ud83c\udfac New video entry point. Confidence: high on the routing regression; the in-wizard relay path was verified by code inspection only (no live Telegram/relay-group access from sandbox).",
-          "commit": "2619378da788f3e3d7ec7d9941a209d6aee70bff"
-        },
-        {
-          "id": "bug-06",
-          "title": "Command list drift / outdated commands",
-          "status": "done",
-          "notes": "Current surface (constants.js COMMANDS + index.js dispatch): /start /help /new /tasks /done /settings /cancel. Legacy had /manual /automatic /status \u2014 folded into /new and /tasks per \u00a78.2. Drift found: /help rendered the home screen with NO command list anywhere in-app, and README had no command reference. Fix: added HELP_TEXT (views.js) listing every current command + accepted /new sources + explicit note about removed legacy commands; added handleHelp (commands/start.js) as a fresh message; routed /help to it in index.js (/start unchanged). README.md gained a command reference table. node --check passes on all touched files. Confidence: high.",
-          "commit": "2948d943c1df27e31a717f4824107383916f6e62"
-        },
-        {
-          "id": "bug-07",
-          "title": "Finished/errored tasks disappear from task list",
-          "status": "done",
-          "notes": "Root cause: commands/tasks.js showTasks filtered terminal entries out of /tasks (active = entries.filter(!isTerminal(state))), so complete/error/cancelled tasks vanished from the operator's main list; they were only reachable via /done. Fix: /tasks now lists ALL tasks sorted by creation time, with terminal rows marked \u2705 complete / \u26a0\ufe0f error / \u26d4 cancelled (plain-language state text via describeTaskState unchanged); delete and bug-02 in-place confirm-delete still work on terminal rows; /done retained for the completed-with-release-links view. Unused isTerminal import removed; node --check passes. Note: status.json expiry is 12h TTL with hourly cleanup purging only expired records (bug-03), so tasks older than the TTL may show as \"status unavailable\" \u2014 expected per design, not part of this bug. Confidence: high on the rendering fix; verified by code inspection, not a live bot run.",
-          "commit": "cce81ae0f04e5d96e757f756f6f9da866b1fa95f"
-        },
-        {
-          "id": "bug-08",
-          "title": "production.json paste support (multi-bubble reassembly)",
-          "status": "done",
-          "notes": "Telegram splits long pasted text into multiple message bubbles; each bubble used to hit handlePlanUploadMessage as a standalone message and fail JSON.parse. Fix: text uploads in the upload_plan flow now buffer fragments in state.pending.jsonBuffer; each new bubble is appended and the joined text is parsed only once looksLikePartialJson() reports balanced braces (string/escape-aware scan; code-fence stripping via stripCodeFence for the bug-10 fenced-block fallback). While partial, the bot acknowledges each fragment (\"received part N, M chars so far\") as a fresh message (bug-01 behavior). Guards: joined buffer capped at MAX_PLAN_BYTES (1 MB) with a clear error; buffer cleared on validation errors so a fresh paste starts clean; buffer cleared with the flow on success/cancel. File uploads are unaffected (complete by definition). Confidence: high on logic; verified by node --check and code inspection, not a live bot run.",
-          "commit": "290ff24d6e491a343b83b9fff0483dd251416a24"
-        },
-        {
-          "id": "bug-09",
-          "title": "Copy button for agent prompts",
-          "status": "done",
-          "notes": "Added a \"\ud83d\udccb Copy prompt\" inline button to sendAgentPrompt using the Bot API copy_text field (copies to clipboard on tap). copy_text is capped at 256 chars, so the button carries a compact canonical prompt (focus clause dropped only if it would overflow); the FULL prompt remains in the message inside a <pre> block, which Telegram clients copy with one tap. buttons() in telegram.js passes button objects through verbatim, so copy_text reaches the API unmodified. node --check passes. Confidence: high; not verified against a live bot.",
-          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
-        },
-        {
-          "id": "bug-10",
-          "title": "production.json prompt output format",
-          "status": "done",
-          "notes": "Agent prompt now instructs: PREFER delivering production.json as a file attachment; if a file cannot be produced, wrap the complete JSON in a single triple-backtick code block for one-action copy, no commentary outside the file/block. Upload guidance text notes multi-bubble pastes are reassembled (bug-08); bug-08 stripCodeFence consumes the fenced fallback. node --check passes.",
-          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
-        },
-        {
-          "id": "bug-11",
-          "title": "Video quality \u2014 CPU sharpening/upscale pass",
-          "status": "done",
-          "notes": "Stage B already had a CPU-only quality pass (enhance.py: hqdn3d denoise, Hald color grade, cas edge enhancement, threshold-protected unsharp, gradfun deband; wired into run.py/stage-b.yml with --enhance default true). Missing piece was the upscale: added detail-preserving 2x lanczos upscale capped at 2160x3840 (pseudo-4K) between color grade and sharpeners \u2014 the AE-style scale-then-sharpen pass \u2014 all CPU filters, no GPU dependency. 2160x3840 exceeds H.264 Level 4.0, so enhance_one probes the source and steps up to Level 5.1 with 20M/40M VBV only when needed; smaller sources keep the 4.0 contract. validate_enhanced checks profile/pix_fmt/fps only, so the mobile-safe contract is untouched; atomic swap and fail-closed validation retained. Verified by ast.parse, not a live render. Confidence: high on the chain; 2x upscale cost on GH runners is real but bounded for short vertical clips.",
-          "commit": "5bc9ba3460796be247aa9fce92e492ca15a5b676"
-        },
-        {
-          "id": "bug-12",
-          "title": "Gemini API key validation false rejection",
-          "status": "done",
-          "notes": "Root cause: handleGeminiKeyMessage validated the RAW pasted text with /^AIza[A-Za-z0-9_-]{10,}$/ \u2014 a valid key pasted with surrounding quotes, spaces, or a trailing newline failed the anchored regex. Fix: normalize first (strip quotes and ALL whitespace), validate the normalized key, store the sanitized key. Format check stays strict. node --check passes. Confidence: high on the normalization fix; the exact reported key value was not available, but normalization covers the standard paste-corruption cases.",
-          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
-        }
-      ]
+        {"id": "bug-01", "title": "Message edit-vs-new-message dispatch logic", "status": "done", "commit": "c97aa2e16c0a1ee83b22b964e748197d9c6249e5"},
+        {"id": "bug-02", "title": "Delete confirmation UX — in-place label toggle", "status": "done", "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"},
+        {"id": "bug-03", "title": "Clarify task cleanup (1h) vs task expiry (12h)", "status": "done", "commit": ""},
+        {"id": "bug-04", "title": "Torrent method broken", "status": "done", "commit": "e06f5b9f234b595a2478066b39ecd8bb8e26723c"},
+        {"id": "bug-05", "title": "Telegram direct file/video forward broken", "status": "done", "commit": "2619378da788f3e3d7ec7d9941a209d6aee70bff"},
+        {"id": "bug-06", "title": "Command list drift", "status": "done", "commit": "2948d943c1df27e31a717f4824107383916f6e62"},
+        {"id": "bug-07", "title": "Finished/errored tasks disappear from task list", "status": "done", "commit": "cce81ae0f04e5d96e757f756f6f9da866b1fa95f"},
+        {"id": "bug-08", "title": "production.json paste multi-bubble reassembly", "status": "done", "commit": "290ff24d6e491a343b83b9fff0483dd251416a24"},
+        {"id": "bug-09", "title": "Copy button for agent prompts", "status": "done", "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"},
+        {"id": "bug-10", "title": "production.json prompt output format", "status": "done", "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"},
+        {"id": "bug-11", "title": "Video quality — CPU sharpening/upscale pass", "status": "done", "commit": "5bc9ba3460796be247aa9fce92e492ca15a5b676"},
+        {"id": "bug-12", "title": "Gemini API key validation false rejection", "status": "done", "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"},
+        {"id": "bug-13", "title": "Stage A audio step failure (series mode)", "status": "done", "commit": "4cd6ef15026b02e381ebd3968d611ed6fe6f3567"},
+        {"id": "bug-14", "title": "Series mode production.json series_id mismatch", "status": "done", "commit": "b82df381384e8713bd4359c0464733a9ae72b504"},
+        {"id": "bug-15", "title": "Restart button shows stages that never ran", "status": "done", "commit": "89742c99e7d0768944190b290355ef9f740b3798"},
+        {"id": "bug-16", "title": "Restart gives no feedback/acknowledgment", "status": "done", "commit": "ca369956dea762d852309e01200000cb359aaa31"},
+        {"id": "bug-17", "title": "AI mode should fall back to manual on Gemini failure", "status": "done", "commit": "f328cccbbeb21c9209c5686070c213c4823341f7"},
+        {"id": "bug-18", "title": "Gemini key still rejected", "status": "done", "commit": "7c6cbb96bf9ea16082f51fd2701b2ee1d013aa8a"},
+        {"id": "bug-19", "title": "Script generation — hook & cliffhanger quality overhaul", "status": "done", "commit": "b82df381384e8713bd4359c0464733a9ae72b504"}
+      ],
+      "completed_at": "2026-08-27T16:44:14Z"
     }
   ],
   "bugs": [
     {
-      "id": "bug-13",
-      "title": "Stage A audio step failure (series mode via Telegram link)",
-      "status": "done",
-      "notes": "Root cause verified from real run 33090759415 logs: 'Restart Stage A' dispatched a fresh run that crashed at the 'Write initial status' step with ValueError: cannot transition terminal state 'error' -> 'stage_a_running'. (Note: the failing job's own message template says 'Stage A failed', which reads like an audio/transcribe failure but the true crash was this status gate at run start.) Fix: pipeline/status.py now permits terminal -> stage_a_running/stage_b_running (the restart re-open path) and error -> queued; complete stays locked against non-running states. Verified by code inspection; full suite unaffected.",
-      "commit": "4cd6ef15026b02e381ebd3968d611ed6fe6f3567"
+      "id": "bug-20",
+      "title": "Release asset not found during Stage B download",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     },
     {
-      "id": "bug-14",
-      "title": "Series mode production.json series_id mismatch (series- vs manual-)",
-      "status": "done",
-      "notes": "Root cause: neither the Gemini automatic-mode prompt nor the manual agent prompt stated WHICH series_id to embed \u2014 they only said 'include series_id, part, start_seconds'. The agent invented one from context and picked the job-id format (manual-1787840065710); stage-b.yml cross-checks the plan against stage-a-request.json's series id (series-1787840084142) \u2014 exactly the reported pair from the real run. Fix: prompt.py --series-id (passed by bundle.py from the request) + SERIES_DIRECTIVE now reads 'series_id (EXACTLY \"<id>\" \u2014 copy verbatim...)'; bot sendAgentPrompt (manual flow) injects the request's exact series_id/part/start_seconds into the full prompt and the copy_text button. Smoke-tested: generated 00_READ_THIS_FIRST.txt contains the exact series id.",
-      "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
+      "id": "bug-21",
+      "title": "Clone-update-push settings not appearing for main account",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     },
     {
-      "id": "bug-15",
-      "title": "Restart button shows stages that never ran",
-      "status": "done",
-      "notes": "taskKeyboard (bot/src/runtime.js) used to push both restart buttons for any error/cancelled state. Now the Stage B button appears only when status.message indicates Stage B actually ran (/stage b/i). Stage A restart is always offered for terminal tasks. Verified via node test: error with 'Stage A failed' shows only restarta; 'Stage B failed' shows both. bot/test/wizard.test.mjs covers both cases.",
-      "commit": "89742c99e7d0768944190b290355ef9f740b3798"
+      "id": "bug-22",
+      "title": "On-demand video delivery for finished tasks",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     },
     {
-      "id": "bug-16",
-      "title": "Restart gives no feedback/acknowledgment",
-      "status": "done",
-      "notes": "restartStageA/B (bot/src/index.js) now (1) edit the active view immediately with 'Restarting Stage A/B for task X \u2014 dispatching a fresh workflow run...' and (2) send a '\u2705 Stage A/B restart dispatched' message after dispatchWorkflow resolves, with a button back to the task status screen. Callback spinner already cleared by the router's answerCallback. node --check passes; logic verified by inspection (no live bot in sandbox).",
-      "commit": "ca369956dea762d852309e01200000cb359aaa31"
+      "id": "bug-23",
+      "title": "Telegraph help guide",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     },
     {
-      "id": "bug-17",
-      "title": "AI mode should fall back to manual on Gemini failure",
-      "status": "done",
-      "notes": "stage-a.yml gained a failure()-gated step (automatic mode only, requires a persisted status.json): writes state=awaiting_plan with 'Automatic (Gemini) analysis could not complete \u2014 quota exhausted or the provider failed. Falling back to manual mode: tap Get agent prompt in the task view for the copyable prompt, generate production.json with your own AI, then tap Upload production.json.', commits/pushes it, and drops work/automatic_fallback.active so the generic on-failure handler does not overwrite the recovery state. In awaiting_plan the task view already offers Get agent prompt (copyable, with copy_text button) and Upload production.json \u2014 the required recovery path. Validated by yaml parse + inspection; not run live.",
-      "commit": "f328cccbbeb21c9209c5686070c213c4823341f7"
+      "id": "bug-24",
+      "title": "Automatic Zernio publishing not triggering despite being enabled",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     },
     {
-      "id": "bug-18",
-      "title": "Gemini key still rejected (previous fix incomplete \u2014 re-investigate)",
-      "status": "done",
-      "notes": "Re-investigated from scratch (did not reuse prior diagnosis). Three layered findings: (1) bug-12's normalization fix sat in the repo UNDEPLOYED \u2014 Deploy Bots run 33090510465 failed on two stale tests (tasks.test.mjs expected the pre-bug-07 'Active tasks' heading; wizard.test.mjs expected pre-bug-02 'task:del:A' in the detail keyboard), so the live bot still ran the old validator. Both tests fixed; the next deploy ships the fix. (2) The regex ^AIza[A-Za-z0-9_-]{10,}$ hard-rejects Google's CURRENT key format: AI Studio now issues keys with an 'AQ.' prefix (dot included) and Google treats keys as opaque strings it can re-brand \u2014 anchoring on AIza is exactly where the false rejection hides. (3) Replaced with /^[A-Za-z0-9._-]{30,128}$/ \u2014 accepts AIza\u2026 (39 chars) and AQ.\u2026 keys, still rejects whitespace/garbage. Code lives in the same commit as bug-16 (same file, bot/src/index.js).",
-      "commit": "7c6cbb96bf9ea16082f51fd2701b2ee1d013aa8a"
-    },
-    {
-      "id": "bug-19",
-      "title": "Script generation \u2014 hook & cliffhanger quality overhaul",
-      "status": "done",
-      "notes": "Applied to pipeline/plan/prompt.py \u2014 the single template (00_READ_THIS_FIRST.txt) governing BOTH the Gemini automatic-mode script and the external-agent manual script. SERIES_DIRECTIVE rewritten with the guide's 10 sections adapted to series parts (hook = central question; cliffhanger = one specific unanswered question grown from the part's escalation; non-final structure Hook->Setup->Escalation->Major Revelation->New Unanswered Question->Cliffhanger vs full-arc resolution for final parts; banned fake-suspense phrases; 10-question checklist referencing the real next part number). Main template's 'last cut' rule extended with earned-ending/information-gap/short-sentence rules so single videos benefit too. Groundedness constraints (no invented events) retained \u2014 the guide layers on top of factuality. Smoke-tested render: series id, part, next-part substituted correctly.",
-      "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
+      "id": "bug-25",
+      "title": "Video quality regression — missing sharpening + unwanted vertical stretch",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-27T16:44:14Z"
+  ]
 }
