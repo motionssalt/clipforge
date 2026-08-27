@@ -32,8 +32,8 @@
     {
       "id": "bug-05",
       "title": "Telegram direct file/video forward broken (regression vs _legacy/)",
-      "status": "pending",
-      "notes": "Direct video forwards no longer work. Diff against _legacy/ and fix.",
+      "status": "in_progress",
+      "notes": "Investigating direct video forward regression vs _legacy/ telegram bot.",
       "commit": ""
     },
     {
