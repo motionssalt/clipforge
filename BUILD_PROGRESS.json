@@ -463,7 +463,7 @@
         "bot/test/tasks.test.mjs",
         "BUILD_PROGRESS.json"
       ],
-      "tests": "cd bot && npm test (92 passed at follow-up commit; the initial push showed 89/92 due to three test-side assertion needles that did not account for the marker rendering inside <b> tags — assertions corrected, implementation unchanged); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
+      "tests": "FINAL: cd bot && npm test (92 passed) — verified at commit fixing the test needles; PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed). Note: the feature commit itself briefly shipped 3 red tests whose needles did not match the rendered \"label</b> —\" row shape; two follow-up test-only commits fixed the assertions. Implementation was correct throughout."
     }
   ],
   "next_action": "Nothing queued — all four scoped items (Bugs 1-3 + Feature 4) are fixed, tested, committed, and pushed as separate commits. Watch the next hourly cleanup.yml run for the task-label-reclamation-report artifact confirming the one-time legacy-label cleanup against the live KV store.",
@@ -516,7 +516,7 @@
   },
   "last_session": {
     "id": "feature-4-unseen-task-marker",
-    "note": "Feature 4 complete; test assertions corrected in follow-up commit, all suites green."
+    "note": "All four scoped items pushed; both suites green (216 Python / 92 JS) at HEAD."
   },
   "architecture_concerns_closed": [
     {
