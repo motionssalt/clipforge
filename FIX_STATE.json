@@ -18,8 +18,8 @@
     {
       "id": "bug-03",
       "title": "Clarify task cleanup (1h) vs task expiry (12h)",
-      "status": "pending",
-      "notes": "Verify cleanup only purges already-finished/expired records to free slots; expiry (12h) controls actual task lifetime. Confirm not shortening lifetime to 1h.",
+      "status": "in_progress",
+      "notes": "Investigating current cleanup/expiry implementations.",
       "commit": ""
     },
     {
