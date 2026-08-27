@@ -141,8 +141,8 @@
     {
       "id": "bug-22",
       "title": "On-demand video delivery for finished tasks",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation of on-demand video delivery for finished tasks.",
       "commit": ""
     },
     {
