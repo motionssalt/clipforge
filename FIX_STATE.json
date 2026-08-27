@@ -148,8 +148,8 @@
     {
       "id": "bug-23",
       "title": "Telegraph help guide",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Investigating bot UI/flow to author Telegraph help guide.",
       "commit": ""
     },
     {
