@@ -9,18 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "created_at_epoch": 1787865454,
-  "updated_at_epoch": 1787865454,
-  "expires_at_epoch": 1787908654,
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33110006037",
+  "created_at_epoch": 1787860029,
+  "updated_at_epoch": 1787860029,
+  "expires_at_epoch": 1787903229,
   "release_tag": "clipforge-automatic-1787854611749",
   "release_url": "",
   "assets": {},
   "run": {
-    "workflow_run_id": 33117378707,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33117378707",
-    "code_ref": "63995012fec93103617810c5632c5b30a636a1b4"
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
   },
   "publishing": {
     "status": "not_requested",
