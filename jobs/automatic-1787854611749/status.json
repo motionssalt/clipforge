@@ -9,18 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "queued",
-  "message": "Stage A dispatched — ingest will begin shortly.",
+  "state": "stage_a_running",
+  "message": "Stage A starting — ingesting source (url)",
   "created_at_epoch": 1787854628,
-  "updated_at_epoch": 1787854628,
+  "updated_at_epoch": 1787854701,
   "expires_at_epoch": 1787897828,
   "release_tag": "clipforge-automatic-1787854611749",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787854611749",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 33102705385,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33102705385",
+    "code_ref": "8bbd7af8a953b9fd0923df46758c6b6282cb97d4"
   },
   "publishing": {
     "status": "not_requested",
