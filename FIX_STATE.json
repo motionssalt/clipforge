@@ -39,8 +39,8 @@
     {
       "id": "bug-06",
       "title": "Command list drift / outdated commands",
-      "status": "pending",
-      "notes": "Update bot in-app command list and README.md reference to current commands.",
+      "status": "in_progress",
+      "notes": "Auditing current commands vs legacy/docs; updating in-app help and README.",
       "commit": ""
     },
     {
