@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "enabled": false,
+  "enabled": true,
   "auto_publish": false,
   "automatic_mode": "publish_now",
   "target_accounts": {
