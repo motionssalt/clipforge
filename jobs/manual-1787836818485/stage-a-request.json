@@ -1,29 +1,34 @@
 {
-  "version": 2,
   "job_id": "manual-1787836818485",
-  "source": {
-    "kind": "telegram_relay",
-    "value": "relay:private"
-  },
-  "options": {
-    "whisper_model": "base",
-    "language": "auto",
-    "target_duration_seconds": 60,
-    "focus": "",
-    "enable_vision_assist": true
-  },
   "mode": "manual",
-  "series": {
-    "enabled": false,
-    "series_id": "",
-    "source_job_id": "",
-    "part": 0,
-    "start_seconds": 0,
-    "context": ""
-  },
   "music": {
     "ref": "audio-library/Podcast_Background_Music_While_Talking_Interviews_Free_Music_to.m4a",
     "source": "explicit_library"
   },
-  "saved_at_epoch": 1787836858
+  "options": {
+    "enable_vision_assist": true,
+    "focus": "",
+    "language": "auto",
+    "target_duration_seconds": 60,
+    "whisper_model": "base"
+  },
+  "saved_at_epoch": 1787836901,
+  "series": {
+    "context": "",
+    "enabled": false,
+    "part": 0,
+    "series_id": "",
+    "source_job_id": "",
+    "start_seconds": 0
+  },
+  "source": {
+    "kind": "telegram_relay",
+    "relay": {
+      "expected_size_bytes": "29865762",
+      "release_tag": "clipforge-relay-input-manual-1787836818485",
+      "sha256": "197a8da9bce5f093076f629859a2d064432526b026f3d141540526c9d78258e5"
+    },
+    "value": "relay:private"
+  },
+  "version": 2
 }
