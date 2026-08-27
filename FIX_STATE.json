@@ -53,9 +53,9 @@
     {
       "id": "bug-08",
       "title": "production.json paste support (multi-bubble reassembly)",
-      "status": "in_progress",
-      "notes": "Investigating plan-upload handler for multi-bubble JSON paste support.",
-      "commit": ""
+      "status": "done",
+      "notes": "Telegram splits long pasted text into multiple message bubbles; each bubble used to hit handlePlanUploadMessage as a standalone message and fail JSON.parse. Fix: text uploads in the upload_plan flow now buffer fragments in state.pending.jsonBuffer; each new bubble is appended and the joined text is parsed only once looksLikePartialJson() reports balanced braces (string/escape-aware scan; code-fence stripping via stripCodeFence for the bug-10 fenced-block fallback). While partial, the bot acknowledges each fragment (\"received part N, M chars so far\") as a fresh message (bug-01 behavior). Guards: joined buffer capped at MAX_PLAN_BYTES (1 MB) with a clear error; buffer cleared on validation errors so a fresh paste starts clean; buffer cleared with the flow on success/cancel. File uploads are unaffected (complete by definition). Confidence: high on logic; verified by node --check and code inspection, not a live bot run.",
+      "commit": "290ff24d6e491a343b83b9fff0483dd251416a24"
     },
     {
       "id": "bug-09",
