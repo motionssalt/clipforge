@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33117378707",
   "created_at_epoch": 1787865454,
-  "updated_at_epoch": 1787865454,
+  "updated_at_epoch": 1787865550,
   "expires_at_epoch": 1787908654,
   "release_tag": "clipforge-automatic-1787854611749",
   "release_url": "",
