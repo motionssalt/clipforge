@@ -219,10 +219,20 @@ def write_status(
         # single-source-of-truth rule from ARCHITECTURE.md §6.
         prior_state = record.get("state")
         if prior_state in TERMINAL_STATES and state != prior_state and state not in TERMINAL_STATES:
-            raise ValueError(
-                f"cannot transition terminal state {prior_state!r} -> {state!r}; "
-                "terminal jobs are done"
-            )
+            # bug-13/15: a deliberate Restart Stage A/B tap RE-OPENS a terminal job.
+            # The restart dispatches a fresh workflow run whose first status write
+            # (stage_a_running / stage_b_running) must not be refused here —
+            # previously the write crashed the restarted run at its very first
+            # step ("cannot transition terminal state 'error' -> 'stage_a_running'").
+            # Terminal -> same-terminal stays idempotent for cleanup; only
+            # complete -> non-running states remains refused (a finished render
+            # cannot silently slip back to a queued/awaiting state).
+            running = {"stage_a_running", "stage_b_running"}
+            if not (state in running or (prior_state == "error" and state == "queued")):
+                raise ValueError(
+                    f"cannot transition terminal state {prior_state!r} -> {state!r}; "
+                    "terminal jobs are done (restart via a Stage A/B re-run)"
+                )
         record["state"] = state
 
     if message is not None:
