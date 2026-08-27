@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "job_id": "manual-1787837156850",
+  "source": {
+    "kind": "telegram_channel",
+    "value": "https://t.me/gbwhatsaapsolvingpromble/466"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": 60,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": false,
+    "series_id": "",
+    "source_job_id": "",
+    "part": 0,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/Podcast_Background_Music_While_Talking_Interviews_Free_Music_to.m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1787837190
+}
