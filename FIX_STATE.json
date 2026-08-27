@@ -46,8 +46,8 @@
     {
       "id": "bug-07",
       "title": "Finished/errored tasks disappear from task list",
-      "status": "pending",
-      "notes": "Completed/errored tasks must remain visible with terminal status (done/error).",
+      "status": "in_progress",
+      "notes": "Investigating why finished/errored tasks vanish from the task list.",
       "commit": ""
     },
     {
