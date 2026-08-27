@@ -597,11 +597,46 @@ jobs:
           echo "FATAL: could not persist the awaiting_plan status to origin after 3 attempts." >&2
           exit 1
 
+      # ---------------------------------------------------------------------
+      # bug-17: AUTOMATIC-MODE FALLBACK. If the bounded Gemini analysis (or
+      # anything after the analysis bundle was published) fails, do NOT leave
+      # the user with a dead error and no recovery path: park the job in
+      # awaiting_plan so the bot offers "Get agent prompt" (the copyable
+      # manual prompt) and "Upload production.json" exactly like manual mode.
+      # ---------------------------------------------------------------------
+      - name: Automatic Mode failed — fall back to the manual production.json flow
+        if: ${{ failure() && steps.req.outputs.mode == 'automatic' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          job_id="${{ steps.req.outputs.job_id }}"
+          if ! [[ "$job_id" =~ ^[A-Za-z0-9._-]{1,120}$ ]]; then exit 0; fi
+          if [ ! -f "jobs/$job_id/status.json" ]; then exit 0; fi
+          touch work/automatic_fallback.active
+          python -m pipeline.status "$job_id" --state awaiting_plan \
+            --message "Automatic (Gemini) analysis could not complete — quota exhausted or the provider failed. Falling back to manual mode: tap Get agent prompt in the task view for the copyable prompt, generate production.json with your own AI, then tap Upload production.json." || exit 0
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$job_id/" || true
+          git commit -m "clipforge: job $job_id automatic analysis failed; manual fallback" || exit 0
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase --autostash || true; sleep 2
+          done
+          echo "WARN: could not persist the manual-fallback status." >&2
+
       - name: On failure, write error status
         if: failure()
         shell: bash
         run: |
           set -uo pipefail
+          # bug-17: when the automatic-mode fallback already parked this job in
+          # awaiting_plan, do not overwrite that recovery path with an error.
+          if [ -f work/automatic_fallback.active ]; then
+            echo "Automatic-mode failure converted to the manual awaiting_plan fallback; not writing an error status."
+            exit 0
+          fi
           # Bug 1 fix: this handler must ALWAYS leave a readable error status
           # behind, including for failures before the request step completed
           # (checkout, setup, validation). steps.req.outputs.job_id is now
