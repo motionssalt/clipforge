@@ -3,42 +3,24 @@
   "job_id": "manual-1787840065710",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "series-1787840084142",
-    "part": 1,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
     "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "stage_b_queued",
-  "message": "Production plan uploaded — Stage B dispatched.",
-  "created_at_epoch": 1787840085,
-  "updated_at_epoch": 1787844482,
-=======
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "created_at_epoch": 1787840085,
-  "updated_at_epoch": 1787844568,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1787883285,
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33087959382",
+  "created_at_epoch": 1787844574,
+  "updated_at_epoch": 1787844574,
+  "expires_at_epoch": 1787887774,
   "release_tag": "clipforge-manual-1787840065710",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787840065710",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/00_READ_THIS_FIRST.txt",
-    "analysis_720p.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/analysis_720p.mp4",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1787840065710/transcript.json",
-    "analysis_bundle_url": ""
-  },
+  "release_url": "",
+  "assets": {},
   "run": {
-    "workflow_run_id": 33087959382,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33087959382",
-    "code_ref": "f078182c52fdc4faa52e78c61afdd4790947c42b"
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
   },
   "publishing": {
     "status": "not_requested",
