@@ -129,12 +129,12 @@ test('showTasks renders an unreadable status as "status unavailable", not "queue
   const text = String(sent[0].payload.text || '');
   assert.match(text, /Active tasks/);
   // The dead job (404 status) must NOT read as a plain "queued" row…
-  const deadLine = text.split('\n').find((l) => l.includes('<b>A</b>'));
+  const deadLine = text.split('\n').find((l) => l.includes('</b>') && l.includes('A —'));
   assert.ok(deadLine, 'expected a row for label A');
   assert.match(deadLine, /status unavailable/);
   assert.doesNotMatch(deadLine, /queued/);
   // …while the genuinely running job keeps its real state.
-  const liveLine = text.split('\n').find((l) => l.includes('<b>B</b>'));
+  const liveLine = text.split('\n').find((l) => l.includes('B —'));
   assert.match(liveLine, /stage_a_running/);
 });
 
@@ -194,7 +194,7 @@ test('showTasks sorts rows by creation time and offers a delete button per row',
   });
   try { await showTasks(env, CHAT); } finally { restore(); }
   const text = String(sent[0].payload.text || '');
-  const order = ['<b>B</b>', '<b>C</b>', '<b>A</b>'].map((needle) => text.indexOf(needle));
+  const order = ['B —', 'C —', 'A —'].map((needle) => text.indexOf(needle));
   assert.ok(order[0] !== -1 && order[0] < order[1] && order[1] < order[2], `rows newest-first, got ${order}`);
   const callbacks = JSON.stringify(sent[0].payload.reply_markup || {});
   for (const label of ['A', 'B', 'C']) assert.match(callbacks, new RegExp(`task:del:${label}`));
@@ -273,8 +273,8 @@ test('Feature 4: a new task shows 🆕 in /tasks; a seen one does not', async ()
   });
   try { await showTasks(env, CHAT); } finally { restore(); }
   const text = String(sent[0].payload.text || '');
-  assert.match(text, /🆕 <b>A<\/b>/, 'unseen task A must carry the 🆕 marker');
-  assert.doesNotMatch(text, /🆕 <b>B<\/b>/, 'seen task B must not carry the marker');
+  assert.match(text, /<b>🆕 A<\/b>/, 'unseen task A must carry the 🆕 marker');
+  assert.doesNotMatch(text, /<b>🆕 B<\/b>/, 'seen task B must not carry the marker');
   assert.match(text, /<b>B<\/b>/);
 });
 

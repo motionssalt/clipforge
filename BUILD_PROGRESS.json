@@ -454,7 +454,7 @@
     {
       "session": "feature-4-unseen-task-marker",
       "date_utc": "2026-08-27",
-      "summary": "Feature 4 (mark new/unopened tasks with NEW marker). Confirmed no seen/opened concept existed in tasks.options — added as new state: options[jobId].seen, keyed by JOB id (not label) so a freed-and-reused label can never inherit the previous occupants seen state. New tasks default to unseen (absence of seen:true); showTasks/loadTaskList read the flag per entry and prefix unseen rows with the NEW emoji on both the list line and the Open button; showTask (the task:open:<label> flow in runtime.js) calls markTaskSeen on open, a no-op write-skip on repeat opens. Works alongside Bug 2s creation-time sort as an independent explicit flag, not inferred from recency. Tests: 3 new JS tests (unseen shows marker / seen does not; opening clears the marker on next render; label-reused new task starts unseen).",
+      "summary": "Feature 4 (mark new/unopened tasks with NEW marker). Confirmed no seen/opened concept existed in tasks.options — added as new state: options[jobId].seen, keyed by JOB id (not label) so a freed-and-reused label can never inherit the previous occupants seen state. New tasks default to unseen (absence of seen:true); showTasks/loadTaskList read the flag per entry and prefix unseen rows with the NEW emoji on both the list line and the Open button; showTask (the task:open:<label> flow in runtime.js) calls markTaskSeen on open, a no-op write-skip on repeat opens. Works alongside Bug 2s creation-time sort as an independent explicit flag, not inferred from recency. Tests: 3 new JS tests (unseen shows marker / seen does not; opening clears the marker on next render; label-reused new task starts unseen). Follow-up: fixed three test assertions (not the implementation) that were red on first push.",
       "files_created": [],
       "files_modified": [
         "bot/src/storage.js",
@@ -463,7 +463,7 @@
         "bot/test/tasks.test.mjs",
         "BUILD_PROGRESS.json"
       ],
-      "tests": "cd bot && npm test (92 passed, was 89); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
+      "tests": "cd bot && npm test (92 passed at follow-up commit; the initial push showed 89/92 due to three test-side assertion needles that did not account for the marker rendering inside <b> tags — assertions corrected, implementation unchanged); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
     }
   ],
   "next_action": "Nothing queued — all four scoped items (Bugs 1-3 + Feature 4) are fixed, tested, committed, and pushed as separate commits. Watch the next hourly cleanup.yml run for the task-label-reclamation-report artifact confirming the one-time legacy-label cleanup against the live KV store.",
@@ -516,7 +516,7 @@
   },
   "last_session": {
     "id": "feature-4-unseen-task-marker",
-    "note": "Feature 4 (mark new/unopened tasks with NEW marker). Confirmed no seen/opened concept existed in tasks.options — added as new state: options[jobId].seen, keyed by JOB id (not label) so a freed-and-reused label can never inherit the previous occupants seen state. New tasks default to unseen (absence of seen:true); showTasks/loadTaskList read the flag per entry and prefix unseen rows with the NEW em"
+    "note": "Feature 4 complete; test assertions corrected in follow-up commit, all suites green."
   },
   "architecture_concerns_closed": [
     {
