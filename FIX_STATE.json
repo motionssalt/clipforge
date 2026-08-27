@@ -134,9 +134,9 @@
     {
       "id": "bug-21",
       "title": "Clone-update-push settings not appearing for main account",
-      "status": "in_progress",
-      "notes": "Starting investigation of clone-update-push settings feature.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: the previous sweep never actually implemented this feature; the current codebase had no clone-update-push wiring at all in bot/src/index.js or bot/src/views.js. The Settings > GitHub clone sub-screen only offered Create/Connect/Disconnect, so the main account (which is itself a connected clone of motionssalt/clipforge) had nothing to click. Design decision: GitHub PATs cannot push to another user private repo, so a truly remote push from main account to other users clones is not possible. The correct shape is a per-clone pull-from-source action, which is what the legacy browser Settings page (_legacy/shadow-clone.js) exposed as Check for updates / Apply update. Fix: added bot/src/clone-sync.js with checkCloneUpdates (uses GitHub compare API against .clipforge-sync.json marker, or full snapshot if no marker) and applyCloneUpdates (single tree commit against current main HEAD with base_tree so per-clone paths branding/ jobs/ audio-library/ key/account files are preserved via the existing sourcePathAllowed excludes). Wired a Sync from source button into Settings > GitHub clone that shows only when a clone is connected (no is-main-account gate, no has-existing-clones gate). Flow: press Sync from source -> preview of changed files (first 20) with count and old->new SHA -> Apply update button -> commits into clone and updates .clipforge-sync.json. Confidence: high on wiring and design; button will render for every connected clone including main-account owner (satisfies the visibility complaint in bug-21). Not runtime-verified end-to-end against a live clone since that requires a real Cloudflare Worker deployment plus a real Telegram interaction, but node --check passes and I traced every call site. Preserved test failures (4 tests) are pre-existing due to missing tweetnacl npm install in sandbox and unrelated to this change.",
+      "commit": "9e13c29"
     },
     {
       "id": "bug-22",
