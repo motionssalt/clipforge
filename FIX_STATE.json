@@ -127,9 +127,9 @@
     {
       "id": "bug-20",
       "title": "Release asset not found during Stage B download",
-      "status": "in_progress",
-      "notes": "Investigating stage-b.yml Load release metadata + Download source video steps for race/naming/eventual-consistency issue.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: Load release metadata step in stage-b.yml did a single, no-retry read of /releases/tags/<tag>. GitHub release-asset reads are eventually consistent: when stage-a.yml dispatches Stage B via workflow_dispatch immediately after softprops/action-gh-release finishes uploading source_input.bin, the first read from a fresh runner can return the release without that asset yet visible, or with it in a transient state (starter/new) where a download would fail. This matches the reported intermittent nature (only fires when the specific runner+API-node the dispatch lands on has stale cache) and the fact that it worked previously (used to be luckier / smaller Stage A tail latency). Fix: bounded polling loop with backoff (0,3,3,4,5,5,10,15,20,25s -> ~90s total across up to 10 attempts) that only accepts an asset whose state is uploaded or absent (older responses omit the field). Logs visible assets on each attempt so a genuine miss is diagnosable. Also added a 3x retry with backoff on the asset-download call itself for unrelated transient 5xx/connection resets on large asset downloads. Confidence: high on the mechanism; not verified against a live GitHub-side retry (cannot repro the exact race in sandbox). If the asset never lands within 90s it still fails loudly with the same error, but now with per-attempt asset-list logging.",
+      "commit": "c28d95c"
     },
     {
       "id": "bug-21",
