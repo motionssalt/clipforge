@@ -42,3 +42,22 @@ commit filled-in credentials.
 
 Stage 1 — Architecture — is **complete**. No new-version implementation code
 exists yet. `BUILD_PROGRESS.json` names the next unbuilt piece.
+
+## Bot command reference (current)
+
+| Command | What it does |
+|---|---|
+| `/start` | Home menu for the connected clone |
+| `/help` | In-app command reference |
+| `/new` | Start the new-video wizard — manual, automatic, or series mode |
+| `/tasks` | Active task list; finished and errored tasks remain visible with their terminal status |
+| `/done` | Completed tasks |
+| `/settings` | Clone settings: Gemini API keys, narrator voice, watermark, music library, Zernio |
+| `/cancel` | Cancel the current setup or input flow |
+
+Inside `/new`, accepted sources: direct `https://` video URL, Google Drive share
+link, magnet URI, `.torrent` file (≤ 1 MB), public `t.me` channel-post link, or
+a directly forwarded/uploaded video.
+
+Legacy commands removed in the rebuild: `/manual` and `/automatic` are folded
+into `/new`; `/status` is folded into `/tasks`.

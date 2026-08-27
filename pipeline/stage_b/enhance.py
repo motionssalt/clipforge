@@ -40,12 +40,18 @@ LUT_FILTER = "haldclut=shortest=1"
 LUT_GRID_SOURCE = common.LUT_GRID_SOURCE
 LUT_ASSET = common.LUT_HALD_ASSET
 
+# bug-11: detail-preserving 2x lanczos upscale to pseudo-4K (capped at
+# 2160x3840) inserted between the color grade and the sharpeners, so cas/
+# unsharp work on the upsampled frame — the AE-style "scale up, then
+# sharpen" pass. CPU-only (lanczos/cas/unsharp are all CPU filters), safe
+# for GitHub Actions runners; no GPU dependency introduced.
+UPSCALE = "scale=w='min(2160,2*iw)':h='min(3840,2*ih)':flags=lanczos"
 EDGE_SHARPEN = "cas=strength=0.75"
 LINE_SHARPEN = "unsharp=7:7:0.85:5:5:0.35"
 DEBAND = "gradfun=1.2:16"
 
 FILTER_CHAIN = (
-    f"{DENOISE},{LUT_FILTER},{EDGE_SHARPEN},{LINE_SHARPEN},{DEBAND},"
+    f"{DENOISE},{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},{LINE_SHARPEN},{DEBAND},"
     "format=yuv420p,setsar=1"
 )
 
@@ -61,11 +67,34 @@ X264_MAXRATE = "8M"
 X264_BUFSIZE = "16M"
 
 
+def _level_and_vbv(src: str) -> tuple[str, str, str]:
+    """Return (level, maxrate, bufsize) sized for the upscaled output.
+
+    bug-11: 2160x3840 needs H.264 Level 5.1 (Level 4.0 tops out below it);
+    anything smaller keeps the original Level 4.0 contract.
+    """
+    try:
+        data = common.probe_json(src)
+        width = height = 0
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                width = int(stream.get("width") or 0)
+                height = int(stream.get("height") or 0)
+                break
+        out_w, out_h = min(2160, 2 * width), min(3840, 2 * height)
+        if max(out_w, out_h) > 2048 or (out_w * out_h) > (2048 * 2048):
+            return "5.1", "20M", "40M"
+    except Exception:
+        pass
+    return X264_LEVEL, X264_MAXRATE, X264_BUFSIZE
+
+
 def enhance_one(src: str, dst: str) -> None:
-    """Denoise, apply the supplied color cube, and sharpen one video."""
+    """Denoise, upscale, apply the supplied color cube, and sharpen one video."""
+    level, maxrate, bufsize = _level_and_vbv(src)
     graph = (
         f"[0:v]{DENOISE}[denoised];"
-        f"[denoised][1:v]{LUT_FILTER},{EDGE_SHARPEN},"
+        f"[denoised][1:v]{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},"
         f"{LINE_SHARPEN},{DEBAND},format=yuv420p,setsar=1[enhanced]"
     )
     cmd = [
@@ -78,12 +107,12 @@ def enhance_one(src: str, dst: str) -> None:
         "-map", "[enhanced]", "-map", "0:a:0",
         "-c:v", "libx264",
         "-profile:v", X264_PROFILE,
-        "-level:v", X264_LEVEL,
+        "-level:v", level,
         "-preset", X264_PRESET,
         "-tune", X264_TUNE,
         "-crf", X264_CRF,
-        "-maxrate", X264_MAXRATE,
-        "-bufsize", X264_BUFSIZE,
+        "-maxrate", maxrate,
+        "-bufsize", bufsize,
         "-pix_fmt", TARGET_PIX_FMT,
         "-bf", "0",
         "-g", str(TARGET_FPS * 2),

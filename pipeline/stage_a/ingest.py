@@ -972,16 +972,30 @@ def _resolve_magnet_metadata(magnet_uri: str, info: dict[str, Any], metadata_dir
             print(f"magnet exact-source failed ({exc}); falling back to aria2", flush=True)
 
     print("Fetching magnet metadata via aria2 (metadata-only, bounded).", flush=True)
+    # Regression fix (bug-04): legacy used --bt-stop-timeout=120 --seed-ratio=0
+    # --max-tries=1 and, crucially, did NOT require aria2 to exit 0 -- aria2's
+    # metadata-only mode saves the .torrent manifest and then exits non-zero
+    # while waiting to stop, so the real success signal is "was the metadata
+    # file saved", not the exit code. The new port used check=True with
+    # --max-tries=3 and no stop timeout, so every successful metadata fetch was
+    # raised as IngestError and the torrent method always failed.
     try:
         subprocess.run(
             ["timeout", "600", "aria2c", f"--dir={metadata_dir}",
              "--bt-metadata-only=true", "--bt-save-metadata=true",
-             "--seed-time=0", "--max-tries=3", magnet_uri],
-            check=True, timeout=620,
+             "--seed-time=0", "--seed-ratio=0", "--bt-stop-timeout=120",
+             "--connect-timeout=60", "--timeout=60",
+             "--max-tries=1", "--file-allocation=none", magnet_uri],
+            check=False, timeout=620,
         )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+    except subprocess.TimeoutExpired as exc:
         raise IngestError(f"aria2 could not retrieve the magnet metadata: {exc}") from exc
-    return find_saved_metadata(metadata_dir, info["infohash_v1"])
+    except OSError as exc:
+        raise IngestError(f"aria2 is unavailable for magnet metadata fetch: {exc}") from exc
+    try:
+        return find_saved_metadata(metadata_dir, info["infohash_v1"])
+    except FileNotFoundError as exc:
+        raise IngestError(f"aria2 could not retrieve the magnet metadata: {exc}") from exc
 
 
 def _download_torrent_payload(torrent_path: Path, out_dir: Path, selected_index: int) -> None:

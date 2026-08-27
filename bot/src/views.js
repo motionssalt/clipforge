@@ -82,6 +82,24 @@ export function homeText(snapshot) {
 
 export const ONBOARDING_TEXT = '<b>ClipForge</b>\n\nThis shared bot turns a source video into a short, narrated, captioned vertical clip. Your private chat operates only the GitHub clone connected to it.\n\nCreate your own private Shadow Clone, or connect a clone you already have.';
 
+export const HELP_TEXT = [
+  '<b>ClipForge commands</b>',
+  '',
+  '/new — start the new-video wizard (manual, automatic, or series mode)',
+  '/tasks — list active tasks; finished and errored tasks stay visible here',
+  '/done — list completed tasks',
+  '/settings — clone settings (Gemini keys, narrator voice, watermark, music, Zernio)',
+  '/cancel — cancel the current setup or input flow',
+  '/start, /help — this screen / the home menu',
+  '',
+  'Inside /new you can send: a direct https:// video URL, a Google Drive share link,',
+  'a magnet URI, a .torrent file (≤ 1 MB), a public t.me channel-post link,',
+  'or forward/upload the video itself.',
+  '',
+  'Removed legacy commands: /manual and /automatic are folded into /new;',
+  '/status is folded into /tasks.'
+].join('\n');
+
 export function settingsKeyboard() {
   return buttons([
     [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini keys', callback_data: 'set:gemini' }],
