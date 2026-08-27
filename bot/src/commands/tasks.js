@@ -12,6 +12,11 @@
  * moment labels became reusable — and every row carries a delete button that
  * routes through the existing confirm-delete flow, so any stale or stuck
  * task can be cleared (and its letter reclaimed) by the operator.
+ *
+ * bug-02 (fix-sweep): tapping the delete button no longer switches to a
+ * separate confirmation view. Instead it edits the row's own label to
+ * "Confirm Delete?" in place, in the same list. Tapping the confirm button
+ * again on that row actually deletes.
  */
 
 import { readStatus } from '../github.js';
@@ -50,7 +55,12 @@ export async function loadTaskList(env, chatId) {
   return { credentials, entries: sortTaskEntries(entries) };
 }
 
-export async function showTasks(env, chatId, messageId = null) {
+/**
+ * Render the active-task list. `pendingDeleteLabel` marks a single row as
+ * awaiting delete confirmation: its label reads "Confirm Delete?" and its
+ * trash button becomes the executing confirm button (bug-02).
+ */
+export async function showTasks(env, chatId, messageId = null, pendingDeleteLabel = '') {
   const { credentials, entries } = await loadTaskList(env, chatId);
   if (!credentials) return;
   // A task is "active" unless we can positively read a terminal state. An
@@ -67,11 +77,20 @@ export async function showTasks(env, chatId, messageId = null) {
       const unreadable = !entry.status;
       const stateText = describeTaskState(entry.status, { unreadable });
       const marker = entry.seen ? '' : '🆕 ';
-      lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — ${escapeHtml(stateText)}`);
-      rows.push([
-        { text: `${marker}Open ${entry.label} · ${stateText}`, callback_data: `task:open:${entry.label}` },
-        { text: `🗑 ${entry.label}`, callback_data: `task:del:${entry.label}` }
-      ]);
+      const isPendingDelete = pendingDeleteLabel && entry.label === pendingDeleteLabel;
+      if (isPendingDelete) {
+        lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — <b>Confirm Delete?</b>`);
+        rows.push([
+          { text: `⚠️ ${entry.label} — Confirm Delete?`, callback_data: `task:delconfirm:${entry.label}` },
+          { text: `✖ Cancel`, callback_data: `menu:tasks` }
+        ]);
+      } else {
+        lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — ${escapeHtml(stateText)}`);
+        rows.push([
+          { text: `${marker}Open ${entry.label} · ${stateText}`, callback_data: `task:open:${entry.label}` },
+          { text: `🗑 ${entry.label}`, callback_data: `task:del:${entry.label}` }
+        ]);
+      }
     }
   }
   rows.push([{ text: '← Menu', callback_data: 'menu:home' }]);

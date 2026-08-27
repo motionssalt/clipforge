@@ -69,7 +69,11 @@ export function taskKeyboard(status, label) {
   // Bug 2 fix: deletion is offered for terminal tasks AND for tasks whose
   // status is unreadable (status == null) — a stuck task must be clearable
   // so its letter is reclaimed.
-  if (isTerminal(state) || !status) rows.push([{ text: '🗑 Delete task', callback_data: `task:del:${label}` }]);
+  // bug-02: from the task detail view we still want a full-page confirmation
+  // card (there is no list of rows to toggle inline here), so route through
+  // task:delfrom which invokes confirmDeleteTask. task:del is reserved for
+  // the tasks-list inline toggle.
+  if (isTerminal(state) || !status) rows.push([{ text: '🗑 Delete task', callback_data: `task:delfrom:${label}` }]);
   rows.push([{ text: '← Tasks', callback_data: 'menu:tasks' }]);
   return buttons(rows);
 }
@@ -90,7 +94,7 @@ export async function showTask(env, chatId, label, messageId = null) {
   if (!status) {
     return renderInteractiveView(env, chatId,
       `<b>Task ${escapeHtml(label)}</b> · <code>${escapeHtml(jobId)}</code>\n\n<b>Status unavailable</b> — the job record could not be read. It may have failed before Stage A could report in, or it may have expired. Try Refresh, or delete this task if it is stale.`,
-      { replyMarkup: buttons([[{ text: '🔄 Refresh', callback_data: `task:open:${label}` }], [{ text: '🗑 Delete task', callback_data: `task:del:${label}` }], [{ text: '← Tasks', callback_data: 'menu:tasks' }]]) },
+      { replyMarkup: buttons([[{ text: '🔄 Refresh', callback_data: `task:open:${label}` }], [{ text: '🗑 Delete task', callback_data: `task:delfrom:${label}` }], [{ text: '← Tasks', callback_data: 'menu:tasks' }]]) },
       messageId);
   }
   const state = String(status.state || 'queued');
