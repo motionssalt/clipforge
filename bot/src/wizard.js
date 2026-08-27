@@ -109,7 +109,8 @@ export function describeMusic(music) {
 }
 
 export function describeMode(wizard) {
-  const base = wizard.mode === 'automatic' ? 'Automatic (Gemini writes the plan)' : 'Manual (your external AI writes the plan)';
+  // bug-30: manual is the only mode.
+  const base = 'Manual (your external AI writes the plan)';
   return wizard.series ? `${base} · Series on` : base;
 }
 
@@ -155,7 +156,7 @@ export function wizardToRequest(wizard, seriesId) {
       target_duration_seconds: wizard.duration,
       focus: series ? '' : String(wizard.focus || '')
     },
-    mode: wizard.mode,
+    mode: 'manual', // bug-30: manual is the only mode
     series: {
       enabled: series,
       series_id: series ? String(seriesId || '') : '',
@@ -178,8 +179,10 @@ function nav(extra = []) {
 
 export function modeKeyboard(wizard) {
   const seriesMark = wizard.series ? '☑' : '▢';
+  // bug-30: the Gemini-based Automatic mode was removed — Manual is the only
+  // task-creation path (production.json via file upload, paste, or agent prompt).
   return [
-    [{ text: 'Manual', callback_data: 'wz:mode:manual' }, { text: 'Automatic', callback_data: 'wz:mode:automatic' }],
+    [{ text: 'Manual (external AI writes the plan)', callback_data: 'wz:mode:manual' }],
     [{ text: `Series ${seriesMark}`, callback_data: 'wz:series:toggle' }],
     [{ text: 'Cancel', callback_data: 'wz:cancel' }]
   ];
@@ -232,9 +235,8 @@ export function stepPrompt(wizard, options = {}) {
   switch (wizard.step) {
     case 'mode':
       return {
-        text: '<b>New video — step 1/6: mode</b>\n\n<b>Manual:</b> you run the analysis yourself with an external AI and upload the plan.\n<b>Automatic:</b> Gemini writes the plan for you (needs a Gemini key).\n\nToggle <b>Series</b> to chain this video into sequential cliffhanger parts.',
-        keyboard: modeKeyboard(wizard),
-        ...(options.geminiMissing ? { notice: 'Automatic mode needs a Gemini API key — add one in Settings first.' } : {})
+        text: '<b>New video — step 1/6: mode</b>\n\n<b>Manual:</b> Stage A prepares an analysis bundle; you run it through your own external AI and upload the resulting production.json (file upload, paste, or the built-in agent prompt).\n\nToggle <b>Series</b> to chain this video into sequential cliffhanger parts.',
+        keyboard: modeKeyboard(wizard)
       };
     case 'source':
       return {

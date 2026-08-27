@@ -628,7 +628,10 @@ export function buildStageARequest(jobId, request) {
   const options = request && typeof request.options === 'object' && request.options ? request.options : {};
   const series = request && typeof request.series === 'object' && request.series ? request.series : {};
   const music = request && typeof request.music === 'object' && request.music ? request.music : {};
-  const mode = request && request.mode === 'automatic' ? 'automatic' : 'manual';
+  // bug-30: manual is the only task-creation mode; any legacy/injected
+  // 'automatic' request is normalized to manual so no job can resurrect the
+  // removed Gemini path.
+  const mode = 'manual';
   const whisperModel = WHISPER_MODELS.has(options.whisper_model) ? options.whisper_model : 'base';
   const targetDuration = Math.max(1, Math.floor(Number(options.target_duration_seconds) || 120));
   const musicSource = MUSIC_SOURCES.has(music.source) ? music.source : 'none';
@@ -703,7 +706,9 @@ export function geminiFingerprint(value) {
 }
 
 export function makeJobId(mode, now = Date.now()) {
-  return `${mode === 'automatic' ? 'automatic' : 'manual'}-${Number(now)}`;
+  // bug-30: all jobs are manual now; keep the mode arg for call-site compat.
+  void mode;
+  return `manual-${Number(now)}`;
 }
 
 export { b64decode, b64encode, cloneRepositoryName, parseJsonDocument, parseRepo, safeAudioLibraryPath, safeJobId, sourcePathAllowed };

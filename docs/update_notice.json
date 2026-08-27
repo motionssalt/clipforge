@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "published_at": "2026-08-27T23:10:00Z",
+  "source_sha": "136f6b3",
+  "summary": "Sweep bug-26..bug-32: immediate dispatch feedback, cleaner production.json paste, batch music upload, manual-only task creation (Gemini removed), main-account-only update publishing, and a telegram_relay ingest fix.",
+  "changes": [
+    "Stage/restart/publish actions now show an immediate starting indicator.",
+    "Pasted multi-bubble production.json no longer shows a spurious 'send the rest' prompt, and the raw JSON bubbles are deleted after acceptance.",
+    "Add Music File now accepts many files in a row, finished with a Done button.",
+    "The Gemini automatic script-generation mode was removed; production.json is manual-only (file, paste, or agent prompt).",
+    "Update publishing is gated to the main account; clones are notified of changes and pull via Sync from source.",
+    "telegram_relay source ingest now has the token it needs (GH_TOKEN) to fetch its release asset."
+  ]
+}

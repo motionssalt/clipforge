@@ -112,7 +112,7 @@ test('race closed: staging-time record lets Bot B attach copied media before any
   await putRelayJob(env, chatId, jobId, {
     state: 'staged',
     repo: 'owner/clone',
-    mode: 'automatic',
+    mode: 'manual',
     relay: {
       source_type: 'telegram_bot_forward', media_kind: 'video', file_id: 'f', file_unique_id: 'u',
       file_size: 1024, mime_type: 'video/mp4', file_name: 'telegram-video.mp4', source_message_id: 5,

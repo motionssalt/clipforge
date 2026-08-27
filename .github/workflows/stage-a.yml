@@ -9,8 +9,12 @@ name: Stage A — Ingest, Transcribe, Analyze (new pipeline)
 # Preserved subsystem §9.1 (telegram_channel) is wired: ingest.py routes it to
 # pipeline/stage_a/telegram_channel.py, which enforces the original-repo gate
 # plus fail-closed MTProto secrets (absent on clones — that absence IS the
-# security boundary's second layer). telegram_relay §9.2 still fails closed in
-# ingest.py until the relay-asset ingest follow-up lands.
+# security boundary's second layer). telegram_relay §9.2 fetches its temporary
+# prerelease asset through the same GH_TOKEN the release-URL steps already use.
+#
+# bug-30: the Gemini-based Automatic Mode (production.json generation) is
+# removed. Stage A always ends in awaiting_plan; the only path into Stage B is
+# a user-supplied production.json (file upload, paste, or the agent prompt).
 run-name: Stage A — ${{ inputs.job_id }}
 
 on:
@@ -210,11 +214,17 @@ jobs:
       # Exit codes: 0 ok · 3 awaiting_torrent_selection (clean stop) ·
       # 4 preserved-subsystem gate · 2 ingest error.
       # ---------------------------------------------------------------------
-      - name: Ingest source (url, drive, magnet, torrent_file, telegram_channel)
+      - name: Ingest source (url, drive, magnet, torrent_file, telegram_channel, telegram_relay)
         id: ingest
         if: ${{ steps.series_reuse.outputs.reused != 'true' }}
         shell: bash
         env:
+          # bug-32: the telegram_relay ingest path must be able to fetch its
+          # temporary prerelease asset from the release. GH_TOKEN is the same
+          # scoped credential the release-URL / download steps below already
+          # use; without it ingest.py failed with "needs GH_TOKEN" (exit 2),
+          # nothing was uploaded, and Stage B then reported the source missing.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Dedicated user-authorized MTProto media session for public Telegram
           # channel posts (§9.1). Original repo ONLY — clones never receive
           # these secrets, so telegram_channel.py fails closed there. GitHub
@@ -387,8 +397,11 @@ jobs:
               f.write("assets_json=" + json.dumps(out) + "\n")
           '
 
-      - name: Write awaiting_plan status (manual mode)
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'manual' }}
+      # bug-30: every successful Stage A now lands in awaiting_plan (the Gemini
+      # automatic-analysis branch below is removed). The mode guard is gone so
+      # the state no longer depends on a 'manual' vs 'automatic' split.
+      - name: Write awaiting_plan status
+        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') }}
         shell: bash
         env:
           ASSETS_JSON: ${{ steps.assets.outputs.assets_json }}
@@ -412,173 +425,8 @@ jobs:
           p.write_text(json.dumps(data, indent=2, ensure_ascii=False))
           PY
 
-      # ---------------------------------------------------------------------
-      # AUTOMATIC MODE — bounded Gemini analysis turns the released bundle
-      # into a validated production.json, then dispatches Stage B. The
-      # analyzer (pipeline/plan/automatic.py) enforces ordered evidence
-      # retrieval, multi-key rotation from GEMINI_API_KEYS, fallback models,
-      # and re-validates the plan through the shared §7.3 contract before
-      # anything is committed.
-      # ---------------------------------------------------------------------
-      - name: Write automatic_analysis_running status
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        env:
-          ASSETS_JSON: ${{ steps.assets.outputs.assets_json }}
-        run: |
-          set -euo pipefail
-          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
-            --state automatic_analysis_running \
-            --message "Stage A complete. Automatic Mode is analyzing the released evidence with Gemini." \
-            --release-url "${{ steps.assets.outputs.release_url }}"
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          p = Path("jobs/${{ steps.req.outputs.job_id }}/status.json")
-          data = json.loads(p.read_text())
-          data.setdefault("assets", {}).update(json.loads(os.environ["ASSETS_JSON"]))
-          p.write_text(json.dumps(data, indent=2, ensure_ascii=False))
-          PY
-
-      - name: Commit automatic analysis start status
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase --autostash || true
-          git add "jobs/${{ steps.req.outputs.job_id }}/status.json"
-          git commit -m "clipforge: job ${{ steps.req.outputs.job_id }} automatic analysis running" || echo "nothing to commit"
-          pushed=false
-          for attempt in 1 2 3; do
-            if git push; then pushed=true; break; fi
-            echo "automatic analysis start status push attempt $attempt failed — rebasing and retrying…" >&2
-            git pull --rebase --autostash
-            sleep 2
-          done
-          if [ "$pushed" != "true" ]; then
-            echo "FATAL: could not persist automatic analysis start status." >&2
-            exit 1
-          fi
-
-      - name: Install Gemini SDK for Automatic Mode
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install -q "google-genai>=1.66,<2"
-          python - <<'PY'
-          from google import genai  # noqa: F401 — surface SDK import failures here
-          print("google-genai import: OK")
-          PY
-
-      - name: Download released analysis assets for Automatic Mode
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          rm -rf work/automatic-release
-          mkdir -p work/automatic-release
-          gh release download "${{ steps.req.outputs.release_tag }}" --repo "$GITHUB_REPOSITORY" \
-            --dir work/automatic-release \
-            --pattern '00_READ_THIS_FIRST.txt' \
-            --pattern 'transcript.json' \
-            --pattern 'scene_index.json' \
-            --pattern 'key_moments.json' \
-            --pattern 'screenshots.zip'
-          for required in 00_READ_THIS_FIRST.txt transcript.json scene_index.json key_moments.json screenshots.zip; do
-            test -s "work/automatic-release/$required"
-          done
-
-      - name: Run bounded Gemini Automatic Mode analysis
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        env:
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-        run: |
-          set -euo pipefail
-          if [ -z "${GEMINI_API_KEYS:-}" ]; then
-            echo "FATAL: GEMINI_API_KEYS is empty. Add a Gemini API key in Repository settings first." >&2
-            exit 2
-          fi
-          # pipeline.plan.automatic calls the official Google Gen AI SDK
-          # directly: it logs only key indexes, enforces the local
-          # evidence-tool policy, and writes production.json only after the
-          # shared pipeline.plan.schema contract validates it.
-          python -m pipeline.plan.automatic \
-            --artifacts-dir work/automatic-release \
-            --output "jobs/${{ steps.req.outputs.job_id }}/production.json" \
-            --result-path "jobs/${{ steps.req.outputs.job_id }}/automatic_analysis.json"
-
-      - name: Resolve Automatic Mode music selection
-        id: automatic_music
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pipeline.plan.music \
-            "${{ steps.req.outputs.job_id }}" \
-            "jobs/${{ steps.req.outputs.job_id }}/stage-a-request.json"
-
-      - name: Write automatic stage_b_queued status
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
-            --state stage_b_queued \
-            --message "Automatic analysis validated production.json. Dispatching the Stage B render workflow." \
-            --release-url "${{ steps.assets.outputs.release_url }}" \
-            --asset "production_json=path:jobs/${{ steps.req.outputs.job_id }}/production.json" \
-            --asset "automatic_analysis=path:jobs/${{ steps.req.outputs.job_id }}/automatic_analysis.json"
-
-      - name: Commit automatic production plan and status
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase --autostash || true
-          git add "jobs/${{ steps.req.outputs.job_id }}/production.json" \
-                  "jobs/${{ steps.req.outputs.job_id }}/automatic_analysis.json" \
-                  "jobs/${{ steps.req.outputs.job_id }}/status.json"
-          git commit -m "clipforge: automatic production plan for job ${{ steps.req.outputs.job_id }}" || echo "nothing to commit"
-          pushed=false
-          for attempt in 1 2 3; do
-            if git push; then pushed=true; break; fi
-            echo "automatic production plan push attempt $attempt failed — rebasing and retrying…" >&2
-            git pull --rebase --autostash
-            sleep 2
-          done
-          if [ "$pushed" != "true" ]; then
-            echo "FATAL: could not persist automatic production plan and queued status." >&2
-            exit 1
-          fi
-
-      - name: Dispatch Stage B from the validated automatic plan
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          # Resolve the default branch AFTER the production.json push, matching
-          # the bot's fresh-code Stage B dispatch behavior.
-          branch="${{ github.event.repository.default_branch }}"
-          code_ref="$(git ls-remote origin "refs/heads/$branch" | awk '{print $1}')"
-          test -n "$code_ref"
-          gh workflow run stage-b.yml --repo "$GITHUB_REPOSITORY" --ref "$branch" \
-            -f "job_id=${{ steps.req.outputs.job_id }}" \
-            -f "production_ref=path:jobs/${{ steps.req.outputs.job_id }}/production.json" \
-            -f "music_ref=${{ steps.automatic_music.outputs.music_ref }}" \
-            -f "code_ref=$code_ref"
-
       - name: Commit final status
-        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') && steps.req.outputs.mode == 'manual' }}
+        if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') }}
         shell: bash
         env:
           RELEASE_URL: ${{ steps.assets.outputs.release_url }}
@@ -597,46 +445,14 @@ jobs:
           echo "FATAL: could not persist the awaiting_plan status to origin after 3 attempts." >&2
           exit 1
 
-      # ---------------------------------------------------------------------
-      # bug-17: AUTOMATIC-MODE FALLBACK. If the bounded Gemini analysis (or
-      # anything after the analysis bundle was published) fails, do NOT leave
-      # the user with a dead error and no recovery path: park the job in
-      # awaiting_plan so the bot offers "Get agent prompt" (the copyable
-      # manual prompt) and "Upload production.json" exactly like manual mode.
-      # ---------------------------------------------------------------------
-      - name: Automatic Mode failed — fall back to the manual production.json flow
-        if: ${{ failure() && steps.req.outputs.mode == 'automatic' }}
-        shell: bash
-        run: |
-          set -uo pipefail
-          job_id="${{ steps.req.outputs.job_id }}"
-          if ! [[ "$job_id" =~ ^[A-Za-z0-9._-]{1,120}$ ]]; then exit 0; fi
-          if [ ! -f "jobs/$job_id/status.json" ]; then exit 0; fi
-          touch work/automatic_fallback.active
-          python -m pipeline.status "$job_id" --state awaiting_plan \
-            --message "Automatic (Gemini) analysis could not complete — quota exhausted or the provider failed. Falling back to manual mode: tap Get agent prompt in the task view for the copyable prompt, generate production.json with your own AI, then tap Upload production.json." || exit 0
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase --autostash || true
-          git add "jobs/$job_id/" || true
-          git commit -m "clipforge: job $job_id automatic analysis failed; manual fallback" || exit 0
-          for attempt in 1 2 3; do
-            git push && exit 0
-            git pull --rebase --autostash || true; sleep 2
-          done
-          echo "WARN: could not persist the manual-fallback status." >&2
-
+      # bug-30: the automatic-mode Gemini branch and its fallback were removed
+      # — Stage A only ever ends in awaiting_plan now, so the only failure
+      # handler needed is the generic error one below.
       - name: On failure, write error status
         if: failure()
         shell: bash
         run: |
           set -uo pipefail
-          # bug-17: when the automatic-mode fallback already parked this job in
-          # awaiting_plan, do not overwrite that recovery path with an error.
-          if [ -f work/automatic_fallback.active ]; then
-            echo "Automatic-mode failure converted to the manual awaiting_plan fallback; not writing an error status."
-            exit 0
-          fi
           # Bug 1 fix: this handler must ALWAYS leave a readable error status
           # behind, including for failures before the request step completed
           # (checkout, setup, validation). steps.req.outputs.job_id is now

@@ -65,13 +65,12 @@ export async function getCredentials(env, chatId) {
 }
 
 export async function putCredentials(env, chatId, credentials) {
+  // bug-30: geminiKeys/pendingGeminiKey dropped — the Gemini mode is removed.
   const safe = {
     version: 1,
     githubPat: String(credentials.githubPat || ''),
     repo: String(credentials.repo || ''),
-    geminiKeys: Array.isArray(credentials.geminiKeys) ? credentials.geminiKeys.map(String) : [],
-    pendingGithubPat: String(credentials.pendingGithubPat || ''),
-    pendingGeminiKey: String(credentials.pendingGeminiKey || '')
+    pendingGithubPat: String(credentials.pendingGithubPat || '')
   };
   const encrypted = await encryptCredentials(safe, chatId, env.KV_ENCRYPTION_KEY);
   await env.CLIPFORGE_BOT_KV.put(key(chatId, 'credentials'), encrypted);
@@ -194,6 +193,16 @@ export async function isTaskSeen(env, chatId, jobId) {
 export async function taskLabels(env, chatId) {
   const tasks = await getTasks(env, chatId);
   return Object.entries(tasks.labels).map(([label, jobId]) => ({ label, jobId }));
+}
+
+// bug-31: the last announced clone-update marker (docs/update_notice.json's
+// published_at). Stored per chat so a pushed update is announced exactly once.
+export async function getAnnouncedUpdate(env, chatId) {
+  return env.CLIPFORGE_BOT_KV.get(key(chatId, 'update_notice'));
+}
+
+export async function setAnnouncedUpdate(env, chatId, marker) {
+  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'update_notice'), String(marker || ''));
 }
 
 export async function markUpdateSeen(env, updateId) {

@@ -5,7 +5,7 @@
 
 import { getCredentials } from '../storage.js';
 import {
-  readGeminiMetadata, readSeriesSettings, readZernioSettings, tryGetJsonFile
+  readSeriesSettings, readZernioSettings, tryGetJsonFile
 } from '../github.js';
 import { MUSIC_DEFAULT_PATH, TTS_SETTINGS_PATH, WATERMARK_PATH } from '../constants.js';
 import {
@@ -24,25 +24,21 @@ async function safeDoc(credentials, path) {
 /** One batched read of the small branding/ JSONs behind the home + settings screens. */
 export async function loadSnapshot(credentials) {
   const empty = {
-    repo: '', narratorVoice: '', seriesEnabled: false, geminiCount: 0,
+    repo: '', narratorVoice: '', seriesEnabled: false,
     watermarkName: '', musicDefaultPath: '', zernioEnabled: false
   };
   if (!credentials || !credentials.repo) return empty;
-  const [geminiMeta, narrator, watermark, musicDefault, series, zernio] = await Promise.all([
-    readGeminiMetadata(credentials, credentials.repo).catch(() => []),
+  const [narrator, watermark, musicDefault, series, zernio] = await Promise.all([
     safeDoc(credentials, TTS_SETTINGS_PATH),
     safeDoc(credentials, WATERMARK_PATH),
     safeDoc(credentials, MUSIC_DEFAULT_PATH),
     readSeriesSettings(credentials, credentials.repo).catch(() => null),
     readZernioSettings(credentials, credentials.repo).catch(() => null)
   ]);
-  const localKeys = Array.isArray(credentials.geminiKeys) ? credentials.geminiKeys.length : 0;
-  const metaCount = Array.isArray(geminiMeta) ? geminiMeta.length : 0;
   return {
     repo: credentials.repo,
     narratorVoice: narrator && narrator.voice ? String(narrator.voice) : '',
     seriesEnabled: Boolean(series && (series.enabled === true || (series.document && series.document.enabled === true))),
-    geminiCount: localKeys || metaCount,
     watermarkName: watermark && watermark.creator_name ? String(watermark.creator_name) : '',
     musicDefaultPath: musicDefault && musicDefault.library_track_path ? String(musicDefault.library_track_path) : '',
     zernioEnabled: Boolean(zernio && (zernio.enabled === true || (zernio.document && zernio.document.enabled === true)))

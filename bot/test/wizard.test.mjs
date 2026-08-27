@@ -76,8 +76,8 @@ test('wizardToRequest projects the §7.1 shape', () => {
 
 test('wizardToRequest blanks focus for series and stamps part 1', () => {
   const wizard = newWizard();
-  wizard.jobId = 'automatic-9';
-  wizard.mode = 'automatic';
+  wizard.jobId = 'manual-9';
+  wizard.mode = 'manual';
   wizard.series = true;
   wizard.source = { kind: 'magnet', value: 'magnet:?xt=urn:btih:x' };
   wizard.focus = 'should be dropped';
@@ -136,12 +136,11 @@ test('taskKeyboard exposes only state-valid actions (§8.5)', () => {
 });
 
 test('home and settings screens render the §8.3/§8.6 summary', () => {
-  const home = homeText({ repo: 'me/clone', narratorVoice: 'en-US-AvaNeural', seriesEnabled: true, geminiCount: 2, zernioEnabled: false });
+  const home = homeText({ repo: 'me/clone', narratorVoice: 'en-US-AvaNeural', seriesEnabled: true, zernioEnabled: false });
   assert.match(home, /me\/clone/);
   assert.match(home, /Narrator: Ava/);
   assert.match(home, /Series: on/);
-  assert.match(home, /2 keys configured/);
-  const settings = settingsText({ repo: '', narratorVoice: 'unknown', seriesEnabled: false, geminiCount: 0, watermarkName: '', musicDefaultPath: '', zernioEnabled: false });
+  const settings = settingsText({ repo: '', narratorVoice: 'unknown', seriesEnabled: false, watermarkName: '', musicDefaultPath: '', zernioEnabled: false });
   assert.match(settings, /not connected/);
   assert.match(settings, /Narrator: Andrew/); // DEFAULT_VOICE fallback
 });

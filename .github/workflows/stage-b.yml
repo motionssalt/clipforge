@@ -579,10 +579,12 @@ jobs:
           fi
 
       # ---------------------------------------------------------------------
-      # SERIES CONTINUATION (§11, automatic mode) — derive the next part from
-      # persisted series state, commit its stage-a-request.json + queued
-      # status.json, and dispatch Stage A for it. Manual-mode series parts are
-      # chained by the bot's "Start next part" action instead.
+      # SERIES CONTINUATION (§11) — bug-30: with the Gemini automatic mode
+      # removed, every series part is manual and is chained by the bot's
+      # "Start next part" action. The automatic in-pipeline continuation below
+      # only ever fired for mode==automatic requests; those can no longer be
+      # created, so the step is inert for current jobs and kept harmless for
+      # any legacy in-flight records.
       # ---------------------------------------------------------------------
       - name: Continue the next validated Series Mode part
         if: success()
@@ -595,13 +597,12 @@ jobs:
           export PYTHONPATH="$GITHUB_WORKSPACE"
           test -f "jobs/$JOB_ID/production.json" || exit 0
           test -f "jobs/$JOB_ID/stage-a-request.json" || exit 0
-          # Manual series parts chain via the bot's "Start next part" button.
-          if [ "$(python -c "import json;print(json.load(open('jobs/$JOB_ID/stage-a-request.json')).get('mode'))")" != "automatic" ]; then
-            echo "Manual series part — continuation is started from the bot; nothing to do."
-            exit 0
-          fi
+          # bug-30: series parts are always chained via the bot's "Start next
+          # part" button now (automatic mode removed) — never auto-chain here.
+          echo "Series continuation is handled by the bot; nothing to do."
+          exit 0
           mkdir -p work
-          python -m pipeline.plan.series . "$JOB_ID" > work/series_next.json
+          # bug-30: unreachable (the step exits above), retained for reference.
           python - <<'PY'
           import json, os, subprocess, time
           from pathlib import Path

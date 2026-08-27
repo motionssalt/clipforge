@@ -75,14 +75,14 @@ export function homeKeyboard() {
 
 /**
  * §8.3 home screen. `snapshot` is { repo, narratorVoice, seriesEnabled,
- * geminiCount, zernioEnabled }.
+ * zernioEnabled }. (bug-30: Gemini removed.)
  */
 export function homeText(snapshot) {
   const voice = VOICES[snapshot.narratorVoice] ? snapshot.narratorVoice : DEFAULT_VOICE;
   const lines = [
     '<b>ClipForge</b>',
     `Connected to: <code>${escapeHtml(snapshot.repo)}</code>   ·   Narrator: ${escapeHtml(VOICES[voice].label)}   ·   Series: ${snapshot.seriesEnabled ? 'on' : 'off'}`,
-    `Gemini: ${snapshot.geminiCount ? `${snapshot.geminiCount} key${snapshot.geminiCount === 1 ? '' : 's'} configured` : 'not configured'}   ·   Zernio: ${snapshot.zernioEnabled ? 'on' : 'off'}`
+    `Zernio: ${snapshot.zernioEnabled ? 'on' : 'off'}`
   ];
   return lines.join('\n');
 }
@@ -91,7 +91,8 @@ export function homeText(snapshot) {
 export const ONBOARDING_TEXT = '<b>ClipForge</b>\n\nThis shared bot turns a source video into a short, narrated, captioned vertical clip. Your private chat operates only the GitHub clone connected to it.\n\nCreate your own private Shadow Clone, or connect a clone you already have.';
 
 export function helpKeyboard() {
-  return buttons([[{ text: '📖 Full user guide (with screenshots)', url: HELP_GUIDE_URL }]]);
+  // bug-29: the guide is text-only (ASCII diagrams, no screenshots).
+  return buttons([[{ text: '📖 Full user guide', url: HELP_GUIDE_URL }]]);
 }
 
 export const HELP_TEXT = [
@@ -100,7 +101,7 @@ export const HELP_TEXT = [
   '/new — start the new-video wizard (manual, automatic, or series mode)',
   '/tasks — list active tasks; finished and errored tasks stay visible here',
   '/done — list completed tasks',
-  '/settings — clone settings (Gemini keys, narrator voice, watermark, music, Zernio)',
+  '/settings — clone settings (GitHub clone, narrator voice, watermark, music, Zernio)',
   '/cancel — cancel the current setup or input flow',
   '/start, /help — this screen / the home menu',
   '',
@@ -114,24 +115,22 @@ export const HELP_TEXT = [
 
 export function settingsKeyboard() {
   return buttons([
-    [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Gemini keys', callback_data: 'set:gemini' }],
-    [{ text: 'Narrator', callback_data: 'set:voice' }, { text: 'Music library', callback_data: 'set:music' }],
-    [{ text: 'Watermark', callback_data: 'set:watermark' }, { text: 'Series Mode', callback_data: 'set:series' }],
-    [{ text: 'Zernio publishing', callback_data: 'set:zernio' }],
+    [{ text: 'GitHub clone', callback_data: 'set:github' }, { text: 'Narrator', callback_data: 'set:voice' }],
+    [{ text: 'Music library', callback_data: 'set:music' }, { text: 'Watermark', callback_data: 'set:watermark' }],
+    [{ text: 'Series Mode', callback_data: 'set:series' }, { text: 'Zernio publishing', callback_data: 'set:zernio' }],
     [{ text: 'Back to menu', callback_data: 'menu:home' }]
   ]);
 }
 
 /**
  * §8.6 settings summary lines. `snapshot` is { repo, narratorVoice,
- * seriesEnabled, geminiCount, watermarkName, musicDefaultPath, zernioEnabled }.
+ * seriesEnabled, watermarkName, musicDefaultPath, zernioEnabled }. (bug-30: Gemini removed.)
  */
 export function settingsText(snapshot) {
   const voice = VOICES[snapshot.narratorVoice] ? snapshot.narratorVoice : DEFAULT_VOICE;
   return [
     '<b>Settings</b>',
     `GitHub clone: ${snapshot.repo ? `<code>${escapeHtml(snapshot.repo)}</code>` : 'not connected'}`,
-    `Gemini keys: ${snapshot.geminiCount ? `${snapshot.geminiCount} configured` : 'not configured'}`,
     `Narrator: ${escapeHtml(VOICES[voice].label)} (Edge TTS)`,
     `Music default: ${snapshot.musicDefaultPath ? `<code>${escapeHtml(String(snapshot.musicDefaultPath).replace(/^audio-library\//, ''))}</code>` : 'not set'}`,
     `Watermark: ${snapshot.watermarkName ? escapeHtml(snapshot.watermarkName) : 'not set'}`,
