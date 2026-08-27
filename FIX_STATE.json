@@ -26,8 +26,8 @@
       "id": "bug-04",
       "title": "Torrent method broken (regression vs _legacy/)",
       "status": "done",
-      "notes": "Root cause: _resolve_magnet_metadata ran aria2 metadata-only fetch with check=True, --max-tries=3, and no --bt-stop-timeout/--seed-ratio=0. aria2 saves the .torrent manifest then exits non-zero while stopping, so check=True raised IngestError on every successful fetch. Legacy stage-a.yml used --bt-stop-timeout=120 --seed-ratio=0 --max-tries=1 --file-allocation=none and judged success by the saved metadata file, not the exit code. Fix: restored those flags, check=False, success = find_saved_metadata() locates the manifest; raises IngestError only if no manifest appears. Payload-download aria2 flags and 1-based manifest index passed to --select-file were verified identical to legacy. Confidence: high on the mechanism; not verified against a live swarm (no aria2/peers in sandbox).",
-      "commit": "5818c3437ab5529f3aab544967026e42341589a9"
+      "notes": "Root cause: _resolve_magnet_metadata ran aria2 metadata-only fetch with check=True, --max-tries=3, and no --bt-stop-timeout/--seed-ratio=0. aria2 saves the .torrent manifest then exits non-zero while stopping, so check=True raised IngestError on every successful fetch. Legacy stage-a.yml used --bt-stop-timeout=120 --seed-ratio=0 --max-tries=1 --file-allocation=none and judged success by the saved metadata file, not the exit code. Fix: restored those flags, check=False, success = find_saved_metadata() locates the manifest; raises IngestError only if no manifest appears. Payload-download aria2 flags and 1-based manifest index passed to --select-file verified identical to legacy. Confidence: high on the mechanism; not verified against a live swarm (no aria2/peers in sandbox).",
+      "commit": "a78882b6978b21c3edc070405565299ff681caef"
     },
     {
       "id": "bug-05",
