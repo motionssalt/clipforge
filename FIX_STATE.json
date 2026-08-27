@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "previous_sweeps": [
     {
       "branch": "agent/fix-sweep",
@@ -141,5 +141,6 @@
       "notes": "Applied to pipeline/plan/prompt.py \u2014 the single template (00_READ_THIS_FIRST.txt) governing BOTH the Gemini automatic-mode script and the external-agent manual script. SERIES_DIRECTIVE rewritten with the guide's 10 sections adapted to series parts (hook = central question; cliffhanger = one specific unanswered question grown from the part's escalation; non-final structure Hook->Setup->Escalation->Major Revelation->New Unanswered Question->Cliffhanger vs full-arc resolution for final parts; banned fake-suspense phrases; 10-question checklist referencing the real next part number). Main template's 'last cut' rule extended with earned-ending/information-gap/short-sentence rules so single videos benefit too. Groundedness constraints (no invented events) retained \u2014 the guide layers on top of factuality. Smoke-tested render: series id, part, next-part substituted correctly.",
       "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
     }
-  ]
+  ],
+  "completed_at": "2026-08-27T16:44:14Z"
 }
