@@ -7,13 +7,13 @@
       "title": "No immediate feedback when a stage is dispatched",
       "status": "pending",
       "notes": "Every stage-triggering action (Stage A start, Stage B start, restart, any other dispatch) must immediately show an animated/progressing 'starting...' indicator BEFORE the dispatch completes. New message on user-initiated actions, edit on button-driven state changes, per existing rules.",
-      "commit": ""
+      "commit": "136f6b3"
     },
     {
       "id": "bug-27",
-      "title": "Pasted production.json — spurious 'send the rest' prompt and no chat cleanup",
+      "title": "Pasted production.json \u2014 spurious 'send the rest' prompt and no chat cleanup",
       "status": "pending",
-      "notes": "1) Bot tells user to send remaining parts even when all split bubbles already arrived and full JSON assembled successfully right after — must not appear if bot will succeed anyway. 2) After full production.json accepted across split bubbles, delete all user message bubbles to avoid chat clutter (only after confirmed successful parse/acceptance).",
+      "notes": "1) Bot tells user to send remaining parts even when all split bubbles already arrived and full JSON assembled successfully right after \u2014 must not appear if bot will succeed anyway. 2) After full production.json accepted across split bubbles, delete all user message bubbles to avoid chat clutter (only after confirmed successful parse/acceptance).",
       "commit": ""
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       "id": "bug-29",
-      "title": "Help page — missing setup instructions, remove images",
+      "title": "Help page \u2014 missing setup instructions, remove images",
       "status": "pending",
       "notes": "1) Add clear setup instructions: GitHub account creation, repository setup (fork/clone per actual flow), GitHub PAT creation with correct minimum permissions. 2) Remove ALL images/screenshots from the help page; use ASCII diagrams if visuals needed.",
       "commit": ""
@@ -39,14 +39,14 @@
     },
     {
       "id": "bug-31",
-      "title": "Clone-update-push — wrong account can see/trigger it, updates wrong target",
+      "title": "Clone-update-push \u2014 wrong account can see/trigger it, updates wrong target",
       "status": "pending",
-      "notes": "1) Visibility: feature must ONLY appear in Settings for the main/original repository account — re-verify bug-21 gating logic rather than trusting it. 2) Direction: tapping update must push OUT to clone deployments, not update main itself (main is already latest). Clones receiving a pushed update must get a changelog/notification on their end.",
+      "notes": "1) Visibility: feature must ONLY appear in Settings for the main/original repository account \u2014 re-verify bug-21 gating logic rather than trusting it. 2) Direction: tapping update must push OUT to clone deployments, not update main itself (main is already latest). Clones receiving a pushed update must get a changelog/notification on their end.",
       "commit": ""
     },
     {
       "id": "bug-32",
-      "title": "Telegram relay download broken — missing GH_TOKEN for source ingest",
+      "title": "Telegram relay download broken \u2014 missing GH_TOKEN for source ingest",
       "status": "pending",
       "notes": "Confirmed run error: 'ingest error: telegram_relay source needs GH_TOKEN to fetch its temporary release asset. Exit code 2.' Likely same root cause as Stage B 'missing source asset' (source_input.bin / original.* never uploaded). Fix telegram_relay ingest to use the existing scoped PAT/token setup (no new unscoped credential). Verify a full telegram_relay run produces a release asset Stage B can find.",
       "commit": ""
