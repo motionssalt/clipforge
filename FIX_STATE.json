@@ -53,8 +53,8 @@
     {
       "id": "bug-08",
       "title": "production.json paste support (multi-bubble reassembly)",
-      "status": "pending",
-      "notes": "Telegram splits long pasted text into multiple bubbles. Detect, reassemble, and parse as production.json input.",
+      "status": "in_progress",
+      "notes": "Investigating plan-upload handler for multi-bubble JSON paste support.",
       "commit": ""
     },
     {
