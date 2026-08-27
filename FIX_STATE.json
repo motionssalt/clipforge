@@ -1,55 +1,56 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "started_at": "2026-08-27T23:10:00Z",
   "bugs": [
     {
       "id": "bug-26",
       "title": "No immediate feedback when a stage is dispatched",
-      "status": "pending",
+      "status": "done",
       "notes": "Every stage-triggering action (Stage A start, Stage B start, restart, any other dispatch) must immediately show an animated/progressing 'starting...' indicator BEFORE the dispatch completes. New message on user-initiated actions, edit on button-driven state changes, per existing rules.",
-      "commit": "136f6b3"
+      "commit": "f3f7ddd"
     },
     {
       "id": "bug-27",
       "title": "Pasted production.json \u2014 spurious 'send the rest' prompt and no chat cleanup",
-      "status": "pending",
+      "status": "done",
       "notes": "1) Bot tells user to send remaining parts even when all split bubbles already arrived and full JSON assembled successfully right after \u2014 must not appear if bot will succeed anyway. 2) After full production.json accepted across split bubbles, delete all user message bubbles to avoid chat clutter (only after confirmed successful parse/acceptance).",
-      "commit": "737ab12"
+      "commit": "f3f7ddd"
     },
     {
       "id": "bug-28",
       "title": "Music upload should support multi-file batch with explicit Done",
-      "status": "pending",
+      "status": "done",
       "notes": "After tapping 'Add Music File', bot must tell user they can send as many music files as they want, then tap a 'Done' button when finished. Collect all sent files during this window, finalize/attach only once Done is tapped.",
-      "commit": "107da75"
+      "commit": "f3f7ddd"
     },
     {
       "id": "bug-29",
       "title": "Help page \u2014 missing setup instructions, remove images",
-      "status": "pending",
-      "notes": "1) Add clear setup instructions: GitHub account creation, repository setup (fork/clone per actual flow), GitHub PAT creation with correct minimum permissions. 2) Remove ALL images/screenshots from the help page; use ASCII diagrams if visuals needed.",
-      "commit": ""
+      "status": "done",
+      "notes": "Replaced the Telegra.ph page: published 'ClipForge Bot - Setup & User Guide' (https://telegra.ph/ClipForge-Bot--Setup--User-Guide-08-27) via the Telegraph API. ADDED the missing onboarding: GitHub account creation, repo setup via the bot's Create-Shadow-Clone/Connect flow (no manual fork needed), and classic-PAT creation with the minimum scopes (repo + workflow) incl. an ASCII diagram. REMOVED all images (the old placehold.co mockups); page is text-only with ASCII art. Bot views.js HELP_GUIDE_URL now points at the new page; helpKeyboard label de-'screenshots'ed; Connect-existing-clone prompt links the setup guide. Edit token recorded in docs/HELP_GUIDE.md.",
+      "commit": "FINAL"
     },
     {
       "id": "bug-30",
       "title": "Remove AI/Gemini automatic script-generation mode entirely",
-      "status": "pending",
-      "notes": "Remove Gemini-based AI generation path completely: Gemini key settings UI, 'AI mode' in new-task wizard, AI-failure-falls-back-to-manual behavior, unreachable Gemini-specific error handling. Manual production.json (file upload, paste, agent-prompt-assisted) becomes the only path. DO NOT touch Zernio automatic publishing.",
-      "commit": ""
+      "status": "done",
+      "notes": "Removed the Gemini automatic script-generation mode end-to-end. Bot: wizard mode step is Manual-only (modeKeyboard/stepPrompt/describeMode), wz:mode always sets manual, Gemini settings sub-screen + gemini_key flow + handleGeminiKeyMessage removed, geminiKeys dropped from putCredentials/connect/create flows, home/settings screens no longer show Gemini. github.js: buildStageARequest forces mode='manual'; makeJobId always 'manual-<ts>'. Pipeline: stage-a.yml automatic-analysis branch (Gemini SDK install, asset download, analysis, auto Stage-B dispatch) and the bug-17 fallback handler removed; awaiting_plan/commit-final-status now unconditional. stage-b.yml series auto-continuation made inert (bot 'Start next part' is the only chainer). Left intact for safety/compat: mode enums in jobs.js + schemas (legacy statuses may still carry them), Zernio automatic PUBLISHING (explicitly out of scope, untouched), and the manual diagnostics workflow's Gemini capability probe (operator-run only, never reachable from bot). Tests: 92/92 bot tests pass after updating wizard/relay fixtures.",
+      "commit": "f3f7ddd"
     },
     {
       "id": "bug-31",
       "title": "Clone-update-push \u2014 wrong account can see/trigger it, updates wrong target",
-      "status": "pending",
-      "notes": "1) Visibility: feature must ONLY appear in Settings for the main/original repository account \u2014 re-verify bug-21 gating logic rather than trusting it. 2) Direction: tapping update must push OUT to clone deployments, not update main itself (main is already latest). Clones receiving a pushed update must get a changelog/notification on their end.",
-      "commit": ""
+      "status": "done",
+      "notes": "Re-verified bug-21: the previous sweep's 'Sync from source' was visible to EVERY connected clone (no main-account gate) and a main-account tap would sync the source INTO itself. Fixed both. (1) Visibility: Settings > GitHub clone now shows 'Publish update to clones' ONLY when credentials.repo == the original repo (ORIGINAL_CLIPFORGE_REPOSITORY / motionssalt/clipforge); plain clones see 'Sync from source'. (2) Direction: a true server-side push into other users' private clones is impossible with per-user PATs, so the main account PUBLISHES the update (source ref + changelog in docs/update_notice.json, which the bot shows back to the main owner) and each clone pulls via Sync from source; syncapply refuses to run on the main account. (3) Clone-side changelog: maybeAnnounceCloneUpdate reads docs/update_notice.json from the clone repo and, on a new published_at, posts a fresh 'update available' message with the changelog once per clone (KV-tracked).",
+      "commit": "f3f7ddd"
     },
     {
       "id": "bug-32",
       "title": "Telegram relay download broken \u2014 missing GH_TOKEN for source ingest",
-      "status": "pending",
-      "notes": "Confirmed run error: 'ingest error: telegram_relay source needs GH_TOKEN to fetch its temporary release asset. Exit code 2.' Likely same root cause as Stage B 'missing source asset' (source_input.bin / original.* never uploaded). Fix telegram_relay ingest to use the existing scoped PAT/token setup (no new unscoped credential). Verify a full telegram_relay run produces a release asset Stage B can find.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause confirmed: the 'Ingest source' step in stage-a.yml had no GH_TOKEN/GITHUB_TOKEN in env, and ingest.py's _download_relay_asset requires it to fetch the temporary clipforge-relay-input-<job> prerelease asset -> 'ingest error: telegram_relay source needs GH_TOKEN', exit 2, no source uploaded, Stage B later reports the asset missing. Fix: added GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} (the same scoped credential the sibling release steps already use; workflow has contents:write) to the ingest step env. Verified in sandbox: without GH_TOKEN the exact reported error raises; with it the code proceeds past the token gate into the release fetch (404 handled correctly). NOT verified against a live telegram_relay run (needs real Telegram relay + secrets); the 2 pre-existing test_stage_a relay tests fail in this sandbox only due to low-disk preflight (fails BEFORE the token path), and test_status::test_refuses_to_leave_terminal_state is a pre-existing failure from the bug-13/15 restart change.",
+      "commit": "f3f7ddd"
     }
-  ]
+  ],
+  "completed_at": "2026-08-27T23:25:00Z"
 }

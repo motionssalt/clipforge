@@ -13,7 +13,7 @@ import { DEFAULT_VOICE, VOICES, escapeHtml } from './constants.js';
  * bug-23: canonical end-to-end user guide (Telegraph). Linked from /help
  * and the onboarding screen.
  */
-export const HELP_GUIDE_URL = 'https://telegra.ph/ClipForge-Bot--Complete-User-Guide-08-27-2';
+export const HELP_GUIDE_URL = 'https://telegra.ph/ClipForge-Bot--Setup--User-Guide-08-27';
 
 export function callbackMessageId(callback) {
   const value = callback && callback.message && callback.message.message_id;
