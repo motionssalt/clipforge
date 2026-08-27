@@ -2,9 +2,9 @@
 
 The picture chain is, in order:
 
-    light hqdn3d shimmer denoise → supplied 3D color-cube grade → strong
-    contrast-adaptive sharpen → threshold-protected line-ink unsharp → gradfun
-    debanding → yuv420p
+    light hqdn3d shimmer denoise → supplied 3D color-cube grade → 2x
+    lanczos upscale → sharpen on the upsampled frame → rescale BACK to the
+    source's own 9:10 frame → gradfun debanding → yuv420p
 
 Rationale (hard-won, do not relitigate):
 
@@ -46,13 +46,30 @@ LUT_ASSET = common.LUT_HALD_ASSET
 # sharpen" pass. CPU-only (lanczos/cas/unsharp are all CPU filters), safe
 # for GitHub Actions runners; no GPU dependency introduced.
 UPSCALE = "scale=w='min(2160,2*iw)':h='min(3840,2*ih)':flags=lanczos"
+# bug-25: the 2x upscale must NOT be left in the delivered file. It used to
+# stop the pipeline here, so final.mp4 came out at 2x the source resolution.
+# The captions/reframe stage then ran
+# ``scale=1080:1200:force_original_aspect_ratio=increase,crop=1080:1200`` on
+# that 2x frame — force_original_aspect_ratio=increase scales the source's
+# aspect onto the TARGET box and crops the overflow, so a frame that was
+# already the target shape gets its aspect re-interpreted and force-cropped
+# to 9:10. That is the vertical-stretch regression. And because the final
+# crop happened AFTER the sharpeners, the sharpening was partially cropped /
+# rescaled away (the missing-sharpening complaint). Fix: upscale only to give
+# the sharpeners a bigger canvas, then rescale back to the SOURCE'S OWN
+# frame so enhance is resolution-neutral and the sharpened detail survives
+# all the way to delivery.`` setsar=1`` keeps pixels square; the source's
+# own SAR is restored below, never hardcoded 1080x1200 here.
+RESCALE_BACK = (
+    "scale=w='trunc(iw/2/2)*2':h='trunc(ih/2/2)*2':flags=lanczos,setsar=1"
+)
 EDGE_SHARPEN = "cas=strength=0.75"
 LINE_SHARPEN = "unsharp=7:7:0.85:5:5:0.35"
 DEBAND = "gradfun=1.2:16"
 
 FILTER_CHAIN = (
-    f"{DENOISE},{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},{LINE_SHARPEN},{DEBAND},"
-    "format=yuv420p,setsar=1"
+    f"{DENOISE},{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},{LINE_SHARPEN},"
+    f"{RESCALE_BACK},{DEBAND},format=yuv420p,setsar=1"
 )
 
 # Mobile-safe encoding parameters (same contract as render.py).
@@ -95,7 +112,7 @@ def enhance_one(src: str, dst: str) -> None:
     graph = (
         f"[0:v]{DENOISE}[denoised];"
         f"[denoised][1:v]{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},"
-        f"{LINE_SHARPEN},{DEBAND},format=yuv420p,setsar=1[enhanced]"
+        f"{LINE_SHARPEN},{RESCALE_BACK},{DEBAND},format=yuv420p,setsar=1[enhanced]"
     )
     cmd = [
         "ffmpeg", "-y",

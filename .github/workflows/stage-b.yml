@@ -719,9 +719,17 @@ jobs:
         run: |
           set -euo pipefail
           export PYTHONPATH="$GITHUB_WORKSPACE"
-          # The complete status is committed+pushed by the step above, and the
-          # working tree is at that commit — reading the local files here sees
-          # exactly the state the bot and publish.yml will see.
+          # bug-24: the working tree is pinned to the job's code_ref (the SHA
+          # captured when the job STARTED). If the operator toggled
+          # auto_publish in Settings after the job started, the local
+          # branding/zernio_settings.json is STALE and the gate below reads
+          # the old "off" value — the publish step is then skipped even though
+          # automatic publish is enabled. Pull the CURRENT tip of the default
+          # branch so the settings read reflects the latest committed config.
+          # Status commits already happened above, so this can never clobber
+          # pending work; it only advances the checkout.
+          git fetch origin "${{ github.event.repository.default_branch }}" --depth=1 || true
+          git checkout "origin/${{ github.event.repository.default_branch }}" -- branding/ 2>/dev/null || true
           IFS=$'\t' read -r DISPATCH MODE TIMEZONE TARGETS_JSON REQUEST_ID REASON < <(
             python -m pipeline.publish.zernio automatic-dispatch . "$JOB_ID" \
               --secret-configured "$ZERNIO_SECRET_PRESENT"
