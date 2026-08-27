@@ -46,9 +46,9 @@
     {
       "id": "bug-07",
       "title": "Finished/errored tasks disappear from task list",
-      "status": "in_progress",
-      "notes": "Investigating why finished/errored tasks vanish from the task list.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: commands/tasks.js showTasks filtered terminal entries out of /tasks (active = entries.filter(!isTerminal(state))), so complete/error/cancelled tasks vanished from the operator's main list; they were only reachable via /done. Fix: /tasks now lists ALL tasks sorted by creation time, with terminal rows marked ✅ complete / ⚠️ error / ⛔ cancelled (plain-language state text via describeTaskState unchanged); delete and bug-02 in-place confirm-delete still work on terminal rows; /done retained for the completed-with-release-links view. Unused isTerminal import removed; node --check passes. Note: status.json expiry is 12h TTL with hourly cleanup purging only expired records (bug-03), so tasks older than the TTL may show as \"status unavailable\" — expected per design, not part of this bug. Confidence: high on the rendering fix; verified by code inspection, not a live bot run.",
+      "commit": "cce81ae0f04e5d96e757f756f6f9da866b1fa95f"
     },
     {
       "id": "bug-08",
