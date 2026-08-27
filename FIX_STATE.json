@@ -141,9 +141,9 @@
     {
       "id": "bug-22",
       "title": "On-demand video delivery for finished tasks",
-      "status": "in_progress",
-      "notes": "Starting investigation of on-demand video delivery for finished tasks.",
-      "commit": ""
+      "status": "done",
+      "notes": "Implemented on-demand video delivery for finished tasks. runtime.js taskKeyboard: every 'complete' task now gets a '\ud83d\udce9 Send video to chat' button (task:sendvideo), works for single tasks and series Stage B parts since the button is keyed to state==complete regardless of publish status. index.js: new deliverVideoToChat handler \u2014 resolves the release tag from status.release_tag (fallback clipforge-<job_id>), locates the final.mp4 asset via new github.js findReleaseAsset() which honours the uploaded-state rule from bug-20. Size gate: if asset.size is 0/unknown or > 49 MB (1 MB headroom under the 50 MB Bot API limit) the bot replies with a direct browser_download_url link plus the release page link instead of attempting an upload. Under the limit it downloads the bytes with an authenticated octet-stream fetch (downloadReleaseAssetBytes, capped at 50 MB) and sends via new telegram.js sendVideoBytes (multipart sendVideo, supports_streaming). Caption is built from production.json (title + hashtags) via deliverVideoCaption, truncated to Telegram's 1024-char caption limit, with a 'ClipForge video \u2014 Task <label>' fallback when no plan title exists. A progress message is shown while the Worker downloads the asset. Confidence: wiring is verified (node --check passes, call sites traced); not runtime-verified against live Telegram/GitHub since that needs a deployed Worker and a real release asset. The \u226550 MB branch relies on GitHub's reported asset.size; a misreported size would surface as a Telegram send error, which the existing callback error path already reports to the user.",
+      "commit": "41f6acd"
     },
     {
       "id": "bug-23",
