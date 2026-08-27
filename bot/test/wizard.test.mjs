@@ -122,8 +122,12 @@ test('taskKeyboard exposes only state-valid actions (§8.5)', () => {
   const awaiting = flat({ state: 'awaiting_plan' });
   assert.ok(awaiting.includes('task:prompt:A') && awaiting.includes('task:upload:A'));
   assert.ok(flat({ state: 'stage_b_running' }).includes('task:cancelb:A'));
-  const err = flat({ state: 'error' });
-  assert.ok(err.includes('task:restarta:A') && err.includes('task:restartb:A') && err.includes('task:del:A'));
+  // bug-15: a task that died inside Stage A (Stage B never began) must NOT
+  // offer a Stage B restart; a Stage B failure offers both.
+  const errA = flat({ state: 'error', message: 'Stage A failed. See workflow run for logs.' });
+  assert.ok(errA.includes('task:restarta:A') && !errA.includes('task:restartb:A') && errA.includes('task:delfrom:A'));
+  const errB = flat({ state: 'error', message: 'Stage B failed. See workflow run for logs.' });
+  assert.ok(errB.includes('task:restarta:A') && errB.includes('task:restartb:A') && errB.includes('task:delfrom:A'));
   const done = flat({ state: 'complete', mode: 'manual', series: { enabled: true, part: 1, is_final: false } });
   assert.ok(done.includes('task:dl:A') && done.includes('task:pub:A') && done.includes('task:next:A'));
   const doneFinal = flat({ state: 'complete', mode: 'manual', series: { enabled: true, part: 3, is_final: true } });

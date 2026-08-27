@@ -50,10 +50,19 @@ export function taskKeyboard(status, label) {
     rows.push([{ text: '⛔ Cancel Stage B', callback_data: `task:cancelb:${label}` }]);
   }
   if (state === 'error' || state === 'cancelled') {
-    rows.push([
-      { text: '↻ Restart Stage A', callback_data: `task:restarta:${label}` },
-      { text: '↻ Restart Stage B', callback_data: `task:restartb:${label}` }
-    ]);
+    // bug-15: only offer restarts for stages that actually RAN. status.message
+    // tells us where the failure happened ("Stage A failed." vs "Stage B
+    // failed."); when it is uninformative, any recorded stage progress
+    // (awaiting_plan / stage_b_*) implies Stage A completed, so Stage B restart
+    // is meaningful. A task that died inside Stage A (Stage B never began) must
+    // NOT show a "Restart Stage B" button.
+    const message = String((status && status.message) || '');
+    const stageBStarted = /stage b/i.test(message);
+    const restartRow = [{ text: '↻ Restart Stage A', callback_data: `task:restarta:${label}` }];
+    if (stageBStarted) {
+      restartRow.push({ text: '↻ Restart Stage B', callback_data: `task:restartb:${label}` });
+    }
+    rows.push(restartRow);
   }
   if (state === 'complete') {
     rows.push([
