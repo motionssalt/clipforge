@@ -5,25 +5,120 @@
     {
       "branch": "agent/fix-sweep",
       "bugs": [
-        {"id": "bug-01", "title": "Message edit-vs-new-message dispatch logic", "status": "done", "commit": "c97aa2e16c0a1ee83b22b964e748197d9c6249e5"},
-        {"id": "bug-02", "title": "Delete confirmation UX — in-place label toggle", "status": "done", "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"},
-        {"id": "bug-03", "title": "Clarify task cleanup (1h) vs task expiry (12h)", "status": "done", "commit": ""},
-        {"id": "bug-04", "title": "Torrent method broken", "status": "done", "commit": "e06f5b9f234b595a2478066b39ecd8bb8e26723c"},
-        {"id": "bug-05", "title": "Telegram direct file/video forward broken", "status": "done", "commit": "2619378da788f3e3d7ec7d9941a209d6aee70bff"},
-        {"id": "bug-06", "title": "Command list drift", "status": "done", "commit": "2948d943c1df27e31a717f4824107383916f6e62"},
-        {"id": "bug-07", "title": "Finished/errored tasks disappear from task list", "status": "done", "commit": "cce81ae0f04e5d96e757f756f6f9da866b1fa95f"},
-        {"id": "bug-08", "title": "production.json paste multi-bubble reassembly", "status": "done", "commit": "290ff24d6e491a343b83b9fff0483dd251416a24"},
-        {"id": "bug-09", "title": "Copy button for agent prompts", "status": "done", "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"},
-        {"id": "bug-10", "title": "production.json prompt output format", "status": "done", "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"},
-        {"id": "bug-11", "title": "Video quality — CPU sharpening/upscale pass", "status": "done", "commit": "5bc9ba3460796be247aa9fce92e492ca15a5b676"},
-        {"id": "bug-12", "title": "Gemini API key validation false rejection", "status": "done", "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"},
-        {"id": "bug-13", "title": "Stage A audio step failure (series mode)", "status": "done", "commit": "4cd6ef15026b02e381ebd3968d611ed6fe6f3567"},
-        {"id": "bug-14", "title": "Series mode production.json series_id mismatch", "status": "done", "commit": "b82df381384e8713bd4359c0464733a9ae72b504"},
-        {"id": "bug-15", "title": "Restart button shows stages that never ran", "status": "done", "commit": "89742c99e7d0768944190b290355ef9f740b3798"},
-        {"id": "bug-16", "title": "Restart gives no feedback/acknowledgment", "status": "done", "commit": "ca369956dea762d852309e01200000cb359aaa31"},
-        {"id": "bug-17", "title": "AI mode should fall back to manual on Gemini failure", "status": "done", "commit": "f328cccbbeb21c9209c5686070c213c4823341f7"},
-        {"id": "bug-18", "title": "Gemini key still rejected", "status": "done", "commit": "7c6cbb96bf9ea16082f51fd2701b2ee1d013aa8a"},
-        {"id": "bug-19", "title": "Script generation — hook & cliffhanger quality overhaul", "status": "done", "commit": "b82df381384e8713bd4359c0464733a9ae72b504"}
+        {
+          "id": "bug-01",
+          "title": "Message edit-vs-new-message dispatch logic",
+          "status": "done",
+          "commit": "c97aa2e16c0a1ee83b22b964e748197d9c6249e5"
+        },
+        {
+          "id": "bug-02",
+          "title": "Delete confirmation UX \u2014 in-place label toggle",
+          "status": "done",
+          "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"
+        },
+        {
+          "id": "bug-03",
+          "title": "Clarify task cleanup (1h) vs task expiry (12h)",
+          "status": "done",
+          "commit": ""
+        },
+        {
+          "id": "bug-04",
+          "title": "Torrent method broken",
+          "status": "done",
+          "commit": "e06f5b9f234b595a2478066b39ecd8bb8e26723c"
+        },
+        {
+          "id": "bug-05",
+          "title": "Telegram direct file/video forward broken",
+          "status": "done",
+          "commit": "2619378da788f3e3d7ec7d9941a209d6aee70bff"
+        },
+        {
+          "id": "bug-06",
+          "title": "Command list drift",
+          "status": "done",
+          "commit": "2948d943c1df27e31a717f4824107383916f6e62"
+        },
+        {
+          "id": "bug-07",
+          "title": "Finished/errored tasks disappear from task list",
+          "status": "done",
+          "commit": "cce81ae0f04e5d96e757f756f6f9da866b1fa95f"
+        },
+        {
+          "id": "bug-08",
+          "title": "production.json paste multi-bubble reassembly",
+          "status": "done",
+          "commit": "290ff24d6e491a343b83b9fff0483dd251416a24"
+        },
+        {
+          "id": "bug-09",
+          "title": "Copy button for agent prompts",
+          "status": "done",
+          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
+        },
+        {
+          "id": "bug-10",
+          "title": "production.json prompt output format",
+          "status": "done",
+          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
+        },
+        {
+          "id": "bug-11",
+          "title": "Video quality \u2014 CPU sharpening/upscale pass",
+          "status": "done",
+          "commit": "5bc9ba3460796be247aa9fce92e492ca15a5b676"
+        },
+        {
+          "id": "bug-12",
+          "title": "Gemini API key validation false rejection",
+          "status": "done",
+          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
+        },
+        {
+          "id": "bug-13",
+          "title": "Stage A audio step failure (series mode)",
+          "status": "done",
+          "commit": "4cd6ef15026b02e381ebd3968d611ed6fe6f3567"
+        },
+        {
+          "id": "bug-14",
+          "title": "Series mode production.json series_id mismatch",
+          "status": "done",
+          "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
+        },
+        {
+          "id": "bug-15",
+          "title": "Restart button shows stages that never ran",
+          "status": "done",
+          "commit": "89742c99e7d0768944190b290355ef9f740b3798"
+        },
+        {
+          "id": "bug-16",
+          "title": "Restart gives no feedback/acknowledgment",
+          "status": "done",
+          "commit": "ca369956dea762d852309e01200000cb359aaa31"
+        },
+        {
+          "id": "bug-17",
+          "title": "AI mode should fall back to manual on Gemini failure",
+          "status": "done",
+          "commit": "f328cccbbeb21c9209c5686070c213c4823341f7"
+        },
+        {
+          "id": "bug-18",
+          "title": "Gemini key still rejected",
+          "status": "done",
+          "commit": "7c6cbb96bf9ea16082f51fd2701b2ee1d013aa8a"
+        },
+        {
+          "id": "bug-19",
+          "title": "Script generation \u2014 hook & cliffhanger quality overhaul",
+          "status": "done",
+          "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
+        }
       ],
       "completed_at": "2026-08-27T16:44:14Z"
     }
@@ -32,8 +127,8 @@
     {
       "id": "bug-20",
       "title": "Release asset not found during Stage B download",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Investigating stage-b.yml Load release metadata + Download source video steps for race/naming/eventual-consistency issue.",
       "commit": ""
     },
     {
@@ -66,7 +161,7 @@
     },
     {
       "id": "bug-25",
-      "title": "Video quality regression — missing sharpening + unwanted vertical stretch",
+      "title": "Video quality regression \u2014 missing sharpening + unwanted vertical stretch",
       "status": "pending",
       "notes": "",
       "commit": ""
