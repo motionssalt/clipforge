@@ -11,9 +11,9 @@
     {
       "id": "bug-02",
       "title": "Delete confirmation UX \u2014 in-place label toggle",
-      "status": "in_progress",
-      "notes": "Investigating: current confirmDeleteTask renders separate view. Need to make task:del toggle the row inline in the list, second tap deletes.",
-      "commit": ""
+      "status": "done",
+      "notes": "Tasks list delete button now toggles the row label in-place to \"Confirm Delete?\" instead of switching views. Second tap on that row executes delete. Full-page confirm card kept for task-detail view (no row to toggle there) via new task:delfrom callback. task:del is reserved for the list inline toggle. Confidence: high.",
+      "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"
     },
     {
       "id": "bug-03",
