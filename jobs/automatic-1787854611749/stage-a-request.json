@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "job_id": "automatic-1787854611749",
+  "source": {
+    "kind": "url",
+    "value": "https://usercontent.smvd.xyz/renders/2026-08-27T18-00-00.000Z/ytvid_wSB4YEz0r_M_1440p60/ytvid_wSB4YEz0r_M_1440p60.mp4"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": 300,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "automatic",
+  "series": {
+    "enabled": false,
+    "series_id": "",
+    "source_job_id": "",
+    "part": 0,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/Podcast_Background_Music_While_Talking_Interviews_Free_Music_to.m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1787854627
+}
