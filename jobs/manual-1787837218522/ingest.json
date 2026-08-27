@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "job_id": "manual-1787837218522",
+  "source_kind": "drive",
+  "original_path": "work/original.mkv",
+  "original_asset_name": "original.mkv",
+  "size_bytes": 156507354,
+  "container": "mkv",
+  "ingested_at_epoch": 1787837330
+}
