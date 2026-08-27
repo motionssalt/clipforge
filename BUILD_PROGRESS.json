@@ -438,9 +438,21 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "cd bot && npm test (86 passed, was 82); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
+    },
+    {
+      "session": "bugfix-3-torrent-selection-prompt",
+      "date_utc": "2026-08-27",
+      "summary": "Bug 3 fix (torrent file selection was not clearly surfaced). Investigation confirmed the pipeline side is intact — stage_a/ingest.py still writes torrent-selection.json and sets awaiting_torrent_selection via pipeline.status for multi-file torrents with no pick yet (identical to the legacy flow), and the receive side (task:tsel/tselpick -> showTorrentSelection/pickTorrentFile in index.js) was already fully wired. The gap was the SEND side in the current bot: /tasks printed the raw state name via the generic fallback, and the task view showed only the bare state + message. Fixes: describeTaskState (constants.js, added with Bug 1) renders the state as waiting for your file selection; showTasks uses it for both the line and the Open button; the task view (runtime.js showTask) now adds an explicit call-to-action line telling the operator to tap Choose video file (which routes to the existing paginated chooser). Tests: 3 new JS tests (list rendering, taskKeyboard chooser wiring, task-view prompt).",
+      "files_created": [],
+      "files_modified": [
+        "bot/src/runtime.js",
+        "bot/test/tasks.test.mjs",
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "cd bot && npm test (89 passed, was 86); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
     }
   ],
-  "next_action": "Bug 3 (torrent selection prompt wiring) and Feature 4 (unseen NEW marker) remain in this sessions task list.",
+  "next_action": "Feature 4 (unseen NEW task marker) remains in this sessions task list.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -489,8 +501,8 @@
     "note_after_relay_fix": "relay-ordering-fix-session-1: 210 Python (unittest discover pipeline/tests) + 78 JS (npm test) all green after the staging-time relay record fix."
   },
   "last_session": {
-    "id": "bugfix-2-label-lifecycle",
-    "note": "Bug 2 fix (task labels never reclaimed; legacy and current tasks mixed). Root cause confirmed: storage.js nextLabel()/ensureTaskLabel() allocated from a monotonic tasks.next counter, removeTask() existed but nothing called it, and pipeline/cleanup/expired.py only manages GitHub-side artifacts with no knowledge of the bot KV label store. Fixes: (1) manual deletion surfaced — every /tasks row now ca"
+    "id": "bugfix-3-torrent-selection-prompt",
+    "note": "Bug 3 fix (torrent file selection was not clearly surfaced). Investigation confirmed the pipeline side is intact — stage_a/ingest.py still writes torrent-selection.json and sets awaiting_torrent_selection via pipeline.status for multi-file torrents with no pick yet (identical to the legacy flow), and the receive side (task:tsel/tselpick -> showTorrentSelection/pickTorrentFile in index.js) was alre"
   },
   "architecture_concerns_closed": [
     {

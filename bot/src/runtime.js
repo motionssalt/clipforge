@@ -8,7 +8,7 @@ import { GitHubError, readStatus } from './github.js';
 import { getCredentials, getJobIdForLabel } from './storage.js';
 import { isTerminal } from './jobs.js';
 import { buttons } from './telegram.js';
-import { escapeHtml, redact } from './constants.js';
+import { escapeHtml, redact, describeTaskState } from './constants.js';
 import { ONBOARDING_TEXT, onboardingKeyboard, renderInteractiveView } from './views.js';
 
 /** Map internal errors to short, secret-free user text (§13 invariant #1). */
@@ -89,9 +89,17 @@ export async function showTask(env, chatId, label, messageId = null) {
       { replyMarkup: buttons([[{ text: '🔄 Refresh', callback_data: `task:open:${label}` }], [{ text: '🗑 Delete task', callback_data: `task:del:${label}` }], [{ text: '← Tasks', callback_data: 'menu:tasks' }]]) },
       messageId);
   }
+  const state = String(status.state || 'queued');
   const lines = [
     `<b>Task ${escapeHtml(label)}</b> · <code>${escapeHtml(jobId)}</code>`,
-    `State: <b>${escapeHtml(status.state || 'queued')}</b>`,
+    `State: <b>${escapeHtml(state)}</b>`,
+    // Bug 3 fix: the torrent-selection state reads as an explicit call to
+    // action on the task view itself — the operator is told plainly what the
+    // job is waiting for and which button resolves it, not just shown a raw
+    // state name.
+    state === 'awaiting_torrent_selection'
+      ? `⏳ <b>${escapeHtml(describeTaskState(status))}</b> — tap <b>📂 Choose video file</b> below and pick the file to process.`
+      : '',
     escapeHtml(status.message || '')
   ];
   const series = status.series && typeof status.series === 'object' ? status.series : {};

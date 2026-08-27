@@ -199,3 +199,54 @@ test('showTasks sorts rows by creation time and offers a delete button per row',
   const callbacks = JSON.stringify(sent[0].payload.reply_markup || {});
   for (const label of ['A', 'B', 'C']) assert.match(callbacks, new RegExp(`task:del:${label}`));
 });
+
+// ---------------------------------------------------------------------------
+// Bug 3 fix coverage: a job in awaiting_torrent_selection must surface a
+// clear, actionable file-selection prompt — never the raw state string.
+// (The pipeline-side state transition was verified intact: stage_a/ingest.py
+// writes torrent-selection.json + sets awaiting_torrent_selection via
+// pipeline.status for multi-file torrents, exactly like the legacy flow.)
+// ---------------------------------------------------------------------------
+
+test('Bug 3: /tasks renders the torrent-selection state as plain language', async () => {
+  const kv = makeKv();
+  const env = await makeEnv(kv);
+  await ensureTaskLabel(env, CHAT, 'job-tor');
+  const sent = [];
+  const restore = installFetch({
+    files: { 'jobs/job-tor/status.json': makeStatus('job-tor', 'awaiting_torrent_selection', 100) },
+    sent,
+  });
+  try { await showTasks(env, CHAT); } finally { restore(); }
+  const text = String(sent[0].payload.text || '');
+  assert.match(text, /waiting for your file selection/i);
+  assert.doesNotMatch(text, /awaiting_torrent_selection/);
+  const kb = JSON.stringify(sent[0].payload.reply_markup || {});
+  assert.match(kb, /waiting for your file selection/i);
+});
+
+test('Bug 3: the task keyboard offers the torrent chooser while selection is pending', async () => {
+  const { taskKeyboard } = await import('../src/runtime.js');
+  const kb = JSON.stringify(taskKeyboard(makeStatus('j-1', 'awaiting_torrent_selection', 1), 'A'));
+  assert.match(kb, /Choose video file/);
+  assert.match(kb, /task:tsel:A:0/);
+});
+
+test('Bug 3: the task view tells the operator plainly to pick a file', async () => {
+  const { showTask } = await import('../src/runtime.js');
+  const kv = makeKv();
+  const env = await makeEnv(kv);
+  await ensureTaskLabel(env, CHAT, 'job-tor2');
+  const sent = [];
+  const restore = installFetch({
+    files: { 'jobs/job-tor2/status.json': makeStatus('job-tor2', 'awaiting_torrent_selection', 100) },
+    sent,
+  });
+  try { await showTask(env, CHAT, 'A'); } finally { restore(); }
+  assert.equal(sent.length, 1, 'expected the task view to render');
+  const text = String(sent[0].payload.text || '');
+  assert.match(text, /waiting for your file selection/i);
+  assert.match(text, /Choose video file/);
+  const kb = JSON.stringify(sent[0].payload.reply_markup || {});
+  assert.match(kb, /task:tsel:A:0/, 'chooser button must be wired to the selection screen');
+});
