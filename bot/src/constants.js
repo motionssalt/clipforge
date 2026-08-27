@@ -50,6 +50,19 @@ export const DEFAULT_VOICE = 'en-US-AndrewNeural';
 // into /new; /status is folded into /tasks.
 export const COMMANDS = new Set(['/start', '/help', '/new', '/tasks', '/done', '/settings', '/cancel']);
 
+/**
+ * Plain-language rendering for task states an operator must recognize at a
+ * glance (Bug 1/Bug 3 fix). Anything not listed falls back to the raw state
+ * name. `unreadable` marks a task whose status document could not be read at
+ * all — rendered distinctly instead of being folded into "queued".
+ */
+export function describeTaskState(status, { unreadable = false } = {}) {
+  if (unreadable) return 'status unavailable — could not read the job record';
+  const state = status && status.state ? String(status.state) : 'queued';
+  if (state === 'awaiting_torrent_selection') return 'waiting for your file selection';
+  return state;
+}
+
 export function escapeHtml(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

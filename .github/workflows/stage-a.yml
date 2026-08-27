@@ -66,12 +66,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Bug 1 fix: never fail in THIS step. The job_id output must always
+          # be set so the "On failure" handler can persist an error status even
+          # when validation itself is what fails; the hard stop happens one
+          # step later in "Validate resolved job".
           job_id="${{ inputs.job_id }}"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+          echo "release_tag=clipforge-$job_id" >> "$GITHUB_OUTPUT"
           if ! [[ "$job_id" =~ ^[A-Za-z0-9._-]{1,120}$ ]]; then
-            echo "Invalid job_id" >&2; exit 1
+            echo "Invalid job_id" >&2
+            echo "job_valid=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           req="jobs/$job_id/stage-a-request.json"
-          test -f "$req" || { echo "Missing $req — the bot must write it before dispatch" >&2; exit 1; }
+          if ! test -f "$req"; then
+            echo "Missing $req — the bot must write it before dispatch" >&2
+            echo "job_valid=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "job_valid=true" >> "$GITHUB_OUTPUT"
           python - "$req" >> "$GITHUB_OUTPUT" <<'PY'
           import json, re, sys
           data = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -93,8 +106,13 @@ jobs:
           put("series_source_job_id", src_job if re.fullmatch(r"[A-Za-z0-9._-]{1,120}", src_job) else "")
           put("target_duration_seconds", str(int(opts.get("target_duration_seconds", 120) or 120)))
           PY
-          echo "release_tag=clipforge-$job_id" >> "$GITHUB_OUTPUT"
-          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+
+      - name: Validate resolved job
+        if: ${{ steps.req.outputs.job_valid != 'true' }}
+        shell: bash
+        run: |
+          echo "Stage A cannot run for job '${{ steps.req.outputs.job_id }}': the id is invalid or its stage-a-request.json is missing." >&2
+          exit 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -584,16 +602,31 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          python -m pipeline.status "${{ steps.req.outputs.job_id }}" --state error \
-            --message "Stage A failed. See workflow run for logs." \
+          # Bug 1 fix: this handler must ALWAYS leave a readable error status
+          # behind, including for failures before the request step completed
+          # (checkout, setup, validation). steps.req.outputs.job_id is now
+          # emitted unconditionally; if it is still unusable we surface the
+          # failure instead of letting || true swallow it silently.
+          job_id="${{ steps.req.outputs.job_id }}"
+          if ! [[ "$job_id" =~ ^[A-Za-z0-9._-]{1,120}$ ]]; then
+            echo "FATAL: Stage A failed before a usable job_id was resolved; no status file can be written." >&2
+            exit 1
+          fi
+          python -m pipeline.status "$job_id" --state error \
+            --message "Stage A failed. See workflow run for logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --release-tag "${{ steps.req.outputs.release_tag }}" || true
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase --autostash || true
-          git add "jobs/${{ steps.req.outputs.job_id }}/" || true
-          git commit -m "clipforge: job ${{ steps.req.outputs.job_id }} stage A error" || true
+          git add "jobs/$job_id/" || true
+          git commit -m "clipforge: job $job_id stage A error" || true
+          pushed=false
           for attempt in 1 2 3; do
-            git push && break
-            git pull --rebase --autostash || true; sleep 2
+            if git push; then pushed=true; break; fi
+            git pull --rebase --autostash || true
+            sleep 2
           done
-          true
+          if [ "$pushed" != "true" ]; then
+            echo "FATAL: could not persist the stage A error status for job $job_id." >&2
+            exit 1
+          fi
