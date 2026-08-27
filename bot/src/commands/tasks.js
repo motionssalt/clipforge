@@ -15,7 +15,7 @@
  */
 
 import { readStatus } from '../github.js';
-import { taskLabels } from '../storage.js';
+import { taskLabels, getTaskOptions } from '../storage.js';
 import { isTerminal } from '../jobs.js';
 import { buttons } from '../telegram.js';
 import { escapeHtml, describeTaskState } from '../constants.js';
@@ -40,8 +40,12 @@ export async function loadTaskList(env, chatId) {
   if (!credentials) return { credentials: null, entries: [] };
   const labels = (await taskLabels(env, chatId)).slice(0, MAX_LISTED);
   const entries = await Promise.all(labels.map(async ({ label, jobId }) => {
-    const status = await readStatus(credentials, credentials.repo, jobId).catch(() => null);
-    return { label, jobId, status };
+    const [status, options] = await Promise.all([
+      readStatus(credentials, credentials.repo, jobId).catch(() => null),
+      getTaskOptions(env, chatId, jobId).catch(() => ({})),
+    ]);
+    // Feature 4: unseen is the default — only an explicit seen:true clears it.
+    return { label, jobId, status, seen: Boolean(options && options.seen === true) };
   }));
   return { credentials, entries: sortTaskEntries(entries) };
 }
@@ -62,9 +66,10 @@ export async function showTasks(env, chatId, messageId = null) {
     for (const entry of active) {
       const unreadable = !entry.status;
       const stateText = describeTaskState(entry.status, { unreadable });
-      lines.push(`<b>${escapeHtml(entry.label)}</b> — ${escapeHtml(stateText)}`);
+      const marker = entry.seen ? '' : '🆕 ';
+      lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — ${escapeHtml(stateText)}`);
       rows.push([
-        { text: `Open ${entry.label} · ${stateText}`, callback_data: `task:open:${entry.label}` },
+        { text: `${marker}Open ${entry.label} · ${stateText}`, callback_data: `task:open:${entry.label}` },
         { text: `🗑 ${entry.label}`, callback_data: `task:del:${entry.label}` }
       ]);
     }

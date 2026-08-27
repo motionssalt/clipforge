@@ -15,7 +15,7 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "background_workflows",
+  "current_phase": "complete",
   "current_task": {
     "stage": "background_workflows",
     "task": "Background workflows — cleanup, deploy-bots, diagnostics",
@@ -450,9 +450,23 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "cd bot && npm test (89 passed, was 86); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
+    },
+    {
+      "session": "feature-4-unseen-task-marker",
+      "date_utc": "2026-08-27",
+      "summary": "Feature 4 (mark new/unopened tasks with NEW marker). Confirmed no seen/opened concept existed in tasks.options — added as new state: options[jobId].seen, keyed by JOB id (not label) so a freed-and-reused label can never inherit the previous occupants seen state. New tasks default to unseen (absence of seen:true); showTasks/loadTaskList read the flag per entry and prefix unseen rows with the NEW emoji on both the list line and the Open button; showTask (the task:open:<label> flow in runtime.js) calls markTaskSeen on open, a no-op write-skip on repeat opens. Works alongside Bug 2s creation-time sort as an independent explicit flag, not inferred from recency. Tests: 3 new JS tests (unseen shows marker / seen does not; opening clears the marker on next render; label-reused new task starts unseen).",
+      "files_created": [],
+      "files_modified": [
+        "bot/src/storage.js",
+        "bot/src/commands/tasks.js",
+        "bot/src/runtime.js",
+        "bot/test/tasks.test.mjs",
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "cd bot && npm test (92 passed, was 89); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
     }
   ],
-  "next_action": "Feature 4 (unseen NEW task marker) remains in this sessions task list.",
+  "next_action": "Nothing queued — all four scoped items (Bugs 1-3 + Feature 4) are fixed, tested, committed, and pushed as separate commits. Watch the next hourly cleanup.yml run for the task-label-reclamation-report artifact confirming the one-time legacy-label cleanup against the live KV store.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -501,8 +515,8 @@
     "note_after_relay_fix": "relay-ordering-fix-session-1: 210 Python (unittest discover pipeline/tests) + 78 JS (npm test) all green after the staging-time relay record fix."
   },
   "last_session": {
-    "id": "bugfix-3-torrent-selection-prompt",
-    "note": "Bug 3 fix (torrent file selection was not clearly surfaced). Investigation confirmed the pipeline side is intact — stage_a/ingest.py still writes torrent-selection.json and sets awaiting_torrent_selection via pipeline.status for multi-file torrents with no pick yet (identical to the legacy flow), and the receive side (task:tsel/tselpick -> showTorrentSelection/pickTorrentFile in index.js) was alre"
+    "id": "feature-4-unseen-task-marker",
+    "note": "Feature 4 (mark new/unopened tasks with NEW marker). Confirmed no seen/opened concept existed in tasks.options — added as new state: options[jobId].seen, keyed by JOB id (not label) so a freed-and-reused label can never inherit the previous occupants seen state. New tasks default to unseen (absence of seen:true); showTasks/loadTaskList read the flag per entry and prefix unseen rows with the NEW em"
   },
   "architecture_concerns_closed": [
     {

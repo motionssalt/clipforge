@@ -172,6 +172,25 @@ export async function removeTask(env, chatId, label, jobId) {
   return true;
 }
 
+// Feature 4 (unseen-task marker): the flag lives in tasks.options[jobId] —
+// keyed by JOB id, not by label — so a freed-and-reused letter never
+// inherits the previous occupant's seen state. New tasks default to unseen
+// (absence of seen:true); the marker clears on the operator's first open.
+export async function markTaskSeen(env, chatId, jobId) {
+  const tasks = await getTasks(env, chatId);
+  const record = tasks.options[jobId];
+  if (record && record.seen === true) return false;
+  tasks.options[jobId] = { ...(record || {}), seen: true };
+  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
+  return true;
+}
+
+export async function isTaskSeen(env, chatId, jobId) {
+  const tasks = await getTasks(env, chatId);
+  const record = tasks.options[jobId];
+  return Boolean(record && record.seen === true);
+}
+
 export async function taskLabels(env, chatId) {
   const tasks = await getTasks(env, chatId);
   return Object.entries(tasks.labels).map(([label, jobId]) => ({ label, jobId }));

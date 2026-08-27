@@ -250,3 +250,65 @@ test('Bug 3: the task view tells the operator plainly to pick a file', async () 
   const kb = JSON.stringify(sent[0].payload.reply_markup || {});
   assert.match(kb, /task:tsel:A:0/, 'chooser button must be wired to the selection screen');
 });
+
+// ---------------------------------------------------------------------------
+// Feature 4 coverage: 🆕 on unseen tasks, cleared by opening, per-job (so a
+// reused label starts unseen again even if the old occupant was seen).
+// ---------------------------------------------------------------------------
+
+test('Feature 4: a new task shows 🆕 in /tasks; a seen one does not', async () => {
+  const { setTaskOptions } = await import('../src/storage.js');
+  const kv = makeKv();
+  const env = await makeEnv(kv);
+  await ensureTaskLabel(env, CHAT, 'job-unseen');
+  await ensureTaskLabel(env, CHAT, 'job-seen');
+  await setTaskOptions(env, CHAT, 'job-seen', { seen: true });
+  const sent = [];
+  const restore = installFetch({
+    files: {
+      'jobs/job-unseen/status.json': makeStatus('job-unseen', 'stage_a_running', 200),
+      'jobs/job-seen/status.json': makeStatus('job-seen', 'stage_a_running', 100),
+    },
+    sent,
+  });
+  try { await showTasks(env, CHAT); } finally { restore(); }
+  const text = String(sent[0].payload.text || '');
+  assert.match(text, /🆕 <b>A<\/b>/, 'unseen task A must carry the 🆕 marker');
+  assert.doesNotMatch(text, /🆕 <b>B<\/b>/, 'seen task B must not carry the marker');
+  assert.match(text, /<b>B<\/b>/);
+});
+
+test('Feature 4: opening a task clears its 🆕 marker on the next /tasks render', async () => {
+  const { showTask } = await import('../src/runtime.js');
+  const { isTaskSeen } = await import('../src/storage.js');
+  const kv = makeKv();
+  const env = await makeEnv(kv);
+  await ensureTaskLabel(env, CHAT, 'job-open-me');
+  assert.equal(await isTaskSeen(env, CHAT, 'job-open-me'), false);
+  const restore1 = installFetch({
+    files: { 'jobs/job-open-me/status.json': makeStatus('job-open-me', 'stage_a_running', 100) },
+    sent: [],
+  });
+  try { await showTask(env, CHAT, 'A'); } finally { restore1(); }
+  assert.equal(await isTaskSeen(env, CHAT, 'job-open-me'), true, 'open must mark seen');
+  const sent = [];
+  const restore2 = installFetch({
+    files: { 'jobs/job-open-me/status.json': makeStatus('job-open-me', 'stage_a_running', 100) },
+    sent,
+  });
+  try { await showTasks(env, CHAT); } finally { restore2(); }
+  assert.doesNotMatch(String(sent[0].payload.text || ''), /🆕/, 'marker must be gone after opening');
+});
+
+test('Feature 4: a label reused by a new task starts unseen (flag is per-job)', async () => {
+  const { ensureTaskLabel, removeTask, setTaskOptions, isTaskSeen } = await import('../src/storage.js');
+  const kv = makeKv();
+  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
+  await ensureTaskLabel(env, CHAT, 'job-old-occupant');
+  await setTaskOptions(env, CHAT, 'job-old-occupant', { seen: true });
+  await removeTask(env, CHAT, 'A', 'job-old-occupant');
+  const label = await ensureTaskLabel(env, CHAT, 'job-new-occupant');
+  assert.equal(label, 'A', 'label A must be reused');
+  assert.equal(await isTaskSeen(env, CHAT, 'job-new-occupant'), false,
+    'the new occupant of label A must start unseen — no inheritance from the old job');
+});

@@ -5,7 +5,7 @@
  */
 
 import { GitHubError, readStatus } from './github.js';
-import { getCredentials, getJobIdForLabel } from './storage.js';
+import { getCredentials, getJobIdForLabel, markTaskSeen } from './storage.js';
 import { isTerminal } from './jobs.js';
 import { buttons } from './telegram.js';
 import { escapeHtml, redact, describeTaskState } from './constants.js';
@@ -79,6 +79,10 @@ export async function showTask(env, chatId, label, messageId = null) {
   const credentials = await requireCredentials(env, chatId, messageId);
   if (!credentials) return;
   const jobId = await getJobIdForLabel(env, chatId, label);
+  // Feature 4: opening a task clears its unseen marker. markTaskSeen skips
+  // the KV write when the task is already seen, so repeat opens cost a read
+  // only. An unknown label has nothing to mark.
+  if (jobId) await markTaskSeen(env, chatId, jobId).catch(() => {});
   if (!jobId) {
     return renderInteractiveView(env, chatId, `Unknown task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: '← Tasks', callback_data: 'menu:tasks' }]]) }, messageId);
   }
