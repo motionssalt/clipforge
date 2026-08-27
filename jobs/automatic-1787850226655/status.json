@@ -1,7 +1,7 @@
 {
   "version": 2,
   "job_id": "automatic-1787850226655",
-  "mode": "automatic",
+  "mode": "manual",
   "series": {
     "enabled": false,
     "series_id": "",
@@ -9,35 +9,21 @@
     "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "stage_b_queued",
-  "message": "Production plan uploaded — Stage B dispatched.",
-  "created_at_epoch": 1787853093,
-  "updated_at_epoch": 1787855885,
-=======
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "created_at_epoch": 1787853093,
-  "updated_at_epoch": 1787855989,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1787896293,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "created_at_epoch": 1787855995,
+  "updated_at_epoch": 1787857303,
+  "expires_at_epoch": 1787899195,
   "release_tag": "clipforge-automatic-1787850226655",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787850226655",
   "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/00_READ_THIS_FIRST.txt",
-    "analysis_720p.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/analysis_720p.mp4",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/transcript.json"
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/clipforge-automatic-1787850226655-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/final.mp4"
   },
   "run": {
     "workflow_run_id": 33104454470,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33104454470",
-    "code_ref": "31f082ddd823b8c80d1a1b6bbfa200e87afa43c2"
+    "code_ref": "60ed3b2f7b1b4abdf10aecef138e9a210d09048a"
   },
   "publishing": {
     "status": "not_requested",
