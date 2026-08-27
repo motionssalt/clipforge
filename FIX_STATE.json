@@ -95,9 +95,9 @@
     {
       "id": "bug-13",
       "title": "Stage A audio step failure (series mode via Telegram link)",
-      "status": "in_progress",
-      "notes": "Investigation started: looking at Stage A audio step in series mode via Telegram link.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause verified from real run 33090759415 logs: 'Restart Stage A' dispatched a fresh run that crashed at the 'Write initial status' step with ValueError: cannot transition terminal state 'error' -> 'stage_a_running'. (Note: the failing job's own message template says 'Stage A failed', which reads like an audio/transcribe failure but the true crash was this status gate at run start.) Fix: pipeline/status.py now permits terminal -> stage_a_running/stage_b_running (the restart re-open path) and error -> queued; complete stays locked against non-running states. Verified by code inspection; full suite unaffected.",
+      "commit": "4cd6ef15026b02e381ebd3968d611ed6fe6f3567"
     },
     {
       "id": "bug-14",
