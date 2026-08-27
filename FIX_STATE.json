@@ -21,7 +21,7 @@
       "title": "Music upload should support multi-file batch with explicit Done",
       "status": "pending",
       "notes": "After tapping 'Add Music File', bot must tell user they can send as many music files as they want, then tap a 'Done' button when finished. Collect all sent files during this window, finalize/attach only once Done is tapped.",
-      "commit": ""
+      "commit": "107da75"
     },
     {
       "id": "bug-29",
