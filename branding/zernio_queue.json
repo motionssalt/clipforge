@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "provider": "zernio",
+  "items": [
+    {
+      "job_id": "automatic-1787850226655",
+      "status": "partial",
+      "mode": "publish_now",
+      "scheduled_for": "2026-08-27T19:32:52.542Z",
+      "timezone": "UTC",
+      "post_ids": [
+        "6a9090e607aa40ed296abf32",
+        "6a9090e98d8383fc5275c6b3"
+      ],
+      "updated_at_epoch": 1787859184
+    }
+  ]
+}
