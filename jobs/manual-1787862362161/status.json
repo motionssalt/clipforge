@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (telegram_relay)",
+  "state": "error",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33113601229",
   "created_at_epoch": 1787862395,
-  "updated_at_epoch": 1787862706,
+  "updated_at_epoch": 1787862708,
   "expires_at_epoch": 1787905595,
   "release_tag": "clipforge-manual-1787862362161",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787862362161",
