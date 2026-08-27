@@ -69,6 +69,10 @@ export function taskKeyboard(status, label) {
       { text: '📥 Download', callback_data: `task:dl:${label}` },
       { text: '📣 Publish (Zernio)', callback_data: `task:pub:${label}` }
     ]);
+    // bug-22: on-demand delivery — send the finished video into this chat
+    // when it fits under Telegram's 50 MB bot limit, otherwise hand back the
+    // GitHub release link. Works for single tasks and series Stage B parts.
+    rows.push([{ text: '📩 Send video to chat', callback_data: `task:sendvideo:${label}` }]);
     const series = status.series && typeof status.series === 'object' ? status.series : {};
     if (status.mode === 'manual' && series.enabled === true && series.is_final !== true) {
       rows.push([{ text: '▶ Start next part', callback_data: `task:next:${label}` }]);

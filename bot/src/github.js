@@ -325,6 +325,26 @@ export async function getReleaseTextAsset(credentials, url, maximumBytes = 1024 
   return decoder.decode(bytes);
 }
 
+/**
+ * bug-22: find one asset on the release for a tag, with its size and
+ * browser_download_url. Returns null when the release or asset is absent.
+ * `asset.state === 'uploaded'` mirrors the Stage B (bug-20) acceptance rule:
+ * a starter/queued asset is not yet downloadable.
+ */
+export async function findReleaseAsset(credentials, repo, tag, assetName) {
+  const { owner, name } = parseRepo(repo);
+  const release = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/releases/tags/${encodeURIComponent(tag)}`);
+  const assets = release && Array.isArray(release.assets) ? release.assets : [];
+  const asset = assets.find((entry) => entry && entry.name === assetName && (entry.state === 'uploaded' || entry.state === undefined));
+  if (!asset) return null;
+  return {
+    name: asset.name,
+    size: Number(asset.size) || 0,
+    url: String(asset.browser_download_url || ''),
+    releaseUrl: String(release.html_url || '')
+  };
+}
+
 export async function listJobIds(credentials, repo) {
   const { owner, name } = parseRepo(repo);
   try {

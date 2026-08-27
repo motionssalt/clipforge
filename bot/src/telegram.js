@@ -95,6 +95,18 @@ export async function sendAudioBytes(env, chatId, bytes, filename, caption) {
   }, 'audio', bytes, filename, audioMimeType(filename));
 }
 
+// bug-22: on-demand delivery of a finished video (< 50 MB) straight into the
+// user's chat. supports_streaming keeps it playable inline in the client.
+export async function sendVideoBytes(env, chatId, bytes, filename, caption, replyMarkup = null) {
+  return telegramMultipart(env, 'sendVideo', {
+    chat_id: chatId,
+    caption,
+    parse_mode: 'HTML',
+    supports_streaming: true,
+    ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+  }, 'video', bytes, filename, 'video/mp4');
+}
+
 export async function sendDocumentBytes(env, chatId, bytes, filename, caption, replyMarkup = null) {
   return telegramMultipart(env, 'sendDocument', {
     chat_id: chatId,
