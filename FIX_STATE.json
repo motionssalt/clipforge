@@ -134,8 +134,8 @@
     {
       "id": "bug-21",
       "title": "Clone-update-push settings not appearing for main account",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation of clone-update-push settings feature.",
       "commit": ""
     },
     {
