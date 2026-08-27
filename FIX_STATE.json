@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "started_at": "2026-08-27T00:00:00Z",
   "previous_sweeps": [
     {
@@ -148,23 +148,24 @@
     {
       "id": "bug-23",
       "title": "Telegraph help guide",
-      "status": "in_progress",
-      "notes": "Investigating bot UI/flow to author Telegraph help guide.",
-      "commit": ""
+      "status": "done",
+      "notes": "Published 'ClipForge Bot \u2014 Complete User Guide' on Telegra.ph at https://telegra.ph/ClipForge-Bot--Complete-User-Guide-08-27-2 under a fresh anonymous ClipForge account (can_edit=true; auth link not persisted). Content authored against the live bot code: onboarding/clone setup, /new wizard steps (mode, series toggle, source kinds incl. torrent/Drive/magnet/t.me/forward, focus, durations 30-300s, music, confirm), Stage A manual vs automatic flow, Stage B render description, finished-task actions (incl. the new bug-22 Send-video-to-chat), command reference, and operational caveats (50 MB limit, job expiry). Illustrative images: two placehold.co dark-theme text mockups of the home menu and finished-task keyboard (AI image generation failed twice on insufficient credits; plain descriptive images used instead, which the task allowed). Wired into bot: views.js exports HELP_GUIDE_URL + helpKeyboard() with a guide URL button on /help, and onboardingKeyboard() gains a 'How ClipForge works (guide)' link row; start.js handleHelp attaches the button. Committed in 72a4f64. docs/HELP_GUIDE.md records the canonical URL. Confidence: high \u2014 page created via official Telegraph API and returned ok; buttons verified by node --check.",
+      "commit": "72a4f64"
     },
     {
       "id": "bug-24",
       "title": "Automatic Zernio publishing not triggering despite being enabled",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: the 'Dispatch automatic Zernio publish when enabled' step in stage-b.yml ran `python -m pipeline.publish.zernio automatic-dispatch .` against the working tree, which is pinned to the job's code_ref (the default-branch SHA captured when the job STARTED, per the restart-correctness design). The auto_publish flag lives in branding/zernio_settings.json, written by the bot at toggle time. If the operator enabled automatic publish AFTER the job started, the gate read the stale committed settings (auto_publish=false) and skipped \u2014 exactly the reported 'publish step was skipped due to a condition evaluating as not-set/false'. The flag names match (bot writes enabled/auto_publish/automatic_mode/target_accounts; pipeline reads the same), so it was a stale read, not a field-name mismatch. Fix: the gate step now fetches the current default-branch tip and checks out branding/ from it before evaluating, so the settings read reflects the latest committed config. Status commits already happened earlier in the job, so refreshing branding/ cannot clobber pending work; the step remains a no-op success on any gate failure. Confidence: high on mechanism and fix correctness by code trace; not verified against a live run (requires a real clone with Zernio secrets \u2014 the operator should enable auto-publish, run a task, and confirm the gate logs 'automatic publish armed'.)",
+      "commit": "2f41ead"
     },
     {
       "id": "bug-25",
       "title": "Video quality regression \u2014 missing sharpening + unwanted vertical stretch",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "Both symptoms share one root cause in the bug-11 quality pass (commit 5bc9ba3). enhance.py upscaled the merged MP4 2x (min(2160,2*iw) x min(3840,2*ih), lanczos) and LEFT it at 2x resolution. The downstream captions stage (reframe.scene_crop_filter) then ran scale=1080:1200:force_original_aspect_ratio=increase,crop=1080:1200 on that 2x frame: with force_original_aspect_ratio=increase the 9:10-ish 2x frame is scaled so it COVERS the 1080x1200 box and the overflow cropped \u2014 re-interpreting the frame's geometry and producing the reported vertical stretch/distortion (exact proportions depend on the source's aspect vs 9:10; the doubling also doubled the dimensions the reframe math saw). And because sharpeners (cas + unsharp) ran BEFORE that final scale+crop, part of the sharpened high-frequency detail was rescaled/cropped away and the delivered pixels passed through a CRF-24 re-encode, explaining why Stage B took noticeably longer with no visible sharpness gain. Fix: enhance.py now upscales only to give the sharpeners a larger canvas, then rescales BACK to the source's own frame (scale=w='trunc(iw/2/2)*2':h='trunc(ih/2/2)*2':flags=lanczos,setsar=1) before debanding and output, making the pass resolution- and aspect-neutral so the reframe stage receives the same geometry as before bug-11 and the sharpened detail survives into final.mp4. Level/VBV sizing logic still probes the input and is unaffected. Confidence: mechanism verified by tracing the full filter chain end to end (render -> enhance -> captions/reframe -> watermark -> compress); not visually verified on a real render (no GPU/media fixtures here) \u2014 the operator should re-render one task and confirm correct 9:10 proportions and visible crispness.",
+      "commit": "2f41ead"
     }
-  ]
+  ],
+  "completed_at": "2026-08-27T20:55:00Z"
 }
