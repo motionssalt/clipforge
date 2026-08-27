@@ -95,8 +95,8 @@
     {
       "id": "bug-13",
       "title": "Stage A audio step failure (series mode via Telegram link)",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Investigation started: looking at Stage A audio step in series mode via Telegram link.",
       "commit": ""
     },
     {
