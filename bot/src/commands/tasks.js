@@ -21,7 +21,6 @@
 
 import { readStatus } from '../github.js';
 import { taskLabels, getTaskOptions } from '../storage.js';
-import { isTerminal } from '../jobs.js';
 import { buttons } from '../telegram.js';
 import { escapeHtml, describeTaskState } from '../constants.js';
 import { requireCredentials } from '../runtime.js';
@@ -67,16 +66,23 @@ export async function showTasks(env, chatId, messageId = null, pendingDeleteLabe
   // unreadable status is NOT silently treated as "queued" (pre-fix behavior):
   // it is listed with an explicit unavailable marker so a job that died
   // before persisting its error status is visible to the operator.
-  const active = entries.filter((entry) => !entry.status || !isTerminal(entry.status.state));
-  const lines = ['<b>Active tasks</b>'];
+  // bug-07 fix: terminal tasks (complete / error / cancelled) stay visible
+  // in the task list with their terminal status instead of vanishing.
+  // Pre-fix this filter dropped them from /tasks entirely, so a task that
+  // finished or errored disappeared from the operator's main list and was
+  // only reachable via /done.
+  const active = entries;
+  const lines = ['<b>Tasks</b>'];
   const rows = [];
   if (!active.length) {
-    lines.push('No active tasks. Start one with 🎬 New video.');
+    lines.push('No tasks yet. Start one with 🎬 New video.');
   } else {
     for (const entry of active) {
       const unreadable = !entry.status;
       const stateText = describeTaskState(entry.status, { unreadable });
-      const marker = entry.seen ? '' : '🆕 ';
+      const termState = entry.status ? String(entry.status.state) : '';
+      const terminalMark = termState === 'complete' ? '✅ ' : termState === 'error' ? '⚠️ ' : termState === 'cancelled' ? '⛔ ' : '';
+      const marker = (entry.seen ? '' : '🆕 ') + terminalMark;
       const isPendingDelete = pendingDeleteLabel && entry.label === pendingDeleteLabel;
       if (isPendingDelete) {
         lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — <b>Confirm Delete?</b>`);
