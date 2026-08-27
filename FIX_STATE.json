@@ -1,171 +1,55 @@
 {
-  "sweep_complete": true,
-  "started_at": "2026-08-27T00:00:00Z",
-  "previous_sweeps": [
-    {
-      "branch": "agent/fix-sweep",
-      "bugs": [
-        {
-          "id": "bug-01",
-          "title": "Message edit-vs-new-message dispatch logic",
-          "status": "done",
-          "commit": "c97aa2e16c0a1ee83b22b964e748197d9c6249e5"
-        },
-        {
-          "id": "bug-02",
-          "title": "Delete confirmation UX \u2014 in-place label toggle",
-          "status": "done",
-          "commit": "7537a48693cccc2699eab4b912f3a8d2c81ee372"
-        },
-        {
-          "id": "bug-03",
-          "title": "Clarify task cleanup (1h) vs task expiry (12h)",
-          "status": "done",
-          "commit": ""
-        },
-        {
-          "id": "bug-04",
-          "title": "Torrent method broken",
-          "status": "done",
-          "commit": "e06f5b9f234b595a2478066b39ecd8bb8e26723c"
-        },
-        {
-          "id": "bug-05",
-          "title": "Telegram direct file/video forward broken",
-          "status": "done",
-          "commit": "2619378da788f3e3d7ec7d9941a209d6aee70bff"
-        },
-        {
-          "id": "bug-06",
-          "title": "Command list drift",
-          "status": "done",
-          "commit": "2948d943c1df27e31a717f4824107383916f6e62"
-        },
-        {
-          "id": "bug-07",
-          "title": "Finished/errored tasks disappear from task list",
-          "status": "done",
-          "commit": "cce81ae0f04e5d96e757f756f6f9da866b1fa95f"
-        },
-        {
-          "id": "bug-08",
-          "title": "production.json paste multi-bubble reassembly",
-          "status": "done",
-          "commit": "290ff24d6e491a343b83b9fff0483dd251416a24"
-        },
-        {
-          "id": "bug-09",
-          "title": "Copy button for agent prompts",
-          "status": "done",
-          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
-        },
-        {
-          "id": "bug-10",
-          "title": "production.json prompt output format",
-          "status": "done",
-          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
-        },
-        {
-          "id": "bug-11",
-          "title": "Video quality \u2014 CPU sharpening/upscale pass",
-          "status": "done",
-          "commit": "5bc9ba3460796be247aa9fce92e492ca15a5b676"
-        },
-        {
-          "id": "bug-12",
-          "title": "Gemini API key validation false rejection",
-          "status": "done",
-          "commit": "4a0a1afa8b80bd51579ab52ade51e60a30914758"
-        },
-        {
-          "id": "bug-13",
-          "title": "Stage A audio step failure (series mode)",
-          "status": "done",
-          "commit": "4cd6ef15026b02e381ebd3968d611ed6fe6f3567"
-        },
-        {
-          "id": "bug-14",
-          "title": "Series mode production.json series_id mismatch",
-          "status": "done",
-          "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
-        },
-        {
-          "id": "bug-15",
-          "title": "Restart button shows stages that never ran",
-          "status": "done",
-          "commit": "89742c99e7d0768944190b290355ef9f740b3798"
-        },
-        {
-          "id": "bug-16",
-          "title": "Restart gives no feedback/acknowledgment",
-          "status": "done",
-          "commit": "ca369956dea762d852309e01200000cb359aaa31"
-        },
-        {
-          "id": "bug-17",
-          "title": "AI mode should fall back to manual on Gemini failure",
-          "status": "done",
-          "commit": "f328cccbbeb21c9209c5686070c213c4823341f7"
-        },
-        {
-          "id": "bug-18",
-          "title": "Gemini key still rejected",
-          "status": "done",
-          "commit": "7c6cbb96bf9ea16082f51fd2701b2ee1d013aa8a"
-        },
-        {
-          "id": "bug-19",
-          "title": "Script generation \u2014 hook & cliffhanger quality overhaul",
-          "status": "done",
-          "commit": "b82df381384e8713bd4359c0464733a9ae72b504"
-        }
-      ],
-      "completed_at": "2026-08-27T16:44:14Z"
-    }
-  ],
+  "sweep_complete": false,
+  "started_at": "2026-08-27T23:10:00Z",
   "bugs": [
     {
-      "id": "bug-20",
-      "title": "Release asset not found during Stage B download",
-      "status": "done",
-      "notes": "Root cause: Load release metadata step in stage-b.yml did a single, no-retry read of /releases/tags/<tag>. GitHub release-asset reads are eventually consistent: when stage-a.yml dispatches Stage B via workflow_dispatch immediately after softprops/action-gh-release finishes uploading source_input.bin, the first read from a fresh runner can return the release without that asset yet visible, or with it in a transient state (starter/new) where a download would fail. This matches the reported intermittent nature (only fires when the specific runner+API-node the dispatch lands on has stale cache) and the fact that it worked previously (used to be luckier / smaller Stage A tail latency). Fix: bounded polling loop with backoff (0,3,3,4,5,5,10,15,20,25s -> ~90s total across up to 10 attempts) that only accepts an asset whose state is uploaded or absent (older responses omit the field). Logs visible assets on each attempt so a genuine miss is diagnosable. Also added a 3x retry with backoff on the asset-download call itself for unrelated transient 5xx/connection resets on large asset downloads. Confidence: high on the mechanism; not verified against a live GitHub-side retry (cannot repro the exact race in sandbox). If the asset never lands within 90s it still fails loudly with the same error, but now with per-attempt asset-list logging.",
-      "commit": "c28d95c"
+      "id": "bug-26",
+      "title": "No immediate feedback when a stage is dispatched",
+      "status": "pending",
+      "notes": "Every stage-triggering action (Stage A start, Stage B start, restart, any other dispatch) must immediately show an animated/progressing 'starting...' indicator BEFORE the dispatch completes. New message on user-initiated actions, edit on button-driven state changes, per existing rules.",
+      "commit": ""
     },
     {
-      "id": "bug-21",
-      "title": "Clone-update-push settings not appearing for main account",
-      "status": "done",
-      "notes": "Root cause: the previous sweep never actually implemented this feature; the current codebase had no clone-update-push wiring at all in bot/src/index.js or bot/src/views.js. The Settings > GitHub clone sub-screen only offered Create/Connect/Disconnect, so the main account (which is itself a connected clone of motionssalt/clipforge) had nothing to click. Design decision: GitHub PATs cannot push to another user private repo, so a truly remote push from main account to other users clones is not possible. The correct shape is a per-clone pull-from-source action, which is what the legacy browser Settings page (_legacy/shadow-clone.js) exposed as Check for updates / Apply update. Fix: added bot/src/clone-sync.js with checkCloneUpdates (uses GitHub compare API against .clipforge-sync.json marker, or full snapshot if no marker) and applyCloneUpdates (single tree commit against current main HEAD with base_tree so per-clone paths branding/ jobs/ audio-library/ key/account files are preserved via the existing sourcePathAllowed excludes). Wired a Sync from source button into Settings > GitHub clone that shows only when a clone is connected (no is-main-account gate, no has-existing-clones gate). Flow: press Sync from source -> preview of changed files (first 20) with count and old->new SHA -> Apply update button -> commits into clone and updates .clipforge-sync.json. Confidence: high on wiring and design; button will render for every connected clone including main-account owner (satisfies the visibility complaint in bug-21). Not runtime-verified end-to-end against a live clone since that requires a real Cloudflare Worker deployment plus a real Telegram interaction, but node --check passes and I traced every call site. Preserved test failures (4 tests) are pre-existing due to missing tweetnacl npm install in sandbox and unrelated to this change.",
-      "commit": "9e13c29"
+      "id": "bug-27",
+      "title": "Pasted production.json — spurious 'send the rest' prompt and no chat cleanup",
+      "status": "pending",
+      "notes": "1) Bot tells user to send remaining parts even when all split bubbles already arrived and full JSON assembled successfully right after — must not appear if bot will succeed anyway. 2) After full production.json accepted across split bubbles, delete all user message bubbles to avoid chat clutter (only after confirmed successful parse/acceptance).",
+      "commit": ""
     },
     {
-      "id": "bug-22",
-      "title": "On-demand video delivery for finished tasks",
-      "status": "done",
-      "notes": "Implemented on-demand video delivery for finished tasks. runtime.js taskKeyboard: every 'complete' task now gets a '\ud83d\udce9 Send video to chat' button (task:sendvideo), works for single tasks and series Stage B parts since the button is keyed to state==complete regardless of publish status. index.js: new deliverVideoToChat handler \u2014 resolves the release tag from status.release_tag (fallback clipforge-<job_id>), locates the final.mp4 asset via new github.js findReleaseAsset() which honours the uploaded-state rule from bug-20. Size gate: if asset.size is 0/unknown or > 49 MB (1 MB headroom under the 50 MB Bot API limit) the bot replies with a direct browser_download_url link plus the release page link instead of attempting an upload. Under the limit it downloads the bytes with an authenticated octet-stream fetch (downloadReleaseAssetBytes, capped at 50 MB) and sends via new telegram.js sendVideoBytes (multipart sendVideo, supports_streaming). Caption is built from production.json (title + hashtags) via deliverVideoCaption, truncated to Telegram's 1024-char caption limit, with a 'ClipForge video \u2014 Task <label>' fallback when no plan title exists. A progress message is shown while the Worker downloads the asset. Confidence: wiring is verified (node --check passes, call sites traced); not runtime-verified against live Telegram/GitHub since that needs a deployed Worker and a real release asset. The \u226550 MB branch relies on GitHub's reported asset.size; a misreported size would surface as a Telegram send error, which the existing callback error path already reports to the user.",
-      "commit": "41f6acd"
+      "id": "bug-28",
+      "title": "Music upload should support multi-file batch with explicit Done",
+      "status": "pending",
+      "notes": "After tapping 'Add Music File', bot must tell user they can send as many music files as they want, then tap a 'Done' button when finished. Collect all sent files during this window, finalize/attach only once Done is tapped.",
+      "commit": ""
     },
     {
-      "id": "bug-23",
-      "title": "Telegraph help guide",
-      "status": "done",
-      "notes": "Published 'ClipForge Bot \u2014 Complete User Guide' on Telegra.ph at https://telegra.ph/ClipForge-Bot--Complete-User-Guide-08-27-2 under a fresh anonymous ClipForge account (can_edit=true; auth link not persisted). Content authored against the live bot code: onboarding/clone setup, /new wizard steps (mode, series toggle, source kinds incl. torrent/Drive/magnet/t.me/forward, focus, durations 30-300s, music, confirm), Stage A manual vs automatic flow, Stage B render description, finished-task actions (incl. the new bug-22 Send-video-to-chat), command reference, and operational caveats (50 MB limit, job expiry). Illustrative images: two placehold.co dark-theme text mockups of the home menu and finished-task keyboard (AI image generation failed twice on insufficient credits; plain descriptive images used instead, which the task allowed). Wired into bot: views.js exports HELP_GUIDE_URL + helpKeyboard() with a guide URL button on /help, and onboardingKeyboard() gains a 'How ClipForge works (guide)' link row; start.js handleHelp attaches the button. Committed in 72a4f64. docs/HELP_GUIDE.md records the canonical URL. Confidence: high \u2014 page created via official Telegraph API and returned ok; buttons verified by node --check.",
-      "commit": "72a4f64"
+      "id": "bug-29",
+      "title": "Help page — missing setup instructions, remove images",
+      "status": "pending",
+      "notes": "1) Add clear setup instructions: GitHub account creation, repository setup (fork/clone per actual flow), GitHub PAT creation with correct minimum permissions. 2) Remove ALL images/screenshots from the help page; use ASCII diagrams if visuals needed.",
+      "commit": ""
     },
     {
-      "id": "bug-24",
-      "title": "Automatic Zernio publishing not triggering despite being enabled",
-      "status": "done",
-      "notes": "Root cause: the 'Dispatch automatic Zernio publish when enabled' step in stage-b.yml ran `python -m pipeline.publish.zernio automatic-dispatch .` against the working tree, which is pinned to the job's code_ref (the default-branch SHA captured when the job STARTED, per the restart-correctness design). The auto_publish flag lives in branding/zernio_settings.json, written by the bot at toggle time. If the operator enabled automatic publish AFTER the job started, the gate read the stale committed settings (auto_publish=false) and skipped \u2014 exactly the reported 'publish step was skipped due to a condition evaluating as not-set/false'. The flag names match (bot writes enabled/auto_publish/automatic_mode/target_accounts; pipeline reads the same), so it was a stale read, not a field-name mismatch. Fix: the gate step now fetches the current default-branch tip and checks out branding/ from it before evaluating, so the settings read reflects the latest committed config. Status commits already happened earlier in the job, so refreshing branding/ cannot clobber pending work; the step remains a no-op success on any gate failure. Confidence: high on mechanism and fix correctness by code trace; not verified against a live run (requires a real clone with Zernio secrets \u2014 the operator should enable auto-publish, run a task, and confirm the gate logs 'automatic publish armed'.)",
-      "commit": "2f41ead"
+      "id": "bug-30",
+      "title": "Remove AI/Gemini automatic script-generation mode entirely",
+      "status": "pending",
+      "notes": "Remove Gemini-based AI generation path completely: Gemini key settings UI, 'AI mode' in new-task wizard, AI-failure-falls-back-to-manual behavior, unreachable Gemini-specific error handling. Manual production.json (file upload, paste, agent-prompt-assisted) becomes the only path. DO NOT touch Zernio automatic publishing.",
+      "commit": ""
     },
     {
-      "id": "bug-25",
-      "title": "Video quality regression \u2014 missing sharpening + unwanted vertical stretch",
-      "status": "done",
-      "notes": "Both symptoms share one root cause in the bug-11 quality pass (commit 5bc9ba3). enhance.py upscaled the merged MP4 2x (min(2160,2*iw) x min(3840,2*ih), lanczos) and LEFT it at 2x resolution. The downstream captions stage (reframe.scene_crop_filter) then ran scale=1080:1200:force_original_aspect_ratio=increase,crop=1080:1200 on that 2x frame: with force_original_aspect_ratio=increase the 9:10-ish 2x frame is scaled so it COVERS the 1080x1200 box and the overflow cropped \u2014 re-interpreting the frame's geometry and producing the reported vertical stretch/distortion (exact proportions depend on the source's aspect vs 9:10; the doubling also doubled the dimensions the reframe math saw). And because sharpeners (cas + unsharp) ran BEFORE that final scale+crop, part of the sharpened high-frequency detail was rescaled/cropped away and the delivered pixels passed through a CRF-24 re-encode, explaining why Stage B took noticeably longer with no visible sharpness gain. Fix: enhance.py now upscales only to give the sharpeners a larger canvas, then rescales BACK to the source's own frame (scale=w='trunc(iw/2/2)*2':h='trunc(ih/2/2)*2':flags=lanczos,setsar=1) before debanding and output, making the pass resolution- and aspect-neutral so the reframe stage receives the same geometry as before bug-11 and the sharpened detail survives into final.mp4. Level/VBV sizing logic still probes the input and is unaffected. Confidence: mechanism verified by tracing the full filter chain end to end (render -> enhance -> captions/reframe -> watermark -> compress); not visually verified on a real render (no GPU/media fixtures here) \u2014 the operator should re-render one task and confirm correct 9:10 proportions and visible crispness.",
-      "commit": "2f41ead"
+      "id": "bug-31",
+      "title": "Clone-update-push — wrong account can see/trigger it, updates wrong target",
+      "status": "pending",
+      "notes": "1) Visibility: feature must ONLY appear in Settings for the main/original repository account — re-verify bug-21 gating logic rather than trusting it. 2) Direction: tapping update must push OUT to clone deployments, not update main itself (main is already latest). Clones receiving a pushed update must get a changelog/notification on their end.",
+      "commit": ""
+    },
+    {
+      "id": "bug-32",
+      "title": "Telegram relay download broken — missing GH_TOKEN for source ingest",
+      "status": "pending",
+      "notes": "Confirmed run error: 'ingest error: telegram_relay source needs GH_TOKEN to fetch its temporary release asset. Exit code 2.' Likely same root cause as Stage B 'missing source asset' (source_input.bin / original.* never uploaded). Fix telegram_relay ingest to use the existing scoped PAT/token setup (no new unscoped credential). Verify a full telegram_relay run produces a release asset Stage B can find.",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-27T20:55:00Z"
+  ]
 }
