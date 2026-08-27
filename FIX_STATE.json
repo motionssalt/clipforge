@@ -116,9 +116,9 @@
     {
       "id": "bug-16",
       "title": "Restart gives no feedback/acknowledgment",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "restartStageA/B (bot/src/index.js) now (1) edit the active view immediately with 'Restarting Stage A/B for task X \u2014 dispatching a fresh workflow run...' and (2) send a '\u2705 Stage A/B restart dispatched' message after dispatchWorkflow resolves, with a button back to the task status screen. Callback spinner already cleared by the router's answerCallback. node --check passes; logic verified by inspection (no live bot in sandbox).",
+      "commit": "ca369956dea762d852309e01200000cb359aaa31"
     },
     {
       "id": "bug-17",
