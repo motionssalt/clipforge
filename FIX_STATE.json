@@ -4,13 +4,13 @@
     {
       "id": "bug-01",
       "title": "Message edit-vs-new-message dispatch logic",
-      "status": "pending",
-      "notes": "Bot sometimes edits when it should send a new message. User text/commands must always produce NEW messages; inline button presses should edit existing message except in case-by-case exceptions where new content type warrants a new message. Root cause suspected for bug-07 and bug-08.",
+      "status": "in_progress",
+      "notes": "Investigating dispatch layer. renderInteractiveView always edits activeViewId if present; renderFreshView clears it first. Need to trace which paths use which after user text/command vs button press.",
       "commit": ""
     },
     {
       "id": "bug-02",
-      "title": "Delete confirmation UX — in-place label toggle",
+      "title": "Delete confirmation UX \u2014 in-place label toggle",
       "status": "pending",
       "notes": "Currently switches to a separate confirmation view. Change so tapping delete on a task changes that task's own label to 'Confirm Delete?' inline in the same list; second tap deletes. No view switching.",
       "commit": ""
@@ -73,7 +73,7 @@
     },
     {
       "id": "bug-11",
-      "title": "Video quality — CPU sharpening/upscale pass",
+      "title": "Video quality \u2014 CPU sharpening/upscale pass",
       "status": "pending",
       "notes": "Add unsharp mask + edge enhancement + detail-preserving upscale to render pipeline. CPU-only (GH Actions). Approximate AE-style crisp pseudo-4K without artifacts.",
       "commit": ""
@@ -82,7 +82,7 @@
       "id": "bug-12",
       "title": "Gemini API key validation false rejection",
       "status": "pending",
-      "notes": "Bot rejects valid Gemini API keys — likely bad regex/format check. Fix.",
+      "notes": "Bot rejects valid Gemini API keys \u2014 likely bad regex/format check. Fix.",
       "commit": ""
     }
   ]
