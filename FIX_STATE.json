@@ -4,9 +4,9 @@
     {
       "id": "bug-01",
       "title": "Message edit-vs-new-message dispatch logic",
-      "status": "in_progress",
-      "notes": "Investigating dispatch layer. renderInteractiveView always edits activeViewId if present; renderFreshView clears it first. Need to trace which paths use which after user text/command vs button press.",
-      "commit": ""
+      "status": "done",
+      "notes": "Root cause: handleMessage code paths pass messageId=null to renderInteractiveView, but that function still edits state.activeViewId when set. Fix: clear activeViewId at the entry of handleMessage so user-sent messages always trigger sendMessage. Callback handling (button presses) remains unchanged and still edits in place via explicit messageId arg. This same root cause underlies bug-07 (plan upload success calls showTask which was editing away) and bug-08 (paste JSON success path). Confidence: high on the mechanism; will still make bug-07/08 their own separate fixes with additional coverage.",
+      "commit": "c97aa2e16c0a1ee83b22b964e748197d9c6249e5"
     },
     {
       "id": "bug-02",
