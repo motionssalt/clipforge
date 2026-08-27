@@ -109,9 +109,9 @@
     {
       "id": "bug-15",
       "title": "Restart button shows stages that never ran",
-      "status": "pending",
-      "notes": "",
-      "commit": ""
+      "status": "done",
+      "notes": "taskKeyboard (bot/src/runtime.js) used to push both restart buttons for any error/cancelled state. Now the Stage B button appears only when status.message indicates Stage B actually ran (/stage b/i). Stage A restart is always offered for terminal tasks. Verified via node test: error with 'Stage A failed' shows only restarta; 'Stage B failed' shows both. bot/test/wizard.test.mjs covers both cases.",
+      "commit": "89742c99e7d0768944190b290355ef9f740b3798"
     },
     {
       "id": "bug-16",
