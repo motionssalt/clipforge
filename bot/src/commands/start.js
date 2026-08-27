@@ -70,6 +70,8 @@ export async function handleStart(env, chatId, messageId = null) {
  * It is intentionally a fresh message, never an edit of a prior view.
  */
 export async function handleHelp(env, chatId) {
-  const { HELP_TEXT, renderInteractiveView } = await import('../views.js');
-  return renderInteractiveView(env, chatId, HELP_TEXT, {}, null);
+  const { HELP_TEXT, helpKeyboard, renderInteractiveView } = await import('../views.js');
+  // bug-23: the in-app command reference now carries a link to the full
+  // Telegraph user guide.
+  return renderInteractiveView(env, chatId, HELP_TEXT, { replyMarkup: helpKeyboard() }, null);
 }

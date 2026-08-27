@@ -9,6 +9,12 @@ import { buttons, editMessage, sendMessage } from './telegram.js';
 import { getState, putState } from './storage.js';
 import { DEFAULT_VOICE, VOICES, escapeHtml } from './constants.js';
 
+/**
+ * bug-23: canonical end-to-end user guide (Telegraph). Linked from /help
+ * and the onboarding screen.
+ */
+export const HELP_GUIDE_URL = 'https://telegra.ph/ClipForge-Bot--Complete-User-Guide-08-27-2';
+
 export function callbackMessageId(callback) {
   const value = callback && callback.message && callback.message.message_id;
   return Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null;
@@ -54,7 +60,8 @@ export async function renderFreshView(env, chatId, text, options = {}) {
 export function onboardingKeyboard() {
   return buttons([
     [{ text: 'Create private Shadow Clone', callback_data: 'clone:new' }],
-    [{ text: 'Connect existing clone', callback_data: 'clone:connect' }]
+    [{ text: 'Connect existing clone', callback_data: 'clone:connect' }],
+    [{ text: '📖 How ClipForge works (guide)', url: HELP_GUIDE_URL }]
   ]);
 }
 
@@ -80,7 +87,12 @@ export function homeText(snapshot) {
   return lines.join('\n');
 }
 
+// bug-23: onboarding points at the full Telegraph guide.
 export const ONBOARDING_TEXT = '<b>ClipForge</b>\n\nThis shared bot turns a source video into a short, narrated, captioned vertical clip. Your private chat operates only the GitHub clone connected to it.\n\nCreate your own private Shadow Clone, or connect a clone you already have.';
+
+export function helpKeyboard() {
+  return buttons([[{ text: '📖 Full user guide (with screenshots)', url: HELP_GUIDE_URL }]]);
+}
 
 export const HELP_TEXT = [
   '<b>ClipForge commands</b>',
