@@ -9,10 +9,17 @@
     "start_seconds": 0,
     "is_final": false
   },
+<<<<<<< Updated upstream
   "state": "stage_b_queued",
   "message": "Production plan uploaded — Stage B dispatched.",
   "created_at_epoch": 1787853093,
   "updated_at_epoch": 1787855885,
+=======
+  "state": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1787853093,
+  "updated_at_epoch": 1787855989,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1787896293,
   "release_tag": "clipforge-automatic-1787850226655",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-automatic-1787850226655",
@@ -28,9 +35,9 @@
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-automatic-1787850226655/transcript.json"
   },
   "run": {
-    "workflow_run_id": 33100555321,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33100555321",
-    "code_ref": "3a1e79117aebe89022d41b60300ea7b6dc90b969"
+    "workflow_run_id": 33104454470,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33104454470",
+    "code_ref": "31f082ddd823b8c80d1a1b6bbfa200e87afa43c2"
   },
   "publishing": {
     "status": "not_requested",
