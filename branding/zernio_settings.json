@@ -4,7 +4,9 @@
   "auto_publish": false,
   "automatic_mode": "smart_schedule",
   "target_accounts": {
-    "tiktok": [],
+    "tiktok": [
+      "6a23f25a2b2567671af5f0f7"
+    ],
     "youtube": [
       "6a8e09b877555aae01785097"
     ]
