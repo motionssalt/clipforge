@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "note": "Masked fingerprints only. Raw keys live in the GEMINI_API_KEYS repo secret and are never committed.",
+  "keys": [
+    {
+      "fingerprint": "AQ.A…zN0A",
+      "added_at": "2026-08-27T16:56:41.643Z"
+    }
+  ],
+  "updated_at_epoch": 1787849801
+}
