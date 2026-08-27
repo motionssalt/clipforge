@@ -121,13 +121,26 @@ function nextLabel(index) {
   return out;
 }
 
+// Bug 2 fix: labels are no longer allocated from a monotonically increasing
+// counter that never shrinks. The lowest currently-unused label is chosen, so
+// a letter freed by a manual delete (or reclamation) is reused by the next new
+// task instead of labels only ever growing forward. tasks.next is kept as a
+// high-water hint, but correctness no longer depends on it.
+function lowestFreeLabelIndex(labels) {
+  const used = new Set(Object.keys(labels || {}));
+  let index = 0;
+  while (used.has(nextLabel(index))) index += 1;
+  return index;
+}
+
 export async function ensureTaskLabel(env, chatId, jobId) {
   const tasks = await getTasks(env, chatId);
   for (const [label, knownJobId] of Object.entries(tasks.labels)) {
     if (knownJobId === jobId) return label;
   }
-  const label = nextLabel(tasks.next);
-  tasks.next += 1;
+  const index = lowestFreeLabelIndex(tasks.labels);
+  const label = nextLabel(index);
+  tasks.next = Math.max(Number(tasks.next) || 0, index + 1);
   tasks.labels[label] = jobId;
   await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
   return label;

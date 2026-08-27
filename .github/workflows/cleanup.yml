@@ -80,3 +80,37 @@ jobs:
           else
             echo "No job-folder changes to commit."
           fi
+
+  task-label-reclamation:
+    name: Reclaim stale bot task labels
+    # Bug 2 fix: pipeline.cleanup.expired deletes the GitHub-side artifacts of
+    # expired jobs, but the bot's per-chat label store lives in the
+    # CLIPFORGE_BOT_KV Cloudflare namespace — a separate system. This job is
+    # the KV half of the cleanup: it frees labels whose job is confirmed stale
+    # (same expiry rule as expired.py), so letters become reusable.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Reclaim labels of expired/deleted jobs from the bot KV store
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          node scripts/reclaim-stale-task-labels.mjs --apply --report reclamation-report.json
+      - name: Upload reclamation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: task-label-reclamation-report
+          path: reclamation-report.json
+          retention-days: 14

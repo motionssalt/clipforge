@@ -6,6 +6,12 @@
  * into the active list as a plain "queued" row (indistinguishable from a
  * task that is genuinely still working). An unreadable status now surfaces
  * explicitly as a distinct "status unavailable" row.
+ *
+ * Bug 2 fix: the list is sorted by actual creation time (most recent first)
+ * instead of label order — label order stopped correlating with recency the
+ * moment labels became reusable — and every row carries a delete button that
+ * routes through the existing confirm-delete flow, so any stale or stuck
+ * task can be cleared (and its letter reclaimed) by the operator.
  */
 
 import { readStatus } from '../github.js';
@@ -18,7 +24,17 @@ import { renderInteractiveView } from '../views.js';
 
 const MAX_LISTED = 15;
 
-/** Load statuses for the chat's labels; returns [{ label, jobId, status }]. */
+/** Sort a loaded task list by creation time, most recent first. */
+export function sortTaskEntries(entries) {
+  return entries.slice().sort((a, b) => {
+    const aCreated = Number(a.status && a.status.created_at_epoch) || 0;
+    const bCreated = Number(b.status && b.status.created_at_epoch) || 0;
+    if (aCreated !== bCreated) return bCreated - aCreated; // newest first
+    return a.label < b.label ? -1 : a.label > b.label ? 1 : 0;
+  });
+}
+
+/** Load statuses for the chat's labels; returns sorted [{ label, jobId, status }]. */
 export async function loadTaskList(env, chatId) {
   const credentials = await requireCredentials(env, chatId);
   if (!credentials) return { credentials: null, entries: [] };
@@ -27,7 +43,7 @@ export async function loadTaskList(env, chatId) {
     const status = await readStatus(credentials, credentials.repo, jobId).catch(() => null);
     return { label, jobId, status };
   }));
-  return { credentials, entries };
+  return { credentials, entries: sortTaskEntries(entries) };
 }
 
 export async function showTasks(env, chatId, messageId = null) {
@@ -47,7 +63,10 @@ export async function showTasks(env, chatId, messageId = null) {
       const unreadable = !entry.status;
       const stateText = describeTaskState(entry.status, { unreadable });
       lines.push(`<b>${escapeHtml(entry.label)}</b> — ${escapeHtml(stateText)}`);
-      rows.push([{ text: `Open ${entry.label} · ${stateText}`, callback_data: `task:open:${entry.label}` }]);
+      rows.push([
+        { text: `Open ${entry.label} · ${stateText}`, callback_data: `task:open:${entry.label}` },
+        { text: `🗑 ${entry.label}`, callback_data: `task:del:${entry.label}` }
+      ]);
     }
   }
   rows.push([{ text: '← Menu', callback_data: 'menu:home' }]);

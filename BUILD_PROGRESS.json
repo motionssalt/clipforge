@@ -421,9 +421,26 @@
         "BUILD_PROGRESS.json"
       ],
       "tests": "PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed, was 210); cd bot && npm test (82 passed, was 79)"
+    },
+    {
+      "session": "bugfix-2-label-lifecycle",
+      "date_utc": "2026-08-27",
+      "summary": "Bug 2 fix (task labels never reclaimed; legacy and current tasks mixed). Root cause confirmed: storage.js nextLabel()/ensureTaskLabel() allocated from a monotonic tasks.next counter, removeTask() existed but nothing called it, and pipeline/cleanup/expired.py only manages GitHub-side artifacts with no knowledge of the bot KV label store. Fixes: (1) manual deletion surfaced — every /tasks row now carries a delete button routed through the existing task:del -> task:delconfirm -> removeTask flow, and the task view offers Delete for terminal AND unreadable-status tasks; (2) automatic reclamation via new scripts/reclaim-stale-task-labels.mjs running hourly as the task-label-reclamation job of cleanup.yml — it scans user:<chat>:tasks KV docs via wrangler CLI and frees labels whose job is stale under the SAME rule as expired.py (expires_at_epoch past, terminal state, or no readable status); credentials referenced by secret name only (CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID, same pair as deploy-bots.yml); (3) label reuse — ensureTaskLabel now picks the lowest currently-unused letter instead of incrementing forever; (4) /tasks sorts by status.created_at_epoch newest-first (sortTaskEntries), so reused early letters no longer read as old tasks; (5) the one-time legacy cleanup of the operators live KV labels (B,C,G,H,I,J,K,L,M,N) is executed by the same script on the next cleanup.yml run — Cloudflare credentials exist only as repo secrets, so it cannot be run from a build sandbox; this is documented and the first runs report is uploaded as the task-label-reclamation-report artifact.",
+      "files_created": [
+        "scripts/reclaim-stale-task-labels.mjs"
+      ],
+      "files_modified": [
+        "bot/src/storage.js",
+        "bot/src/commands/tasks.js",
+        "bot/src/runtime.js",
+        "bot/test/tasks.test.mjs",
+        ".github/workflows/cleanup.yml",
+        "BUILD_PROGRESS.json"
+      ],
+      "tests": "cd bot && npm test (86 passed, was 82); PYTHONPATH=. python3 -m unittest discover pipeline/tests (216 passed — unchanged)"
     }
   ],
-  "next_action": "Bug 2 (task label reclamation + creation-time sort) is in progress in this session; Bugs 3-4 queued after it.",
+  "next_action": "Bug 3 (torrent selection prompt wiring) and Feature 4 (unseen NEW marker) remain in this sessions task list.",
   "architecture_concerns": [
     {
       "id": "series-shape-nested-vs-flat",
@@ -457,7 +474,8 @@
       "status": "resolved",
       "resolved_at_utc": "2026-08-26",
       "resolution": "Moved relay-job record creation from confirm time to staging time in bot/src/index.js (handleWizardRelayVideo creates the record before copyMessage; startRelayJob merges/upgrades it). bot/test/relay.test.mjs +3 tests. Full suites green after change: 210 Python + 78 JS (was 75)."
-    }
+    },
+    "Bug 2 one-time legacy-label cleanup cannot run from a CI-less build sandbox (Cloudflare creds are repo secrets only); it executes via the new task-label-reclamation job on the next hourly cleanup.yml run — verify the reclamation-report artifact after first run."
   ],
   "active_blockers": [],
   "human_review_items": [
@@ -471,8 +489,8 @@
     "note_after_relay_fix": "relay-ordering-fix-session-1: 210 Python (unittest discover pipeline/tests) + 78 JS (npm test) all green after the staging-time relay record fix."
   },
   "last_session": {
-    "id": "bugfix-1-error-visibility",
-    "note": "Bug 1 fix (failed tasks disappeared silently). Confirmed both suspected causes: (1) stage-a.yml wrote its job_id output only AFTER validation, so a pre-resolution failure left steps.req.outputs.job_id empty and the if:failure() handler swallowed the resulting write failure behind || true / a trailing true, leaving no status.json anywhere; (2) showTasks() treated an unreadable status (readStatus nu"
+    "id": "bugfix-2-label-lifecycle",
+    "note": "Bug 2 fix (task labels never reclaimed; legacy and current tasks mixed). Root cause confirmed: storage.js nextLabel()/ensureTaskLabel() allocated from a monotonic tasks.next counter, removeTask() existed but nothing called it, and pipeline/cleanup/expired.py only manages GitHub-side artifacts with no knowledge of the bot KV label store. Fixes: (1) manual deletion surfaced — every /tasks row now ca"
   },
   "architecture_concerns_closed": [
     {

@@ -137,3 +137,65 @@ test('showTasks renders an unreadable status as "status unavailable", not "queue
   const liveLine = text.split('\n').find((l) => l.includes('<b>B</b>'));
   assert.match(liveLine, /stage_a_running/);
 });
+
+// ---------------------------------------------------------------------------
+// Bug 2 fix coverage: freed labels are reused, the list sorts by creation
+// time (not label order), and every /tasks row offers a delete button.
+// ---------------------------------------------------------------------------
+
+test('a freed label is reused by the next new task (lowest free letter wins)', async () => {
+  const { ensureTaskLabel, removeTask } = await import('../src/storage.js');
+  const kv = makeKv();
+  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-1'), 'A');
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-2'), 'B');
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-3'), 'C');
+  assert.equal(await removeTask(env, CHAT, 'B', 'job-2'), true);
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-4'), 'B', 'freed label B must be reused');
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-5'), 'D');
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-4'), 'B', 'same job keeps its label');
+});
+
+test('deleting the earliest label frees A for reuse', async () => {
+  const { ensureTaskLabel, removeTask } = await import('../src/storage.js');
+  const kv = makeKv();
+  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
+  await ensureTaskLabel(env, CHAT, 'job-1');
+  await ensureTaskLabel(env, CHAT, 'job-2');
+  await removeTask(env, CHAT, 'A', 'job-1');
+  assert.equal(await ensureTaskLabel(env, CHAT, 'job-9'), 'A');
+});
+
+test('sortTaskEntries orders by creation time, newest first (label order ignored)', async () => {
+  const { sortTaskEntries } = await import('../src/commands/tasks.js');
+  const sorted = sortTaskEntries([
+    { label: 'B', jobId: 'j-b', status: makeStatus('j-b', 'queued', 100) },
+    { label: 'A', jobId: 'j-a', status: makeStatus('j-a', 'queued', 300) },
+    { label: 'C', jobId: 'j-c', status: makeStatus('j-c', 'queued', 200) },
+    { label: 'D', jobId: 'j-d', status: null },
+  ]);
+  assert.deepEqual(sorted.map((e) => e.label), ['A', 'C', 'B', 'D']);
+});
+
+test('showTasks sorts rows by creation time and offers a delete button per row', async () => {
+  const kv = makeKv();
+  const env = await makeEnv(kv);
+  await ensureTaskLabel(env, CHAT, 'job-old');
+  await ensureTaskLabel(env, CHAT, 'job-new');
+  await ensureTaskLabel(env, CHAT, 'job-mid');
+  const sent = [];
+  const restore = installFetch({
+    files: {
+      'jobs/job-old/status.json': makeStatus('job-old', 'stage_a_running', 100),
+      'jobs/job-new/status.json': makeStatus('job-new', 'stage_a_running', 300),
+      'jobs/job-mid/status.json': makeStatus('job-mid', 'stage_a_running', 200),
+    },
+    sent,
+  });
+  try { await showTasks(env, CHAT); } finally { restore(); }
+  const text = String(sent[0].payload.text || '');
+  const order = ['<b>B</b>', '<b>C</b>', '<b>A</b>'].map((needle) => text.indexOf(needle));
+  assert.ok(order[0] !== -1 && order[0] < order[1] && order[1] < order[2], `rows newest-first, got ${order}`);
+  const callbacks = JSON.stringify(sent[0].payload.reply_markup || {});
+  for (const label of ['A', 'B', 'C']) assert.match(callbacks, new RegExp(`task:del:${label}`));
+});

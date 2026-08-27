@@ -66,7 +66,10 @@ export function taskKeyboard(status, label) {
     }
   }
   rows.push([{ text: '🔄 Refresh', callback_data: `task:open:${label}` }]);
-  if (isTerminal(state)) rows.push([{ text: '🗑 Delete task', callback_data: `task:del:${label}` }]);
+  // Bug 2 fix: deletion is offered for terminal tasks AND for tasks whose
+  // status is unreadable (status == null) — a stuck task must be clearable
+  // so its letter is reclaimed.
+  if (isTerminal(state) || !status) rows.push([{ text: '🗑 Delete task', callback_data: `task:del:${label}` }]);
   rows.push([{ text: '← Tasks', callback_data: 'menu:tasks' }]);
   return buttons(rows);
 }
@@ -82,8 +85,8 @@ export async function showTask(env, chatId, label, messageId = null) {
   const status = await readStatus(credentials, credentials.repo, jobId);
   if (!status) {
     return renderInteractiveView(env, chatId,
-      `<b>Task ${escapeHtml(label)}</b> · <code>${escapeHtml(jobId)}</code>\n\nNo status file yet — the job record exists but Stage A has not reported in. Try Refresh in a moment.`,
-      { replyMarkup: buttons([[{ text: '🔄 Refresh', callback_data: `task:open:${label}` }], [{ text: '← Tasks', callback_data: 'menu:tasks' }]]) },
+      `<b>Task ${escapeHtml(label)}</b> · <code>${escapeHtml(jobId)}</code>\n\n<b>Status unavailable</b> — the job record could not be read. It may have failed before Stage A could report in, or it may have expired. Try Refresh, or delete this task if it is stale.`,
+      { replyMarkup: buttons([[{ text: '🔄 Refresh', callback_data: `task:open:${label}` }], [{ text: '🗑 Delete task', callback_data: `task:del:${label}` }], [{ text: '← Tasks', callback_data: 'menu:tasks' }]]) },
       messageId);
   }
   const lines = [
