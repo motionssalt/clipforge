@@ -127,7 +127,7 @@ test('showTasks renders an unreadable status as "status unavailable", not "queue
   }
   assert.equal(sent.length, 1, 'expected exactly one Telegram message');
   const text = String(sent[0].payload.text || '');
-  assert.match(text, /Active tasks/);
+  assert.match(text, /<b>Tasks<\/b>/);
   // The dead job (404 status) must NOT read as a plain "queued" row…
   const deadLine = text.split('\n').find((l) => l.includes('A</b> —'));
   assert.ok(deadLine, 'expected a row for label A');

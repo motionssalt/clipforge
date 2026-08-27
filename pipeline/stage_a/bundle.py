@@ -125,6 +125,7 @@ def generate_prompt(
         cmd += [
             "--series-part", str(part),
             "--series-start-seconds", str(start),
+            "--series-id", str(series.get("series_id") or ""),
             "--series-context-env", "CLIPFORGE_SERIES_CONTEXT",
         ]
 

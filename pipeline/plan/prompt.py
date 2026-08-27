@@ -190,16 +190,79 @@ footage from {series_start_seconds}s onward. Do not recap, say "previously on",
 or replay earlier material. Prior-part continuity notes are private guidance:
 {series_context}
 
-Start with a strong standalone hook. For every non-final part, choose an honest
-cliffhanger rather than forcing a target timestamp. In production.json include
-a nested "series" object with fields: series_id, part ({series_part}),
-start_seconds ({series_start_seconds}), end_seconds, is_final (boolean), and a
-concise non-empty summary. Put "Part {series_part}" directly in title.
+HOOK & CLIFFHANGER CRAFT (this part's narration is judged by these rules):
+
+1. THE HOOK'S JOB IS CURIOSITY, NOT SUMMARY. The first 1-2 sentences must make
+   the viewer think "Wait... what happened?" or "How is that possible?". Lead
+   with the consequence, mystery, danger, contradiction, or impossible
+   situation — then give the minimum context to make it clear.
+   WEAK: "This is a story about a man who came home and found something
+   strange." STRONG: "This guy found a phone outside his house... but the
+   last photo on it was a picture of him sleeping."
+
+2. THE HOOK MUST BE THE STORY'S CENTRAL QUESTION. Identify the one unanswered
+   question this part revolves around (who entered the house? what is on the
+   phone?) and make the hook establish exactly that. A dramatic hook unrelated
+   to the actual story is a failure.
+
+3. NEVER SPOIL THE TWIST IN THE FIRST SENTENCE. Reveal information
+   progressively: Hook -> Setup -> Escalation -> New Discovery -> Bigger
+   Question -> Payoff. Each beat must create a reason to hear the next one.
+
+4. BUILD TOWARD THE CLIFFHANGER. For a non-final part, the ending must feel
+   EARNED — every important detail should raise tension, create a question,
+   eliminate an explanation, or make the final discovery bigger. The
+   cliffhanger must grow directly out of THIS part's escalation: if the story
+   is about a mysterious phone, the ending reveals something about the phone.
+   Never bolt on a random shocking sentence just to end the part.
+
+5. A STRONG CLIFFHANGER = ONE SPECIFIC UNANSWERED QUESTION. Reveal just
+   enough to create a NEW mystery, then stop before resolving it. The viewer
+   must feel: "I understand what is happening... but I have to know what
+   happens next." NOT: "And then something crazy happened. Find out in Part
+   {next_part}." — generic appeals are banned.
+
+6. USE INFORMATION GAPS. Give enough information to understand the situation,
+   then deliberately withhold the one critical piece (the timestamp, the
+   identity, what was outside the door).
+
+7. SHORT SENTENCES AT HIGH-TENSION MOMENTS. As tension rises, narration gets
+   shorter and harder: "Then he checked the second camera." / "Someone was
+   standing behind him." / "But when he turned around... nobody was there."
+   Never bury a peak moment in a long winding sentence.
+
+8. NO FAKE-SUSPENSE FILLER. Banned phrases: "You won't believe what happened",
+   "But things were about to get crazy", "And then everything changed",
+   "What happened next was insane", "Wait until you see this". Create suspense
+   through information, not announcements.
+
+9. STRUCTURE BY PART TYPE. A FINAL part resolves: Hook -> Setup -> Escalation
+   -> Discovery -> Resolution (the viewer gets an answer). A NON-FINAL part
+   follows: Hook -> Setup -> Escalation -> Major Revelation -> New Unanswered
+   Question -> Cliffhanger — the first mystery may be partly answered, but the
+   answer must open an even bigger question, and the script stops at the most
+   compelling moment, not after the story has already peaked.
+
+10. SELF-CHECK BEFORE RETURNING (all must be yes):
+    (1) Does the opening create curiosity immediately?
+    (2) Does the hook introduce the central mystery or conflict?
+    (3) Does every section add meaningful new information?
+    (4) Does tension increase throughout?
+    (5) Are details revealed progressively, not dumped?
+    (6) Does the ending connect directly to what came before it?
+    (7) Does the cliffhanger create ONE specific unanswered question?
+    (8) Would a viewer genuinely need Part {next_part} for that answer?
+    (9) Does the cliffhanger feel earned rather than inserted?
+    (10) Does the script stop at the most compelling possible moment?
+
+In production.json include a nested "series" object with fields: series_id
+(EXACTLY "{series_id}" — copy it verbatim, it is the durable id of this whole
+series, NOT this job's id), part ({series_part}), start_seconds
+({series_start_seconds}), end_seconds, is_final (boolean), and a concise
+non-empty summary of THIS part. Put "Part {series_part}" directly in title.
 ################################################################################
 
 """
-
-
 TEMPLATE = """\
 {series_block}{focus_block}================================================================================
   READ THIS FIRST — Source-video cut-selection instructions for the AI agent
@@ -949,6 +1012,22 @@ STEP 3 (assemble cuts).
           - The last cut's voiceover_text ends the story. Land on the
             final beat from the source; do not add a wrap-up.
 
+        ENDING QUALITY — EARNED, NOT ANNOUNCED:
+
+        The ending must be the direct result of the story's own escalation:
+        every important detail earlier in the script should raise tension,
+        create a question, eliminate an explanation, or make the final beat
+        land harder. Never end on a generic suspense announcement ("and then
+        something crazy happened", "you won't believe what's next", "wait
+        until you see this") — create suspense through information instead:
+        give the viewer enough to understand the situation, then withhold the
+        one critical piece. And as tension peaks, sentences get SHORTER —
+        "Then he noticed something strange." / "He rewound the footage." /
+        "The person on the screen... was him." Short sentences give the final
+        beats their weight. A normal video resolves its central question; a
+        series part stops at the most compelling unanswered one (see the
+        SERIES MODE directive when present).
+
 --------------------------------------------------------------------------------
 JOB TITLE — ONE title for the entire job (top-level `title` field)
 --------------------------------------------------------------------------------
@@ -1194,6 +1273,7 @@ def main() -> None:
         help="Name of the environment variable that carries the focus string.",
     )
     ap.add_argument("--series-part", type=int, default=None)
+    ap.add_argument("--series-id", default="")
     ap.add_argument("--series-start-seconds", type=int, default=None)
     ap.add_argument("--series-context-env", default=None)
     args = ap.parse_args()
@@ -1213,7 +1293,7 @@ def main() -> None:
     if series_enabled and (args.series_part is None or args.series_part < 1 or args.series_start_seconds is None or args.series_start_seconds < 0):
         ap.error("Series prompts require a positive part number and a non-negative start timestamp.")
     series_context = (os.environ.get(args.series_context_env, "") if args.series_context_env else "").strip() or "(Part 1: no prior parts.)"
-    series_block = SERIES_DIRECTIVE.format(series_part=args.series_part, series_start_seconds=args.series_start_seconds, series_context=series_context) if series_enabled else ""
+    series_block = SERIES_DIRECTIVE.format(series_part=args.series_part, series_start_seconds=args.series_start_seconds, series_context=series_context, series_id=args.series_id or "", next_part=(args.series_part or 0) + 1) if series_enabled else ""
 
     # Compose the focus-conditional blocks. Supplied focus preserves its
     # operator-controlled directive. Empty focus gets a distinct directive that
