@@ -12,9 +12,9 @@
     {
       "id": "bug-41",
       "title": "Multi-file music upload (bug-28) not actually applying",
-      "status": "in_progress",
-      "notes": "Re-investigate music upload end to end; multiple files sent during the Add-Music window must all be collected and attached on Done. | [2026-08-28] Started investigation.",
-      "commit": null
+      "status": "done",
+      "notes": "Multi-file music upload (bug-28) not actually applying. ROOT CAUSE: bug-28's 'done' status did NOT reflect working code \u2014 the current handleMusicUploadMessage uploaded the FIRST audio file immediately and then called clearFlow(), ending the music_upload flow after exactly one file; every subsequent file fell out of the flow and was silently dropped. The upload prompt (ml:upload) also had NO Done button at all, only Cancel \u2014 the batch behavior the update_notice.json changelog advertised was never shipped. FIX (75ce07e, bot/src/index.js): ml:upload now seeds state.pending.uploaded=[] and renders a prompt with an explicit 'Done' button (ml:uploaddone); handleMusicUploadMessage STAGES each file as {name, file_id} in the KV flow state (kept alive, running count shown, same filename re-sent = latest wins) instead of uploading+exiting; ml:uploaddone drains the staged list \u2014 downloads each file from Telegram and commits it to audio-library/ via putBinaryFile, reports per-file added/failed, then clearFlow + library re-render. Also fixed: Cancel (set:music) now clears a live music_upload flow so a cancelled session cannot keep swallowing audio files. VERIFIED: node --check clean; 93/93 bot tests pass; staging state machine simulated in Node (collects N files, dedupes latest-wins, Done drains all). LIMITS: index.js internals are not exported so no direct unit test of the handlers exists (consistent with the existing suite, which only tests exported modules); end-to-end Telegram behavior assumed from the flow routing in handleMessage. NOTE: file_ids are fetched at Done time and expire ~1h after send \u2014 a user who waits longer would get per-file failure messages, which the handler now reports instead of crashing.",
+      "commit": "75ce07e"
     },
     {
       "id": "bug-42",
