@@ -12,15 +12,15 @@
     {
       "id": "bug-34",
       "title": "Smart audio level normalization (background vs vocals)",
-      "status": "in_progress",
-      "notes": "Background audio currently adjusted by simple volume multiplier -> inconsistent perceived loudness. Replace with actual loudness analysis: measure background track level against vocal/narration track (ffmpeg loudnorm/volumedetect or equivalent) and adjust background so ratio is consistently background:vocals = 0.3:1 regardless of input loudness. Must be measured/calculated, not a fixed blind percentage. | [2026-08-28] Started investigation.",
-      "commit": ""
+      "status": "done",
+      "notes": "Background audio currently adjusted by simple volume multiplier -> inconsistent perceived loudness. Replace with actual loudness analysis: measure background track level against vocal/narration track (ffmpeg loudnorm/volumedetect or equivalent) and adjust background so ratio is consistently background:vocals = 0.3:1 regardless of input loudness. Must be measured/calculated, not a fixed blind percentage. | [2026-08-28] Started investigation. FIXED in f3a7d65: render.py now measures EBU R128 integrated loudness (ffmpeg loudnorm print_format=json, same parse pattern voiceover.py already used) of BOTH the merged voiceover WAV and the music file, then computes music_gain_db = (voice_lufs + 10*log10(0.3)) - music_lufs so the bed lands at exactly 0.3:1 perceived loudness vs vocals regardless of source loudness. render_merged now writes the merged voiceover WAV BEFORE produce_merged_video so the real vocal track is measured; the computed linear gain replaces the fixed volume=0.33 in the music filter chain; side-chain ducking + limiter unchanged. Gain clamped [-40,+24] dB; falls back to legacy 0.33 with a WARNING only when measurement is impossible (silent/corrupt file), keeping render alive. Verified with real ffmpeg: quiet (-47.75 LUFS) -> +18.67 dB, loud (-18.35 LUFS) -> -10.73 dB; both re-measure within 0.1 dB of target. Tests: 41/41 stage_b + 175 pipeline pass; test_telegram_relay failure is PRE-EXISTING (verified identical on base commit before my change) — low-disk sandbox preflight, unrelated.",
+      "commit": "f3a7d65"
     },
     {
       "id": "bug-35",
       "title": "Progress/status animation during long-running stages",
-      "status": "pending",
-      "notes": "Add lightweight animated progress indication during long-running stage operations (Stage A, Stage B, restarts, other multi-step dispatched actions), beyond the initial 'starting' ack from bug-26. Periodically-updating status message or simple progress indicator; respect Telegram Bot API message edit rate limits.",
+      "status": "in_progress",
+      "notes": "Add lightweight animated progress indication during long-running stage operations (Stage A, Stage B, restarts, other multi-step dispatched actions), beyond the initial 'starting' ack from bug-26. Periodically-updating status message or simple progress indicator; respect Telegram Bot API message edit rate limits. | [2026-08-28] Started investigation.",
       "commit": ""
     },
     {
