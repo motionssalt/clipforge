@@ -165,11 +165,15 @@ export function wizardToRequest(wizard, seriesId) {
     series: {
       enabled: series,
       series_id: series ? String(seriesId || '') : '',
-      // bug-61: Part 1 is its own Stage A evidence source. Persist the series
-      // id (== Part 1's job id) here instead of '' so later parts reuse THIS
-      // job's release evidence; a blank here made Part 2+ point its
-      // source_job_id at a job id that never ingested anything (no release).
-      source_job_id: series ? String(seriesId || '') : '',
+      // bug-64 (the real bug-61 follow-up): Part 1 is its own Stage A evidence
+      // source, and its release is published under its JOB id — so
+      // source_job_id must be wizard.jobId, NOT the series id. bug-61 seeded
+      // series_id here on the mistaken assumption that series_id == Part 1's
+      // job id; in reality series_id is series-<Date.now()> (index.js) while
+      // the job id is manual-<Date.now()> (a different timestamp), so Part 2's
+      // reuse step downloaded "clipforge-series-<ts>" — a release that never
+      // exists — and died with "release not found".
+      source_job_id: series ? String(wizard.jobId || '') : '',
       part: series ? 1 : 0,
       start_seconds: 0,
       context: ''

@@ -115,7 +115,7 @@ export function buildSeriesContext(entries) {
  * The result is passed to buildStageARequest/saveStageARequest, which stamps
  * version/job_id/saved_at_epoch and normalizes every field.
  */
-export function nextPartRequestBody(request, continuation, context) {
+export function nextPartRequestBody(request, continuation, context, currentJobId = '') {
   const source = isPlainObject(request.source) ? request.source : {};
   const options = isPlainObject(request.options) ? request.options : {};
   const music = isPlainObject(request.music) ? request.music : {};
@@ -143,13 +143,13 @@ export function nextPartRequestBody(request, continuation, context) {
       enabled: true,
       series_id: continuation.seriesId,
       // The original source job id is carried forward unchanged so every
-      // part can reuse Part 1's Stage A evidence. bug-61: fall back to the
-      // series_id (== Part 1's job id), NOT continuation.seriesId, when a
-      // pre-bug-61 Part 1 request left source_job_id blank — otherwise part
-      // >= 3 would self-reference the continuation's own job id and the reuse
-      // step would try to download evidence from a release that can never
-      // exist (exactly how series-1787915980098-p2 failed).
-      source_job_id: String(reqSeries.source_job_id || reqSeries.series_id || continuation.seriesId),
+      // part can reuse Part 1's Stage A evidence. bug-64: when a pre-fix Part
+      // 1 request left source_job_id blank, the fallback is the COMPLETING
+      // part's own job id (currentJobId) — that job just reached 'complete',
+      // so its release provably exists. Never the series_id: it is
+      // series-<ts>, not a job id, so clipforge-<series_id> never exists
+      // (the exact "release not found" bug-61's series_id fallback caused).
+      source_job_id: String(reqSeries.source_job_id || currentJobId || continuation.seriesId),
       part: continuation.part,
       start_seconds: continuation.startSeconds,
       context: String(context || '').slice(0, MAX_CONTEXT_CHARS),

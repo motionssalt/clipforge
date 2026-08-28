@@ -166,6 +166,24 @@ jobs:
           series = data.get("series", {})
           put("series_enabled", "true" if series.get("enabled") else "false")
           src_job = str(series.get("source_job_id", ""))
+          # bug-64: legacy/broken requests carry a SERIES id here instead of a
+          # job id. bug-61 deliberately seeded source_job_id with the series id
+          # (mistaking series-<ts> for Part 1's job id, which is really
+          # manual-<ts>), so Part 2's reuse step tried to download
+          # clipforge-series-<ts> — a release that never exists — and died with
+          # "release not found". The wizard now persists wizard.jobId for new
+          # series; the bot's continuation re-points blank values at the
+          # completing part's own job id. This reader is the last safety net:
+          # any 'series-'-shaped source_job_id is re-pointed at the CURRENT
+          # job's Part 1 (same series id, '-p1'), which is where the reuse
+          # evidence actually lives. Job ids themselves never start with
+          # 'series-' for a Part >= 2 continuation ('manual-<ts>' /
+          # '<series_id>-p<N>'), so this rewrite cannot misfire on valid data.
+          if src_job.startswith("series-"):
+              cur = str(data.get("job_id", ""))
+              m = re.fullmatch(r"(series-[A-Za-z0-9._-]+)-p(\d+)", cur)
+              if m and int(m.group(2)) >= 2:
+                  src_job = f"{m.group(1)}-p1"
           put("series_source_job_id", src_job if re.fullmatch(r"[A-Za-z0-9._-]{1,120}", src_job) else "")
           put("target_duration_seconds", str(int(opts.get("target_duration_seconds", 120) or 120)))
           PY
@@ -241,9 +259,21 @@ jobs:
           mkdir -p work/series-source
           # --clobber: a re-run of this workflow reuses the workspace, and a
           # partial first download would otherwise abort the retry.
-          gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
+          # bug-64: retry with backoff — a freshly-queued continuation can race
+          # the source release's propagation, and the previous single attempt
+          # died with "release not found" on any transient read miss.
+          attempt=1
+          until gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
             --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
-            --pattern 'screenshots.zip' --pattern 'source_input.bin' --clobber
+            --pattern 'screenshots.zip' --pattern 'source_input.bin' --clobber; do
+            if [ "$attempt" -ge 6 ]; then
+              echo "release clipforge-$source_job still unavailable after $attempt attempts" >&2
+              exit 1
+            fi
+            echo "release clipforge-$source_job not readable yet (attempt $attempt) — retrying in 15s"
+            sleep 15
+            attempt=$((attempt + 1))
+          done
           mkdir -p work/screenshots
           cp work/series-source/transcript.json work/transcript.json
           cp work/series-source/scene_index.json work/scene_index.json

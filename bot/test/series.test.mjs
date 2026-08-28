@@ -169,10 +169,22 @@ test('nextPartRequestBody mirrors the automatic continuation with mode manual', 
   assert.deepEqual(body.music, { ref: 'audio-library/theme.mp3', source: 'explicit_library' });
 });
 
-test('nextPartRequestBody falls back to series_id when source_job_id is missing', () => {
+test('nextPartRequestBody falls back to the completing job id when source_job_id is missing (bug-64)', () => {
+  // bug-64: a pre-fix Part 1 request with a blank source_job_id must resolve
+  // to the completing part's OWN job id (its release provably exists), never
+  // the series_id — series_id is series-<ts>, not a job id, so
+  // clipforge-series-<ts> is the "release not found" the bug is about.
   const request = makeRequest({ series: { enabled: true, series_id: 'series-1', source_job_id: '', part: 1, start_seconds: 0, context: '' } });
-  const body = nextPartRequestBody(request, { seriesId: 'series-1', part: 2, startSeconds: 120 }, '');
-  assert.equal(body.series.source_job_id, 'series-1');
+  const body = nextPartRequestBody(request, { seriesId: 'series-1', part: 2, startSeconds: 120 }, '', 'manual-111');
+  assert.equal(body.series.source_job_id, 'manual-111');
+  // ...and a request whose source_job_id is a series id (the bug-61 shape) is
+  // passed through unchanged — the stage-a.yml reuse step treats any
+  // 'series-'-prefixed source_job_id as broken legacy data and re-points it
+  // at the current job id there.
+  const legacy = nextPartRequestBody(
+    makeRequest({ series: { enabled: true, series_id: 'series-1', source_job_id: 'series-1', part: 1, start_seconds: 0, context: '' } }),
+    { seriesId: 'series-1', part: 2, startSeconds: 120 }, '', 'manual-111');
+  assert.equal(legacy.series.source_job_id, 'series-1');
 });
 
 test('nextPartJobId enforces the §6.3 identity rule', () => {
