@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-51",
@@ -29,5 +29,6 @@
       "notes": "Seeded 2026-08-28 (fresh sweep). Real Actions log on fresh clone (clipforge-clone-zuaua5): wrangler deploy fails for missing CLOUDFLARE_API_TOKEN; bug-68 failure-alert step also fails (exit 1) because BOTB_MTPROTO_BOT_TOKEN absent. Prior sweep claimed fix at commit 4f1328d (settings-screen secrets note + ::error:: annotation in alert step; announceDeployFailure verified cross-repo by construction) \u2014 re-verify all of it from current code: (a) setup flow tells user which secrets and where; (b) check whether ANY secret provisioning happens in clone creation; (c) announceDeployFailure polling works cross-repo; (d) alert step degradation/annotation clarity. Documented manual step is acceptable; do not redesign onboarding. [done 2026-08-28] ALL FOUR SUB-REQUIREMENTS VERIFIED FROM CURRENT CODE: (a) settings screen shows the exact two required secrets with the Settings\u2192Secrets and variables\u2192Actions path, gated to connected non-original repos (index.js:1900-1909); (b) confirmed NO automatic secret provisioning exists in clone creation (only GEMINI_API_KEYS/ZERNIO_API_KEY ever written via their own settings screens) \u2014 auto-collecting a Cloudflare token would need a new secure-input flow; bug text explicitly allows the documented-manual-step resolution, which exists (README + in-bot hint); (c) announceDeployFailure (start.js:113-128) polls listWorkflowRuns on credentials.repo (the CLONE) with the owner's PAT, gated to non-original repos at start.js:173-177 \u2014 cross-repo by construction, with newest-failure dedup; (d) deploy-bots.yml alert step emits ::error title=Deploy blocked on a Shadow Clone:: annotation explaining WHY it intentionally fails and what to do, replacing the unexplained second red X \u2014 confirmed live on central run 33218771313's alert step. No code change needed beyond the bug-53 README addition.",
       "commit": "4f1328d"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T23:21:09Z"
 }
