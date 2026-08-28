@@ -684,12 +684,12 @@ export async function finalizeShadowClone(job) {
     if (!sourceBlob || sourceBlob.encoding !== 'base64' || typeof sourceBlob.content !== 'string') throw new Error(`Could not read source file ${file.path}.`);
     let existingSha = null;
     try {
-      const existing = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(file.path)}?ref=${encodeURIComponent(targetBranch)}`);
+      const existing = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/contents/${encodePath(file.path)}?ref=${encodeURIComponent(targetBranch)}`);
       existingSha = existing && existing.sha ? existing.sha : null;
     } catch (error) {
       if (!(error instanceof GitHubError) || error.status !== 404) throw error;
     }
-    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(file.path)}`, {
+    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/contents/${encodePath(file.path)}`, {
       method: 'PUT',
       body: {
         message: `clipforge: copy workflow file ${file.path}`,
@@ -701,9 +701,9 @@ export async function finalizeShadowClone(job) {
   }
   try {
     const workflowPath = `.github/workflows/${CLONE_COPY_WORKFLOW}`;
-    const existing = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(workflowPath)}?ref=${encodeURIComponent(targetBranch)}`);
+    const existing = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/contents/${encodePath(workflowPath)}?ref=${encodeURIComponent(targetBranch)}`);
     if (existing && existing.sha) {
-      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(workflowPath)}`, {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/contents/${encodePath(workflowPath)}`, {
         method: 'DELETE',
         body: { message: 'clipforge: remove one-time clone copy workflow', sha: existing.sha, branch: targetBranch }
       });
@@ -718,12 +718,12 @@ export async function finalizeShadowClone(job) {
   // and fast-forwarded the live default branch; the PAT writes above layered
   // the source workflow files on top. Read the branch head back for the
   // normalization + verification steps below.
-  const headAfterCopy = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(targetBranch)}`);
+  const headAfterCopy = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(targetBranch)}`);
   const finalCommitSha = headAfterCopy && headAfterCopy.object && headAfterCopy.object.sha;
   if (!finalCommitSha || finalCommitSha === bootstrapCommitSha) {
     throw new Error('Shadow Clone verification failed: the copy workflow reported completion but the repository head did not advance past the bootstrap commit.');
   }
-  const finalCommit = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/commits/${encodeURIComponent(finalCommitSha)}`);
+  const finalCommit = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/commits/${encodeURIComponent(finalCommitSha)}`);
   const finalTreeSha = finalCommit && finalCommit.tree && finalCommit.tree.sha;
   if (!finalTreeSha) throw new Error('Shadow Clone verification failed: GitHub did not return the copied file tree.');
   await report('finalize', files.length, files.length);
@@ -740,13 +740,13 @@ export async function finalizeShadowClone(job) {
     // name for 1-3s — the user could open the repo right after the success
     // message and still see the pre-normalization state).
     if (targetBranch !== DEFAULT_BRANCH) {
-      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs`, {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/refs`, {
         method: 'POST', body: { ref: `refs/heads/${DEFAULT_BRANCH}`, sha: commit.sha }
       });
-      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}`, {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}`, {
         method: 'PATCH', body: { default_branch: DEFAULT_BRANCH }
       });
-      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(targetBranch)}`, {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(targetBranch)}`, {
         method: 'DELETE'
       });
       targetBranch = DEFAULT_BRANCH;
@@ -757,14 +757,14 @@ export async function finalizeShadowClone(job) {
     // repo GitHub would display as sync-marker-only (the exact symptom this
     // bug is about — the prior sweep's verification checked the function's
     // own return value, which was correct even when the visible repo was not).
-    const verifyRepo = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}`);
+    const verifyRepo = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}`);
     const verifyBranch = verifyRepo && verifyRepo.default_branch ? String(verifyRepo.default_branch) : targetBranch;
-    const verifyRef = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(verifyBranch)}`);
+    const verifyRef = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(verifyBranch)}`);
     const verifySha = verifyRef && verifyRef.object && verifyRef.object.sha;
     if (verifySha !== commit.sha) {
       throw new Error(`Shadow Clone verification failed: the repository's default branch (${verifyBranch}) does not point at the copied file tree.`);
     }
-    const verifyTree = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/trees/${encodeURIComponent(tree.sha)}?recursive=1`);
+    const verifyTree = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/trees/${encodeURIComponent(tree.sha)}?recursive=1`);
     const verifyBlobs = Array.isArray(verifyTree && verifyTree.tree) ? verifyTree.tree.filter((entry) => entry && entry.type === 'blob').length : 0;
     if (!verifyTree || verifyTree.truncated || verifyBlobs < files.length) {
       throw new Error(`Shadow Clone verification failed: the pushed file tree holds ${verifyBlobs} files, expected at least ${files.length}.`);

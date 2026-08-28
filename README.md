@@ -79,7 +79,7 @@ secret**.
 | `ZERNIO_API_KEY` | Social publishing via Zernio. Absent → publish steps skip/fail only when you actually trigger them. | `stage-b.yml`, `publish.yml` |
 
 **Not needed on a clone (central-only):** `BOTB_MTPROTO_*`,
-`CLIPFORGE_TELEGRAM_*`, and `RELAY_ENCRYPTION_KEY` live only on the central
+`CLIPFORGE_TELEGRAM_*`, `DEPLOY_ALERT_CHAT_ID`, and `RELAY_ENCRYPTION_KEY` live only on the central
 repo/Worker. A clone never receives them and must not — see the next section.
 
 ### 3. Sending a video directly (the private relay)

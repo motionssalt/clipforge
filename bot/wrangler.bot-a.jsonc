@@ -14,7 +14,7 @@
       "binding": "CLIPFORGE_BOT_KV",
       "id": "b09957b233c247deb40cc703ffadc95d"
     }
-  ]
+  ],
   // bug-51: the cron trigger drives the Shadow Clone job sweep
   // (scheduled() in src/index.js) — the webhook stages long-running clone
   // creations in KV and this once-a-minute tick resumes/finalizes/fails them,
