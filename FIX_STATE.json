@@ -5,9 +5,9 @@
     {
       "id": "bug-33",
       "title": "Remove mode-choice prompt from /new",
-      "status": "in_progress",
-      "notes": "Since AI/Gemini automatic mode was already removed in a prior sweep, the /new wizard should no longer ask the user to choose between manual and automatic mode. Go straight into the manual production.json flow without presenting a choice step. Check that no dead code/UI referencing the removed automatic mode remains reachable here. | [2026-08-28] Started investigation.",
-      "commit": ""
+      "status": "done",
+      "notes": "Since AI/Gemini automatic mode was already removed in a prior sweep, the /new wizard should no longer ask the user to choose between manual and automatic mode. Go straight into the manual production.json flow without presenting a choice step. Check that no dead code/UI referencing the removed automatic mode remains reachable here. | [2026-08-28] Started investigation. FIXED in 5e557eb: newWizard() now starts at step=source with mode=manual and jobId minted up-front (manual-<ts>); the mode step is removed from STEPS and stepPrompt; the Series toggle moved onto the source step keyboard (seriesKeyboard, replaces modeKeyboard); the dead wz:mode callback branch in index.js (incl. the leftover automatic-mode Gemini-key gate referencing wz:mode:manual and set:gemini) was deleted, and the now-unused makeJobId import removed from index.js. Step labels renumbered 1/5..5/5. Verified: 93/93 bot tests pass after npm install; wizard tests updated to assert source-first start, manual pre-set, and no mode step. Confidence: high for bot-side flow; the pipeline still receives mode=manual exactly as before (wizardToRequest unchanged).",
+      "commit": "5e557eb"
     },
     {
       "id": "bug-34",
