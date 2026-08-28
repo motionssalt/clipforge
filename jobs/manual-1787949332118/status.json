@@ -3,24 +3,24 @@
   "job_id": "manual-1787949332118",
   "mode": "manual",
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
+    "enabled": true,
+    "series_id": "series-1787949354863",
+    "part": 1,
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33211362482",
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1787951528,
-  "updated_at_epoch": 1787951539,
+  "updated_at_epoch": 1787957192,
   "expires_at_epoch": 1787994728,
   "release_tag": "clipforge-manual-1787949332118",
   "release_url": "",
   "assets": {},
   "run": {
-    "workflow_run_id": 33211362482,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33211362482",
-    "code_ref": "fd6413ab70c2ad36352f7a1c638d8284bc00c3ea"
+    "workflow_run_id": 33218059989,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33218059989",
+    "code_ref": "1415b1b7a7921ea1086bf5e5017f67018887b5d2"
   },
   "publishing": {
     "status": "not_requested",
