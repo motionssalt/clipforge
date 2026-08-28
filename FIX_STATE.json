@@ -4,8 +4,8 @@
     {
       "id": "bug-47",
       "title": "Newly created Shadow Clone repo is empty except for the sync marker file",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation. Prior sweep (bug-46, ff52cd9) reported end-to-end verification, but users report clones containing only .clipforge-sync.json. Will reproduce against the live GitHub API and inspect the actual created tree.",
       "commit": ""
     },
     {
