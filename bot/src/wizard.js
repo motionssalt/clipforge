@@ -3,14 +3,17 @@
  * (ARCHITECTURE.md §8.4). This module is PURE: no env, no I/O, no Telegram.
  * That keeps every transition unit-testable offline.
  *
- * Step order is fixed: mode → source → focus → length → music → confirm.
+ * Step order is fixed: source → focus → length → music → confirm.
+ * bug-33: there is no mode step anymore — bug-30 removed the automatic
+ * (Gemini) mode, so manual is the only path and /new goes straight to the
+ * source step with mode pre-set to 'manual'.
  * The focus step is skipped when the series toggle is on (§8.4 step 3:
  * "series has no editorial focus").
  */
 
 import { TARGET_DURATIONS } from './constants.js';
 
-export const STEPS = ['mode', 'source', 'focus', 'length', 'music', 'confirm'];
+export const STEPS = ['source', 'focus', 'length', 'music', 'confirm'];
 
 // §5 "Deliberately disabled" hosts — rejected at intake with a helpful
 // message (ported verbatim from the legacy bot).
@@ -29,10 +32,12 @@ const MAGNET_RE = /^magnet:\?/i;
 export const MAX_TORRENT_BYTES = 1024 * 1024; // §5: .torrent uploads ≤ 1 MB
 
 export function newWizard() {
+  // bug-33: no mode choice — manual is the only mode (bug-30 removed the
+  // automatic/Gemini path). Start directly at the source step.
   return {
-    step: 'mode',
-    jobId: null, // assigned when the mode is chosen (needed for torrent upload paths)
-    mode: null,
+    step: 'source',
+    jobId: `manual-${Date.now()}`, // assigned up-front (needed for torrent upload paths)
+    mode: 'manual',
     series: false,
     source: null, // { kind, value } | { kind: 'torrent_file', value, fileName }
     focus: '',
@@ -109,7 +114,7 @@ export function describeMusic(music) {
 }
 
 export function describeMode(wizard) {
-  // bug-30: manual is the only mode.
+  // bug-30/33: manual is the only mode — it is no longer shown as a choice.
   const base = 'Manual (your external AI writes the plan)';
   return wizard.series ? `${base} · Series on` : base;
 }
@@ -177,12 +182,11 @@ function nav(extra = []) {
   return [...extra, [{ text: 'Back', callback_data: 'wz:back' }, { text: 'Cancel', callback_data: 'wz:cancel' }]];
 }
 
-export function modeKeyboard(wizard) {
+export function seriesKeyboard(wizard) {
   const seriesMark = wizard.series ? '☑' : '▢';
-  // bug-30: the Gemini-based Automatic mode was removed — Manual is the only
-  // task-creation path (production.json via file upload, paste, or agent prompt).
+  // bug-33: the mode choice is gone (bug-30 removed the automatic mode).
+  // The Series toggle moves to the source step so it remains reachable.
   return [
-    [{ text: 'Manual (external AI writes the plan)', callback_data: 'wz:mode:manual' }],
     [{ text: `Series ${seriesMark}`, callback_data: 'wz:series:toggle' }],
     [{ text: 'Cancel', callback_data: 'wz:cancel' }]
   ];
@@ -233,31 +237,26 @@ export function confirmKeyboard() {
 /** The prompt text + keyboard for a wizard step (text steps use no keyboard). */
 export function stepPrompt(wizard, options = {}) {
   switch (wizard.step) {
-    case 'mode':
-      return {
-        text: '<b>New video — step 1/6: mode</b>\n\n<b>Manual:</b> Stage A prepares an analysis bundle; you run it through your own external AI and upload the resulting production.json (file upload, paste, or the built-in agent prompt).\n\nToggle <b>Series</b> to chain this video into sequential cliffhanger parts.',
-        keyboard: modeKeyboard(wizard)
-      };
     case 'source':
       return {
-        text: '<b>New video — step 2/6: source</b>\n\nSend the video, or paste a direct link / Google Drive link / magnet URI / public t.me channel-post link, or upload a <code>.torrent</code> file (≤ 1 MB).',
-        keyboard: nav([])
+        text: '<b>New video — step 1/5: source</b>\n\nSend the video, or paste a direct link / Google Drive link / magnet URI / public t.me channel-post link, or upload a <code>.torrent</code> file (≤ 1 MB).\n\nToggle <b>Series</b> to chain this video into sequential cliffhanger parts.',
+        keyboard: seriesKeyboard(wizard)
       };
     case 'focus':
       return {
-        text: '<b>New video — step 3/6: focus</b>\n\nOptionally narrow the analysis to one thread (e.g. <i>the trial cross-examination</i>), or send <code>-</code> for the whole video.',
+        text: '<b>New video — step 2/5: focus</b>\n\nOptionally narrow the analysis to one thread (e.g. <i>the trial cross-examination</i>), or send <code>-</code> for the whole video.',
         keyboard: nav([])
       };
     case 'length':
-      return { text: '<b>New video — step 4/6: length</b>\n\nPick the target duration.', keyboard: lengthKeyboard() };
+      return { text: '<b>New video — step 3/5: length</b>\n\nPick the target duration.', keyboard: lengthKeyboard() };
     case 'music':
-      return { text: '<b>New video — step 5/6: music</b>\n\nBackground music for the final render.', keyboard: musicKeyboard() };
+      return { text: '<b>New video — step 4/5: music</b>\n\nBackground music for the final render.', keyboard: musicKeyboard() };
     case 'confirm':
       return {
-        text: `<b>New video — step 6/6: confirm</b>\n\n${wizardSummaryLines(wizard).join('\n')}`,
+        text: `<b>New video — step 5/5: confirm</b>\n\n${wizardSummaryLines(wizard).join('\n')}`,
         keyboard: confirmKeyboard()
       };
     default:
-      return { text: '<b>New video</b>', keyboard: modeKeyboard(wizard) };
+      return { text: '<b>New video</b>', keyboard: seriesKeyboard(wizard) };
   }
 }

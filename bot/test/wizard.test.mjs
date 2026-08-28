@@ -39,21 +39,29 @@ test('public post regex matches channels, rejects profiles and groups', () => {
 
 test('focus step is skipped when the series toggle is on (§8.4)', () => {
   const wizard = newWizard();
-  assert.deepEqual(stepsFor(wizard), ['mode', 'source', 'focus', 'length', 'music', 'confirm']);
+  assert.deepEqual(stepsFor(wizard), ['source', 'focus', 'length', 'music', 'confirm']);
   wizard.series = true;
-  assert.deepEqual(stepsFor(wizard), ['mode', 'source', 'length', 'music', 'confirm']);
+  assert.deepEqual(stepsFor(wizard), ['source', 'length', 'music', 'confirm']);
+});
+
+test('bug-33: /new starts at the source step with manual pre-set', () => {
+  const wizard = newWizard();
+  assert.equal(wizard.step, 'source');
+  assert.equal(wizard.mode, 'manual');
+  assert.match(wizard.jobId, /^manual-\d+$/);
+  assert.ok(!stepsFor(wizard).includes('mode'));
 });
 
 test('wizard step navigation walks forward and back', () => {
   const wizard = newWizard();
-  wizard.step = 'source';
+  assert.equal(wizard.step, 'source');
   assert.equal(nextStep(wizard), 'focus');
   wizard.series = true;
   assert.equal(nextStep(wizard), 'length');
   wizard.step = nextStep(wizard);
   assert.equal(previousStep(wizard), 'source');
-  wizard.step = 'mode';
-  assert.equal(previousStep(wizard), 'mode');
+  wizard.step = 'source';
+  assert.equal(previousStep(wizard), 'source');
 });
 
 test('wizardToRequest projects the §7.1 shape', () => {
