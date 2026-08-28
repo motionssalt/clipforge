@@ -719,6 +719,19 @@ export async function setRepositoryVisibility(credentials, repo, makePrivate) {
   return getRepositoryVisibility(credentials, repo);
 }
 
+/**
+ * bug-50: permanently delete the connected repository (DELETE
+ * /repos/{owner}/{repo}). Requires delete_repo on classic PATs or
+ * Administration (write) on fine-grained PATs — GitHub answers 403/404 when
+ * the token lacks it, and callers surface that with plain scope guidance.
+ * Returns true only when GitHub actually accepted the deletion (204).
+ */
+export async function deleteRepository(credentials, repo) {
+  const { owner, name } = parseRepo(repo);
+  await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, { method: 'DELETE' });
+  return true;
+}
+
 export async function getActionsPublicKey(credentials, repo) {
   const { owner, name } = parseRepo(repo);
   const response = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/secrets/public-key`);
