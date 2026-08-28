@@ -5,7 +5,7 @@
 
 import { getCredentials, getAnnouncedNews, setAnnouncedNews } from '../storage.js';
 import {
-  readSeriesSettings, readZernioSettings, tryGetJsonFile
+  getRepositoryVisibility, readSeriesSettings, readZernioSettings, tryGetJsonFile
 } from '../github.js';
 import { MUSIC_DEFAULT_PATH, TTS_SETTINGS_PATH, WATERMARK_PATH } from '../constants.js';
 import { sendMessage } from '../telegram.js';
@@ -47,15 +47,19 @@ async function safeDoc(credentials, path) {
 export async function loadSnapshot(credentials) {
   const empty = {
     repo: '', narratorVoice: '', seriesEnabled: false,
-    watermarkName: '', musicDefaultPath: '', zernioEnabled: false
+    watermarkName: '', musicDefaultPath: '', zernioEnabled: false, repoPrivate: null
   };
   if (!credentials || !credentials.repo) return empty;
-  const [narrator, watermark, musicDefault, series, zernio] = await Promise.all([
+  // bug-49: repo visibility rides the same batched read so settingsText() can
+  // show public/private; a failed read leaves repoPrivate null and the line
+  // simply omits the visibility suffix.
+  const [narrator, watermark, musicDefault, series, zernio, visibility] = await Promise.all([
     safeDoc(credentials, TTS_SETTINGS_PATH),
     safeDoc(credentials, WATERMARK_PATH),
     safeDoc(credentials, MUSIC_DEFAULT_PATH),
     readSeriesSettings(credentials, credentials.repo).catch(() => null),
-    readZernioSettings(credentials, credentials.repo).catch(() => null)
+    readZernioSettings(credentials, credentials.repo).catch(() => null),
+    getRepositoryVisibility(credentials, credentials.repo).catch(() => null)
   ]);
   return {
     repo: credentials.repo,
@@ -63,7 +67,8 @@ export async function loadSnapshot(credentials) {
     seriesEnabled: Boolean(series && (series.enabled === true || (series.document && series.document.enabled === true))),
     watermarkName: watermark && watermark.creator_name ? String(watermark.creator_name) : '',
     musicDefaultPath: musicDefault && musicDefault.library_track_path ? String(musicDefault.library_track_path) : '',
-    zernioEnabled: Boolean(zernio && (zernio.enabled === true || (zernio.document && zernio.document.enabled === true)))
+    zernioEnabled: Boolean(zernio && (zernio.enabled === true || (zernio.document && zernio.document.enabled === true))),
+    repoPrivate: visibility && typeof visibility.private === 'boolean' ? visibility.private : null
   };
 }
 

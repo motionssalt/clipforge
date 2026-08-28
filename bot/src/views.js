@@ -125,12 +125,18 @@ export function settingsKeyboard() {
 /**
  * §8.6 settings summary lines. `snapshot` is { repo, narratorVoice,
  * seriesEnabled, watermarkName, musicDefaultPath, zernioEnabled }. (bug-30: Gemini removed.)
+ * bug-49: when the clone's visibility is known (`snapshot.repoPrivate` boolean),
+ * the GitHub line reports public/private at a glance so the visibility toggle's
+ * current state is visible without opening the sub-screen.
  */
 export function settingsText(snapshot) {
   const voice = VOICES[snapshot.narratorVoice] ? snapshot.narratorVoice : DEFAULT_VOICE;
+  const visibility = snapshot.repo && typeof snapshot.repoPrivate === 'boolean'
+    ? ` (${snapshot.repoPrivate ? 'private' : '🌐 public'})`
+    : '';
   return [
     '<b>Settings</b>',
-    `GitHub clone: ${snapshot.repo ? `<code>${escapeHtml(snapshot.repo)}</code>` : 'not connected'}`,
+    `GitHub clone: ${snapshot.repo ? `<code>${escapeHtml(snapshot.repo)}</code>${visibility}` : 'not connected'}`,
     `Narrator: ${escapeHtml(VOICES[voice].label)} (Edge TTS)`,
     `Music default: ${snapshot.musicDefaultPath ? `<code>${escapeHtml(String(snapshot.musicDefaultPath).replace(/^audio-library\//, ''))}</code>` : 'not set'}`,
     `Watermark: ${snapshot.watermarkName ? escapeHtml(snapshot.watermarkName) : 'not set'}`,

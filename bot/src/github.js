@@ -686,6 +686,39 @@ export async function currentBranchSha(credentials, repo) {
   return sha;
 }
 
+/**
+ * bug-49: read the connected repository's current visibility. Returns
+ * { private: boolean, defaultBranch, fullName } straight from the repo
+ * object so the settings screen can render the toggle's current state and
+ * the flip lands exactly where GitHub reports it afterwards.
+ */
+export async function getRepositoryVisibility(credentials, repo) {
+  const { owner, name } = parseRepo(repo);
+  const repository = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`);
+  if (!repository || typeof repository.private !== 'boolean') throw new Error('GitHub did not report the repository visibility.');
+  return {
+    private: repository.private,
+    defaultBranch: String(repository.default_branch || DEFAULT_BRANCH),
+    fullName: String(repository.full_name || `${owner}/${name}`)
+  };
+}
+
+/**
+ * bug-49: flip the connected repository between private and public.
+ * `makePrivate: false` publicises, `makePrivate: true` re-privatises.
+ * Reads the repository back after the PATCH and returns the settled
+ * visibility so callers confirm what actually landed instead of trusting
+ * the request (matches the bug-47 read-back discipline).
+ */
+export async function setRepositoryVisibility(credentials, repo, makePrivate) {
+  const { owner, name } = parseRepo(repo);
+  await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, {
+    method: 'PATCH',
+    body: { private: Boolean(makePrivate) }
+  });
+  return getRepositoryVisibility(credentials, repo);
+}
+
 export async function getActionsPublicKey(credentials, repo) {
   const { owner, name } = parseRepo(repo);
   const response = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/secrets/public-key`);
