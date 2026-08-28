@@ -5,8 +5,8 @@
     {
       "id": "bug-33",
       "title": "Remove mode-choice prompt from /new",
-      "status": "pending",
-      "notes": "Since AI/Gemini automatic mode was already removed in a prior sweep, the /new wizard should no longer ask the user to choose between manual and automatic mode. Go straight into the manual production.json flow without presenting a choice step. Check that no dead code/UI referencing the removed automatic mode remains reachable here.",
+      "status": "in_progress",
+      "notes": "Since AI/Gemini automatic mode was already removed in a prior sweep, the /new wizard should no longer ask the user to choose between manual and automatic mode. Go straight into the manual production.json flow without presenting a choice step. Check that no dead code/UI referencing the removed automatic mode remains reachable here. | [2026-08-28] Started investigation.",
       "commit": ""
     },
     {
