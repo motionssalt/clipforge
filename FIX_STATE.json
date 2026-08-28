@@ -11,8 +11,8 @@
     {
       "id": "bug-52",
       "title": "Shadow Clones should relay through central Bot A/Bot B, not need their own",
-      "status": "pending",
-      "notes": "Seeded 2026-08-28. Architecture change. Clones currently lack the direct-video Telegram relay (INTERNAL_RELAY_GROUP_CHAT_ID/RELAY_ENCRYPTION_KEY exist only on central Worker; isOriginalRepo gates in bot/src/index.js). Goal: a clone hands the relay step off to central Bot A/Bot B via an authenticated, per-clone-scoped API/webhook/dispatch \u2014 central secrets must NOT be copied to clones. Must preserve sealed-payload security model (bot/src/relay.js; tests: sealed-payload, relay caption, rememberCopiedMedia) multi-tenant: Bot B only acts on payloads matching a job it was told to expect. Audit all 7 isOriginalRepo call sites; touch only relay-related gating. Extend test/*.mjs relay suite. Document design in code comments like the rest of the codebase. Do not rush.",
+      "status": "in_progress",
+      "notes": "Seeded 2026-08-28. Architecture change. Clones currently lack the direct-video Telegram relay (INTERNAL_RELAY_GROUP_CHAT_ID/RELAY_ENCRYPTION_KEY exist only on central Worker; isOriginalRepo gates in bot/src/index.js). Goal: a clone hands the relay step off to central Bot A/Bot B via an authenticated, per-clone-scoped API/webhook/dispatch \u2014 central secrets must NOT be copied to clones. Must preserve sealed-payload security model (bot/src/relay.js; tests: sealed-payload, relay caption, rememberCopiedMedia) multi-tenant: Bot B only acts on payloads matching a job it was told to expect. Audit all 7 isOriginalRepo call sites; touch only relay-related gating. Extend test/*.mjs relay suite. Document design in code comments like the rest of the codebase. Do not rush. [in_progress 2026-08-28] bug-51 done+confirmed on origin/main (a5037b7). Beginning bug-52: auditing all isOriginalRepo call sites in bot/src/index.js, then reading bot/src/relay.js, bot/src/relay-worker.js, handleRelayVideo + confirm-time relay dispatch, and the sealed-payload tests to map the current security model before designing the cross-repo relay handoff.",
       "commit": ""
     },
     {
