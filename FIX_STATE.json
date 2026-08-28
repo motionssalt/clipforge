@@ -1,20 +1,19 @@
 {
-  "sweep_complete": true,
-  "completed_at": "2026-08-28T00:00:00Z",
+  "sweep_complete": false,
   "bugs": [
     {
-      "id": "bug-57",
-      "title": "status.json series.enabled not synced from production.json — root cause of 'shows as manual', missing next-part flow, and Zernio still showing on series tasks",
-      "status": "done",
-      "notes": "ROOT CAUSE CONFIRMED: status.json series block stayed zeroed even when production.json carried full series data — the desync was the write path, not the read path. The bot DOES seed status.series from stage-a-request.json at job creation (index.js newStatus call), and every reader (task header in runtime.showTask, Zernio task:pub entry, next-part gating in taskKeyboard) reads status.series — so a single later rewrite that lost the block produced all three reported symptoms at once. FIX (write path, 3 layers): (1) pipeline/stage_b/common.plan_series_block(document) derives the status series block from a production.json doc — nested series object OR legacy flat series_* siblings, nested wins per field (same precedence as normalize_plan), self-contained so it works on a raw unvalidated doc, defensive coercions so a malformed plan never crashes a status write, non-series -> all-off block. (2) stage-b.yml: right after production.json passes boundary validation, write_status(series=plan_series_block(...)) non-fatally — covers every production.json-accepting path (all bot dispatches target stage-b.yml with production_ref path:jobs/<id>/production.json). (3) pipeline/stage_b/run.py syncs status.series from the raw plan as the run's FIRST status write (bot reflects the series even if the plan then fails validation) and re-syncs from the validated/normalized plan right after load_production_plan; stage-a.yml early stage_a_running write now carries the request's series block via a new --series-json flag on pipeline.status (is_final is only known once the plan arrives; Stage B fills it in). BACKFILL: scanned jobs/* — exactly ONE desynced job (manual-1787902548797); its status.json series restored from production.json via plan_series_block (state/assets/publishing untouched). 1 job already synced, 3 have no production.json. Low-cost one-time backfill done inline (no script needed — single job). SYMPTOM VERIFICATION (code-level, against current main): (1) task header — runtime.showTask renders the series label from status.series via extractPlanSeries, which now receives the synced block; (2) Zernio Publish suppression — task:pub entry gates on the same status.series block, so series parts no longer offer it; (3) Start-next-part — taskKeyboard's is_final logic (bug-48/bug-51) consumes extractPlanSeries(plan) with status.series fallback; with the write path fixed the plan's is_final:false for a non-final part surfaces the button. All three readers share the single fixed write path, and each was re-checked individually rather than assumed.",
-      "commit": "3ce01a7"
+      "id": "bug-59",
+      "title": "Replace color grade/LUT with new look derived from 960x540 8x8 gradient-tile reference image (vibrant, high-saturation, multi-hue) — build a real grade, do NOT apply image as HALD CLUT",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     },
     {
-      "id": "bug-58",
-      "title": "Deploy-failure notification — user should not be the detection mechanism for blocked deploys",
-      "status": "done",
-      "notes": "Deploy Bots workflow (deploy-bots.yml): a failed bot test step silently skipped both wrangler deploys, with the Actions UI as the only 'alert' — the exact gap that made bug-53/54/55 look unfixed until bug-56 traced the blocked-deploy window. FIX: added a final job step 'Alert owner on Telegram when the deploy is blocked' with if: failure(), so it fires on ANY earlier step failure (bot tests, npm ci, or a wrangler deploy itself). Mechanism: direct Telegram Bot API sendMessage via curl, using BOTB_MTPROTO_BOT_TOKEN — an EXISTING central-repo Actions secret already used by telegram-relay.yml, per the constraint that no Cloudflare-scoped secret may be involved (verified: the alert step references no CLOUDFLARE_* secret). Recipient: DEPLOY_ALERT_CHAT_ID secret when configured, else fallback to the internal relay group -5405387856 (same public, non-secret id as INTERNAL_RELAY_GROUP_CHAT_ID in bot/wrangler.bot-a.jsonc — Bot B is verifiably a member there). Message: 'Deploy blocked: a Deploy Bots step failed on commit <short_sha>; the Cloudflare Workers were NOT fully updated. Check the Actions run: <run_url>'. Safety: best-effort by construction — self-skips with a log line if the token secret is absent, WARNs (not fails) if Telegram delivery fails, and always exits 0 so the alert can never mask or alter the original failure outcome. Verified: YAML parses; the step's run script passes bash -n; exactly one alert step with the correct if condition. NOTE for the owner: to receive the alert in a private chat with Bot B instead of the relay group, add a DEPLOY_ALERT_CHAT_ID Actions secret with your chat id; otherwise alerts land in the internal relay group with no further setup.",
-      "commit": "ee7767b"
+      "id": "bug-60",
+      "title": "Cosmetic UI overhaul — bot-wide animations/liveliness pass with shared animation helpers, respecting Telegram edit rate limits",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     }
   ]
 }
