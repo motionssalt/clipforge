@@ -329,8 +329,10 @@ export function zernioPublishKeyboard(config, publishing, label) {
       rows.push([{ text: `Cancel ${telegramButtonText(platform, 20)}`, callback_data: `task:pubcancel:${label}:${postId}` }]);
     }
   }
+  // bug-47: Zernio CONFIGURATION lives only in the main Settings menu — the
+  // completed-task publish view keeps its publish actions but no longer
+  // carries a duplicate settings shortcut.
   rows.push([
-    { text: 'Zernio settings', callback_data: 'set:zernio' },
     { text: `← Task ${label}`, callback_data: `task:open:${label}` }
   ]);
   return buttons(rows);
