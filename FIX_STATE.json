@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "started_at": "2026-08-28T05:35:00Z",
   "bugs": [
     {
@@ -13,43 +13,44 @@
       "id": "bug-34",
       "title": "Smart audio level normalization (background vs vocals)",
       "status": "done",
-      "notes": "Background audio currently adjusted by simple volume multiplier -> inconsistent perceived loudness. Replace with actual loudness analysis: measure background track level against vocal/narration track (ffmpeg loudnorm/volumedetect or equivalent) and adjust background so ratio is consistently background:vocals = 0.3:1 regardless of input loudness. Must be measured/calculated, not a fixed blind percentage. | [2026-08-28] Started investigation. FIXED in f3a7d65: render.py now measures EBU R128 integrated loudness (ffmpeg loudnorm print_format=json, same parse pattern voiceover.py already used) of BOTH the merged voiceover WAV and the music file, then computes music_gain_db = (voice_lufs + 10*log10(0.3)) - music_lufs so the bed lands at exactly 0.3:1 perceived loudness vs vocals regardless of source loudness. render_merged now writes the merged voiceover WAV BEFORE produce_merged_video so the real vocal track is measured; the computed linear gain replaces the fixed volume=0.33 in the music filter chain; side-chain ducking + limiter unchanged. Gain clamped [-40,+24] dB; falls back to legacy 0.33 with a WARNING only when measurement is impossible (silent/corrupt file), keeping render alive. Verified with real ffmpeg: quiet (-47.75 LUFS) -> +18.67 dB, loud (-18.35 LUFS) -> -10.73 dB; both re-measure within 0.1 dB of target. Tests: 41/41 stage_b + 175 pipeline pass; test_telegram_relay failure is PRE-EXISTING (verified identical on base commit before my change) — low-disk sandbox preflight, unrelated.",
+      "notes": "Background audio currently adjusted by simple volume multiplier -> inconsistent perceived loudness. Replace with actual loudness analysis: measure background track level against vocal/narration track (ffmpeg loudnorm/volumedetect or equivalent) and adjust background so ratio is consistently background:vocals = 0.3:1 regardless of input loudness. Must be measured/calculated, not a fixed blind percentage. | [2026-08-28] Started investigation. FIXED in f3a7d65: render.py now measures EBU R128 integrated loudness (ffmpeg loudnorm print_format=json, same parse pattern voiceover.py already used) of BOTH the merged voiceover WAV and the music file, then computes music_gain_db = (voice_lufs + 10*log10(0.3)) - music_lufs so the bed lands at exactly 0.3:1 perceived loudness vs vocals regardless of source loudness. render_merged now writes the merged voiceover WAV BEFORE produce_merged_video so the real vocal track is measured; the computed linear gain replaces the fixed volume=0.33 in the music filter chain; side-chain ducking + limiter unchanged. Gain clamped [-40,+24] dB; falls back to legacy 0.33 with a WARNING only when measurement is impossible (silent/corrupt file), keeping render alive. Verified with real ffmpeg: quiet (-47.75 LUFS) -> +18.67 dB, loud (-18.35 LUFS) -> -10.73 dB; both re-measure within 0.1 dB of target. Tests: 41/41 stage_b + 175 pipeline pass; test_telegram_relay failure is PRE-EXISTING (verified identical on base commit before my change) \u2014 low-disk sandbox preflight, unrelated.",
       "commit": "f3a7d65"
     },
     {
       "id": "bug-35",
       "title": "Progress/status animation during long-running stages",
-      "status": "in_progress",
-      "notes": "Add lightweight animated progress indication during long-running stage operations (Stage A, Stage B, restarts, other multi-step dispatched actions), beyond the initial 'starting' ack from bug-26. Periodically-updating status message or simple progress indicator; respect Telegram Bot API message edit rate limits. | [2026-08-28] Started investigation.",
-      "commit": ""
+      "status": "done",
+      "notes": "Add lightweight animated progress indication during long-running stage operations (Stage A, Stage B, restarts, other multi-step dispatched actions), beyond the initial 'starting' ack from bug-26. Periodically-updating status message or simple progress indicator; respect Telegram Bot API message edit rate limits. | [2026-08-28] Started investigation. | [2026-08-28] DONE. Added bot/src/progress.js: animateProgress() spinner burst on dispatch (self-limited to 16 edits ~15s, run detached via ctx.waitUntil so the webhook acks instantly; module-level executionCtx set at fetch so restarts can animate too \u2014 far under Telegram edit rate caps). Wired into startJob, restartStageA, restartStageB. Added progressLine() (state->progress-bar %) rendered as a new line in the persistent task view in runtime.js so every refresh shows forward motion. Verified: 93/93 bot tests + syntax pass.",
+      "commit": "8c17787"
     },
     {
       "id": "bug-36",
       "title": "Face-centered vertical crop positioning (legacy feature - verify/restore)",
-      "status": "pending",
-      "notes": "Legacy feature: detect most prominent face per scene and horizontally reposition the 9:16 vertical crop window to center on that face per scene (NOT continuous tracking). Investigate whether it still exists/works in the current pipeline; if missing or broken, restore/fix. Must work for anime faces also.",
-      "commit": ""
+      "status": "done",
+      "notes": "Legacy feature: detect most prominent face per scene and horizontally reposition the 9:16 vertical crop window to center on that face per scene (NOT continuous tracking). Investigate whether it still exists/works in the current pipeline; if missing or broken, restore/fix. Must work for anime faces also. | [2026-08-28] VERIFIED + FIXED. Per-scene face-centered crop EXISTS and functions (stage_b/reframe.py builds one static crop offset per scene via scene-change detection + InsightFace buffalo_sc prominence scoring; target frame is 1080x1200 9:10, not 9:16). GAP FIXED: InsightFace only detects REAL faces. Added an OpenCV cascade fallback (lbpcascade_animeface then haarcascade frontal) inside FaceCenterEngine.analyze, run only when the CNN finds nothing, so anime faces are centred too. Safe: falls back to centre crop if either detector is unavailable. 62/62 py tests pass.",
+      "commit": "8c17787"
     },
     {
       "id": "bug-37",
       "title": "Tasks possibly being cleaned up before actual expiry",
-      "status": "pending",
-      "notes": "Task cleanup should only purge already-expired/terminal tasks (expiry 12h, cleanup interval 1h). Suspected: cleanup may delete tasks that have NOT yet reached actual expiry. Re-verify end to end from actual current code (do not assume prior sweep's bug-03 conclusion); fix so cleanup only ever removes genuinely expired/terminal tasks.",
-      "commit": ""
+      "status": "done",
+      "notes": "Task cleanup should only purge already-expired/terminal tasks (expiry 12h, cleanup interval 1h). Suspected: cleanup may delete tasks that have NOT yet reached actual expiry. Re-verify end to end from actual current code (do not assume prior sweep's bug-03 conclusion); fix so cleanup only ever removes genuinely expired/terminal tasks. | [2026-08-28] VERIFIED \u2014 NO BUG. Audited the full chain end to end: status.py writes expires_at_epoch = created + 12h (DEFAULT_TTL_SECONDS=43200); cleanup.py/expired.py job_is_expired() prefers expires_at_epoch<=now, falls back to created_at+ttl then release created_at+ttl \u2014 NEVER earlier than expiry; cleanup.yml runs hourly (cron '7 * * * *', default 43200) matching spec. KV label reclaim (scripts/reclaim-stale-task-labels.mjs classify) only reclaims terminal states or ttl-expired, keeps 'active'. Nothing is deleted before the 12h expiry. Prior sweep's bug-03 conclusion holds. No code change required.",
+      "commit": "8c17787"
     },
     {
       "id": "bug-38",
       "title": "Pasted production.json UX - verify prior fix (bug-27) is fully correct",
-      "status": "pending",
-      "notes": "Re-verification: confirm the 'send the rest' spurious prompt and the 'delete all split message bubbles after successful parse' behavior from bug-27 are both actually working in current code. Fix if incomplete/broken; if confirmed working, note clearly and move on.",
-      "commit": ""
+      "status": "done",
+      "notes": "Re-verification: confirm the 'send the rest' spurious prompt and the 'delete all split message bubbles after successful parse' behavior from bug-27 are both actually working in current code. Fix if incomplete/broken; if confirmed working, note clearly and move on. | [2026-08-28] VERIFIED + FIXED. 'Send the rest' spurious prompt already correct (only fires while braces unbalanced, via looksLikePartialJson) \u2014 kept. Bubble deletion was NOT implemented in current code: fixed by recording split-bubble message_ids in pending.jsonBubbleIds as fragments accumulate, then deleting every raw bubble via deleteMessage after a successful parse in handlePlanUploadMessage. Both bug-27 behaviours now work. 93/93 bot tests pass.",
+      "commit": "8c17787"
     },
     {
       "id": "bug-39",
       "title": "Clone/owner identity - third attempt, needs clear root-cause audit",
-      "status": "pending",
-      "notes": "Attempted twice before (bug-21, bug-31), still not correct. Audit and record findings for: (1) owner identity detection - distinguish the ONE main-owner account on motionssalt/clipforge vs any other account incl. clone owners; (2) update-push button visible ONLY for that main-owner identity, and its function must push updates OUT to clones (never affect main's own deployment); clones get changelog/notification; (3) 'Create new clone' / 'Login to existing clone' options shown ONLY when logged out. Be explicit about what was actually wrong.",
-      "commit": ""
+      "status": "done",
+      "notes": "Attempted twice before (bug-21, bug-31), still not correct. Audit and record findings for: (1) owner identity detection - distinguish the ONE main-owner account on motionssalt/clipforge vs any other account incl. clone owners; (2) update-push button visible ONLY for that main-owner identity, and its function must push updates OUT to clones (never affect main's own deployment); clones get changelog/notification; (3) 'Create new clone' / 'Login to existing clone' options shown ONLY when logged out. Be explicit about what was actually wrong. | [2026-08-28] DONE \u2014 root-cause audit + fix. (1) OWNER IDENTITY: previously there was NO main-owner check anywhere on the update path; identity is now defined as connected repo == ORIGINAL_CLIPFORGE_REPOSITORY (motionssalt/clipforge). (2) UPDATE-PUSH: previously the update control was 'Sync from source' shown to EVERY connected user and it pulled into the viewer's own clone (wrong shape). Now the main-owner identity sees 'Publish update to clones' (set:github:pushupdate) which writes ONLY docs/update_notice.json (version+changelog) into the source repo \u2014 it never modifies the main deployment's own code (already latest); clones read that notice and pull via their own 'Sync from source'. Clone owners / every non-main identity see only 'Sync from source', never the publish control. (3) 'Create new clone'/'Connect existing clone' previously rendered UNCONDITIONALLY in the GitHub-clone settings menu; now gated to logged-out only (no connected clone), hidden once connected as main or clone. 93/93 bot tests pass.",
+      "commit": "8c17787"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T00:00:00Z"
 }
