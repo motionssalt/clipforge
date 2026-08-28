@@ -27,6 +27,12 @@ export async function showDone(env, chatId, messageId = null) {
       const row = [{ text: `${mark} Open ${entry.label}`, callback_data: `task:open:${entry.label}` }];
       if (state === 'complete' && entry.status.release_url) row.push({ text: 'Release', url: entry.status.release_url });
       rows.push(row);
+      // bug-48: completed series parts stay re-accessible from /done even
+      // after the user has moved on to a later part.
+      const ser = entry.status.series && typeof entry.status.series === 'object' ? entry.status.series : {};
+      if (state === 'complete' && ser.enabled === true && ser.series_id) {
+        rows.push([{ text: `📚 Series parts · ${entry.label}`, callback_data: `task:parts:${entry.label}` }]);
+      }
     }
   }
   rows.push([{ text: '← Menu', callback_data: 'menu:home' }]);

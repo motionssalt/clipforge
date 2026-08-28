@@ -4,12 +4,13 @@
  * error mapping, the credentials gate, and the §8.5 task status screen.
  */
 
-import { GitHubError, readStatus } from './github.js';
+import { GitHubError, readStatus, readProductionPlan } from './github.js';
 import { getCredentials, getJobIdForLabel, markTaskSeen } from './storage.js';
 import { isTerminal } from './jobs.js';
 import { buttons } from './telegram.js';
 import { escapeHtml, redact, describeTaskState } from './constants.js';
 import { ONBOARDING_TEXT, onboardingKeyboard, renderInteractiveView } from './views.js';
+import { extractPlanSeries } from './series.js';
 import { progressLine } from './progress.js';
 
 /** Map internal errors to short, secret-free user text (§13 invariant #1). */
@@ -35,8 +36,9 @@ export async function requireCredentials(env, chatId, messageId = null) {
 }
 
 /** §8.5 — contextual buttons: only actions valid in the job's current state. */
-export function taskKeyboard(status, label) {
+export function taskKeyboard(status, label, plan = null) {
   const state = status && status.state ? String(status.state) : 'queued';
+  const series = status.series && typeof status.series === 'object' ? status.series : {};
   const rows = [];
   if (state === 'awaiting_torrent_selection') {
     rows.push([{ text: '📂 Choose video file', callback_data: `task:tsel:${label}:0` }]);
@@ -70,14 +72,22 @@ export function taskKeyboard(status, label) {
       { text: '📥 Download', callback_data: `task:dl:${label}` },
       { text: '📣 Publish (Zernio)', callback_data: `task:pub:${label}` }
     ]);
+    // bug-48: a completed series part gets the SAME copy-prompt action
+    // non-series tasks have, plus a next-part action gated on the PLAN's
+    // is_final flag — not the status series block, which pipeline/status.py
+    // always normalizes to is_final:false (why the old button never showed).
+    if (status.mode === 'manual' && series.enabled === true) {
+      const planSeries = extractPlanSeries(plan);
+      rows.push([{ text: '📋 Copy prompt', callback_data: `task:prompt:${label}` }]);
+      if (planSeries.is_final !== true) {
+        rows.push([{ text: '▶ Start next part', callback_data: `task:next:${label}` }]);
+      }
+      rows.push([{ text: '📚 Series parts', callback_data: `task:parts:${label}` }]);
+    }
     // bug-22: on-demand delivery — send the finished video into this chat
     // when it fits under Telegram's 50 MB bot limit, otherwise hand back the
     // GitHub release link. Works for single tasks and series Stage B parts.
     rows.push([{ text: '📩 Send video to chat', callback_data: `task:sendvideo:${label}` }]);
-    const series = status.series && typeof status.series === 'object' ? status.series : {};
-    if (status.mode === 'manual' && series.enabled === true && series.is_final !== true) {
-      rows.push([{ text: '▶ Start next part', callback_data: `task:next:${label}` }]);
-    }
   }
   rows.push([{ text: '🔄 Refresh', callback_data: `task:open:${label}` }]);
   // Bug 2 fix: deletion is offered for terminal tasks AND for tasks whose
@@ -104,7 +114,12 @@ export async function showTask(env, chatId, label, messageId = null) {
   if (!jobId) {
     return renderInteractiveView(env, chatId, `Unknown task <b>${escapeHtml(label)}</b>.`, { replyMarkup: buttons([[{ text: '← Tasks', callback_data: 'menu:tasks' }]]) }, messageId);
   }
-  const status = await readStatus(credentials, credentials.repo, jobId);
+  // bug-48: read the production plan alongside the status so the completed
+  // series affordances can key off the plan's real is_final / summary.
+  const [status, plan] = await Promise.all([
+    readStatus(credentials, credentials.repo, jobId),
+    readProductionPlan(credentials, credentials.repo, jobId).catch(() => null)
+  ]);
   if (!status) {
     return renderInteractiveView(env, chatId,
       `<b>Task ${escapeHtml(label)}</b> · <code>${escapeHtml(jobId)}</code>\n\n<b>Status unavailable</b> — the job record could not be read. It may have failed before Stage A could report in, or it may have expired. Try Refresh, or delete this task if it is stale.`,
@@ -135,7 +150,7 @@ export async function showTask(env, chatId, label, messageId = null) {
   if (status.release_url) links.push({ text: 'Open release', url: status.release_url });
   if (status.run && status.run.workflow_run_url) links.push({ text: 'Workflow run', url: status.run.workflow_run_url });
   if (links.length) linkRows.push(links);
-  const keyboard = taskKeyboard(status, label);
+  const keyboard = taskKeyboard(status, label, plan);
   keyboard.inline_keyboard = [...linkRows, ...keyboard.inline_keyboard];
   return renderInteractiveView(env, chatId, lines.filter(Boolean).join('\n'), { replyMarkup: keyboard }, messageId);
 }
