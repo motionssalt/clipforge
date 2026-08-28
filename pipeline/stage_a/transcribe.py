@@ -15,7 +15,7 @@ tuning block below.
 
 Usage:
     python -m pipeline.stage_a.transcribe <input> <output_json>
-        [--model base|small|tiny] [--lang auto|en|ja|...]
+        [--model base|small|tiny] [--lang en|auto|ja|...] (default: en)
 """
 from __future__ import annotations
 
@@ -117,7 +117,7 @@ class FasterWhisperTranscriber:
 
     ALLOWED_SIZES = {"tiny", "base", "small"}
 
-    def __init__(self, model_size: str = "base", language: str = "auto"):
+    def __init__(self, model_size: str = "base", language: str = "en"):
         if model_size not in self.ALLOWED_SIZES:
             raise ValueError(
                 f"model_size must be one of {sorted(self.ALLOWED_SIZES)} (CPU perf cap), got {model_size!r}"
@@ -194,7 +194,7 @@ def transcribe_to_json(
     output_json: str,
     *,
     model: str = "base",
-    language: str = "auto",
+    language: str = "en",
 ) -> dict:
     """Transcribe ``input_path`` and write the transcript payload to disk.
 
@@ -240,7 +240,7 @@ def main() -> None:
     ap.add_argument("input_path")
     ap.add_argument("output_json")
     ap.add_argument("--model", default="base", choices=sorted(FasterWhisperTranscriber.ALLOWED_SIZES))
-    ap.add_argument("--lang", default="auto")
+    ap.add_argument("--lang", default="en")
     args = ap.parse_args()
 
     if not os.path.exists(args.input_path):

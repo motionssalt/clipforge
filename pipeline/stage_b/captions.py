@@ -910,7 +910,7 @@ def render_captions(
     out_video_mp4: str,
     *,
     model: str = "base",
-    lang: str = "auto",
+    lang: str = "en",
     work_dir: str | None = None,
     scene_threshold: float = reframe.DEFAULT_SCENE_THRESHOLD,
     title: str | None = None,
@@ -1020,7 +1020,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("production_json")
     ap.add_argument("out_video_mp4")
     ap.add_argument("--model", default="base", choices=["tiny", "base", "small"])
-    ap.add_argument("--lang", default="auto")
+    ap.add_argument("--lang", default="en")
     ap.add_argument("--work-dir", default=None)
     ap.add_argument("--scene-threshold", type=float, default=reframe.DEFAULT_SCENE_THRESHOLD)
     ap.add_argument("--title", default=None)

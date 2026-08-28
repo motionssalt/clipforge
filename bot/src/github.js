@@ -1531,7 +1531,7 @@ export function buildStageARequest(jobId, request) {
     },
     options: {
       whisper_model: whisperModel,
-      language: String(options.language || 'auto'),
+      language: String(options.language || 'en'),
       target_duration_seconds: targetDuration,
       focus: String(options.focus || ''),
       enable_vision_assist: options.enable_vision_assist !== false

@@ -625,7 +625,7 @@ def write_torrent_selection(
         "selected_index": chosen,
         "stage_a_inputs": {
             "whisper_model": options.get("whisper_model", "base"),
-            "language": options.get("language", "auto"),
+            "language": options.get("language", "en"),
             "target_duration_seconds": str(options.get("target_duration_seconds", 120)),
             "focus": options.get("focus", ""),
         },

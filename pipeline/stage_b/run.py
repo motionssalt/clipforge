@@ -103,7 +103,7 @@ def run_stage_b(
     music_ref: str = "",
     enhance_enabled: bool = True,
     whisper_model: str = "base",
-    whisper_lang: str = "auto",
+    whisper_lang: str = "en",
     enable_face_detection: bool = True,
     write_status: bool = True,
     release_tag: str = "",
@@ -255,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--enhance", dest="enhance", action="store_true", default=True)
     ap.add_argument("--no-enhance", dest="enhance", action="store_false")
     ap.add_argument("--whisper-model", default="base", choices=["tiny", "base", "small"])
-    ap.add_argument("--whisper-lang", default="auto")
+    ap.add_argument("--whisper-lang", default="en")
     ap.add_argument("--no-face-detection", dest="face_detection", action="store_false", default=True)
     ap.add_argument("--no-status", dest="write_status", action="store_false", default=True,
                     help="skip jobs/<id>/status.json writes (local smoke tests)")
