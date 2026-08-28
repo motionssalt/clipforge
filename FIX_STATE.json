@@ -18,9 +18,9 @@
     {
       "id": "bug-53",
       "title": "README.md out of date for Shadow Clone setup",
-      "status": "pending",
-      "notes": "Seeded 2026-08-28 (fresh sweep). Update README.md (and linked docs) for the current Shadow Clone flow: accurate create/connect steps matching post-bug-51 bot behavior; document bug-52 cross-repo relay only if actually done+merged; document ALL Actions secrets a clone needs (CLOUDFLARE_API_TOKEN at minimum \u2014 check deploy-bots.yml and cleanup.yml for the full list). Prior sweep claimed rewrite at commit 8743550 \u2014 verify it matches actual current bot flow and workflow files; invent nothing.",
-      "commit": ""
+      "status": "done",
+      "notes": "Seeded 2026-08-28 (fresh sweep). Update README.md (and linked docs) for the current Shadow Clone flow: accurate create/connect steps matching post-bug-51 bot behavior; document bug-52 cross-repo relay only if actually done+merged; document ALL Actions secrets a clone needs (CLOUDFLARE_API_TOKEN at minimum \u2014 check deploy-bots.yml and cleanup.yml for the full list). Prior sweep claimed rewrite at commit 8743550 \u2014 verify it matches actual current bot flow and workflow files; invent nothing. [done 2026-08-28] VERIFIED README against actual code+workflows: (a) create/connect steps match bot/src/index.js (name or choose-for-me, PAT with repo+workflow scopes, async copy with guaranteed terminal message \u2014 accurate post-bug-51); (b) required clone secrets CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID documented with exact Settings\u2192Secrets and variables\u2192Actions path, matching deploy-bots.yml+cleanup.yml; optional GEMINI_API_KEYS/ZERNIO_API_KEY match diagnostics.yml/stage-b.yml/publish.yml; central-only BOTB_MTPROTO_*/CLIPFORGE_TELEGRAM_*/RELAY_ENCRYPTION_KEY correctly excluded; (c) bug-52 cross-repo relay documented as live behavior (verified true in bug-52 audit); (d) fresh-clone first-deploy-failure note matches announceDeployFailure. GAP FIXED (in bug-51 commit): DEPLOY_ALERT_CHAT_ID is also central-only \u2014 added to README central-only list. No invented steps.",
+      "commit": "d257e31"
     },
     {
       "id": "bug-54",
