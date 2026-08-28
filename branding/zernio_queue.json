@@ -25,6 +25,18 @@
         "6a9168a41679ad2eae5dbe33"
       ],
       "updated_at_epoch": 1787914465
+    },
+    {
+      "job_id": "manual-1787915955571",
+      "status": "publishing",
+      "mode": "publish_now",
+      "scheduled_for": "2026-08-28T13:19:11.921Z",
+      "timezone": "UTC",
+      "post_ids": [
+        "6a918ad1b7c07cccc16482a7",
+        "6a918ad77e54693f74e0b92a"
+      ],
+      "updated_at_epoch": 1787923220
     }
   ]
 }
