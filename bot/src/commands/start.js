@@ -3,9 +3,9 @@
  * Also owns the settings snapshot loader shared with commands/settings.js.
  */
 
-import { getCredentials, getAnnouncedNews, setAnnouncedNews, getAnnouncedUpdate, setAnnouncedUpdate } from '../storage.js';
+import { getCredentials, getAnnouncedNews, setAnnouncedNews, getAnnouncedUpdate, setAnnouncedUpdate, getAnnouncedDeployFailure, setAnnouncedDeployFailure } from '../storage.js';
 import {
-  getRepositoryVisibility, readSeriesSettings, readZernioSettings, tryGetJsonFile
+  getRepositoryVisibility, listWorkflowRuns, readSeriesSettings, readZernioSettings, tryGetJsonFile
 } from '../github.js';
 import { isOriginalRepo } from '../identity.js';
 import { checkCloneUpdates, applyCloneUpdates } from '../clone-sync.js';
@@ -20,6 +20,8 @@ const NEWS_SOURCE_REPO = 'motionssalt/clipforge';
 // bug-65: the changelog file the main account publishes into the SOURCE repo;
 // its published_at marker is what tells a clone a new update has arrived.
 const UPDATE_NOTICE_PATH = 'docs/update_notice.json';
+// bug-68: the workflow whose failed runs the clone owner must hear about.
+const DEPLOY_BOTS_WORKFLOW_FILE = 'deploy-bots.yml';
 
 /** Announce the latest main-account news broadcast once per publication. */
 async function announceNews(env, chatId, credentials) {
@@ -90,6 +92,44 @@ async function autoSyncFromSource(env, chatId, credentials) {
   } catch { /* auto-sync is best-effort — never block the home screen */ }
 }
 
+/**
+ * bug-68: notify the clone owner when their own Deploy Bots run fails. The
+ * workflow-side alert step (bug-58) posts from the runner with the central
+ * BOTB_MTPROTO_BOT_TOKEN secret — but that secret exists ONLY on the main
+ * account's repo (telegram-relay.yml is a preserved central-only subsystem,
+ * ARCHITECTURE.md §9.2), so on every clone the alert step self-skips and a
+ * blocked deploy is visible only in the Actions UI. Clones have no bot token
+ * of their own (§10: one shared Bot A serves all users), so the fix cannot be
+ * another repo secret. Instead the shared Bot A — which already DMs each
+ * clone owner — polls the CONNECTED repo's Deploy Bots runs with the owner's
+ * own PAT on the home-screen touchpoint (same passive-pull pattern as the
+ * bug-46 news broadcast and bug-65 auto-update; the worker has no cron
+ * trigger and the central account cannot push into a private clone). Each
+ * failed run is announced exactly once, keyed on the run id so a rerun that
+ * fails again still notifies. Marker is stored only after a successful send,
+ * so a transient failure retries on the next home render instead of being
+ * swallowed. Best-effort throughout — never blocks the home screen.
+ */
+async function announceDeployFailure(env, chatId, credentials) {
+  try {
+    const runs = await listWorkflowRuns(credentials, credentials.repo, DEPLOY_BOTS_WORKFLOW_FILE, 10);
+    const failed = runs.filter((run) => run.status === 'completed' && run.conclusion === 'failure' && run.id);
+    if (!failed.length) return;
+    const announced = String(await getAnnouncedDeployFailure(env, chatId) || '');
+    const unannounced = failed.filter((run) => String(run.id) !== announced);
+    if (!unannounced.length) return;
+    // Newest first (the API returns newest first): announce the latest failure.
+    const run = unannounced[0];
+    const shortSha = run.headSha ? run.headSha.slice(0, 7) : 'unknown';
+    const url = run.htmlUrl || `https://github.com/${credentials.repo}/actions`;
+    await sendMessage(env, chatId,
+      `\u26a0\ufe0f <b>Deploy blocked on your clone</b>\n\n` +
+      `The <b>Deploy Bots</b> run for commit <code>${escapeHtml(shortSha)}</code> failed; the Cloudflare Workers were NOT updated. ` +
+      `This is expected on a brand-new clone until Cloudflare credentials are configured \u2014 otherwise check the run for the failing step:\n${escapeHtml(url)}`);
+    await setAnnouncedDeployFailure(env, chatId, String(run.id));
+  } catch { /* deploy-failure notice is best-effort — never block the home screen */ }
+}
+
 /** One batched read of the small branding/ JSONs behind the home + settings screens. */
 export async function loadSnapshot(credentials) {
   const empty = {
@@ -132,6 +172,9 @@ export async function showHome(env, chatId, messageId = null) {
   // rewrite its own repo from this path.
   if (!isOriginalRepo(env, credentials.repo)) {
     await autoSyncFromSource(env, chatId, credentials);
+    // bug-68: clones are exactly where the workflow-side alert self-skips
+    // (no BOTB_MTPROTO_BOT_TOKEN), so the owner poll lives on this branch.
+    await announceDeployFailure(env, chatId, credentials);
   }
   return view;
 }

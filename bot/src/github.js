@@ -1078,6 +1078,31 @@ export async function cancelWorkflowRun(credentials, repo, runId) {
   await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/runs/${encodeURIComponent(runId)}/cancel`, { method: 'POST' });
 }
 
+/**
+ * bug-68: list the most recent completed runs of one workflow file. The bot
+ * polls the CONNECTED repo's own "Deploy Bots" runs with the owner's PAT (the
+ * same authority every other Actions read here uses) so a failed deploy on a
+ * clone can be surfaced to the clone owner on Telegram — the workflow-side
+ * alert step self-skips when BOTB_MTPROTO_BOT_TOKEN is absent, which is every
+ * clone (nothing provisions that secret for them).
+ * Returns an array of { id, headSha, conclusion, htmlUrl, createdAt }.
+ */
+export async function listWorkflowRuns(credentials, repo, workflowFile, perPage = 10) {
+  const { owner, name } = parseRepo(repo);
+  const body = await githubRequest(credentials,
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/workflows/${encodeURIComponent(workflowFile)}/runs?per_page=${encodeURIComponent(perPage)}`);
+  const runs = body && Array.isArray(body.workflow_runs) ? body.workflow_runs : [];
+  return runs.map((run) => ({
+    id: run && run.id,
+    headSha: String(run && run.head_sha || ''),
+    status: String(run && run.status || ''),
+    conclusion: String(run && run.conclusion || ''),
+    event: String(run && run.event || ''),
+    htmlUrl: String(run && run.html_url || ''),
+    createdAt: String(run && run.created_at || '')
+  }));
+}
+
 export async function currentBranchSha(credentials, repo) {
   const { owner, name } = parseRepo(repo);
   const branch = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/branches/${encodeURIComponent(DEFAULT_BRANCH)}`);

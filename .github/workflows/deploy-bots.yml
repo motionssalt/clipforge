@@ -25,6 +25,19 @@ name: Deploy Bots — Cloudflare Workers
 # in bot/wrangler.bot-a.jsonc — Bot B is a member there). No Cloudflare-scoped
 # secret is touched by the alert path. The alert itself is best-effort: it
 # must never mask the original failure.
+#
+# bug-68: BOTB_MTPROTO_BOT_TOKEN exists ONLY on this central repo (the relay
+# subsystem is central-only, ARCHITECTURE.md §9.2), so on every Shadow Clone
+# the alert step below used to log a warning and exit 0 — the clone owner was
+# never told their deploy was blocked. Clones have no bot token of their own
+# (§10: one shared Bot A serves all users), so the durable fix is bot-side:
+# the shared Bot A polls the CONNECTED repo's Deploy Bots runs with the
+# owner's PAT on the home-screen touchpoint and DMs the owner on a failure
+# (see announceDeployFailure in bot/src/commands/start.js). This workflow-side
+# step remains the real-time alert for the main account; on a clone it now
+# fails loudly (after logging the pointer) instead of silently succeeding, so
+# a missing-secret clone run stays visibly failed in the Actions UI rather
+# than looking like a clean skip.
 
 on:
   push:
@@ -96,8 +109,17 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${ALERT_BOT_TOKEN:-}" ]; then
-            echo "BOTB_MTPROTO_BOT_TOKEN secret not available; skipping deploy-failure Telegram alert." >&2
-            exit 0
+            # bug-68: this is a Shadow Clone (BOTB_MTPROTO_BOT_TOKEN exists
+            # only on the central repo). The owner is notified by the shared
+            # Bot A polling this repo's failed Deploy Bots runs
+            # (bot/src/commands/start.js#announceDeployFailure) — but do NOT
+            # exit 0 here: a green "alert" step on a failed clone run reads
+            # as if the alert went out. Fail loudly so the run stays visibly
+            # red in the Actions UI; the original failure is already recorded
+            # by the failing step, and this step runs only under failure().
+            echo "BOTB_MTPROTO_BOT_TOKEN secret not available on this repo (Shadow Clone): no workflow-side Telegram alert possible." >&2
+            echo "The clone owner is notified via the shared ClipForge bot's deploy-failure poll (bug-68)." >&2
+            exit 1
           fi
           chat_id="${ALERT_CHAT_ID:-}"
           if [ -z "$chat_id" ]; then

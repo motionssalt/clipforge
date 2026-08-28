@@ -205,6 +205,18 @@ export async function setAnnouncedUpdate(env, chatId, marker) {
   await env.CLIPFORGE_BOT_KV.put(key(chatId, 'update_notice'), String(marker || ''));
 }
 
+// bug-68: the last deploy-failure marker announced to this chat. The marker
+// is the failed Deploy Bots run's id, so a new failed run is announced even
+// if it lands on the same commit as a previously announced one (rerun after
+// fixing the cause must re-notify if it fails again).
+export async function getAnnouncedDeployFailure(env, chatId) {
+  return env.CLIPFORGE_BOT_KV.get(key(chatId, 'deploy_failure'));
+}
+
+export async function setAnnouncedDeployFailure(env, chatId, marker) {
+  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'deploy_failure'), String(marker || ''));
+}
+
 // bug-46: the last announced news marker (docs/news.json's published_at) from
 // the main account. Stored per chat so a pushed news message is announced
 // exactly once per publication.
