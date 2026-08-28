@@ -65,12 +65,40 @@ async function readJobStatus(jobId) {
   } catch { return { error: 'unparseable' }; }
 }
 
-function classify(result) {
+// bug-49: a series part's label is never reclaimed while any sibling part
+// is still non-terminal — mirrors expired.py's series_is_complete guard.
+const seriesPartsCache = new Map();
+async function seriesIncomplete(seriesId) {
+  if (!seriesId) return false;
+  if (seriesPartsCache.has(seriesId)) return seriesPartsCache.get(seriesId);
+  let incomplete = false;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/jobs`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${GH_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'clipforge-task-label-reclamation/1.0' } });
+    const listing = res.ok ? await res.json() : [];
+    for (const item of Array.isArray(listing) ? listing : []) {
+      if (!item || item.type !== 'dir') continue;
+      const st = await readJobStatus(String(item.name));
+      const doc = st && st.doc ? st.doc : null;
+      if (!doc) continue;
+      const ser = doc.series && typeof doc.series === 'object' ? doc.series : {};
+      if (String(ser.series_id || '') !== seriesId) continue;
+      if (!['complete', 'error', 'cancelled'].includes(String(doc.state))) { incomplete = true; break; }
+    }
+  } catch { incomplete = false; }
+  seriesPartsCache.set(seriesId, incomplete);
+  return incomplete;
+}
+
+async function classify(result) {
   // Mirrors pipeline.cleanup.expired: no readable status => expired.
   if (result.missing || result.error === 'unparseable') return 'stale:no-readable-status';
   if (result.error) return `unknown:${result.error}`;
   const doc = result.doc || {};
   if (['complete', 'error', 'cancelled'].includes(String(doc.state))) return `stale:terminal-${doc.state}`;
+  const ser = doc.series && typeof doc.series === 'object' ? doc.series : {};
+  if (ser.enabled === true && String(ser.series_id || '') && await seriesIncomplete(String(ser.series_id))) {
+    return 'active'; // bug-49: series still running — keep the label.
+  }
   const expires = Number(doc.expires_at_epoch);
   if (Number.isFinite(expires) && expires > 0 && expires < NOW) return 'stale:ttl-expired';
   return 'active';
@@ -92,7 +120,7 @@ for (const kvKey of taskKeys) {
   const options = doc && typeof doc.options === 'object' && doc.options ? doc.options : {};
   let changed = false;
   for (const [label, jobId] of Object.entries(labels)) {
-    const verdict = classify(await readJobStatus(String(jobId)));
+    const verdict = await classify(await readJobStatus(String(jobId)));
     if (verdict.startsWith('stale:')) {
       chatReport.reclaimed.push({ label, jobId: String(jobId), reason: verdict });
       delete labels[label]; delete options[String(jobId)]; changed = true;

@@ -189,7 +189,7 @@ def read_job_timing(root: str | Path, job_id: str) -> dict[str, int | None]:
     surfacing the new §6.2 expires_at_epoch field.
     """
     path = Path(root) / JOBS_DIR / job_id / "status.json"
-    timing: dict[str, int | None] = {"created_at_epoch": None, "expires_at_epoch": None}
+    timing: dict[str, Any] = {"created_at_epoch": None, "expires_at_epoch": None, "series_id": "", "series_final": False}
     if not path.exists():
         return timing
     try:
@@ -198,12 +198,18 @@ def read_job_timing(root: str | Path, job_id: str) -> dict[str, int | None]:
         return timing
     if not isinstance(data, dict):
         return timing
-    for key in timing:
+    for key in ("created_at_epoch", "expires_at_epoch"):
         value = data.get(key)
         try:
             timing[key] = int(value) if value is not None else None
         except (TypeError, ValueError):
             timing[key] = None
+    # bug-49: carry the series identity so the sweep can protect a part whose
+    # series still has unfinished parts.
+    series = data.get("series")
+    if isinstance(series, dict) and series.get("enabled") is True:
+        timing["series_id"] = str(series.get("series_id") or "")
+        timing["series_final"] = bool(series.get("is_final", False))
     return timing
 
 
@@ -266,6 +272,30 @@ def parse_iso8601(value: str) -> int:
         return 0
 
 
+def _part_is_terminal(root: str | Path, job_id: str) -> bool:
+    """bug-49: True when a part's status.json reads a terminal state."""
+    try:
+        data = json.loads((Path(root) / JOBS_DIR / job_id / "status.json").read_text(encoding="utf-8"))
+        return str(data.get("state")) in ("complete", "error", "cancelled")
+    except Exception:
+        return False
+
+
+def series_is_complete(root: str | Path, series_id: str) -> bool:
+    """bug-49: a series is complete only when EVERY known part is terminal.
+    A missing/unreadable sibling status counts as INCOMPLETE, so a protected
+    part is never reaped while any sibling is still alive or unknown."""
+    if not series_id:
+        return True
+    for jid in list_job_ids_from_disk(root):
+        info = read_job_timing(root, jid)
+        if info.get("series_id") != series_id:
+            continue
+        if not _part_is_terminal(root, jid):
+            return False
+    return True
+
+
 # --------------------------------------------------------------------------- #
 # Main                                                                          #
 # --------------------------------------------------------------------------- #
@@ -308,6 +338,10 @@ def main(
         timing = read_job_timing(root, job_id)
         release_created = parse_iso8601(rel.get("created_at", "")) or None
         expired, reason = job_is_expired(timing, now=now, ttl=ttl, release_created_at=release_created)
+        # bug-49: never reap a series part while its series is incomplete.
+        if expired and timing.get("series_id") and not series_is_complete(root, timing["series_id"]):
+            log(f"PROTECT job={job_id} — series {timing['series_id']} incomplete ({reason})", flush=True)
+            expired = False
         if expired:
             log(f"EXPIRED job={job_id} ({reason}) tag={rel.get('tag_name')}", flush=True)
             delete_release(owner_repo, rel, token, opener=opener)
@@ -322,6 +356,10 @@ def main(
             continue
         timing = read_job_timing(root, jid)
         expired, reason = job_is_expired(timing, now=now, ttl=ttl)
+        # bug-49: never reap a series part while its series is incomplete.
+        if expired and timing.get("series_id") and not series_is_complete(root, timing["series_id"]):
+            log(f"PROTECT job={jid} folder — series {timing['series_id']} incomplete ({reason})", flush=True)
+            expired = False
         if expired:
             log(f"EXPIRED job={jid} folder ({reason})", flush=True)
             expired_job_ids.add(jid)
