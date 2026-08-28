@@ -4,14 +4,14 @@
   "bugs": [
     {
       "id": "bug-44",
-      "title": "Pasted production.json still shows \"received part one\" — replace with receiving animation",
-      "status": "pending",
-      "notes": "Split production.json paste UX: while receiving split bubbles, show a 'Receiving .json file...' style indicator (never a partial/'part one' message); resolve cleanly to success once fully assembled. Reported a third time (prior bug-27/bug-38 'done' statuses NOT trusted) — re-investigate from current code.",
+      "title": "Pasted production.json still shows \"received part one\" \u2014 replace with receiving animation",
+      "status": "in_progress",
+      "notes": "Split production.json paste UX: while receiving split bubbles, show a 'Receiving .json file...' style indicator (never a partial/'part one' message); resolve cleanly to success once fully assembled. Reported a third time (prior bug-27/bug-38 'done' statuses NOT trusted) \u2014 re-investigate from current code. [STARTED 2026-08-28 sweep: investigating current paste-assembly code from scratch.]",
       "commit": ""
     },
     {
       "id": "bug-45",
-      "title": "Zero-setup cloning — bot auto-creates the GitHub repo via API from the user's PAT",
+      "title": "Zero-setup cloning \u2014 bot auto-creates the GitHub repo via API from the user's PAT",
       "status": "pending",
       "notes": "Remove requirement that the user manually create a GitHub repo before cloning. New flow: user provides GitHub PAT + optional repo name (or bot auto-names); bot creates the repo via GitHub API using the PAT, then proceeds with clone setup against it. Must verify PAT scope allows repo creation; note clearly if not.",
       "commit": ""
@@ -27,14 +27,14 @@
       "id": "bug-47",
       "title": "Remove duplicate Zernio settings from completed-task view; verify publishing end-to-end",
       "status": "pending",
-      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view — remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted — confirm against current behavior).",
+      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view \u2014 remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted \u2014 confirm against current behavior).",
       "commit": ""
     },
     {
       "id": "bug-48",
-      "title": "Series task flow dead-ends after a part completes — missing next-part and copy-prompt actions, no way to revisit completed parts",
+      "title": "Series task flow dead-ends after a part completes \u2014 missing next-part and copy-prompt actions, no way to revisit completed parts",
       "status": "pending",
-      "notes": "After a series-mode part finishes (Stage B complete), task view lacks: (1) action to proceed to the next part, (2) the copy-prompt button (exists for non-series tasks per prior bug-09/bug-10 — confirm whether simply missing from series-complete view), (3) a way to later view/access previously completed series parts (e.g. from /done or a dedicated series view) for re-download/repost.",
+      "notes": "After a series-mode part finishes (Stage B complete), task view lacks: (1) action to proceed to the next part, (2) the copy-prompt button (exists for non-series tasks per prior bug-09/bug-10 \u2014 confirm whether simply missing from series-complete view), (3) a way to later view/access previously completed series parts (e.g. from /done or a dedicated series view) for re-download/repost.",
       "commit": ""
     },
     {
