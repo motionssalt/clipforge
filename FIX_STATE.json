@@ -12,8 +12,8 @@
     {
       "id": "bug-45",
       "title": "Zero-setup cloning \u2014 bot auto-creates the GitHub repo via API from the user's PAT",
-      "status": "pending",
-      "notes": "Remove requirement that the user manually create a GitHub repo before cloning. New flow: user provides GitHub PAT + optional repo name (or bot auto-names); bot creates the repo via GitHub API using the PAT, then proceeds with clone setup against it. Must verify PAT scope allows repo creation; note clearly if not.",
+      "status": "in_progress",
+      "notes": "Remove requirement that the user manually create a GitHub repo before cloning. New flow: user provides GitHub PAT + optional repo name (or bot auto-names); bot creates the repo via GitHub API using the PAT, then proceeds with clone setup against it. Must verify PAT scope allows repo creation; note clearly if not. [STARTED 2026-08-28: reading clone-setup flow and probing PAT repo-creation capability.]",
       "commit": ""
     },
     {
