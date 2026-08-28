@@ -19,15 +19,15 @@
     {
       "id": "bug-46",
       "title": "News-push feature to clones, with optional recurring interval (min 6h)",
-      "status": "in_progress",
-      "notes": "Main account can push a 'news' message to all connected clone deployments. One-off push + optional recurring push on a set interval (minimum 6 hours). Settings UI/flow at implementer's judgment; scheduling likely via scheduled GitHub Actions workflow or Cloudflare Worker cron, matching existing scheduled-behavior architecture (e.g. Zernio smart schedule). [STARTED 2026-08-28: designing news-push on the existing clone-sync/notice architecture + Cloudflare cron.]",
-      "commit": ""
+      "status": "done",
+      "notes": "Main account can push a 'news' message to all connected clone deployments. One-off push + optional recurring push on a set interval (minimum 6 hours). Settings UI/flow at implementer's judgment; scheduling likely via scheduled GitHub Actions workflow or Cloudflare Worker cron, matching existing scheduled-behavior architecture (e.g. Zernio smart schedule). [STARTED 2026-08-28: designing news-push on the existing clone-sync/notice architecture + Cloudflare cron.] [DONE 2026-08-28, commit bba870e]: DESIGN: direct push into clone KV/Telegram is impossible (main has no access to clone bots), so the broadcast rides the SAME proven channel as the bug-39 update notice: a docs/news.json file in the source repo that every clone reads. IMPLEMENTATION: (1) Settings \u2192 GitHub clone (main owner only, same originalRepo gate as publish-update) gains \"\ud83d\udcf0 Push news to clones\" \u2192 news menu with current message + recurring status. (2) Compose (set:news:compose) starts a news_message flow; the text is written to docs/news.json with a fresh published_at. (3) Interval buttons 6h/12h/24h/off (set:news:int:N); anything below 6h except 0 is rejected (NEWS_MIN_INTERVAL_HOURS=6). (4) Clone side: commands/start.js announceNews() reads docs/news.json from motionssalt/clipforge on every home-screen open and sends \"\ud83d\udcf0 News from ClipForge\" once per published_at marker (per-chat KV key news_notice in storage.js) \u2014 main-account chat also sees it (it reads the same source path; harmless). (5) Recurring: new .github/workflows/news-push.yml cron \"37 */6 * * *\" (guarded if: repository==motionssalt/clipforge so clones no-op) re-bumps published_at when interval_hours>=6 has elapsed, which triggers re-announcement everywhere. GITHUB_TOKEN only \u2014 no Cloudflare/third-party secrets needed. VERIFIED: node --check clean on index/storage/start; news-push.yml parses as YAML; bot suite unchanged (53 pass / 4 pre-existing fails). LIMITS: no live cross-deployment run; cron is 6-hourly so a 6h interval re-broadcasts within 6-12h worst case (documented in the menu copy).",
+      "commit": "bba870e"
     },
     {
       "id": "bug-47",
       "title": "Remove duplicate Zernio settings from completed-task view; verify publishing end-to-end",
-      "status": "pending",
-      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view \u2014 remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted \u2014 confirm against current behavior).",
+      "status": "in_progress",
+      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view \u2014 remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted \u2014 confirm against current behavior). [STARTED: removing Zernio settings shortcut from the per-task publish menu; verifying stage-b auto-publish wiring.]",
       "commit": ""
     },
     {
