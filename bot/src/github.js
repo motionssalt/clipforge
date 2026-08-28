@@ -175,10 +175,35 @@ export async function validateConnection(pat, repo) {
   return { login: user.login || '', repo: `${spec.owner}/${spec.name}`, private: !!repository.private };
 }
 
+/**
+ * bug-45: pick a repository name automatically when the user did not supply
+ * one. Generates `clipforge-clone-<suffix>` candidates and returns the first
+ * one that does not already exist on the account.
+ */
+async function autoCloneRepositoryName(credentials, login) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const candidate = `clipforge-clone-${suffix}`;
+    try {
+      await githubRequest(credentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(candidate)}`);
+      // 200 => name taken, try the next candidate.
+    } catch (error) {
+      if (error instanceof GitHubError && error.status === 404) return candidate;
+      throw error;
+    }
+  }
+  throw new Error('Could not find a free repository name automatically. Send a name yourself instead.');
+}
+
 export async function createPrivateShadowClone(pat, requestedName) {
-  const name = cloneRepositoryName(requestedName);
   const identity = await getGitHubIdentity(pat);
   const credentials = { githubPat: String(pat), repo: '', geminiKeys: [] };
+  // bug-45: an empty/blank requestedName means "choose for me" (zero-setup
+  // cloning). Resolve a free name BEFORE creating anything so the flow never
+  // leaves a half-created repo behind on a naming collision.
+  const name = String(requestedName || '').trim()
+    ? cloneRepositoryName(requestedName)
+    : await autoCloneRepositoryName(credentials, identity.login);
   const [sourceOwner, sourceName] = SHADOW_CLONE_SOURCE.split('/');
 
   const sourceRef = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/ref/heads/${encodeURIComponent(DEFAULT_BRANCH)}`);
@@ -208,6 +233,12 @@ export async function createPrivateShadowClone(pat, requestedName) {
   } catch (error) {
     if (error instanceof GitHubError && error.status === 422) {
       throw new Error('A repository with that name already exists in your account. Use “Connect existing clone” instead, or choose a new name.');
+    }
+    // bug-45: repo creation is gated on the PAT's Administration permission.
+    // A 403/404 here almost always means the token cannot create repositories
+    // — surface that plainly instead of the raw API message.
+    if (error instanceof GitHubError && (error.status === 403 || error.status === 404)) {
+      throw new Error('The token could not create a repository on your account. A classic PAT needs the “repo” scope; a fine-grained PAT needs “Administration” (write) access.');
     }
     throw error;
   }
