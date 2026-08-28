@@ -12,8 +12,8 @@
     {
       "id": "bug-34",
       "title": "Smart audio level normalization (background vs vocals)",
-      "status": "pending",
-      "notes": "Background audio currently adjusted by simple volume multiplier -> inconsistent perceived loudness. Replace with actual loudness analysis: measure background track level against vocal/narration track (ffmpeg loudnorm/volumedetect or equivalent) and adjust background so ratio is consistently background:vocals = 0.3:1 regardless of input loudness. Must be measured/calculated, not a fixed blind percentage.",
+      "status": "in_progress",
+      "notes": "Background audio currently adjusted by simple volume multiplier -> inconsistent perceived loudness. Replace with actual loudness analysis: measure background track level against vocal/narration track (ffmpeg loudnorm/volumedetect or equivalent) and adjust background so ratio is consistently background:vocals = 0.3:1 regardless of input loudness. Must be measured/calculated, not a fixed blind percentage. | [2026-08-28] Started investigation.",
       "commit": ""
     },
     {
