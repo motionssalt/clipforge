@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-51",
@@ -39,9 +39,10 @@
     {
       "id": "bug-56",
       "title": "Deploy-freshness cross-check (Bot A/B deployed version vs origin/main)",
-      "status": "in_progress",
-      "notes": "Starting cross-check. Strong evidence already gathered in bug-53/54/55 that the 09:22Z failed run (65b7da4) explains the three re-reports. Now directly verify: latest deploy run head_sha vs latest origin/main bot/** commit; whether any deploy gap remains; whether the auto-deploy pipeline has a systemic sync issue.",
+      "status": "done",
+      "notes": "CROSS-CHECK COMPLETE — deployed Workers are current with origin/main; no ongoing pipeline sync issue. One PAST deploy gap found and already remediated by bug-51.\nDEPLOYED vs ORIGIN: latest successful \"Deploy Bots\" run is 33163301596 @ 2026-08-28T10:25Z on d49a502 (both \"Deploy Bot A Worker\" and \"Deploy Bot B relay Worker\" green). Verified via merge-base that d49a502 contains every bot/** commit on origin/main: bug-52 (3992d04), bug-53 (d4adce7), bug-51 (1492f90), bug-50 (42847aa), bug-48 (c8b7be0), bug-47 (ce32973), bug-46 (bba870e). The only origin/main commits AFTER d49a502 are FIX_STATE.json state updates (bug-54/55/56 bookkeeping) — outside the workflow's bot/** path filter, so they correctly do NOT trigger a deploy. No bot code on main is undeployed.\nTHE ONE GAP THAT EXPLAINS bug-53/54/55: deploy run 33159083660 @ 09:22Z on 65b7da4 — the FIRST run carrying bug-48/49/50 code — FAILED at \"Run bot test suite\" (taskKeyboard §8.5 state-validity test), so both wrangler deploy steps were SKIPPED. bug-48/49/50 (series-complete buttons, series-toggle removal, etc.) were committed but NEVER deployed until bug-51's fix (1492f90) shipped green at 09:44Z (run 33160635806 on 4494eec). All three user re-reports were filed inside this blocked window (after the code landed, before the 09:44Z deploy) — a single deploy-freshness failure, not three code bugs.\nPIPELINE ASSESSMENT: the auto-deploy workflow (deploy-bots.yml) is correctly scoped (push to main, paths bot/**), concurrency-locked (group deploy-bots, no cancel-in-progress), and gated on the bot test suite (npm test) before either deploy step. That test gate is exactly what caught the bug-48 regression and prevented a broken deploy — it worked as designed. No fix to the pipeline itself is required; the failure mode was a code regression, now fixed.\nRESIDUAL RISK (informational, not blocking): a failing bot test on a bot/** push silently skips deploys — main can hold undeployed-but-green-on-its-own code if a later commit breaks tests. Mitigation suggestion (not implemented — out of scope): surface failed deploy-bots runs prominently (e.g. repo status check / notification) so a blocked deploy is noticed immediately rather than via user \"still broken\" reports.",
       "commit": ""
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T10:34:03Z"
 }
