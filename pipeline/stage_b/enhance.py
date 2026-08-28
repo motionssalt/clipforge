@@ -12,9 +12,12 @@ Rationale (hard-won, do not relitigate):
   BEFORE it can be amplified by later sharpening. Do NOT swap back to
   ``nlmeans`` — it is orders of magnitude slower and produced the exact
   "plastered / over-smooth" look this pass exists to avoid.
-* The supplied 64³ color cube is deterministically converted from
-  ``assets/anime_reference_lut_grid.png`` into FFmpeg's Hald level-8 layout. It
-  is the only color transform in this stage.
+* The bundled 64³ color cube (``assets/vibrant_glow_color_cube_l8.png``,
+  FFmpeg Hald level-8) is bug-59's "vibrant multi-hue glow" grade,
+  synthesised by ``pipeline/stage_b/build_glow_lut.py`` from the user's
+  960x540 gradient-tile reference image (a mood reference, NOT a valid HALD
+  CLUT identity — never feed that image to ``haldclut`` directly). It is the
+  only color transform in this stage and runs BEFORE the sharpeners.
 * ``cas`` restores texture/edge definition in a locally content-aware way.
 * ``unsharp`` sharpens line ink specifically (luma threshold keeps it off flat
   regions; zeroed chroma matrix avoids chromatic fringing).
@@ -203,7 +206,7 @@ def enhance_video(target: Path, *, enabled: bool = True) -> bool:
         print("Quality enhancement DISABLED — video left untouched.", flush=True)
         return False
     if not LUT_GRID_SOURCE.is_file():
-        raise common.StageBError(f"supplied LUT grid source missing: {LUT_GRID_SOURCE}")
+        raise common.StageBError(f"graded .cube source missing: {LUT_GRID_SOURCE}")
     if not LUT_ASSET.is_file():
         raise common.StageBError(f"bundled color-cube asset missing: {LUT_ASSET}")
     if not target.is_file():

@@ -97,8 +97,14 @@ FONTS_DIR = ASSETS_DIR / "fonts"
 BRANDING_DIR = REPO_ROOT / "branding"
 
 COOLVETICA_FONT = FONTS_DIR / "Coolvetica.ttf"
-LUT_GRID_SOURCE = ASSETS_DIR / "anime_reference_lut_grid.png"
-LUT_HALD_ASSET = ASSETS_DIR / "anime_reference_color_cube_l8.png"
+# bug-59: the grade is now the "vibrant multi-hue glow" look derived from the
+# 960x540 8x8 gradient-tile reference image. That reference is a mood board,
+# NOT a valid HALD CLUT identity (wrong dimensions/layout), so it is not
+# applied literally — pipeline/stage_b/build_glow_lut.py synthesises a real
+# 64^3 3D LUT encoding its character (warm S-curve contrast, ~1.5x vibrance
+# saturation, +18deg saturation-gated hue shift) and writes both assets below.
+LUT_GRID_SOURCE = ASSETS_DIR / "vibrant_glow_grade.cube"
+LUT_HALD_ASSET = ASSETS_DIR / "vibrant_glow_color_cube_l8.png"
 
 TTS_SETTINGS_PATH = BRANDING_DIR / "tts_settings.json"
 CREATOR_WATERMARK_PATH = BRANDING_DIR / "creator_watermark.json"
