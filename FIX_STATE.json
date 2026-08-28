@@ -11,8 +11,8 @@
     {
       "id": "bug-48",
       "title": "No visible progress indicator while a Shadow Clone is being created",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting. Plan: immediate in-progress message after PAT is received (renderFreshView before createPrivateShadowClone), plus throttled incremental copy progress via an onProgress callback threaded into createPrivateShadowClone, editing the same message. Will follow existing render/edit patterns in bot/src/index.js.",
       "commit": ""
     },
     {
