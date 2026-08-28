@@ -32,7 +32,9 @@ The source video's audio is ALWAYS muted. Each cut's audio track is its
 loudness-normalized voiceover at unity (no arbitrary gain), padded with silence
 to the cut's reconciled video length so concat sees equal-length A/V per
 segment. Optional background music is trimmed/looped to the merged duration,
-scaled down to MUSIC_VOLUME, side-chain ducked under the narration, and a
+gain-staged so its MEASURED loudness sits at MUSIC_TO_VOICE_LOUDNESS_RATIO of
+the measured vocal loudness (bug-34 — no more blind fixed percentage),
+side-chain ducked under the narration, and a
 wide-ceiling limiter catches only true digital-clip peaks.
 
 A standalone merged voiceover-only WAV is written for the caption step, which
@@ -44,7 +46,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
+import re
 import wave
 from pathlib import Path
 from typing import Any
@@ -74,15 +78,100 @@ MIN_RECONCILED_TO_PLANNED_RATIO = 0.75
 # ---------- Audio level policy ----------
 # Each TTS WAV is loudness-normalized by voiceover.py to a dialogue target
 # before this step sees it, so the voice path stays at unity. The music bed is
-# reduced to one third of its uploaded amplitude and side-chain ducked only
+# gain-staged by MEASUREMENT (bug-34): both the merged voiceover and the music
+# file are measured with ffmpeg loudnorm (EBU R128 integrated loudness), and
+# the music gain is computed so its perceived level lands at
+# MUSIC_TO_VOICE_LOUDNESS_RATIO of the vocals — regardless of how loud the
+# uploaded music file already is. Side-chain ducking then lowers the bed only
 # while narration is present.
 VOICEOVER_VOLUME = 1.00
+# Fallback only: used when a loudness measurement cannot be obtained (e.g. a
+# silent/corrupt music file). Mirrors the legacy fixed one-third amplitude.
 MUSIC_VOLUME = 0.33
+# Target perceived background:vocals ratio (0.3:1).
+MUSIC_TO_VOICE_LOUDNESS_RATIO = 0.30
+# Sanity clamps for the computed music gain (dB). Wide enough that realistic
+# uploads (even a very quiet file at ~-50 LUFS under -16 LUFS vocals) still
+# reach the exact 0.3:1 ratio; only pathological measurements are clamped so
+# the bed can neither blast nor vanish entirely.
+MUSIC_GAIN_MIN_DB = -40.0
+MUSIC_GAIN_MAX_DB = 24.0
 MUSIC_DUCK_THRESHOLD = 0.015
 MUSIC_DUCK_RATIO = 10
 MUSIC_DUCK_ATTACK_MS = 20
 MUSIC_DUCK_RELEASE_MS = 350
 MIX_LIMITER_CEILING = 0.99
+
+
+def measure_integrated_loudness_lufs(path: str | Path) -> float:
+    """Measure EBU R128 integrated loudness (LUFS) of an audio file with
+    ffmpeg's loudnorm analysis pass. Raises StageBError when ffmpeg cannot
+    produce a parseable measurement (e.g. silent or corrupt audio)."""
+    result = common.run(
+        [
+            "ffmpeg", "-hide_banner", "-nostdin",
+            "-i", str(path),
+            "-af", "loudnorm=print_format=json",
+            "-f", "null", "-",
+        ],
+        f"loudness measurement for {path}",
+    )
+    matches = re.findall(r"\{\s*\"input_i\".*?\n\}", result.stderr, flags=re.DOTALL)
+    if not matches:
+        raise common.StageBError(
+            f"ffmpeg loudnorm returned no parseable measurement for {path}."
+        )
+    try:
+        measured = json.loads(matches[-1])
+        return float(measured["input_i"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise common.StageBError(
+            f"ffmpeg loudnorm returned incomplete measurement data for {path}."
+        ) from exc
+
+
+def music_gain_db_for_ratio(voice_lufs: float, music_lufs: float) -> float:
+    """Gain (dB) that brings ``music_lufs`` to
+    MUSIC_TO_VOICE_LOUDNESS_RATIO × the perceived level of ``voice_lufs``.
+
+    A linear amplitude ratio r maps to loudness as -10·log10(1/r) dB, so the
+    0.3:1 background:vocals target is voice_lufs - 10·log10(1/0.3) ≈ vocals
+    minus 10.46 dB. The result is clamped to [MUSIC_GAIN_MIN_DB,
+    MUSIC_GAIN_MAX_DB] so a pathological measurement can neither blast nor
+    fully mute the bed.
+    """
+    target_db = 10.0 * math.log10(MUSIC_TO_VOICE_LOUDNESS_RATIO)  # ≈ -10.46 dB
+    gain_db = (voice_lufs + target_db) - music_lufs
+    return min(max(gain_db, MUSIC_GAIN_MIN_DB), MUSIC_GAIN_MAX_DB)
+
+
+def resolve_music_volume(voiceover_wav: str | Path, music: str | Path) -> tuple[float, float | None]:
+    """Return (music_volume_linear, measured_gain_db_or_None) for the bed.
+
+    bug-34: measure both tracks and compute the gain so the music sits at
+    MUSIC_TO_VOICE_LOUDNESS_RATIO of the vocals' perceived loudness. Falls
+    back to the legacy fixed MUSIC_VOLUME only when measurement is impossible
+    (e.g. a silent music file), keeping the render alive.
+    """
+    try:
+        voice_lufs = measure_integrated_loudness_lufs(voiceover_wav)
+        music_lufs = measure_integrated_loudness_lufs(music)
+    except common.StageBError as exc:
+        print(
+            f"WARNING: loudness measurement failed ({exc}); "
+            f"falling back to fixed music volume {MUSIC_VOLUME}.",
+            flush=True,
+        )
+        return MUSIC_VOLUME, None
+    gain_db = music_gain_db_for_ratio(voice_lufs, music_lufs)
+    linear = 10.0 ** (gain_db / 20.0)
+    print(
+        f"Music loudness staging: voiceover {voice_lufs:.2f} LUFS, "
+        f"music {music_lufs:.2f} LUFS → target {voice_lufs + 10.0 * math.log10(MUSIC_TO_VOICE_LOUDNESS_RATIO):.2f} LUFS, "
+        f"applied gain {gain_db:+.2f} dB (linear {linear:.4f}).",
+        flush=True,
+    )
+    return linear, gain_db
 
 
 def final_wav_timing(path: str | Path) -> tuple[float, int]:
@@ -203,7 +292,8 @@ def assert_reconciled_duration_coverage(cuts: list[dict], plan: list[dict]) -> N
 # --------------------------------------------------------------------------- #
 
 def produce_merged_video(src: str | Path, plan: list[dict], vo_wavs: list[str],
-                         dst: str | Path, music: str | Path | None) -> None:
+                         dst: str | Path, music: str | Path | None,
+                         music_volume: float = MUSIC_VOLUME) -> None:
     """Cut every reconciled range from ``src``, retime per-cut video by its
     stretch factor, mute source audio, lay in the voiceover WAVs (padded to the
     cut length), concat everything, optionally mix ducked music under the
@@ -267,7 +357,7 @@ def produce_merged_video(src: str | Path, plan: list[dict], vo_wavs: list[str],
             f"aformat=sample_fmts=fltp:sample_rates={AAC_SAMPLE_RATE}:channel_layouts=stereo,"
             f"aresample=async=1:first_pts=0,"
             f"atrim=0:{total_seconds:.3f},"
-            f"volume={MUSIC_VOLUME}"
+            f"volume={music_volume:.6f}"
             f"[music_reduced]"
         )
         parts.append("[acat]asplit=2[voice_mix][voice_sidechain]")
@@ -589,25 +679,47 @@ def render_merged(
             )
         prev_end = e
 
+    # bug-34: write the merged voiceover BEFORE the render so its real
+    # integrated loudness can be measured against the music file. The gain
+    # applied to the bed is derived from that measurement (0.3:1 vs vocals),
+    # not a fixed percentage of whatever level the upload happens to be.
+    write_merged_voiceover(vo_wavs, reconciled, sidecar_wav)
+    expected_voiceover_seconds = sum(float(item["video_seconds"]) for item in reconciled)
+    validate_merged_voiceover_timeline(sidecar_wav, expected_voiceover_seconds)
+    print(f"Merged voiceover written: {sidecar_wav}", flush=True)
+
+    music_volume = MUSIC_VOLUME
+    music_gain_db = None
+    if music:
+        music_volume, music_gain_db = resolve_music_volume(sidecar_wav, music)
+
+    music_note = ""
+    if music:
+        if music_gain_db is None:
+            music_note = (
+                f", background music at fixed fallback {int(MUSIC_VOLUME * 100)}% "
+                "(loudness measurement unavailable) and ducked beneath speech"
+            )
+        else:
+            music_note = (
+                f", background music gain-staged {music_gain_db:+.1f} dB to "
+                f"{int(MUSIC_TO_VOICE_LOUDNESS_RATIO * 100)}% of measured vocal "
+                "loudness and ducked beneath speech"
+            )
     print(
         f"\nProducing ONE merged video from {len(reconciled)} cut(s) with "
         f"normalized voiceover at unity (source audio muted"
-        f"{', background music at ' + str(int(MUSIC_VOLUME * 100)) + '% and ducked beneath speech' if music else ''}) "
+        f"{music_note}) "
         f"— mobile-safe encoding (H.264 High@L{X264_LEVEL} {TARGET_PIX_FMT} CRF{X264_CRF}, "
         f"AAC-LC {AAC_SAMPLE_RATE}Hz stereo {AAC_BITRATE}, +faststart, no edit lists).",
         flush=True,
     )
 
     os.makedirs(os.path.dirname(os.path.abspath(out_video_mp4)) or ".", exist_ok=True)
-    produce_merged_video(original_video, reconciled, vo_wavs, out_video_mp4, music)
+    produce_merged_video(original_video, reconciled, vo_wavs, out_video_mp4, music, music_volume)
     print(f"Merged video written: {out_video_mp4}", flush=True)
 
     validate_mp4(out_video_mp4)
-
-    write_merged_voiceover(vo_wavs, reconciled, sidecar_wav)
-    expected_voiceover_seconds = sum(float(item["video_seconds"]) for item in reconciled)
-    validate_merged_voiceover_timeline(sidecar_wav, expected_voiceover_seconds)
-    print(f"Merged voiceover written: {sidecar_wav}", flush=True)
 
     return {
         "merged_mp4": out_video_mp4,
