@@ -1,20 +1,33 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
   "bugs": [
     {
-      "id": "bug-66",
-      "title": "Auto-login after Shadow Clone creation + live percentage during creation",
-      "status": "done",
-      "notes": "Seeded 2026-08-28. Two parts: (1) verify auto-login (putCredentials + showHome) still fires at the point where the NEW async clone-creation flow (bug-63: GitHub Actions workflow dispatch instead of synchronous Worker copy) is confirmed complete; if the completion handler doesn't log the user in, add it. (2) verify the progress display during clone creation renders a live percentage (e.g. 'Copying files... 42% (34/80)'); if only bar/file-count, add percentage reusing done/total values, respecting existing Telegram edit-rate throttling. [in_progress 2026-08-28] Beginning investigation: locating async clone-creation completion handler (bug-63 flow) and progress rendering. [done 2026-08-28] PART 1 (auto-login) VERIFIED ALREADY CORRECT in the post-bug-63 async flow: handleClonePatMessage (bot/src/index.js) awaits createPrivateShadowClone (bot/src/github.js), which dispatches the one-time copy workflow into the new repo and POLLS .clipforge-clone-status.json until state===complete (stall/start/deadline guards included). Only AFTER that await resolves does the handler call putCredentials(env, chatId, { githubPat: pat, repo: result.repo, geminiKeys: [] }), clearFlow, and showHome \u2014 i.e. the user is logged in the moment the async copy is confirmed complete, with no manual connect step. No code change needed for part 1. PART 2 (live percentage) WAS MISSING: cloneProgressText rendered progressBar + done/total but no % figure. Fixed: copy-stage line now renders \"Copying files\u2026 <b>{percent}%</b> ({done}/{total})\" with percent = floor(done/total*100) clamped to 100. No throttle change needed \u2014 the existing bug-48 onProgress gate (>=3s AND >=12 files between edits, plus done-change dedupe) still governs edit frequency. node --check passes.",
-      "commit": "5085317"
+      "id": "bug-51",
+      "title": "Shadow Clone creation stalls forever on 'Preparing repository…'",
+      "status": "pending",
+      "notes": "Seeded 2026-08-28. Live user-facing failure: progress message stuck at first indeterminate stage, no success/error ever shown; /start works afterwards (flow died silently). Prior sweep (bug-47/48) claimed a fix + live verification but symptom persists post-sweep, and bug-63 apparently moved the copy to a dispatched Actions workflow with polling of .clipforge-clone-status.json — investigate from current code: (1) can createPrivateShadowClone reject unhandled / escape try-catch in handleClonePatMessage (onProgress throw, Promise.all rejection, Worker kill on CPU/wall-clock limit); (2) is the whole op exceeding Workers request duration (600+ sequential API calls at chunk 4) — if so, structural redesign to workflow_dispatch relay pattern (check whether bug-63 already did this and where the stall actually is, e.g. polling loop never resolving); (3) can renderInteractiveView/onProgress edit calls throw 429 uncaught. Regardless of root cause: every clone attempt must end in success OR a clear error message — never silent stall. Verify end-to-end vs live GitHub API with realistic-size repo.",
+      "commit": ""
     },
     {
-      "id": "bug-67",
-      "title": "Add 'Help tutorial' video button in /start flow that sends help.mp4",
-      "status": "done",
-      "notes": "Seeded 2026-08-28. Create assets/help/ (or bot/assets/help/) folder expecting help.mp4 (actual video added later by user). Add a 'Help tutorial' button to showHome/handleStart button set; on tap, sendVideo the file to the chat. Must handle missing help.mp4 gracefully (friendly 'tutorial not yet available' message, no crash). Note the 50MB Telegram Bot API sendVideo limit in implementation notes. Available to ANY user (main or clone), NOT gated behind owner checks. [in_progress 2026-08-28] bug-66 done+confirmed on origin/main (5085317). Starting bug-67: folder assets/help/, menu:helpvideo button in onboarding+home keyboards, handleHelpVideo in start.js using existing sendVideoBytes/getRepositoryFileBytes, graceful fallback when help.mp4 absent. [done 2026-08-28] IMPLEMENTED. (1) Folder: assets/help/ created with README.md documenting that the maintainer drops help.mp4 at assets/help/help.mp4, that Telegram Bot API sendVideo caps at 50 MB (bot caps the read at 49 MB), and that it is universally available. (2) Button: \"\ud83c\udfac Help tutorial (video)\" (callback menu:helpvideo) added to ALL THREE keyboards in views.js \u2014 onboardingKeyboard (unauthenticated /start flow), homeKeyboard (connected home), helpKeyboard (/help screen) \u2014 so any user, main or clone, can reach it; no isOriginalRepo/owner gate anywhere on the path. (3) Logic: routeCallback in index.js dispatches menu:helpvideo to new handleHelpVideo in commands/start.js. If the chat has connected credentials it reads assets/help/help.mp4 from the connected repo via the existing getRepositoryFileBytes (Contents API, byte-capped) and sends it with the existing sendVideoBytes (sendVideo, supports_streaming). Missing file, oversized file, read error, or no connected repo all fall through to a graceful \"tutorial video not yet available\" message pointing at /help \u2014 no unhandled rejection; routeCallback already answerCallback()s even on throw. Reused the bug-46/bug-65 pattern: the asset lives in the repo itself so clones serve the same content. VERIFICATION: node --check passes on index.js/views.js/start.js. Test suite: 64 pass / 5 fail BOTH before and after this change \u2014 the 5 failures (identity, narrator-previews, relay, tasks, +1 file-level) are pre-existing environment/file-load failures unrelated to this change (bug-68 notes recorded the same 5 as pre-existing); no test exercises views.js keyboards or the new handler. Live confirmation of the button requires the deployed Bot A to pick up this push (deploy-bots.yml triggers on bot/**) and a tap of the button before/after help.mp4 is committed.",
-      "commit": "b1c3e2a"
+      "id": "bug-52",
+      "title": "Shadow Clones should relay through central Bot A/Bot B, not need their own",
+      "status": "pending",
+      "notes": "Seeded 2026-08-28. Architecture change. Clones currently lack the direct-video Telegram relay (INTERNAL_RELAY_GROUP_CHAT_ID/RELAY_ENCRYPTION_KEY exist only on central Worker; isOriginalRepo gates in bot/src/index.js). Goal: a clone hands the relay step off to central Bot A/Bot B via an authenticated, per-clone-scoped API/webhook/dispatch — central secrets must NOT be copied to clones. Must preserve sealed-payload security model (bot/src/relay.js; tests: sealed-payload, relay caption, rememberCopiedMedia) multi-tenant: Bot B only acts on payloads matching a job it was told to expect. Audit all 7 isOriginalRepo call sites; touch only relay-related gating. Extend test/*.mjs relay suite. Document design in code comments like the rest of the codebase. Do not rush.",
+      "commit": ""
+    },
+    {
+      "id": "bug-53",
+      "title": "README.md out of date for Shadow Clone setup",
+      "status": "pending",
+      "notes": "Seeded 2026-08-28. Update README.md (and linked setup docs) for the current Shadow Clone flow: accurate bot-driven create/connect steps matching post-bug-51 behavior; document bug-52 cross-repo relay only if done+merged, else document current per-clone relay requirements; document ALL Actions secrets a clone needs (CLOUDFLARE_API_TOKEN at minimum — check .github/workflows/deploy-bots.yml and cleanup.yml for the full list). Read actual bot flow and workflow files; invent nothing.",
+      "commit": ""
+    },
+    {
+      "id": "bug-54",
+      "title": "Clone Deploy Bots fails: CLOUDFLARE_API_TOKEN never provisioned",
+      "status": "pending",
+      "notes": "Seeded 2026-08-28. Real Actions log on fresh clone (clipforge-clone-zuaua5): wrangler deploy fails for missing CLOUDFLARE_API_TOKEN; bug-68 failure-alert step then ALSO fails (exit 1) because BOTB_MTPROTO_BOT_TOKEN absent. Fix: (a) bot/setup flow must tell user exactly which secrets to add and where (Settings → Secrets and variables → Actions), matching bug-53 docs; (b) consider optional Cloudflare-token collection in create-clone flow with setActionsSecret provisioning (check whether ANY secret provisioning already happens in createPrivateShadowClone) — documented manual step is acceptable if auto-provisioning is a large scope increase; (c) verify announceDeployFailure polling (bot/src/commands/start.js) works cross-repo for clones; (d) make the intentional-failure alert step clearer in Actions UI (e.g. ::error:: annotation) so a red X is distinguishable from a broken alert.",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-28T21:53:16Z"
+  ]
 }
