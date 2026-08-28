@@ -4,6 +4,20 @@
  * Do NOT redesign: the caption and ready-marker formats are the contract
  * between Bot A, Bot B, and telegram-relay.yml. The 1800 MiB cap is the
  * GitHub release per-asset limit with headroom — preserve it.
+ *
+ * bug-52 (multi-tenancy note): this relay is ALREADY the cross-repo path.
+ * ARCHITECTURE.md §10 has ONE shared Bot A Worker serving every user, each
+ * private chat bound to that user's own Shadow Clone repo. The relay group
+ * id and RELAY_ENCRYPTION_KEY live on that single shared deployment (public
+ * var / Worker secret respectively) — never on a clone — and the sealed
+ * envelope Bot A hands to Bot B carries target_repo plus the user's OWN PAT,
+ * so telegram-relay.yml writes into the OWNING user's clone. A clone owner
+ * therefore relays through the central Bot A/Bot B with no relay bots, group,
+ * or encryption key of their own. Tenant isolation is enforced by (1) the
+ * per-chat KV key (chatId, jobId) and (2) the message-id-matched sealed
+ * payload — Bot B only ever releases the payload of the job named in the
+ * ready marker, for the exact group message it observed. See
+ * test/relay.test.mjs ("multi-tenant:" tests) which pin this guarantee.
  */
 
 const SAFE_JOB_RE = /^[A-Za-z0-9._-]{1,120}$/;
