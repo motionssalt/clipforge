@@ -5,12 +5,12 @@
 
 import { getCredentials, getAnnouncedNews, setAnnouncedNews, getAnnouncedUpdate, setAnnouncedUpdate, getAnnouncedDeployFailure, setAnnouncedDeployFailure } from '../storage.js';
 import {
-  getRepositoryVisibility, listWorkflowRuns, readSeriesSettings, readZernioSettings, tryGetJsonFile
+  getRepositoryFileBytes, getRepositoryVisibility, listWorkflowRuns, readSeriesSettings, readZernioSettings, tryGetJsonFile
 } from '../github.js';
 import { isOriginalRepo } from '../identity.js';
 import { checkCloneUpdates, applyCloneUpdates } from '../clone-sync.js';
 import { MUSIC_DEFAULT_PATH, TTS_SETTINGS_PATH, WATERMARK_PATH } from '../constants.js';
-import { sendMessage } from '../telegram.js';
+import { sendMessage, sendVideoBytes } from '../telegram.js';
 import { escapeHtml } from '../constants.js';
 
 // bug-46: news broadcasts are published by the main account into the SOURCE
@@ -195,4 +195,28 @@ export async function handleHelp(env, chatId) {
   // bug-23: the in-app command reference now carries a link to the full
   // Telegraph user guide.
   return renderInteractiveView(env, chatId, HELP_TEXT, { replyMarkup: helpKeyboard() }, null);
+}
+
+// bug-67: the help tutorial video lives in the repository itself so every
+// deployment (main account AND every Shadow Clone) serves the same file
+// without any owner gating. The actual help.mp4 is added to assets/help/ by
+// the maintainer; until then the button answers with a graceful fallback.
+// NOTE: Telegram Bot API sendVideo is limited to 50 MB — help.mp4 must stay
+// under that (we cap the read just below it).
+const HELP_VIDEO_PATH = 'assets/help/help.mp4';
+const HELP_VIDEO_MAX_BYTES = 49 * 1024 * 1024; // < Telegram's 50 MB sendVideo limit
+
+export async function handleHelpVideo(env, chatId) {
+  const credentials = await getCredentials(env, chatId).catch(() => null);
+  const repo = credentials && credentials.githubPat && credentials.repo ? credentials.repo : null;
+  if (repo) {
+    try {
+      const bytes = await getRepositoryFileBytes(credentials, repo, HELP_VIDEO_PATH, HELP_VIDEO_MAX_BYTES);
+      return await sendVideoBytes(env, chatId, bytes, 'help.mp4',
+        '\u{1F3AC} <b>ClipForge help tutorial</b>\n\nFull text guide: /help');
+    } catch { /* fall through to the not-available message below */ }
+  }
+  return sendMessage(env, chatId,
+    '\u{1F3AC} <b>Help tutorial</b>\n\nThe tutorial video is not available yet — it will be added as <code>assets/help/help.mp4</code> (max 50 MB for Telegram). In the meantime, use /help for the full written guide.',
+    { replyMarkup: null });
 }

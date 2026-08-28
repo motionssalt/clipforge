@@ -61,6 +61,7 @@ export function onboardingKeyboard() {
   return buttons([
     [{ text: 'Create private Shadow Clone', callback_data: 'clone:new' }],
     [{ text: 'Connect existing clone', callback_data: 'clone:connect' }],
+    [{ text: '🎬 Help tutorial (video)', callback_data: 'menu:helpvideo' }],
     [{ text: '📖 How ClipForge works (guide)', url: HELP_GUIDE_URL }]
   ]);
 }
@@ -69,7 +70,9 @@ export function homeKeyboard() {
   return buttons([
     [{ text: '🎬 New video', callback_data: 'menu:new' }],
     [{ text: '📋 Tasks', callback_data: 'menu:tasks' }, { text: '✅ Completed', callback_data: 'menu:done' }],
-    [{ text: '⚙️ Settings', callback_data: 'menu:settings' }]
+    [{ text: '⚙️ Settings', callback_data: 'menu:settings' }],
+    // bug-67: video help tutorial, available to every user (main or clone).
+    [{ text: '🎬 Help tutorial (video)', callback_data: 'menu:helpvideo' }]
   ]);
 }
 
@@ -92,7 +95,10 @@ export const ONBOARDING_TEXT = '<b>ClipForge</b>\n\nThis shared bot turns a sour
 
 export function helpKeyboard() {
   // bug-29: the guide is text-only (ASCII diagrams, no screenshots).
-  return buttons([[{ text: '📖 Full user guide', url: HELP_GUIDE_URL }]]);
+  return buttons([
+    [{ text: '🎬 Help tutorial (video)', callback_data: 'menu:helpvideo' }],
+    [{ text: '📖 Full user guide', url: HELP_GUIDE_URL }]
+  ]);
 }
 
 export const HELP_TEXT = [
