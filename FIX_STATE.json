@@ -1,13 +1,19 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
   "bugs": [
     {
-      "id": "bug-68",
-      "title": "Deploy-failure Telegram alert silently skips itself on clones because BOTB_MTPROTO_BOT_TOKEN secret is unset",
-      "status": "done",
-      "notes": "Seeded 2026-08-28. Confirmed via a real failed Deploy Bots run on clone motionssalt/clipforge-clone-y59fyk: the alert step (bug-58) detects missing BOTB_MTPROTO_BOT_TOKEN, logs a warning to the Actions log, and exits 0 without notifying anyone. Clone owners get no Telegram notification of blocked deploys. Fix must ensure a clone owner whose Deploy Bots run fails actually receives a Telegram alert; investigate how clone secrets/bot tokens are provisioned before choosing approach. [in_progress 2026-08-28] Beginning investigation: reading deploy workflow alert step, clone provisioning flow, and bot token secret patterns. [done 2026-08-28] ROOT CAUSE CONFIRMED by code read: the bug-58 alert step in .github/workflows/deploy-bots.yml posts from the Actions runner using secrets.BOTB_MTPROTO_BOT_TOKEN, which exists ONLY on the central repo \u2014 ARCHITECTURE.md \u00a79.2 marks the BOTB_MTPROTO_*/relay subsystem central-only, and \u00a710 states one shared Bot A deployment serves all users, so clones have NO bot token of their own and nothing in clone creation (createPrivateShadowClone) provisions Actions secrets other than GEMINI_API_KEYS during onboarding. Therefore the fix could NOT be another clone repo secret: (a) no provisioning touchpoint exists for a Telegram token, and (b) writing the central Bot B token into a clone secret would hand a central credential to a repo whose workflow files the clone owner controls (\u00a713 violation). CHOSEN FIX \u2014 two parts. (1) bot/src: the shared Bot A now polls the CONNECTED repo's deploy-bots.yml runs with the owner's own PAT via new listWorkflowRuns() (github.js), on the home-screen touchpoint in showHome (commands/start.js#announceDeployFailure) \u2014 the same passive-pull pattern as bug-46 news and bug-65 auto-update, chosen because the worker has no cron trigger and the central account cannot push into a private clone. Each failed run is DMed to the clone owner exactly once; the KV marker (getAnnouncedDeployFailure/setAnnouncedDeployFailure in storage.js) is the run id (not sha) so a rerun that fails again still notifies, and it is stored only after a successful send so transient failures retry on the next home render. Best-effort, try/catch \u2014 never blocks the home screen; main-account chats are excluded (isOriginalRepo) since the central repo already has the real-time workflow alert. The message includes the failing run URL and notes that failure is expected on a brand-new clone before Cloudflare credentials are configured. (2) workflow: when BOTB_MTPROTO_BOT_TOKEN is absent (a clone), the alert step now exits 1 after logging the pointer instead of silently exiting 0, so a failed clone run stays visibly red in the Actions UI rather than showing a green 'alert' step; on the central repo the step is unchanged and still sends the real-time Telegram alert. VERIFICATION: node --check passes on github.js/storage.js/start.js; bot test suite 110 pass / 0 fail (the 5 pre-existing failures recorded in bug-65's notes no longer reproduce \u2014 they were fixed in an earlier landed change; regardless, no new failures from this change). End-to-end delivery on a live clone requires the deployed Bot A Worker to pick this up (deploy-bots.yml triggers on bot/** push) and the clone owner to open the bot home screen after a failed run \u2014 that is the designed delivery path, consistent with bug-46/bug-65.",
-      "commit": "3cde059"
+      "id": "bug-66",
+      "title": "Auto-login after Shadow Clone creation + live percentage during creation",
+      "status": "pending",
+      "notes": "Seeded 2026-08-28. Two parts: (1) verify auto-login (putCredentials + showHome) still fires at the point where the NEW async clone-creation flow (bug-63: GitHub Actions workflow dispatch instead of synchronous Worker copy) is confirmed complete; if the completion handler doesn't log the user in, add it. (2) verify the progress display during clone creation renders a live percentage (e.g. 'Copying files... 42% (34/80)'); if only bar/file-count, add percentage reusing done/total values, respecting existing Telegram edit-rate throttling.",
+      "commit": ""
+    },
+    {
+      "id": "bug-67",
+      "title": "Add 'Help tutorial' video button in /start flow that sends help.mp4",
+      "status": "pending",
+      "notes": "Seeded 2026-08-28. Create assets/help/ (or bot/assets/help/) folder expecting help.mp4 (actual video added later by user). Add a 'Help tutorial' button to showHome/handleStart button set; on tap, sendVideo the file to the chat. Must handle missing help.mp4 gracefully (friendly 'tutorial not yet available' message, no crash). Note the 50MB Telegram Bot API sendVideo limit in implementation notes. Available to ANY user (main or clone), NOT gated behind owner checks.",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-28T21:55:00Z"
+  ]
 }
