@@ -11,7 +11,7 @@
     {
       "id": "bug-64",
       "title": "Series Part 2 Stage A still failing — 'release not found' during evidence reuse",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Reuse step now triggers (bug-61 gating fix appears to have landed) but fails: 'release not found', exit code 1. Investigate: (1) verify bug-61's series_source_job_id extraction fix in .github/workflows/stage-a.yml; (2) find which release name/tag the reuse step constructs vs what Part 1's Stage B published (possible wrong job id used — current part's instead of series.source_job_id); (3) check timing race between Part 1 release publication and Part 2 Stage A dispatch.",
       "commit": ""
     },
