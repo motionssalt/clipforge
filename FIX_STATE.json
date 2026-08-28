@@ -12,15 +12,15 @@
     {
       "id": "bug-45",
       "title": "Zero-setup cloning \u2014 bot auto-creates the GitHub repo via API from the user's PAT",
-      "status": "in_progress",
-      "notes": "Remove requirement that the user manually create a GitHub repo before cloning. New flow: user provides GitHub PAT + optional repo name (or bot auto-names); bot creates the repo via GitHub API using the PAT, then proceeds with clone setup against it. Must verify PAT scope allows repo creation; note clearly if not. [STARTED 2026-08-28: reading clone-setup flow and probing PAT repo-creation capability.]",
-      "commit": ""
+      "status": "done",
+      "notes": "Remove requirement that the user manually create a GitHub repo before cloning. New flow: user provides GitHub PAT + optional repo name (or bot auto-names); bot creates the repo via GitHub API using the PAT, then proceeds with clone setup against it. Must verify PAT scope allows repo creation; note clearly if not. [STARTED 2026-08-28: reading clone-setup flow and probing PAT repo-creation capability.] [DONE 2026-08-28, commit 3eb2f92]: FINDINGS: the prior flow ALREADY created the repo via POST /user/repos from the user PAT (createPrivateShadowClone in github.js), but forced the user to type a valid name and crashed unhandled if creation failed. The manual-creation requirement was therefore a UX gap, not a missing capability. FIX: (1) clone:new prompt now offers a \"\u2728 Choose a name for me\" button (clone:newauto) which seeds flow gh_pat_new with cloneName='' as the auto-name sentinel; handleClonePatMessage no longer treats empty cloneName as an expired flow (checks undefined/null instead). (2) github.js autoCloneRepositoryName() picks a free clipforge-clone-<6char> name by probing GET /repos/<login>/<candidate> for 404 before anything is created, so no half-created repo on collision. (3) createPrivateShadowClone wraps the POST /user/repos 403/404 in a clear \"token cannot create repositories \u2014 classic PAT needs repo scope, fine-grained needs Administration write\" error, and handleClonePatMessage catches creation errors and renders them with a retry button instead of throwing. PAT PERMISSION NOTE (required by prompt): the session PAT is a fine-grained token (login motionssalt, verified via GET /user 200) \u2014 fine-grained PATs do not expose X-OAuth-Scopes, so repo-creation capability cannot be pre-proven without creating a real repo; the only true test is POST /user/repos itself, which the bot now performs and reports on honestly. I deliberately did NOT create a throwaway repo on the production account to probe. VERIFIED: node --check clean on both files; bot suite 53 pass / 4 pre-existing failures (unchanged); auto-name logic simulated in Node (format + collision-skip loop). LIMITS: no live GitHub end-to-end clone creation run from sandbox; API call shapes reused from the already-working createPrivateShadowClone.",
+      "commit": "3eb2f92"
     },
     {
       "id": "bug-46",
       "title": "News-push feature to clones, with optional recurring interval (min 6h)",
-      "status": "pending",
-      "notes": "Main account can push a 'news' message to all connected clone deployments. One-off push + optional recurring push on a set interval (minimum 6 hours). Settings UI/flow at implementer's judgment; scheduling likely via scheduled GitHub Actions workflow or Cloudflare Worker cron, matching existing scheduled-behavior architecture (e.g. Zernio smart schedule).",
+      "status": "in_progress",
+      "notes": "Main account can push a 'news' message to all connected clone deployments. One-off push + optional recurring push on a set interval (minimum 6 hours). Settings UI/flow at implementer's judgment; scheduling likely via scheduled GitHub Actions workflow or Cloudflare Worker cron, matching existing scheduled-behavior architecture (e.g. Zernio smart schedule). [STARTED 2026-08-28: designing news-push on the existing clone-sync/notice architecture + Cloudflare cron.]",
       "commit": ""
     },
     {
