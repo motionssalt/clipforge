@@ -79,7 +79,16 @@ export function taskKeyboard(status, label, plan = null) {
     if (status.mode === 'manual' && series.enabled === true) {
       const planSeries = extractPlanSeries(plan);
       rows.push([{ text: '📋 Copy prompt', callback_data: `task:prompt:${label}` }]);
-      if (planSeries.is_final !== true) {
+      // bug-51: the deploy-blocking test failure. taskKeyboard is also called
+      // WITHOUT a plan (unit tests, §8.5 state-validity contract) — there the
+      // plan falls back to {} and planSeries.is_final is undefined, which used
+      // to make the next-part button render even when the STATUS already said
+      // is_final:true. Gate defensively: hide the button when EITHER the plan
+      // or the status reports the series is final. In production statuses the
+      // status flag is normalized to false, so the plan flag still governs
+      // (preserving the bug-48 fix); status-level is_final:true only ever
+      // further restricts, never wrongly reveals, the action.
+      if (planSeries.is_final !== true && series.is_final !== true) {
         rows.push([{ text: '▶ Start next part', callback_data: `task:next:${label}` }]);
       }
       rows.push([{ text: '📚 Series parts', callback_data: `task:parts:${label}` }]);
