@@ -4,8 +4,8 @@
     {
       "id": "bug-46",
       "title": "Shadow Clone creation fails with raw GitHub error 'Git Repository is empty'",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation. Will read createPrivateShadowClone in bot/src/github.js and bug-45 catch block in bot/src/index.js, then reproduce end-to-end against real GitHub API to determine which Git Data API call fails on a freshly created empty repo.",
       "commit": ""
     }
   ]
