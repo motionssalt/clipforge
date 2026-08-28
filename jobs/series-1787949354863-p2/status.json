@@ -9,10 +9,10 @@
     "start_seconds": 1180,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (torrent_file)",
+  "state": "error",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33221921526",
   "created_at_epoch": 1787961275,
-  "updated_at_epoch": 1787961308,
+  "updated_at_epoch": 1787961323,
   "expires_at_epoch": 1788004475,
   "release_tag": "clipforge-series-1787949354863-p2",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1787949354863-p2",
