@@ -40,9 +40,9 @@
     {
       "id": "bug-49",
       "title": "Series tasks must not expire until the entire series is complete",
-      "status": "pending",
-      "notes": "Current 12h task expiry (per prior bug-03/bug-37) appears to apply per-part even in series mode. For series-mode tasks, no part of an incomplete series may be cleaned up/expired until every part reaches a completed/terminal state. Must not break general (non-series) expiry/cleanup behavior.",
-      "commit": ""
+      "status": "done",
+      "notes": "Current 12h task expiry (per prior bug-03/bug-37) appears to apply per-part even in series mode. For series-mode tasks, no part of an incomplete series may be cleaned up/expired until every part reaches a completed/terminal state. Must not break general (non-series) expiry/cleanup behavior. [DONE 2026-08-28, commit a4ac9a9]: CONFIRMED the bug: job_is_expired used only expires_at_epoch/created_at+ttl \u2014 no series awareness \u2014 so each part expired on its own 12h clock even mid-series. FIX: read_job_timing now also extracts series_id/series_final from status.json; new series_is_complete(root, series_id) scans every jobs/<id> sibling and returns True only when ALL are terminal (complete/error/cancelled) \u2014 unreadable sibling => incomplete => protect. Both expiry loops (releases + orphan folders) skip a part when it has a series_id and the series is incomplete (logged as PROTECT). The KV half (reclaim-stale-task-labels.mjs classify) got the identical guard via a seriesIncomplete() lookup against jobs/ so labels of in-progress series are not freed either. GENERAL EXPIRY PRESERVED: series_id is empty for non-series jobs so the guard never engages (verified by smoke test). VERIFIED: py_compile clean; targeted smoke test in a temp jobs tree \u2014 incomplete-series complete part is protected, becomes reapable once the final part is terminal, and a non-series expired job still expires; bot suite unchanged. LIMITS: protection is conservative (an unreadable sibling blocks cleanup) \u2014 intentional per the \"must not expire until the entire series is complete\" requirement.",
+      "commit": "a4ac9a9"
     },
     {
       "id": "bug-50",
