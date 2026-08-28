@@ -3,14 +3,14 @@
   "bugs": [
     {
       "id": "bug-59",
-      "title": "Replace color grade/LUT with new look derived from 960x540 8x8 gradient-tile reference image (vibrant, high-saturation, multi-hue) — build a real grade, do NOT apply image as HALD CLUT",
-      "status": "pending",
-      "notes": "",
+      "title": "Replace color grade/LUT with new look derived from 960x540 8x8 gradient-tile reference image (vibrant, high-saturation, multi-hue) \u2014 build a real grade, do NOT apply image as HALD CLUT",
+      "status": "in_progress",
+      "notes": "Started: locating current color grade/LUT in render pipeline (filter chains, .cube refs from bug-19/bug-25 work).",
       "commit": ""
     },
     {
       "id": "bug-60",
-      "title": "Cosmetic UI overhaul — bot-wide animations/liveliness pass with shared animation helpers, respecting Telegram edit rate limits",
+      "title": "Cosmetic UI overhaul \u2014 bot-wide animations/liveliness pass with shared animation helpers, respecting Telegram edit rate limits",
       "status": "pending",
       "notes": "",
       "commit": ""
