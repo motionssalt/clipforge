@@ -1,12 +1,13 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-46",
       "title": "Shadow Clone creation fails with raw GitHub error 'Git Repository is empty'",
-      "status": "in_progress",
-      "notes": "Starting investigation. Will read createPrivateShadowClone in bot/src/github.js and bug-45 catch block in bot/src/index.js, then reproduce end-to-end against real GitHub API to determine which Git Data API call fails on a freshly created empty repo.",
-      "commit": ""
+      "status": "done",
+      "notes": "ROOT CAUSE CONFIRMED against the real GitHub API (not just from reading code): on an auto_init:false repo with zero refs, the FIRST Git Data API call in createPrivateShadowClone -- POST /git/blobs -- returns HTTP 409 with body.message='Git Repository is empty.', NOT POST /git/trees as the bug hypothesis guessed. Reproduced with a real PAT against a freshly-created empty private repo: all four writes (git/blobs, git/trees, git/commits, git/refs) fail identically. The raw GitHub message was propagated verbatim through githubRequest() -> GitHubError -> handleClonePatMessage's bug-45 catch, which unconditionally appended classic-PAT-repo-scope / fine-grained-PAT-Administration guidance -- misleading because POST /user/repos had already succeeded, so scopes were fine. FIX (bot/src/github.js createPrivateShadowClone): after POST /user/repos, bootstrap the ref with a Contents API PUT of .clipforge-sync.json (which works on empty repos and creates the first commit + refs/heads/<default> in one call); then copy the source files via the Git Data API as before, build the final tree with base_tree=<bootstrap tree sha> so the sync file is preserved, commit with parents=[bootstrapCommitSha], and PATCH refs/heads/<default> (POST would 422 because the ref now exists). The Git Data API section is wrapped in try/catch that rethrows GitHubError as 'GitHub rejected a write to the new repository (<status>): <msg>' so the raw 'Git Repository is empty' text never resurfaces even if some other empty-repo edge case shows up. FIX (bot/src/index.js handleClonePatMessage): only append PAT-scope/Administration guidance when the error text looks permission-related (regex on token/scope/permission/administration/forbid/unauthorized/could-not-create-a-repository); non-permission failures get a neutral 'usually clears on retry' suffix. Checked adjacent code: only deleteClipforgeJob makes Git Data API writes elsewhere in github.js, but it operates on a mature clone with existing commits (never on a freshly-created empty repo) so it does not hit the same failure mode. VERIFIED END-TO-END against the live GitHub API by importing the actual createPrivateShadowClone into a harness with a real PAT: fresh private empty repo, 302 source files + .clipforge-sync.json copied in 73.3s, main branch created with head commit message 'Shadow clone from motionssalt/clipforge@42311e0' matching the existing user-facing success message, blob count in final tree=303 (302 copied + 1 sync marker, nothing lost). Bot test suite (node --test) shows the same 5 pre-existing unrelated failures (identity/narrator-previews/relay/tasks/wizard) both before and after this change; no new failures introduced. FIX COMMITTED in ff52cd9. Confirmed present on origin/main.",
+      "commit": "ff52cd9"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T00:00:00Z"
 }
