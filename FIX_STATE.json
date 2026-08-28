@@ -11,8 +11,8 @@
     {
       "id": "bug-67",
       "title": "Add 'Help tutorial' video button in /start flow that sends help.mp4",
-      "status": "pending",
-      "notes": "Seeded 2026-08-28. Create assets/help/ (or bot/assets/help/) folder expecting help.mp4 (actual video added later by user). Add a 'Help tutorial' button to showHome/handleStart button set; on tap, sendVideo the file to the chat. Must handle missing help.mp4 gracefully (friendly 'tutorial not yet available' message, no crash). Note the 50MB Telegram Bot API sendVideo limit in implementation notes. Available to ANY user (main or clone), NOT gated behind owner checks.",
+      "status": "in_progress",
+      "notes": "Seeded 2026-08-28. Create assets/help/ (or bot/assets/help/) folder expecting help.mp4 (actual video added later by user). Add a 'Help tutorial' button to showHome/handleStart button set; on tap, sendVideo the file to the chat. Must handle missing help.mp4 gracefully (friendly 'tutorial not yet available' message, no crash). Note the 50MB Telegram Bot API sendVideo limit in implementation notes. Available to ANY user (main or clone), NOT gated behind owner checks. [in_progress 2026-08-28] bug-66 done+confirmed on origin/main (5085317). Starting bug-67: folder assets/help/, menu:helpvideo button in onboarding+home keyboards, handleHelpVideo in start.js using existing sendVideoBytes/getRepositoryFileBytes, graceful fallback when help.mp4 absent.",
       "commit": ""
     }
   ]
