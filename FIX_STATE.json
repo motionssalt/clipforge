@@ -18,8 +18,8 @@
     {
       "id": "bug-49",
       "title": "Add a \"Publicise clone\" button/toggle to clone settings for infinite GitHub Actions runtime",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting. Plan: add a visibility toggle to the GitHub clone settings screen \u2014 read current visibility via the GitHub API, a single toggle button whose label reflects current state, confirmation step before flipping (matching the existing disconnect-confirm pattern), settingsText updated to show visibility, errors surfaced via existing GitHubError conventions.",
       "commit": ""
     },
     {
