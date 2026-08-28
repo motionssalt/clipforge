@@ -3,9 +3,9 @@
   "job_id": "manual-1787902548797",
   "mode": "manual",
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
+    "enabled": true,
+    "series_id": "series-1787902571458",
+    "part": 1,
     "start_seconds": 0,
     "is_final": false
   },
