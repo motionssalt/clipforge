@@ -15,7 +15,7 @@
   "smart_schedule": {
     "timezone": "UTC",
     "interval_hours": 6,
-    "preferred_time": "19:30",
+    "preferred_time": "12:00",
     "queue_depth": 4,
     "start_mode": "next_available",
     "custom_start": ""
