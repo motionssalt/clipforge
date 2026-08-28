@@ -1,20 +1,12 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
   "bugs": [
     {
-      "id": "bug-61",
-      "title": "Series Part 2+ re-runs full Stage A instead of reusing Part 1's evidence",
-      "status": "done",
-      "notes": "ROOT CAUSE CONFIRMED against production: p2 stage-a-request.json DOES contain series.source_job_id (\"series-1787915980098\"), and the id:req step in stage-a.yml DOES extract it correctly into steps.req.outputs.series_source_job_id \u2014 so the reuse step DID fire (did not fall through to re-ingest). It failed because release \"clipforge-series-1787915980098\" DOES NOT EXIST (gh release view: not found): Part 1 never ran under job id series-1787915980098. The evidence actually lives under release clipforge-manual-1787915955571 (transcript.json, scene_index.json, key_moments.json, screenshots.zip, source_input.bin all present). Origin: wizard.js wizardToRequest() hardcoded series.source_job_id='' for Part 1; series.js nextPartRequestBody then fell back to continuation.seriesId (the brand-new series job id that never ingested), making the reuse gate pass but the gh release download fail. FIX (3 files): wizard.js sets source_job_id=seriesId for Part 1 (Part 1 is its own evidence source); series.js fallback chain now source_job_id || series_id || continuation.seriesId so pre-fix blank Part 1 requests also recover; stage-a.yml reuse download adds --clobber so re-runs do not abort on partial workspace files. Failed run 33174996402 used headSha 86300693. FIX COMMITTED in c5bbac1. Bot suite 109/109 pass (node --test), including existing tests covering the new fallback (series.test.mjs \"falls back to series_id when source_job_id is missing\"). stage-b.yml untouched. NOTE for live verification: a real Part 2+ continuation now builds stage-a-request.json whose series.source_job_id resolves to the job that actually holds the release evidence, so the reuse step downloads transcript/scene_index/key_moments/screenshots/source_input.bin from Part 1 and skips ingest/transcribe/vision-assist entirely.",
-      "commit": "c5bbac1"
-    },
-    {
-      "id": "bug-62",
-      "title": "Zernio 'Publish' button still shown on a task already published automatically",
-      "status": "done",
-      "notes": "ROOT CAUSE CONFIRMED: (1) taskKeyboard() in bot/src/runtime.js shows \"\ud83d\udce3 Publish (Zernio)\" UNCONDITIONALLY for every state==complete task \u2014 it never reads status.publishing.status. (2) The writeback side is HEALTHY: publish.yml \"Mark publishing as requested\" sets publishing.status=publishing with the idempotency key, and \"Persist publishing state\" (if: always()) writes the final aggregate status (published/partial/scheduled/failed) back to jobs/<id>/status.json. So after an automatic publish the status IS published \u2014 the bot just ignores it. FIX: pure helper zernioTaskPublishButton() in bot/src/zernio.js \u2014 published/partial -> \"\u2705 View publish status\", publishing/scheduled -> \"\u23f3 View publish status\" (both open the existing task:pub menu which carries the per-post records and retry/cancel actions), not_requested/failed/cancelled keep \"\ud83d\udce3 Publish (Zernio)\" (failed stays retryable). taskKeyboard uses it; showTask also surfaces the \u00a76.2 summary line when publishing.status != not_requested. Tests added to bot/test/zernio.test.mjs. FIX COMMITTED in 9c89d47. Bot suite passes including new zernioTaskPublishButton tests covering every \u00a76.2 status. Writeback verified healthy in publish.yml (Mark-publishing-requested + Persist-publishing-state steps), so the button state now tracks reality for both automatic (stage-b dispatch -> publish.yml) and manual publishes.",
-      "commit": "9c89d47"
+      "id": "bug-46",
+      "title": "Shadow Clone creation fails with raw GitHub error 'Git Repository is empty'",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-28T13:36:48Z"
+  ]
 }
