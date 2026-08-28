@@ -353,6 +353,26 @@ export function zernioPublishKeyboard(config, publishing, label) {
   return buttons(rows);
 }
 
+/**
+ * bug-62: the per-task publish affordance must reflect the §6.2 publishing
+ * state. Once a task has already been published — automatically or manually —
+ * the raw '📣 Publish (Zernio)' call-to-action is redundant and misleading, so
+ * it is replaced with a status-view affordance. Both open the SAME task:pub
+ * menu (which carries the publishing summary plus per-post retry/cancel
+ * actions), so nothing is lost. not_requested/failed/cancelled keep the
+ * original publish button (a failed publish stays retryable).
+ */
+export function zernioTaskPublishButton(publishing, label) {
+  const status = String(publishing && publishing.status || 'not_requested').toLowerCase();
+  if (status === 'published' || status === 'partial') {
+    return { text: '✅ View publish status', callback_data: `task:pub:${label}` };
+  }
+  if (status === 'publishing' || status === 'scheduled') {
+    return { text: '⏳ View publish status', callback_data: `task:pub:${label}` };
+  }
+  return { text: '📣 Publish (Zernio)', callback_data: `task:pub:${label}` };
+}
+
 /** Body text for the Zernio settings screen. */
 export function zernioSettingsText(config) {
   const settings = config.settings;

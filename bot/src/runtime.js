@@ -14,6 +14,9 @@ import { extractPlanSeries } from './series.js';
 import { progressLine } from './progress.js';
 // bug-60: canonical per-state glyph for the task detail header.
 import { statusEmoji } from './anim.js';
+// bug-62: the completed-task publish affordance reflects the §6.2 publishing
+// state instead of always offering a raw Publish button.
+import { zernioPublishingSummary, zernioTaskPublishButton } from './zernio.js';
 
 /** Map internal errors to short, secret-free user text (§13 invariant #1). */
 export function userError(error) {
@@ -72,7 +75,9 @@ export function taskKeyboard(status, label, plan = null) {
   if (state === 'complete') {
     rows.push([
       { text: '📥 Download', callback_data: `task:dl:${label}` },
-      { text: '📣 Publish (Zernio)', callback_data: `task:pub:${label}` }
+      // bug-62: once a publish already happened (automatically or manually)
+      // the raw Publish CTA is replaced with a status-view affordance.
+      zernioTaskPublishButton(status.publishing, label)
     ]);
     // bug-48: a completed series part gets the SAME copy-prompt action
     // non-series tasks have, plus a next-part action gated on the PLAN's
@@ -154,7 +159,13 @@ export async function showTask(env, chatId, label, messageId = null) {
     // bug-35: a live progress bar reflects the current stage so the operator
     // sees forward motion at a glance instead of a bare state name. It
     // updates each time the task view is (re)opened/refreshed.
-    progressLine(status)
+    progressLine(status),
+    // bug-62: surface the §6.2 publishing state on the task view so a
+    // completed+published task reads as published (the keyboard affordance
+    // above already swaps the raw Publish CTA for a status view).
+    status.publishing && String(status.publishing.status || 'not_requested') !== 'not_requested'
+      ? zernioPublishingSummary(status.publishing)
+      : ''
   ];
   const series = status.series && typeof status.series === 'object' ? status.series : {};
   if (series.enabled === true) lines.push(`Series: part ${Number(series.part) || 1}${series.is_final === true ? ' (final)' : ''}`);

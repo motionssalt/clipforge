@@ -21,6 +21,7 @@ import {
   zernioSettingsText,
   zernioTargets,
   zernioTargetsKeyboard,
+  zernioTaskPublishButton,
 } from '../src/zernio.js';
 
 // ------------------------------------------------------------------------ //
@@ -208,6 +209,27 @@ test('toggleZernioTarget refuses unavailable accounts and bad ids', () => {
 // ------------------------------------------------------------------------ //
 // Publishing summary + request id (§6.2 shape)                              //
 // ------------------------------------------------------------------------ //
+
+test('zernioTaskPublishButton swaps the Publish CTA for a status view once published', () => {
+  // bug-62: published/partial -> status view (publish already happened);
+  // publishing/scheduled -> in-flight status view; not_requested/failed/
+  // cancelled keep the raw Publish button (a failed publish stays retryable).
+  for (const [status, expected] of [
+    [null, '📣 Publish (Zernio)'],
+    [{ status: 'not_requested' }, '📣 Publish (Zernio)'],
+    [{ status: 'failed' }, '📣 Publish (Zernio)'],
+    [{ status: 'cancelled' }, '📣 Publish (Zernio)'],
+    [{ status: 'published' }, '✅ View publish status'],
+    [{ status: 'partial' }, '✅ View publish status'],
+    [{ status: 'publishing' }, '⏳ View publish status'],
+    [{ status: 'scheduled' }, '⏳ View publish status'],
+  ]) {
+    const btn = zernioTaskPublishButton(status, 'A');
+    assert.equal(btn.text, expected, `publishing=${JSON.stringify(status)}`);
+    // Every variant still opens the same task:pub menu (records + actions).
+    assert.equal(btn.callback_data, 'task:pub:A');
+  }
+});
 
 test('zernioPublishingSummary labels every §6.2 status', () => {
   assert.equal(zernioPublishingSummary(null), 'Zernio: not requested');
