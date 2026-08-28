@@ -50,20 +50,27 @@ const SEALED_BOX_OVERHEAD_BYTES = 48;
 
 export const SHADOW_CLONE_SOURCE = 'motionssalt/clipforge';
 // bug-63: Shadow Clone creation no longer performs the bulk file copy inside
-// the single Worker request (see createPrivateShadowClone's header comment).
+// the single Worker request (see beginShadowCloneCreation's header comment).
 // The bootstrap commit ships this one-time workflow into the new repository;
 // the bot dispatches it and polls CLONE_STATUS_PATH for progress.
 export const CLONE_COPY_WORKFLOW = 'clone-copy.yml';
 export const CLONE_STATUS_PATH = '.clipforge-clone-status.json';
-// bug-63 poll budget (milliseconds). The Worker only performs one API call
-// per poll tick, so even the deadline path is far below a Cloudflare Workers
-// execution-time limit (the killed mid-loop scenario this bug is about).
-const CLONE_COPY_POLL_MS = 2000;      // time between status reads
-const CLONE_COPY_START_MS = 120000;   // workflow never wrote any status => never started
+// bug-51 poll budget (milliseconds). The budgets live in module scope because
+// they are enforced in TWO separate processes: the webhook request that
+// dispatches the copy workflow waits at most CLONE_COPY_FIRST_WAIT_MS inline
+// (fast path only), after which the Worker's CRON TRIGGER
+// (scheduled handler in index.js) resumes the job from KV and applies the
+// stall/deadline checks below — no single Worker request is ever at risk of
+// hitting the Cloudflare execution-time limit while waiting on GitHub (the
+// killed-mid-loop scenario that made Shadow Clone creation stall forever at
+// "Preparing repository…" with neither a success nor an error message).
+export const CLONE_COPY_POLL_MS = 2000;      // time between status reads (inline fast-path only)
+export const CLONE_COPY_FIRST_WAIT_MS = 30000; // inline wait for very fast runs; then cron takes over
+export const CLONE_COPY_START_MS = 120000;   // workflow never wrote any status => never started
 // Live-verified (bug-63): the paced publish step heartbeats every ~25 blob
 // POSTs (~7s), so 6 minutes of silence means the run is genuinely dead.
-const CLONE_COPY_STALL_MS = 360000;   // status file stopped advancing => dead run
-const CLONE_COPY_DEADLINE_MS = 600000; // absolute ceiling for the copy
+export const CLONE_COPY_STALL_MS = 360000;   // status file stopped advancing => dead run
+export const CLONE_COPY_DEADLINE_MS = 600000; // absolute ceiling for the copy
 const SHADOW_CLONE_EXCLUDES = [
   /^branding\//,
   /^jobs\//,
@@ -229,7 +236,33 @@ async function autoCloneRepositoryName(credentials, login) {
   throw new Error('Could not find a free repository name automatically. Send a name yourself instead.');
 }
 
-export async function createPrivateShadowClone(pat, requestedName, options = {}) {
+// bug-51: Shadow Clone creation is split across THREE entry points so that no
+// single Worker request ever waits on the (multi-minute) GitHub Actions copy
+// run — awaiting that run inside the webhook was the mechanism behind the
+// reported "stuck forever at Preparing repository…" symptom: Cloudflare kills
+// a Workers invocation that outlives its wall-clock budget, which terminates
+// the fetch handler BEFORE either the success message or the catch-path error
+// message in handleClonePatMessage could be sent (and the onProgress edits
+// stop with it — a kill is not a rejection, so no catch anywhere can run).
+//   beginShadowCloneCreation  — webhook request: create repo, bootstrap the
+//                               sync marker + one-time copy workflow, dispatch
+//                               it, then wait at most CLONE_COPY_FIRST_WAIT_MS
+//                               inline for a very fast run. On timeout it
+//                               returns { pending: true } and the caller
+//                               stages the job in KV (index.js#stageCloneJob).
+//   pollShadowCloneJob        — cron tick: read .clipforge-clone-status.json
+//                               once, apply the stall/deadline guards, and on
+//                               completion run finalizeShadowClone (below).
+//   finalizeShadowClone       — the post-copy tail the workflow cannot do with
+//                               its GITHUB_TOKEN (copy .github/workflows/* via
+//                               the Contents API with the user's PAT, delete
+//                               the one-time workflow, normalize the default
+//                               branch, verify the tree). Same work the bug-63
+//                               inline tail did, just callable from cron.
+//   cancelShadowCloneRun      — best-effort cancel of a dead/stalled copy run
+//                               so a failed clone never keeps an Actions run
+//                               (and its minutes) burning after we give up.
+export async function beginShadowCloneCreation(pat, requestedName, options = {}) {
   // bug-48: optional progress reporter ({stage, done, total}) so the bot can
   // keep a live status message while the clone is being built. Reporting is
   // strictly best-effort: a failing callback must never break the clone.
@@ -424,8 +457,12 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
     const detail = dispatchError && dispatchError.message ? ` (${dispatchError.message})` : '';
     throw new Error(`GitHub could not start the clone copy workflow${detail}. Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.`);
   }
+  // bug-51: bounded inline wait — fast path only. A copy run normally takes
+  // minutes (runner startup alone is ~30-60s), so most creations leave this
+  // loop via the `pending` return below; the cron handler then owns all
+  // further waiting. The stall/deadline guards that used to live in this loop
+  // moved to pollShadowCloneJob, which can actually outlive the copy run.
   const startedAt = Date.now();
-  let lastAdvanceAt = startedAt;
   let lastProgressKey = '';
   try {
     for (;;) {
@@ -435,7 +472,6 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
         const progressKey = `${status.state}:${status.done}:${status.total}`;
         if (progressKey !== lastProgressKey) {
           lastProgressKey = progressKey;
-          lastAdvanceAt = Date.now();
           if (status.state === 'copying') {
             await report('copy', status.done, status.total);
           } else if (status.state === 'finalizing') {
@@ -446,14 +482,24 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
           throw new Error(`The clone copy workflow failed${status.error ? `: ${status.error}` : '.'} Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.`);
         }
         if (status.state === 'complete') break;
-        if (Date.now() - lastAdvanceAt > CLONE_COPY_STALL_MS) {
-          throw new Error('The clone copy workflow stopped reporting progress (the Actions run may have failed). Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.');
-        }
-      } else if (Date.now() - startedAt > CLONE_COPY_START_MS) {
-        throw new Error('The clone copy workflow never started. Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.');
       }
-      if (Date.now() - startedAt > CLONE_COPY_DEADLINE_MS) {
-        throw new Error('The clone copy workflow took too long. Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.');
+      if (Date.now() - startedAt > CLONE_COPY_FIRST_WAIT_MS) {
+        // Hand off to the cron trigger (index.js#scheduled). Everything the
+        // cron-side poller needs to resume — including the workflow-run
+        // discovery branch when the run-id lookup raced the dispatch — is
+        // derivable from this returned record plus the stored PAT.
+        return {
+          pending: true,
+          repo,
+          login: identity.login,
+          name,
+          branch: targetBranch,
+          sourceSha: sourceCommitSha,
+          bootstrapCommitSha,
+          totalFiles: files.length,
+          startedAt,
+          lastAdvanceAt: startedAt
+        };
       }
     }
   } catch (error) {
@@ -462,6 +508,170 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
     }
     throw error;
   }
+  return await finalizeShadowClone({
+    githubPat: String(pat),
+    repo,
+    login: identity.login,
+    name,
+    branch: targetBranch,
+    sourceSha: sourceCommitSha,
+    bootstrapCommitSha,
+    totalFiles: files.length,
+    onProgress: options.onProgress
+  });
+}
+
+/**
+ * bug-51 (cron side, 1/3): ONE poll tick for an in-flight Shadow Clone
+ * creation. `job` is the record beginShadowCloneCreation returned with
+ * pending:true (stored in KV by index.js#stageCloneJob). Reads the copy
+ * workflow's status file exactly once, so a cron invocation handles every
+ * staged clone in bounded time.
+ *
+ * Returns:
+ *   { status: 'running', job }   — still copying; `job` carries updated
+ *                                  lastAdvanceAt/lastStatusKey and must be
+ *                                  re-stored by the caller.
+ *   { status: 'complete', job }  — copy run finished; job.runId is resolved.
+ *   { status: 'failed', job, error } — terminal failure (workflow reported
+ *                                  'failed', never started, stalled, or hit
+ *                                  the absolute deadline). `job.runId` is
+ *                                  set whenever a run could be identified so
+ *                                  the caller can cancelShadowCloneRun it.
+ */
+export async function pollShadowCloneJob(job) {
+  const credentials = { githubPat: String(job.githubPat), repo: String(job.repo) };
+  const nextJob = { ...job };
+  const status = await readCloneCopyStatus(credentials, String(job.branch));
+  const now = Date.now();
+  if (status) {
+    const progressKey = `${status.state}:${status.done}:${status.total}`;
+    if (progressKey !== String(job.lastStatusKey || '')) {
+      nextJob.lastStatusKey = progressKey;
+      nextJob.lastAdvanceAt = now;
+    }
+    if (status.state === 'failed') {
+      nextJob.runId = await findCloneCopyRunId(credentials);
+      return {
+        status: 'failed', job: nextJob,
+        error: new Error(`The clone copy workflow failed${status.error ? `: ${status.error}` : '.'}`)
+      };
+    }
+    if (status.state === 'complete') {
+      nextJob.runId = await findCloneCopyRunId(credentials);
+      return { status: 'complete', job: nextJob };
+    }
+    // The absolute deadline precedes the stall check: a run whose status file
+    // keeps "advancing" past the ceiling is still terminated (the old inline
+    // loop checked the deadline outside the status branch for this reason).
+    if (now - Number(job.startedAt || now) > CLONE_COPY_DEADLINE_MS) {
+      nextJob.runId = await findCloneCopyRunId(credentials);
+      return {
+        status: 'failed', job: nextJob,
+        error: new Error('The clone copy workflow took too long.')
+      };
+    }
+    if (now - Number(job.lastAdvanceAt || job.startedAt || now) > CLONE_COPY_STALL_MS) {
+      nextJob.runId = await findCloneCopyRunId(credentials);
+      return {
+        status: 'failed', job: nextJob,
+        error: new Error('The clone copy workflow stopped reporting progress (the Actions run may have failed).')
+      };
+    }
+    return { status: 'running', job: nextJob };
+  }
+  if (now - Number(job.startedAt || now) > CLONE_COPY_START_MS) {
+    nextJob.runId = await findCloneCopyRunId(credentials);
+    return {
+      status: 'failed', job: nextJob,
+      error: new Error('The clone copy workflow never started.')
+    };
+  }
+  if (now - Number(job.startedAt || now) > CLONE_COPY_DEADLINE_MS) {
+    nextJob.runId = await findCloneCopyRunId(credentials);
+    return {
+      status: 'failed', job: nextJob,
+      error: new Error('The clone copy workflow took too long.')
+    };
+  }
+  return { status: 'running', job: nextJob };
+}
+
+/**
+ * bug-51: locate the one-time copy workflow's newest run on the clone, for
+ * cancellation after a terminal failure. The dispatch response carries no run
+ * id, and no list endpoint filters by workflow until GitHub has indexed the
+ * brand-new workflow file (observed live on freshly created repos), so the
+ * primary read is the repo-wide run list — the clone has exactly one workflow
+ * at this point, so its newest run IS the copy run. The per-workflow list is
+ * kept as a fallback. Returns null when nothing can be identified yet; the
+ * caller simply retries on the next cron tick.
+ */
+async function findCloneCopyRunId(credentials) {
+  const { owner, name } = parseRepo(credentials.repo);
+  const readNewest = (body) => {
+    const runs = body && Array.isArray(body.workflow_runs) ? body.workflow_runs : [];
+    const run = runs.find((entry) => entry && entry.id && entry.event === 'workflow_dispatch') || runs[0];
+    return run && run.id ? run.id : null;
+  };
+  try {
+    const body = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/runs?per_page=10`);
+    const runId = readNewest(body);
+    if (runId) return runId;
+  } catch { /* fall through to the per-workflow list */ }
+  try {
+    const body = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/workflows/${encodeURIComponent(CLONE_COPY_WORKFLOW)}/runs?per_page=10`);
+    return readNewest(body);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * bug-51 (cron side, 2/3): cancel the copy workflow's run, best-effort. Used
+ * when a staged clone is declared dead (failed/stalled/deadline) so a queued
+ * or still-running Actions run does not keep burning minutes — or, worse,
+ * complete LATER and mutate a repository the user was already told failed.
+ * Never throws.
+ */
+export async function cancelShadowCloneRun(job) {
+  if (!job || !job.runId || !job.githubPat || !job.repo) return;
+  try {
+    await cancelWorkflowRun({ githubPat: String(job.githubPat), repo: String(job.repo) }, String(job.repo), job.runId);
+  } catch { /* best-effort */ }
+}
+/**
+ * bug-51 (cron side, 3/3): everything that must happen AFTER the copy
+ * workflow reports 'complete'. Called from the webhook fast-path (when the
+ * copy finished inside CLONE_COPY_FIRST_WAIT_MS) and from the cron handler
+ * for staged jobs. `job` needs: githubPat, repo, login, name, branch,
+ * sourceSha, bootstrapCommitSha, totalFiles; onProgress is the same
+ * best-effort reporter contract as beginShadowCloneCreation.
+ */
+export async function finalizeShadowClone(job) {
+  const credentials = { githubPat: String(job.githubPat), repo: '' };
+  const targetCredentials = { githubPat: String(job.githubPat), repo: String(job.repo) };
+  const login = String(job.login);
+  const name = String(job.name);
+  const [sourceOwner, sourceName] = SHADOW_CLONE_SOURCE.split('/');
+  let targetBranch = String(job.branch || DEFAULT_BRANCH);
+  const bootstrapCommitSha = String(job.bootstrapCommitSha);
+  const sourceCommitSha = String(job.sourceSha);
+  const report = async (stage, done, total) => {
+    if (typeof job.onProgress !== 'function') return;
+    try { await job.onProgress({ stage, done: Number(done) || 0, total: Number(total) || 0 }); }
+    catch { /* progress display is best-effort */ }
+  };
+  // Re-enumerate the source tree at the recorded revision: the file list is
+  // far too large to store in the KV job record, and re-deriving it here is
+  // exactly what the in-request implementation did with its `files` array.
+  const sourceCommit = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/commits/${encodeURIComponent(sourceCommitSha)}`);
+  const sourceTreeSha = sourceCommit && sourceCommit.tree && sourceCommit.tree.sha;
+  if (!sourceTreeSha) throw new Error('Could not resolve the ClipForge source file tree.');
+  const sourceTree = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/trees/${encodeURIComponent(sourceTreeSha)}?recursive=1`);
+  const files = Array.isArray(sourceTree && sourceTree.tree)
+    ? sourceTree.tree.filter((entry) => entry && entry.type === 'blob' && sourcePathAllowed(entry.path))
+    : [];
   // bug-63: the run's GITHUB_TOKEN may not write .github/workflows/* by any
   // mechanism (push remote-rejected, Contents API 403 — both verified live),
   // so the copy workflow deliberately excludes the source's own workflow
@@ -570,7 +780,7 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
     }
     throw error;
   }
-  return { repo, login: identity.login, sourceSha: sourceCommitSha, copiedFiles: files.length, branch: targetBranch };
+  return { repo: String(job.repo), login, sourceSha: sourceCommitSha, copiedFiles: files.length, branch: targetBranch };
 }
 
 /**
@@ -598,7 +808,7 @@ async function readCloneCopyStatus(credentials, branch) {
 
 /**
  * bug-63: the one-time copy workflow committed into a brand-new Shadow Clone.
- * It mirrors exactly what createPrivateShadowClone used to do in the Worker —
+ * It mirrors exactly what beginShadowCloneCreation used to do in the Worker —
  * copy every cloneable source file, build the final tree on top of the
  * bootstrap commit, fast-forward the default branch — but on an Actions
  * runner, whose execution budget is hours instead of a single Worker request
