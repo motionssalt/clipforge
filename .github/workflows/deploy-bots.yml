@@ -119,6 +119,11 @@ jobs:
             # by the failing step, and this step runs only under failure().
             echo "BOTB_MTPROTO_BOT_TOKEN secret not available on this repo (Shadow Clone): no workflow-side Telegram alert possible." >&2
             echo "The clone owner is notified via the shared ClipForge bot's deploy-failure poll (bug-68)." >&2
+            # bug-54: a bare "exit 1" here reads in the Actions UI exactly like
+            # a broken alert step (a second unexplained red X). Emit an explicit
+            # error annotation so the run's summary page explains WHY this step
+            # intentionally fails on a clone, and what the owner should do.
+            echo "::error title=Deploy blocked on a Shadow Clone::This run failed because a Deploy Bots step above failed (a fresh clone is missing CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID — add them under repo Settings -> Secrets and variables -> Actions, then re-run). This alert step fails on purpose on clones so the failure stays visible; the owner is also notified in Telegram by the shared ClipForge bot."
             exit 1
           fi
           chat_id="${ALERT_CHAT_ID:-}"
