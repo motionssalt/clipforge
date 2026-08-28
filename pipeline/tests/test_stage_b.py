@@ -7,6 +7,7 @@ exercised through their pure-Python decision logic only.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -328,6 +329,152 @@ class ReframeFilterTests(unittest.TestCase):
         self.assertEqual(shots[-1]["end_seconds"], 12.0)
         self.assertEqual(len(shots), 3)
         self.assertEqual(shots[0]["cause"], "video_start")
+
+
+# --------------------------------------------------------------------------- #
+# reframe: detection engine tiers (bug-36 anime, bug-40 animals)               #
+# --------------------------------------------------------------------------- #
+
+def _blank_engine():
+    """A FaceCenterEngine with no CNN (insightface not needed) and no YOLO,
+    suitable for exercising cascade tiers and fallback behaviour."""
+    import cv2
+    from pipeline.stage_b import reframe as reframe_mod
+    eng = object.__new__(reframe_mod.FaceCenterEngine)
+    eng._cv2 = cv2
+    eng._stylised_cascades = reframe_mod._load_stylised_cascades(cv2)
+    eng._animal_cascades = reframe_mod._load_animal_cascades(cv2)
+    eng._yolo = None
+    eng._yolo_tried = True  # never try to construct a real YOLO in tests
+
+    class _NoCNN:
+        def get(self, image):
+            return []
+    eng.app = _NoCNN()
+    return eng
+
+
+class ReframeDetectionTierTests(unittest.TestCase):
+    def test_vendored_anime_cascade_loads(self) -> None:
+        """bug-40: lbpcascade_animeface.xml is vendored in the repo and must
+        resolve even though opencv-python-headless does not ship it."""
+        import cv2
+        from pipeline.stage_b import reframe as reframe_mod
+        self.assertTrue(
+            os.path.isfile(os.path.join(reframe_mod._BUNDLED_CASCADE_DIR, "lbpcascade_animeface.xml"))
+        )
+        cascades = reframe_mod._load_stylised_cascades(cv2)
+        self.assertGreaterEqual(len(cascades), 1)
+
+    def test_cat_face_cascades_load_from_opencv_bundle(self) -> None:
+        import cv2
+        from pipeline.stage_b import reframe as reframe_mod
+        cascades = reframe_mod._load_animal_cascades(cv2)
+        self.assertGreaterEqual(len(cascades), 1)
+
+    def test_analyze_missing_image_returns_empty(self) -> None:
+        eng = _blank_engine()
+        self.assertEqual(eng.analyze("/definitely/not/here.png"), [])
+
+    def test_analyze_blank_image_no_detectors_no_crash(self) -> None:
+        import numpy as np
+        eng = _blank_engine()
+        eng._stylised_cascades = []
+        eng._animal_cascades = []
+        img = np.full((64, 64, 3), 127, np.uint8)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as fh:
+            path = fh.name
+        try:
+            import cv2
+            cv2.imwrite(path, img)
+            self.assertEqual(eng.analyze(path), [])
+        finally:
+            os.unlink(path)
+
+    def test_yolo_tier_keeps_animals_drops_people(self) -> None:
+        """bug-40: YOLO detections are filtered to COCO animal classes only;
+        the surviving animal box drives the crop centre and confidence."""
+        import cv2
+        import numpy as np
+        eng = _blank_engine()
+        eng._stylised_cascades = []
+        eng._animal_cascades = []
+
+        class _Boxes:
+            cls = type("T", (), {"tolist": lambda s: [0, 16]})()      # person, dog
+            conf = type("T", (), {"tolist": lambda s: [0.9, 0.8]})()
+            xyxy = type("T", (), {"tolist": lambda s: [[10, 10, 100, 100], [200, 200, 400, 400]]})()
+
+        class _Res:
+            boxes = _Boxes()
+
+        class _FakeYOLO:
+            names = {0: "person", 16: "dog"}
+            def predict(self, image, verbose=False):
+                return [_Res()]
+
+        eng._yolo = _FakeYOLO()
+        img = np.full((480, 640, 3), 127, np.uint8)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as fh:
+            path = fh.name
+        try:
+            cv2.imwrite(path, img)
+            dets = eng.analyze(path)
+        finally:
+            os.unlink(path)
+        self.assertEqual(len(dets), 1)
+        self.assertAlmostEqual(dets[0]["center_x"], (200 + 400) / (2 * 640))
+        self.assertAlmostEqual(dets[0]["center_y"], (200 + 400) / (2 * 480))
+        self.assertEqual(dets[0]["confidence"], 0.8)
+
+    def test_yolo_tier_respects_confidence_threshold(self) -> None:
+        import cv2
+        import numpy as np
+        eng = _blank_engine()
+        eng._stylised_cascades = []
+        eng._animal_cascades = []
+
+        class _Boxes:
+            cls = type("T", (), {"tolist": lambda s: [16]})()          # dog
+            conf = type("T", (), {"tolist": lambda s: [0.2]})()        # below 0.4
+            xyxy = type("T", (), {"tolist": lambda s: [[0, 0, 50, 50]]})()
+
+        class _Res:
+            boxes = _Boxes()
+
+        class _FakeYOLO:
+            names = {16: "dog"}
+            def predict(self, image, verbose=False):
+                return [_Res()]
+
+        eng._yolo = _FakeYOLO()
+        img = np.full((64, 64, 3), 127, np.uint8)
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as fh:
+            path = fh.name
+        try:
+            cv2.imwrite(path, img)
+            self.assertEqual(eng.analyze(path), [])
+        finally:
+            os.unlink(path)
+
+    def test_yolo_load_failure_is_swallowed(self) -> None:
+        """If ultralytics is absent/broken the engine must still work."""
+        eng = _blank_engine()
+        eng._yolo_tried = False  # force a real load attempt
+        import builtins
+        real_import = builtins.__import__
+
+        def _boom(name, *args, **kwargs):
+            if name == "ultralytics":
+                raise RuntimeError("no ultralytics in test")
+            return real_import(name, *args, **kwargs)
+
+        builtins.__import__ = _boom
+        try:
+            self.assertIsNone(eng._yolo_model())
+            self.assertTrue(eng._yolo_tried)
+        finally:
+            builtins.__import__ = real_import
 
 
 # --------------------------------------------------------------------------- #

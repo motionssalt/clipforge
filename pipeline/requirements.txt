@@ -15,6 +15,13 @@ Pillow>=10.3,<12
 opencv-python-headless>=4.8,<5
 insightface==0.7.3
 
+# --- Animal-subject detection for the cinematic reframe (bug-40; optional) ---
+# YOLOv8n COCO animal classes (bird/cat/dog/horse/sheep/cow/elephant/bear/
+# zebra/giraffe). Loaded lazily and ONLY as a fallback when neither the CNN
+# face detector nor the anime/cat cascades found a subject; any import/model
+# failure is swallowed and the render keeps the safe centered crop.
+ultralytics>=8.2,<9
+
 # --- Numerics ------------------------------------------------------------------
 numpy>=1.24,<3
 

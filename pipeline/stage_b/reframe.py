@@ -34,10 +34,30 @@ MIN_FACE_CONFIDENCE = 0.55
 # cascade's rectangles carry no confidence, so they use a neutral 0.6 (just
 # above MIN_FACE_CONFIDENCE) and compete on size.
 _ANIME_CASCADE_CONFIDENCE = 0.6
-_ANIME_CASCADE_FILES = (
-    "lbpcascade_animeface.xml",
-    "haarcascade_frontalface_default.xml",
+# bug-40: the anime-face cascade is VENDORED in this repo (MIT-licensed,
+# nagadomi/lbpcascade_animeface). opencv-python-headless does NOT ship
+# lbpcascade_animeface.xml, so looking it up inside cv2.data.haarcascades
+# (as the bug-36 code did) silently degraded "anime faces work" to the
+# human frontal haar cascade in production.
+_BUNDLED_CASCADE_DIR = os.path.join(os.path.dirname(__file__), "cascades")
+_ANIME_CASCADE_SOURCES = (
+    # (cascade file name, directory resolver) — first file that exists wins.
+    ("lbpcascade_animeface.xml", "bundled"),   # vendored (nagadomi, MIT)
+    ("lbpcascade_animeface.xml", "opencv"),    # in case a build ships it
+    ("haarcascade_frontalface_default.xml", "opencv"),
 )
+# bug-40: animal faces. OpenCV ships cat-face cascades; a lazy YOLOv8n
+# pass (ultralytics, optional dependency) covers dogs/birds and 13 more
+# COCO animal classes. Boxes from animal detectors use the same neutral
+# confidence as the anime cascade and compete on size.
+_ANIMAL_CASCADE_CONFIDENCE = 0.6
+_ANIMAL_CASCADE_FILES = (
+    "haarcascade_frontalcatface_extended.xml",
+    "haarcascade_frontalcatface.xml",
+)
+_YOLO_ANIMAL_CLASS_IDS = (14, 15, 16, 17, 18, 19, 20, 21, 22, 23)  # bird..zebra
+_YOLO_EXTRA_ANIMAL_NAMES = frozenset({"dog"})  # label-name guard
+_YOLO_MIN_CONFIDENCE = 0.4
 
 _SCENE_LINE_RE = re.compile(r"pts_time:(?P<t>[0-9]+(?:\.[0-9]+)?)")
 
@@ -146,34 +166,53 @@ def sample_frames_for_shot(
 # --------------------------------------------------------------------------- #
 
 class FaceCenterEngine:
-    """Local CPU face detector used only to choose one static scene focus."""
+    """Local CPU subject detector used only to choose one static scene focus.
 
-    backend = "insightface/buffalo_sc:detection"
+    Detection tiers, all best-effort (a tier that is unavailable or finds
+    nothing simply falls through to the next):
+      1. InsightFace buffalo_sc — real human faces (confidence-scored).
+      2. OpenCV cascades — stylised/anime faces (vendored
+         lbpcascade_animeface.xml) and cat faces (haarcascade_frontalcatface*),
+         all shipped with the repo / the wheel so they resolve in CI.
+      3. YOLOv8n (optional ultralytics dependency) — COCO animal classes
+         (bird/cat/dog/horse/sheep/cow/elephant/bear/zebra/giraffe) for
+         non-cat animal subjects.
+    """
+
+    backend = "insightface/buffalo_sc + cascades(anime,cat) + yolov8n(animals)"
 
     def __init__(self) -> None:
-        import cv2  # noqa: F401
+        import cv2
         from insightface.app import FaceAnalysis  # type: ignore
 
         # Detection only; ctx_id=-1 enforces CPU.
         self.app = FaceAnalysis(name="buffalo_sc", allowed_modules=["detection"])
         self.app.prepare(ctx_id=-1, det_size=(640, 640))
+        self._cv2 = cv2
+        self._stylised_cascades = _load_stylised_cascades(cv2)
+        self._animal_cascades = _load_animal_cascades(cv2)
+        self._yolo = None          # lazily constructed on first need
+        self._yolo_tried = False
 
-def _load_anime_cascades(cv2) -> list:
-    """bug-36: OpenCV cascade classifiers that catch stylised/anime faces the
-    CNN detector misses. Best-effort: missing cascade files yield no extras."""
-    cascades = []
-    for name in _ANIME_CASCADE_FILES:
-        path = os.path.join(cv2.data.haarcascades, name)
-        if not os.path.isfile(path):
-            continue
-        cascade = cv2.CascadeClassifier(path)
-        if not cascade.empty():
-            cascades.append(cascade)
-    return cascades
+    # -- cascade loading helpers are module-level below; engine caches them --
 
+    def _yolo_model(self):
+        """bug-40: lazily import ultralytics and load YOLOv8n; returns None
+        when the dependency or weights are unavailable (never raises)."""
+        if self._yolo_tried:
+            return self._yolo
+        self._yolo_tried = True
+        try:
+            from ultralytics import YOLO  # type: ignore
+
+            self._yolo = YOLO("yolov8n.pt")
+        except Exception as error:
+            print(f"  animal detector (YOLOv8n) unavailable: {type(error).__name__}: {error}", flush=True)
+            self._yolo = None
+        return self._yolo
 
     def analyze(self, image_path: str) -> list[dict]:
-        import cv2
+        cv2 = self._cv2
 
         image = cv2.imread(image_path)
         if image is None:
@@ -189,6 +228,7 @@ def _load_anime_cascades(cv2) -> list:
             area_fraction = (box_width * box_height) / float(width * height)
             if area_fraction <= 0:
                 return
+            _record.hits += 1
             detections.append(
                 {
                     "center_x": clamp01((x1 + x2) / (2.0 * width)),
@@ -198,6 +238,7 @@ def _load_anime_cascades(cv2) -> list:
                     "prominence": confidence * math.sqrt(area_fraction),
                 }
             )
+        _record.hits = 0
 
         for face in self.app.get(image):
             confidence = float(getattr(face, "det_score", 0.0) or 0.0)
@@ -206,13 +247,16 @@ def _load_anime_cascades(cv2) -> list:
             x1, y1, x2, y2 = [float(v) for v in face.bbox.tolist()]
             _record(x1, y1, x2, y2, confidence)
 
-        # bug-36: if the CNN found nothing, try the anime/stylised cascade so
-        # anime content is face-centred too. Runs only as a fallback.
+        # bug-36 + bug-40: if the CNN found nothing, try the stylised/anime
+        # and cat-face cascades (shipped with the repo / OpenCV), then a
+        # YOLO animal pass for other animal subjects. Fallback tiers never
+        # raise and never fail the render.
         if not detections:
             try:
                 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 gray = cv2.equalizeHist(gray)
-                for cascade in _load_anime_cascades(cv2):
+                for cascade in (*self._stylised_cascades, *self._animal_cascades):
+                    _record.hits = 0
                     for (cx, cy, cw, ch) in cascade.detectMultiScale(
                         gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24)
                     ):
@@ -222,7 +266,64 @@ def _load_anime_cascades(cv2) -> list:
             except Exception:
                 pass
 
+        if not detections:
+            model = self._yolo_model()
+            if model is not None:
+                try:
+                    results = model.predict(image, verbose=False)
+                    names = getattr(model, "names", {}) or {}
+                    for result in results or []:
+                        boxes = getattr(result, "boxes", None)
+                        if boxes is None:
+                            continue
+                        for cls_id, conf, xyxy in zip(
+                            boxes.cls.tolist(), boxes.conf.tolist(), boxes.xyxy.tolist()
+                        ):
+                            label = str(names.get(int(cls_id), "")).lower()
+                            is_animal = int(cls_id) in _YOLO_ANIMAL_CLASS_IDS or label in _YOLO_EXTRA_ANIMAL_NAMES
+                            if not is_animal or float(conf) < _YOLO_MIN_CONFIDENCE:
+                                continue
+                            x1, y1, x2, y2 = [float(v) for v in xyxy]
+                            _record(x1, y1, x2, y2, float(conf))
+                except Exception as error:
+                    print(f"  animal detector pass failed: {type(error).__name__}: {error}", flush=True)
+
         return detections
+
+
+def _cascade_path(cv2, name: str, source: str) -> str | None:
+    base = _BUNDLED_CASCADE_DIR if source == "bundled" else cv2.data.haarcascades
+    path = os.path.join(base, name)
+    return path if os.path.isfile(path) else None
+
+
+def _load_stylised_cascades(cv2) -> list:
+    """bug-36/bug-40: cascades that catch stylised/anime faces the CNN
+    detector misses. Best-effort: missing cascade files yield no extras."""
+    cascades = []
+    for name, source in _ANIME_CASCADE_SOURCES:
+        path = _cascade_path(cv2, name, source)
+        if path is None:
+            continue
+        cascade = cv2.CascadeClassifier(path)
+        if not cascade.empty():
+            cascades.append(cascade)
+            break  # first available stylised cascade wins
+    return cascades
+
+
+def _load_animal_cascades(cv2) -> list:
+    """bug-40: OpenCV's shipped cat-face cascades. Other animal species are
+    covered by the lazy YOLO pass in FaceCenterEngine.analyze."""
+    cascades = []
+    for name in _ANIMAL_CASCADE_FILES:
+        path = _cascade_path(cv2, name, "opencv")
+        if path is None:
+            continue
+        cascade = cv2.CascadeClassifier(path)
+        if not cascade.empty():
+            cascades.append(cascade)
+    return cascades
 
 
 def _crop_offset_for_subject(
