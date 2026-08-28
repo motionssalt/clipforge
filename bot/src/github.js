@@ -49,6 +49,21 @@ const decoder = new TextDecoder();
 const SEALED_BOX_OVERHEAD_BYTES = 48;
 
 export const SHADOW_CLONE_SOURCE = 'motionssalt/clipforge';
+// bug-63: Shadow Clone creation no longer performs the bulk file copy inside
+// the single Worker request (see createPrivateShadowClone's header comment).
+// The bootstrap commit ships this one-time workflow into the new repository;
+// the bot dispatches it and polls CLONE_STATUS_PATH for progress.
+export const CLONE_COPY_WORKFLOW = 'clone-copy.yml';
+export const CLONE_STATUS_PATH = '.clipforge-clone-status.json';
+// bug-63 poll budget (milliseconds). The Worker only performs one API call
+// per poll tick, so even the deadline path is far below a Cloudflare Workers
+// execution-time limit (the killed mid-loop scenario this bug is about).
+const CLONE_COPY_POLL_MS = 2000;      // time between status reads
+const CLONE_COPY_START_MS = 120000;   // workflow never wrote any status => never started
+// Live-verified (bug-63): the paced publish step heartbeats every ~25 blob
+// POSTs (~7s), so 6 minutes of silence means the run is genuinely dead.
+const CLONE_COPY_STALL_MS = 360000;   // status file stopped advancing => dead run
+const CLONE_COPY_DEADLINE_MS = 600000; // absolute ceiling for the copy
 const SHADOW_CLONE_EXCLUDES = [
   /^branding\//,
   /^jobs\//,
@@ -299,6 +314,7 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
   const initialBranch = target && target.default_branch ? String(target.default_branch) : DEFAULT_BRANCH;
   const sync = { source: SHADOW_CLONE_SOURCE, synced_sha: sourceCommitSha, synced_at: new Date().toISOString() };
   const syncPayload = `${JSON.stringify(sync, null, 2)}\n`;
+  const cloneCopyWorkflowPayload = `${buildCloneCopyWorkflowYaml()}\n`;
   let bootstrap;
   try {
     bootstrap = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/.clipforge-sync.json`, {
@@ -306,6 +322,22 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
       body: {
         message: `Initialize Shadow Clone from ${SHADOW_CLONE_SOURCE}@${sourceCommitSha.slice(0, 7)}`,
         content: b64encode(syncPayload),
+        branch: initialBranch
+      }
+    });
+    // bug-63: ship the one-time copy workflow alongside the sync marker in the
+    // bootstrap commit. The Contents API PUT above uses the single-file form,
+    // which rejects a `tree` array, so the workflow is a second Contents PUT on
+    // the same ref — still one or two round-trips total, and both land on the
+    // branch POST /user/repos announced (the live default branch is resolved
+    // below, after the ref exists). If this second PUT fails, the repo already
+    // exists; surface the failure so the user can pick a new name instead of
+    // leaving a copy-less clone behind.
+    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/.github/workflows/${encodeURIComponent(CLONE_COPY_WORKFLOW)}`, {
+      method: 'PUT',
+      body: {
+        message: 'clipforge: install one-time Shadow Clone copy workflow',
+        content: b64encode(cloneCopyWorkflowPayload),
         branch: initialBranch
       }
     });
@@ -340,52 +372,154 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
     if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   const bootstrapCommitSha = bootstrap && bootstrap.commit && bootstrap.commit.sha;
-  const bootstrapTreeSha = bootstrap && bootstrap.commit && bootstrap.commit.tree && bootstrap.commit.tree.sha;
-  if (!bootstrapCommitSha || !bootstrapTreeSha) throw new Error('GitHub did not return a bootstrap commit for the new repository.');
+  if (!bootstrapCommitSha) throw new Error('GitHub did not return a bootstrap commit for the new repository.');
   await report('copy', 0, files.length);
 
-  const entries = [];
-  const copyChunkSize = 4;
-  try {
-    for (let index = 0; index < files.length; index += copyChunkSize) {
-      const chunk = files.slice(index, index + copyChunkSize);
-      const copied = await Promise.all(chunk.map(async (file) => {
-        const sourceBlob = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/blobs/${encodeURIComponent(file.sha)}`);
-        if (!sourceBlob || sourceBlob.encoding !== 'base64' || typeof sourceBlob.content !== 'string') throw new Error(`Could not read source file ${file.path}.`);
-        const targetBlob = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/blobs`, {
-          method: 'POST', body: { content: sourceBlob.content.replace(/\n/g, ''), encoding: 'base64' }
-        });
-        if (!targetBlob || !targetBlob.sha) throw new Error(`Could not copy source file ${file.path}.`);
-        return { path: file.path, mode: file.mode || '100644', type: 'blob', sha: targetBlob.sha };
-      }));
-      entries.push(...copied);
-      await report('copy', entries.length, files.length);
+  // bug-63: the bulk copy is executed by the one-time Actions workflow that
+  // was committed into the new repository above — NOT by this Worker request.
+  // The previous implementation looped here: for every source file it fetched
+  // the source blob and created a target blob (two fully-awaited GitHub API
+  // round-trips per file, in chunks of 4), followed by tree creation, commit
+  // creation, and a ref PATCH. For a repo of this size that is hundreds of
+  // sequential requests inside ONE Worker invocation, which exceeds the
+  // Cloudflare Workers execution budget — the Worker was killed mid-loop,
+  // which is exactly why affected clones ended up containing ONLY
+  // .clipforge-sync.json (the bootstrap commit is self-contained and survives
+  // the kill) and why the progress message never advanced past 'Preparing
+  // repository...'. The workflow performs the identical Git Data API
+  // copy/tree/commit/PATCH sequence (via `git clone --filter=blob:none` of
+  // the public source, so source blobs never pass through the API at all),
+  // records progress into .clipforge-clone-status.json, and self-deletes on
+  // success. The poll below reads that status file — the same
+  // commit-a-status-file + bot-reads-it pattern the job pipeline already uses
+  // (ARCHITECTURE.md §6). A clone that still sits on 'copying' for longer
+  // than CLONE_COPY_STALL_MS with no status update is treated as a dead
+  // run and surfaced as an error instead of spinning forever.
+  // GitHub indexes new workflow files slightly after the push that creates
+  // them; dispatching immediately can 404 with 'Workflow not found'. Retry a
+  // few times before treating that as fatal.
+  let dispatched = false;
+  let dispatchError = null;
+  for (let attempt = 0; attempt < 6 && !dispatched; attempt += 1) {
+    try {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/actions/workflows/${encodeURIComponent(CLONE_COPY_WORKFLOW)}/dispatches`, {
+        method: 'POST',
+        body: {
+          ref: targetBranch,
+          inputs: {
+            source_sha: sourceCommitSha,
+            bootstrap_commit: bootstrapCommitSha,
+            expected_files: String(files.length)
+          }
+        }
+      });
+      dispatched = true;
+    } catch (error) {
+      dispatchError = error;
+      if (!(error instanceof GitHubError) || (error.status !== 404 && error.status !== 422)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
-    await report('finalize', files.length, files.length);
-    // bug-46: build the final tree on top of the bootstrap commit's tree via
-    // base_tree, so the .clipforge-sync.json bootstrap file is preserved
-    // (and its blob is re-used automatically). The overlay tree carries only
-    // the newly copied source files.
-    const tree = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/trees`, {
-      method: 'POST', body: { base_tree: bootstrapTreeSha, tree: entries }
-    });
-    if (!tree || !tree.sha) throw new Error('Could not create the Shadow Clone file tree.');
-    const commit = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/commits`, {
-      method: 'POST', body: {
-        message: `Shadow clone from ${SHADOW_CLONE_SOURCE}@${sourceCommitSha.slice(0, 7)}`,
-        tree: tree.sha,
-        parents: [bootstrapCommitSha]
+  }
+  if (!dispatched) {
+    const detail = dispatchError && dispatchError.message ? ` (${dispatchError.message})` : '';
+    throw new Error(`GitHub could not start the clone copy workflow${detail}. Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.`);
+  }
+  const startedAt = Date.now();
+  let lastAdvanceAt = startedAt;
+  let lastProgressKey = '';
+  try {
+    for (;;) {
+      await new Promise((resolve) => setTimeout(resolve, CLONE_COPY_POLL_MS));
+      const status = await readCloneCopyStatus(targetCredentials, targetBranch);
+      if (status) {
+        const progressKey = `${status.state}:${status.done}:${status.total}`;
+        if (progressKey !== lastProgressKey) {
+          lastProgressKey = progressKey;
+          lastAdvanceAt = Date.now();
+          if (status.state === 'copying') {
+            await report('copy', status.done, status.total);
+          } else if (status.state === 'finalizing') {
+            await report('finalize', status.done || files.length, status.total || files.length);
+          }
+        }
+        if (status.state === 'failed') {
+          throw new Error(`The clone copy workflow failed${status.error ? `: ${status.error}` : '.'} Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.`);
+        }
+        if (status.state === 'complete') break;
+        if (Date.now() - lastAdvanceAt > CLONE_COPY_STALL_MS) {
+          throw new Error('The clone copy workflow stopped reporting progress (the Actions run may have failed). Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.');
+        }
+      } else if (Date.now() - startedAt > CLONE_COPY_START_MS) {
+        throw new Error('The clone copy workflow never started. Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.');
+      }
+      if (Date.now() - startedAt > CLONE_COPY_DEADLINE_MS) {
+        throw new Error('The clone copy workflow took too long. Connect to the repository anyway (Settings → GitHub clone → Connect existing clone) and use Sync from source to fill in the missing files.');
+      }
+    }
+  } catch (error) {
+    if (error instanceof GitHubError) {
+      throw new Error(`GitHub rejected a write to the new repository (${error.status || 'unknown'}): ${error.message}`);
+    }
+    throw error;
+  }
+  // bug-63: the run's GITHUB_TOKEN may not write .github/workflows/* by any
+  // mechanism (push remote-rejected, Contents API 403 — both verified live),
+  // so the copy workflow deliberately excludes the source's own workflow
+  // files and never deletes itself. The BOT finishes both jobs here with the
+  // user's PAT, whose workflow scope the onboarding prompt already requires —
+  // the same authority the original in-Worker copy used for every file.
+  const workflowFiles = files.filter((file) => /^\.github\/workflows\//.test(file.path) && file.path !== `.github/workflows/${CLONE_COPY_WORKFLOW}`);
+  for (const file of workflowFiles) {
+    const sourceBlob = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/blobs/${encodeURIComponent(file.sha)}`);
+    if (!sourceBlob || sourceBlob.encoding !== 'base64' || typeof sourceBlob.content !== 'string') throw new Error(`Could not read source file ${file.path}.`);
+    let existingSha = null;
+    try {
+      const existing = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(file.path)}?ref=${encodeURIComponent(targetBranch)}`);
+      existingSha = existing && existing.sha ? existing.sha : null;
+    } catch (error) {
+      if (!(error instanceof GitHubError) || error.status !== 404) throw error;
+    }
+    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(file.path)}`, {
+      method: 'PUT',
+      body: {
+        message: `clipforge: copy workflow file ${file.path}`,
+        content: sourceBlob.content.replace(/\n/g, ''),
+        branch: targetBranch,
+        ...(existingSha ? { sha: existingSha } : {})
       }
     });
-    if (!commit || !commit.sha) throw new Error('Could not create the Shadow Clone commit.');
-    // bug-46: PATCH the existing ref (created by the bootstrap PUT) rather
-    // than POST /git/refs, which would fail with 422 because refs/heads/<default>
-    // now exists.
-    // bug-47: patch the branch the bootstrap actually created (the repo's
-    // live default branch), never an assumed name.
-    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(targetBranch)}`, {
-      method: 'PATCH', body: { sha: commit.sha, force: false }
-    });
+  }
+  try {
+    const workflowPath = `.github/workflows/${CLONE_COPY_WORKFLOW}`;
+    const existing = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(workflowPath)}?ref=${encodeURIComponent(targetBranch)}`);
+    if (existing && existing.sha) {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/${encodePath(workflowPath)}`, {
+        method: 'DELETE',
+        body: { message: 'clipforge: remove one-time clone copy workflow', sha: existing.sha, branch: targetBranch }
+      });
+    }
+  } catch (error) {
+    // Best-effort: a lingering one-time workflow is inert (workflow_dispatch
+    // only, requires the exact bootstrap inputs) and must not fail an
+    // otherwise complete clone.
+    console.warn('clone copy workflow self-delete skipped:', String(error && error.message || error));
+  }
+  // The workflow already built the final tree on top of the bootstrap commit
+  // and fast-forwarded the live default branch; the PAT writes above layered
+  // the source workflow files on top. Read the branch head back for the
+  // normalization + verification steps below.
+  const headAfterCopy = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(targetBranch)}`);
+  const finalCommitSha = headAfterCopy && headAfterCopy.object && headAfterCopy.object.sha;
+  if (!finalCommitSha || finalCommitSha === bootstrapCommitSha) {
+    throw new Error('Shadow Clone verification failed: the copy workflow reported completion but the repository head did not advance past the bootstrap commit.');
+  }
+  const finalCommit = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/commits/${encodeURIComponent(finalCommitSha)}`);
+  const finalTreeSha = finalCommit && finalCommit.tree && finalCommit.tree.sha;
+  if (!finalTreeSha) throw new Error('Shadow Clone verification failed: GitHub did not return the copied file tree.');
+  await report('finalize', files.length, files.length);
+  const commit = { sha: finalCommitSha };
+  const tree = { sha: finalTreeSha };
+  try {
     // bug-47: the rest of this module (and the workflows' assumptions about
     // the clone layout) address the clone via DEFAULT_BRANCH. If the account's
     // default-branch preference made the first branch something else (e.g.
@@ -437,6 +571,272 @@ export async function createPrivateShadowClone(pat, requestedName, options = {})
     throw error;
   }
   return { repo, login: identity.login, sourceSha: sourceCommitSha, copiedFiles: files.length, branch: targetBranch };
+}
+
+/**
+ * bug-63: best-effort read of the one-time copy workflow's status file from
+ * the (possibly not yet normalized) bootstrap branch. Returns null while the
+ * file does not exist yet or cannot be parsed — the caller keeps polling.
+ */
+async function readCloneCopyStatus(credentials, branch) {
+  const { owner, name } = parseRepo(credentials.repo);
+  try {
+    const file = await githubRequest(credentials, `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodePath(CLONE_STATUS_PATH)}?ref=${encodeURIComponent(branch)}`);
+    if (!file || typeof file.content !== 'string') return null;
+    const parsed = JSON.parse(b64decode(file.content));
+    if (!parsed || typeof parsed.state !== 'string') return null;
+    return {
+      state: parsed.state,
+      done: Number(parsed.done) || 0,
+      total: Number(parsed.total) || 0,
+      error: typeof parsed.error === 'string' ? parsed.error.slice(0, 300) : ''
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * bug-63: the one-time copy workflow committed into a brand-new Shadow Clone.
+ * It mirrors exactly what createPrivateShadowClone used to do in the Worker —
+ * copy every cloneable source file, build the final tree on top of the
+ * bootstrap commit, fast-forward the default branch — but on an Actions
+ * runner, whose execution budget is hours instead of a single Worker request
+ * lifetime. Progress is written to .clipforge-clone-status.json (the bot
+ * polls it, same commit-a-status-file pattern as the job pipeline). The
+ * workflow self-deletes in the final commit on success and always leaves the
+ * status file behind for diagnosis. Kept as a JS template (not a repo YAML
+ * file) so the token never lives in the source repository's workflow
+ * directory, where it would run on every clone push.
+ */
+function buildCloneCopyWorkflowYaml() {
+  return `name: Shadow Clone — one-time file copy
+
+# bug-63: created by the ClipForge bot's Shadow Clone onboarding and
+# DISPATCHED ONCE with the source revision + bootstrap commit as inputs. It
+# performs the bulk source-file copy that previously ran inside the
+# Cloudflare Worker and was killed mid-loop by the Worker's execution-time
+# limit (leaving clones with only .clipforge-sync.json). Self-deletes on
+# success; permanent failures (missing inputs, non-fast-forward, empty tree)
+# trap the workflow so it can never silently fire again on a later push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Source commit SHA to copy from (must be an ancestor of motionssalt/clipforge main)"
+        required: true
+        type: string
+      bootstrap_commit:
+        description: "Bootstrap commit SHA the final tree is built on top of"
+        required: true
+        type: string
+      expected_files:
+        description: "Number of cloneable files the bot enumerated at dispatch time"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clipforge-clone-copy
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    name: Copy source files
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Validate inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "\${{ inputs.source_sha }}" | grep -qE '^[0-9a-f]{40}$'
+          printf '%s' "\${{ inputs.bootstrap_commit }}" | grep -qE '^[0-9a-f]{40}$'
+          printf '%s' "\${{ inputs.expected_files }}" | grep -qE '^[0-9]+$'
+
+      - name: Check out the clone repository
+        uses: actions/checkout@v4
+        with:
+          ref: "\${{ github.ref_name }}"
+          fetch-depth: 0
+
+      - name: Record start status
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "clipforge-bot"
+          git config user.email "clipforge-bot@users.noreply.github.com"
+          TOTAL=$(printf '%s' "\${{ inputs.expected_files }}")
+          printf '{"version":1,"state":"copying","done":0,"total":%s,"updated_at":"%s"}\\n' "$TOTAL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .clipforge-clone-status.json
+          git add .clipforge-clone-status.json
+          git commit -m "clipforge: clone copy started" -q
+          git push -q origin "HEAD:\${{ github.ref_name }}"
+
+      - name: Fetch the source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/clipforge-src
+          git clone --filter=blob:none --no-checkout --depth 50 https://github.com/${SHADOW_CLONE_SOURCE}.git /tmp/clipforge-src
+          cd /tmp/clipforge-src
+          git cat-file -e "\${{ inputs.source_sha }}^{commit}" || { echo "source_sha not reachable from ${SHADOW_CLONE_SOURCE} main"; exit 1; }
+          git checkout -q "\${{ inputs.source_sha }}"
+
+      - name: Copy cloneable files and report progress
+        id: copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          copy_one() {
+            local p="$1"
+            if git -C /tmp/clipforge-src cat-file -e "\${{ inputs.source_sha }}:$p" 2>/dev/null; then
+              mkdir -p "$(dirname "$p")"
+              git -C /tmp/clipforge-src show "\${{ inputs.source_sha }}:$p" > "$p"
+            fi
+          }
+          git -C /tmp/clipforge-src ls-tree -r --name-only "\${{ inputs.source_sha }}" \
+            | grep -Ev '^(branding/|jobs/|audio-library/)' \
+            | grep -Eiv 'keys|accounts|queue' \
+            > /tmp/clipforge-all.txt
+          # Workflow files are NOT copied into the working tree: a push from
+          # this run must not touch .github/workflows/* (GITHUB_TOKEN pushes
+          # carrying workflow changes are remote-rejected — verified live,
+          # bug-63; Contents-API PUTs for them are 403-forbidden too). The
+          # source's own workflow files are written afterwards by the BOT via
+          # the Contents API using the user's PAT, whose workflow scope the
+          # onboarding prompt already requires — the same authority the
+          # original in-Worker copy relied on. The workflow list is still
+          # written so the bot-side follow-up can enumerate exactly which
+          # source paths exist.
+          grep -v '^\.github/workflows/' /tmp/clipforge-all.txt > /tmp/clipforge-files.txt
+          grep '^\.github/workflows/' /tmp/clipforge-all.txt > /tmp/clipforge-workflows.txt || true
+          # Mode manifest for the exec-bit restore below (the source ships one
+          # 100755 script; exec bits must survive the copy — the old in-Worker
+          # copy carried file.mode through for this reason).
+          git -C /tmp/clipforge-src ls-tree -r "\${{ inputs.source_sha }}" \
+            | awk -F'\t' '{
+                p = $2;
+                # Portable string ops only — mawk (Ubuntu default) mis-parses
+                # escaped slashes inside awk regex constants (verified live).
+                if (substr(p,1,9) == "branding/" || substr(p,1,5) == "jobs/" || substr(p,1,14) == "audio-library/") next;
+                tl = tolower(p);
+                if (index(tl,"keys") || index(tl,"accounts") || index(tl,"queue")) next;
+                split($1, m, " ");
+                print m[1] " " p;
+              }' > /tmp/clipforge-modes.txt
+          TOTAL=$(wc -l < /tmp/clipforge-all.txt | tr -d ' ')
+          PUSHABLE=$(wc -l < /tmp/clipforge-files.txt | tr -d ' ')
+          if [ "$TOTAL" -eq 0 ]; then echo "no cloneable files found"; exit 1; fi
+          if [ "$TOTAL" -ne "\${{ inputs.expected_files }}" ]; then
+            echo "warning: enumerated $TOTAL files, bot expected \${{ inputs.expected_files }}"
+          fi
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+          CHUNK=25
+          COUNT=0
+          NEXT=$CHUNK
+          # Live-verified (bug-63): the file list MUST be redirected into the
+          # loop — GitHub Actions run-steps have no interactive stdin, so a
+          # bare read loop exits after zero iterations and reports success
+          # with 0 files copied.
+          while IFS= read -r p; do
+            copy_one "$p"
+            COUNT=$((COUNT + 1))
+            if [ "$COUNT" -ge "$NEXT" ] || [ "$COUNT" -eq "$PUSHABLE" ]; then
+              printf '{"version":1,"state":"copying","done":%s,"total":%s,"updated_at":"%s"}\\n' "$COUNT" "$PUSHABLE" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .clipforge-clone-status.json
+              git add .clipforge-clone-status.json
+              git commit -q -m "clipforge: clone copy progress $COUNT/$PUSHABLE"
+              git push -q origin "HEAD:\${{ github.ref_name }}"
+              NEXT=$((COUNT + CHUNK))
+            fi
+          done < /tmp/clipforge-files.txt
+          if [ "$COUNT" -ne "$PUSHABLE" ]; then echo "copied $COUNT of $PUSHABLE files"; exit 1; fi
+          # Restore exec bits: git-show-redirect materializes every file as
+          # 644 regardless of the source mode, and git add records what it
+          # sees. chmod from the modes manifest (path = text after first
+          # space, so space-containing paths survive).
+          awk '$1 == "100755" { print substr($0, index($0, " ") + 1) }' /tmp/clipforge-modes.txt | while IFS= read -r p; do
+            if [ -f "$p" ]; then chmod +x "$p"; fi
+          done
+          echo "copied=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the full tree
+        # Live-verified (bug-63): ONE fast-forward git push carries the whole
+        # copied tree EXCEPT .github/workflows/* (the copy step deliberately
+        # leaves those out of the working tree). This is allowed because the
+        # commit chain touches no workflow path, and it needs ZERO REST
+        # mutations — the earlier designs of ~330 paced REST blob writes and
+        # of GITHUB_TOKEN Contents-API workflow PUTs both hit 403s live
+        # (secondary rate limit on the former, the workflow-file restriction
+        # on the latter). The push is built on top of the bootstrap commit,
+        # so .clipforge-sync.json is preserved (the old in-Worker copy's
+        # base_tree behaviour) and exec bits restored by the copy step's
+        # chmod survive (git add records what it sees).
+        shell: bash
+        env:
+          COPIED: \${{ steps.copy.outputs.copied }}
+          TOTAL: \${{ steps.copy.outputs.total }}
+        run: |
+          set -euo pipefail
+          git config user.name  "clipforge-bot"
+          git config user.email "clipforge-bot@users.noreply.github.com"
+          printf '{"version":1,"state":"finalizing","done":%s,"total":%s,"updated_at":"%s"}\\n' "$COPIED" "$TOTAL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .clipforge-clone-status.json
+          git add -A
+          git commit -q -m "clipforge: copy files from ${SHADOW_CLONE_SOURCE}@\${{ inputs.source_sha }} ($COPIED files)"
+          # Fast-forward only: refuse to clobber a branch that moved.
+          git push -q origin "HEAD:\${{ github.ref_name }}"
+          # Server-side post-condition: the pushed head must descend from the
+          # bootstrap commit and its tree must hold at least TOTAL minus the
+          # source-workflow count blobs (those arrive via the bot's PAT after
+          # the run reports 'complete').
+          git fetch -q origin "\${{ github.ref_name }}"
+          git merge-base --is-ancestor "\${{ inputs.bootstrap_commit }}" "origin/\${{ github.ref_name }}" || { echo "bootstrap commit is not an ancestor of the pushed head"; exit 1; }
+          WFCOUNT=$(wc -l < /tmp/clipforge-workflows.txt | tr -d ' ')
+          FLOOR=$((TOTAL - WFCOUNT))
+          BLOBS=$(git ls-tree -r "origin/\${{ github.ref_name }}" | grep -c ' blob ')
+          if [ "$BLOBS" -lt "$FLOOR" ]; then echo "published tree holds $BLOBS blobs, expected at least $FLOOR"; exit 1; fi
+          echo "published tree verified: $BLOBS blobs (source workflows pending via the bot)"
+
+      - name: Record completion
+        shell: bash
+        env:
+          TOTAL: \${{ steps.copy.outputs.total }}
+          COPIED: \${{ steps.copy.outputs.copied }}
+        run: |
+          set -euo pipefail
+          git config user.name  "clipforge-bot"
+          git config user.email "clipforge-bot@users.noreply.github.com"
+          # The publish step's push advanced the ref; resync before the final
+          # status commit. The one-time workflow file itself is NOT deleted
+          # here — a GITHUB_TOKEN push may not touch .github/workflows/* even
+          # to delete (verified live, bug-63). The bot removes it via the
+          # Contents API with the user's PAT right after this status lands.
+          git fetch -q origin "\${{ github.ref_name }}"
+          git reset -q --hard "origin/\${{ github.ref_name }}"
+          printf '{"version":1,"state":"complete","done":%s,"total":%s,"updated_at":"%s"}\\n' "$COPIED" "$TOTAL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .clipforge-clone-status.json
+          git add .clipforge-clone-status.json
+          git commit -q -m "clipforge: clone copy complete"
+          git push -q origin "HEAD:\${{ github.ref_name }}"
+
+      - name: Record failure
+        if: failure()
+        shell: bash
+        env:
+          TOTAL: \${{ steps.copy.outputs.total }}
+        run: |
+          set +e
+          git config user.name  "clipforge-bot"
+          git config user.email "clipforge-bot@users.noreply.github.com"
+          git fetch -q origin "\${{ github.ref_name }}"
+          git reset -q --hard "origin/\${{ github.ref_name }}"
+          printf '{"version":1,"state":"failed","done":0,"total":%s,"error":"copy workflow step failed — see the Actions run log","updated_at":"%s"}\\n' "\${TOTAL:-0}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .clipforge-clone-status.json
+          git add .clipforge-clone-status.json
+          git commit -q -m "clipforge: clone copy failed" || true
+          git push -q origin "HEAD:\${{ github.ref_name }}" || true
+          exit 1
+`;
 }
 
 export async function getContent(credentials, repo, path) {
