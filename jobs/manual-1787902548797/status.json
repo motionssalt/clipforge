@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1787905155,
-  "updated_at_epoch": 1787906033,
+  "updated_at_epoch": 1787906390,
   "expires_at_epoch": 1787948355,
   "release_tag": "clipforge-manual-1787902548797",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1787902548797",
@@ -26,8 +26,57 @@
     "code_ref": "40c594e433e08bd8fe04269eba0a3d1b0dbb9a19"
   },
   "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "partial",
+    "posts": [
+      {
+        "post_id": "6a91494e06d07410d2f27fd4",
+        "status": "failed",
+        "scheduled_for": "2026-08-28T08:39:40.613Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a23f25a2b2567671af5f0f7",
+              "platform": "tiktok",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "MOTIONSALT",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn-us.com/tos-useast8-avt-0068-tx2/4df688dfaf37162e3a0f79b969d77fb2~tplv-tiktokx-cropcenter:168:168.jpeg?dr=9638&refresh_token=b9dd5bd6&x-expires=1788058800&x-signature=yZaPnAw5GqutE%2FSEs6uA7KQohSY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=useast8",
+              "username": "motionsalt"
+            },
+            "status": "failed"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-manual-1787902548797-mtcpaegj-tiktok"
+      },
+      {
+        "post_id": "6a9149512edd8edd814a786e",
+        "status": "published",
+        "scheduled_for": "2026-08-28T08:39:44.262Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "published",
+            "platformPostId": "A7o0Uylb0ts",
+            "platformPostUrl": "https://www.youtube.com/watch?v=A7o0Uylb0ts"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-manual-1787902548797-mtcpaegj-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-manual-1787902548797-mtcpaegj"
   }
 }

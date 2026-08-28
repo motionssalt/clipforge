@@ -13,6 +13,18 @@
         "6a9090e98d8383fc5275c6b3"
       ],
       "updated_at_epoch": 1787859184
+    },
+    {
+      "job_id": "manual-1787902548797",
+      "status": "partial",
+      "mode": "publish_now",
+      "scheduled_for": "2026-08-28T08:39:40.613Z",
+      "timezone": "UTC",
+      "post_ids": [
+        "6a91494e06d07410d2f27fd4",
+        "6a9149512edd8edd814a786e"
+      ],
+      "updated_at_epoch": 1787906390
     }
   ]
 }
