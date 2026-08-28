@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "job_id": "manual-1787915955571",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1787915955571/source.torrent"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": 120,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1787915980098",
+    "source_job_id": "",
+    "part": 1,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1787915980
+}
