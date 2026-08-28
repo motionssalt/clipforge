@@ -26,15 +26,15 @@
     {
       "id": "bug-47",
       "title": "Remove duplicate Zernio settings from completed-task view; verify publishing end-to-end",
-      "status": "in_progress",
-      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view \u2014 remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted \u2014 confirm against current behavior). [STARTED: removing Zernio settings shortcut from the per-task publish menu; verifying stage-b auto-publish wiring.]",
-      "commit": ""
+      "status": "done",
+      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view \u2014 remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted \u2014 confirm against current behavior). [STARTED: removing Zernio settings shortcut from the per-task publish menu; verifying stage-b auto-publish wiring.] [DONE 2026-08-28, commit ce32973]: (1) DUPLICATE REMOVED: zernioPublishKeyboard() in bot/src/zernio.js no longer renders the \"Zernio settings\" (set:zernio) button on the completed-task publish menu \u2014 only publish actions + back-to-task remain. Zernio config lives solely in main Settings \u2192 Zernio publishing. The \"\ud83d\udce3 Publish (Zernio)\" button on the completed-task view is a publish ACTION (showZernioPublishMenu), not settings, so it stays. (2) AUTO-PUBLISH RE-VERIFIED against current code (prior bug-24 not trusted): stage-b.yml lines ~741-782 \"Dispatch automatic Zernio publish when enabled\" \u2014 gated on ZERNIO_API_KEY presence, re-fetches branding/zernio_settings.json from the CURRENT default-branch tip (its own comments document the stale-checkout trap and the fix), then runs pipeline/publish/zernio.py automatic-dispatch (module confirmed present with that subcommand) and fires gh workflow run publish.yml action=publish with the job id. Chain confirmed: stage-b complete \u2192 auto-dispatch \u2192 publish.yml publish action \u2192 status.publishing updated. No code change needed for the verification half. VERIFIED: node --check clean; bot suite 53 pass / 4 pre-existing fails (unchanged). LIMITS: no live Zernio API call possible from sandbox (no secret); verification is static against workflow + pipeline code paths.",
+      "commit": "ce32973"
     },
     {
       "id": "bug-48",
       "title": "Series task flow dead-ends after a part completes \u2014 missing next-part and copy-prompt actions, no way to revisit completed parts",
-      "status": "pending",
-      "notes": "After a series-mode part finishes (Stage B complete), task view lacks: (1) action to proceed to the next part, (2) the copy-prompt button (exists for non-series tasks per prior bug-09/bug-10 \u2014 confirm whether simply missing from series-complete view), (3) a way to later view/access previously completed series parts (e.g. from /done or a dedicated series view) for re-download/repost.",
+      "status": "in_progress",
+      "notes": "After a series-mode part finishes (Stage B complete), task view lacks: (1) action to proceed to the next part, (2) the copy-prompt button (exists for non-series tasks per prior bug-09/bug-10 \u2014 confirm whether simply missing from series-complete view), (3) a way to later view/access previously completed series parts (e.g. from /done or a dedicated series view) for re-download/repost. [STARTED: deriving next-part/copy-prompt affordances from the actual plan; adding a series-parts view.]",
       "commit": ""
     },
     {
