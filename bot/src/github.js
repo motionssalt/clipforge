@@ -275,6 +275,19 @@ export async function createPrivateShadowClone(pat, requestedName) {
   // first commit + refs/heads/<branch> in one call, so we use it to
   // bootstrap the ref with the sync marker before switching to the Git Data
   // API (which is faster for the bulk file copy).
+  //
+  // bug-47: the bootstrap PUT must land on the branch that will actually be
+  // the repo's DEFAULT branch. POST /user/repos returns `default_branch` (the
+  // branch GitHub will set when the first commit arrives), but an
+  // account-level "default branch name" preference can change between repo
+  // creation and the bootstrap commit, so the authoritative branch is read
+  // back from the repo AFTER the bootstrap commit exists. Hard-coding
+  // DEFAULT_BRANCH here previously let the bootstrap commit land on one ref
+  // (e.g. refs/heads/master, because that account prefers "master") while the
+  // final PATCH fast-forwarded another (refs/heads/main) — GitHub then shows
+  // the bootstrap-only ref as the repo's default view, which is exactly the
+  // reported symptom: "the clone contains only .clipforge-sync.json".
+  const initialBranch = target && target.default_branch ? String(target.default_branch) : DEFAULT_BRANCH;
   const sync = { source: SHADOW_CLONE_SOURCE, synced_sha: sourceCommitSha, synced_at: new Date().toISOString() };
   const syncPayload = `${JSON.stringify(sync, null, 2)}\n`;
   let bootstrap;
@@ -284,7 +297,7 @@ export async function createPrivateShadowClone(pat, requestedName) {
       body: {
         message: `Initialize Shadow Clone from ${SHADOW_CLONE_SOURCE}@${sourceCommitSha.slice(0, 7)}`,
         content: b64encode(syncPayload),
-        branch: DEFAULT_BRANCH
+        branch: initialBranch
       }
     });
   } catch (error) {
@@ -292,6 +305,30 @@ export async function createPrivateShadowClone(pat, requestedName) {
       throw new Error(`GitHub could not initialize the new repository: ${error.message}`);
     }
     throw error;
+  }
+  // bug-47: resolve the branch that actually became the repo's default from
+  // the live repo object, not from our assumption. Immediately after the
+  // bootstrap commit GitHub can still report the PLANNED default branch
+  // (observed live: default_branch said "main" while only refs/heads/master
+  // existed — it settled to "master" ~1s later), so the reported branch name
+  // is only trusted once the matching ref actually exists. Every subsequent
+  // ref/contents operation in this function uses the resolved value.
+  let targetBranch = initialBranch;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    let liveBranch = targetBranch;
+    try {
+      const liveRepo = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}`);
+      if (liveRepo && liveRepo.default_branch) liveBranch = String(liveRepo.default_branch);
+      const head = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(liveBranch)}`);
+      if (head && head.object && head.object.sha) {
+        targetBranch = liveBranch;
+        break;
+      }
+    } catch {
+      // Reported branch has no ref yet — GitHub is still settling; retry.
+    }
+    targetBranch = liveBranch;
+    if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   const bootstrapCommitSha = bootstrap && bootstrap.commit && bootstrap.commit.sha;
   const bootstrapTreeSha = bootstrap && bootstrap.commit && bootstrap.commit.tree && bootstrap.commit.tree.sha;
@@ -332,9 +369,50 @@ export async function createPrivateShadowClone(pat, requestedName) {
     // bug-46: PATCH the existing ref (created by the bootstrap PUT) rather
     // than POST /git/refs, which would fail with 422 because refs/heads/<default>
     // now exists.
-    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(DEFAULT_BRANCH)}`, {
+    // bug-47: patch the branch the bootstrap actually created (the repo's
+    // live default branch), never an assumed name.
+    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(targetBranch)}`, {
       method: 'PATCH', body: { sha: commit.sha, force: false }
     });
+    // bug-47: the rest of this module (and the workflows' assumptions about
+    // the clone layout) address the clone via DEFAULT_BRANCH. If the account's
+    // default-branch preference made the first branch something else (e.g.
+    // "master"), normalize to DEFAULT_BRANCH with the explicit
+    // create-ref -> PATCH default_branch -> delete-old-ref sequence. This is
+    // synchronous, unlike POST /branches/<b>/rename (verified live: rename
+    // moves the refs instantly but leaves default_branch pointing at the old
+    // name for 1-3s — the user could open the repo right after the success
+    // message and still see the pre-normalization state).
+    if (targetBranch !== DEFAULT_BRANCH) {
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs`, {
+        method: 'POST', body: { ref: `refs/heads/${DEFAULT_BRANCH}`, sha: commit.sha }
+      });
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}`, {
+        method: 'PATCH', body: { default_branch: DEFAULT_BRANCH }
+      });
+      await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(targetBranch)}`, {
+        method: 'DELETE'
+      });
+      targetBranch = DEFAULT_BRANCH;
+    }
+    // bug-47 post-conditions: the clone is only "created" when the repo's
+    // DEFAULT branch head is the commit carrying the full copied tree. Check
+    // against the live API and fail loudly instead of reporting success on a
+    // repo GitHub would display as sync-marker-only (the exact symptom this
+    // bug is about — the prior sweep's verification checked the function's
+    // own return value, which was correct even when the visible repo was not).
+    const verifyRepo = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}`);
+    const verifyBranch = verifyRepo && verifyRepo.default_branch ? String(verifyRepo.default_branch) : targetBranch;
+    const verifyRef = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/ref/heads/${encodeURIComponent(verifyBranch)}`);
+    const verifySha = verifyRef && verifyRef.object && verifyRef.object.sha;
+    if (verifySha !== commit.sha) {
+      throw new Error(`Shadow Clone verification failed: the repository's default branch (${verifyBranch}) does not point at the copied file tree.`);
+    }
+    const verifyTree = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/trees/${encodeURIComponent(tree.sha)}?recursive=1`);
+    const verifyBlobs = Array.isArray(verifyTree && verifyTree.tree) ? verifyTree.tree.filter((entry) => entry && entry.type === 'blob').length : 0;
+    if (!verifyTree || verifyTree.truncated || verifyBlobs < files.length) {
+      throw new Error(`Shadow Clone verification failed: the pushed file tree holds ${verifyBlobs} files, expected at least ${files.length}.`);
+    }
   } catch (error) {
     // bug-46: replace the raw GitHub API message with something that is
     // accurate for the actual failure mode (Git Data API write against a
@@ -346,7 +424,7 @@ export async function createPrivateShadowClone(pat, requestedName) {
     }
     throw error;
   }
-  return { repo, login: identity.login, sourceSha: sourceCommitSha, copiedFiles: files.length };
+  return { repo, login: identity.login, sourceSha: sourceCommitSha, copiedFiles: files.length, branch: targetBranch };
 }
 
 export async function getContent(credentials, repo, path) {
