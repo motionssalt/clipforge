@@ -11,8 +11,8 @@
     {
       "id": "bug-58",
       "title": "Deploy-failure notification \u2014 user should not be the detection mechanism for blocked deploys",
-      "status": "pending",
-      "notes": "Deploy Bots workflow: failed bot tests silently skip Cloudflare Worker deploy with no alert. Add `if: failure()` step that calls Telegram Bot API directly with bot token from Actions secrets to notify bot owner: 'Deploy blocked: bot tests failed on commit <sha>, Workers were NOT updated. Check the Actions run: <url>'. Must not require Cloudflare-scoped secrets.",
+      "status": "in_progress",
+      "notes": "Deploy Bots workflow: failed bot tests silently skip Cloudflare Worker deploy with no alert. Add `if: failure()` step that calls Telegram Bot API directly with bot token from Actions secrets to notify bot owner: 'Deploy blocked: bot tests failed on commit <sha>, Workers were NOT updated. Check the Actions run: <url>'. Must not require Cloudflare-scoped secrets. | Started investigation: locate Deploy Bots workflow, its test step, and available Telegram secrets.",
       "commit": ""
     }
   ]
