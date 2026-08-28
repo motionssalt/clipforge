@@ -18,9 +18,9 @@
     {
       "id": "bug-53",
       "title": "\"Push news to clones\" not visible to the user — verify gating condition",
-      "status": "in_progress",
-      "notes": "Starting investigation. Static audit says NEWS_PATH/handleNewsMessage/newsMenuText/newsMenuKeyboard and the set:news button all exist in bot/src/index.js, gated identically to the publish-update button on repo === originalRepo(env). Hypotheses to verify: (a) stale deploy despite green run, (b) originalRepo(env) mismatch (same class as bug-39/bug-51), (c) button present but buried in the menu tree.",
-      "commit": ""
+      "status": "done",
+      "notes": "RESOLVED. Root-cause findings (all three hypotheses verified):\n(a) STALE DEPLOY — ruled out for current state: bug-46 news feature (bba870e) shipped in deploy run 33158642774 @ 2026-08-28T09:13Z with both wrangler deploy steps green; bug-51 fix deployed in run 33160635806 @ 09:44Z; bug-52 deployed in run 33162451483 @ 10:12Z. The user report window predates the 09:13 deploy — the same broken-deploy window (failed run 33159083660 @ 09:22Z skipping both wrangler steps) that bug-51 documented for bug-48/49/50. So at report time the button genuinely was not deployed; it IS live now.\n(b) OWNER-IDENTITY GAP — found and fixed (same class as bug-39/bug-51): validateConnection stored the connected repo slug exactly as the user typed it (${spec.owner}/${spec.name}), while the clone-creation path stored the API-canonical full_name, and all 7 owner gates compared via raw String(repo).toLowerCase() !== originalRepo(env). Any drift (mixed case, surrounding whitespace, a pasted github.com URL, trailing .git) would silently demote the main account to a clone and hide \"Push news to clones\"/\"Publish update to clones\". Fix: new bot/src/identity.js exporting originalRepoFromEnv + isOriginalRepo backed by new github.js normalizeRepoSlug (handles case, whitespace, https/git URL forms, .git/trailing slashes); all 7 gate sites in index.js migrated; validateConnection now persists the API-canonical repository.full_name so the stored value always matches the gate.\n(c) BUTTON POSITION — verified: single render path only (handleSettingsCallback set:github); the button sits adjacent to \"Publish update to clones\" under Settings → GitHub clone; no second/stale code path exists.\nTests: bot suite 98/98 pass including 5 new identity.test.mjs regression cases.",
+      "commit": "95f8354"
     }
   ]
 }
