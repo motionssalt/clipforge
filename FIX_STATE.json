@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-66",
@@ -11,9 +11,10 @@
     {
       "id": "bug-67",
       "title": "Add 'Help tutorial' video button in /start flow that sends help.mp4",
-      "status": "in_progress",
-      "notes": "Seeded 2026-08-28. Create assets/help/ (or bot/assets/help/) folder expecting help.mp4 (actual video added later by user). Add a 'Help tutorial' button to showHome/handleStart button set; on tap, sendVideo the file to the chat. Must handle missing help.mp4 gracefully (friendly 'tutorial not yet available' message, no crash). Note the 50MB Telegram Bot API sendVideo limit in implementation notes. Available to ANY user (main or clone), NOT gated behind owner checks. [in_progress 2026-08-28] bug-66 done+confirmed on origin/main (5085317). Starting bug-67: folder assets/help/, menu:helpvideo button in onboarding+home keyboards, handleHelpVideo in start.js using existing sendVideoBytes/getRepositoryFileBytes, graceful fallback when help.mp4 absent.",
-      "commit": ""
+      "status": "done",
+      "notes": "Seeded 2026-08-28. Create assets/help/ (or bot/assets/help/) folder expecting help.mp4 (actual video added later by user). Add a 'Help tutorial' button to showHome/handleStart button set; on tap, sendVideo the file to the chat. Must handle missing help.mp4 gracefully (friendly 'tutorial not yet available' message, no crash). Note the 50MB Telegram Bot API sendVideo limit in implementation notes. Available to ANY user (main or clone), NOT gated behind owner checks. [in_progress 2026-08-28] bug-66 done+confirmed on origin/main (5085317). Starting bug-67: folder assets/help/, menu:helpvideo button in onboarding+home keyboards, handleHelpVideo in start.js using existing sendVideoBytes/getRepositoryFileBytes, graceful fallback when help.mp4 absent. [done 2026-08-28] IMPLEMENTED. (1) Folder: assets/help/ created with README.md documenting that the maintainer drops help.mp4 at assets/help/help.mp4, that Telegram Bot API sendVideo caps at 50 MB (bot caps the read at 49 MB), and that it is universally available. (2) Button: \"\ud83c\udfac Help tutorial (video)\" (callback menu:helpvideo) added to ALL THREE keyboards in views.js \u2014 onboardingKeyboard (unauthenticated /start flow), homeKeyboard (connected home), helpKeyboard (/help screen) \u2014 so any user, main or clone, can reach it; no isOriginalRepo/owner gate anywhere on the path. (3) Logic: routeCallback in index.js dispatches menu:helpvideo to new handleHelpVideo in commands/start.js. If the chat has connected credentials it reads assets/help/help.mp4 from the connected repo via the existing getRepositoryFileBytes (Contents API, byte-capped) and sends it with the existing sendVideoBytes (sendVideo, supports_streaming). Missing file, oversized file, read error, or no connected repo all fall through to a graceful \"tutorial video not yet available\" message pointing at /help \u2014 no unhandled rejection; routeCallback already answerCallback()s even on throw. Reused the bug-46/bug-65 pattern: the asset lives in the repo itself so clones serve the same content. VERIFICATION: node --check passes on index.js/views.js/start.js. Test suite: 64 pass / 5 fail BOTH before and after this change \u2014 the 5 failures (identity, narrator-previews, relay, tasks, +1 file-level) are pre-existing environment/file-load failures unrelated to this change (bug-68 notes recorded the same 5 as pre-existing); no test exercises views.js keyboards or the new handler. Live confirmation of the button requires the deployed Bot A to pick up this push (deploy-bots.yml triggers on bot/**) and a tap of the button before/after help.mp4 is committed.",
+      "commit": "b1c3e2a"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T21:53:16Z"
 }
