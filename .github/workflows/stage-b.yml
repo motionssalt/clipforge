@@ -94,6 +94,44 @@ jobs:
           git branch --set-upstream-to="origin/$branch" "$branch"
           echo "Now on branch '$branch' at $(git rev-parse HEAD)."
 
+      # ---------------------------------------------------------------------
+      # bug-42: RELAY BACK TO THE BOT FIRST. Literal first piece of work after
+      # checkout — before Python setup, ffmpeg/dep install, or any processing.
+      # The bot polls jobs/<id>/status.json; pushing a stage_b_running marker
+      # here means the bot learns the run actually started immediately, not
+      # after several heavy steps. pipeline/status.py is stdlib-only and needs
+      # no setup. Failure here must NOT fail the run (the existing status step
+      # later still fires) — hence continue-on-error.
+      # ---------------------------------------------------------------------
+      - name: Notify bot that the run started (first step)
+        id: notify_start
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          job_id="${{ github.event.inputs.job_id }}"
+          if ! [[ "$job_id" =~ ^[A-Za-z0-9._-]{1,120}$ ]]; then
+            echo "invalid job_id; skipping early bot notification" >&2
+            exit 0
+          fi
+          python -m pipeline.status "$job_id" \
+            --state stage_b_running \
+            --message "Stage B run started on GitHub Actions — setting up." \
+            --release-tag "clipforge-$job_id" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --code-ref "$(git rev-parse HEAD)" || { echo "WARN: status write failed" >&2; exit 0; }
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash || true
+          git add "jobs/$job_id/"
+          git commit -m "clipforge: job $job_id stage B started (bot notify)" || echo "nothing to commit"
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase --autostash || true; sleep 2
+          done
+          echo "WARN: early bot-notification push failed; later status steps will carry it." >&2
+
       - name: Resolve inputs
         id: jid
         shell: bash
