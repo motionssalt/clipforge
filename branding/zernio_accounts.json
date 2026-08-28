@@ -1,13 +1,13 @@
 {
   "version": 1,
   "provider": "zernio",
-  "updated_at_epoch": 1787788372,
+  "updated_at_epoch": 1787912155,
   "accounts": [
     {
-      "id": "6a23f25a2b2567671af5f0f7",
-      "platform": "tiktok",
-      "username": "motionsalt",
-      "displayName": "MOTIONSALT",
+      "id": "6a91584577555aae01490c7a",
+      "platform": "instagram",
+      "username": "chimeravfx",
+      "displayName": "ChimeraVFX",
       "profileId": "{'_id': '6a23f22dba1bebcaf7982ef3', 'name': 'Default'}",
       "isActive": true,
       "enabled": true,
