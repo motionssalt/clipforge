@@ -12,8 +12,8 @@
     {
       "id": "bug-41",
       "title": "Multi-file music upload (bug-28) not actually applying",
-      "status": "pending",
-      "notes": "Re-investigate music upload end to end; multiple files sent during the Add-Music window must all be collected and attached on Done.",
+      "status": "in_progress",
+      "notes": "Re-investigate music upload end to end; multiple files sent during the Add-Music window must all be collected and attached on Done. | [2026-08-28] Started investigation.",
       "commit": null
     },
     {
