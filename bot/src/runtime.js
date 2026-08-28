@@ -12,6 +12,8 @@ import { escapeHtml, redact, describeTaskState } from './constants.js';
 import { ONBOARDING_TEXT, onboardingKeyboard, renderInteractiveView } from './views.js';
 import { extractPlanSeries } from './series.js';
 import { progressLine } from './progress.js';
+// bug-60: canonical per-state glyph for the task detail header.
+import { statusEmoji } from './anim.js';
 
 /** Map internal errors to short, secret-free user text (§13 invariant #1). */
 export function userError(error) {
@@ -138,7 +140,9 @@ export async function showTask(env, chatId, label, messageId = null) {
   const state = String(status.state || 'queued');
   const lines = [
     `<b>Task ${escapeHtml(label)}</b> · <code>${escapeHtml(jobId)}</code>`,
-    `State: <b>${escapeHtml(state)}</b>`,
+    // bug-60: the canonical state glyph leads the State line so the detail
+    // view uses the same visual language as the task list rows.
+    `State: ${statusEmoji(state)} <b>${escapeHtml(state)}</b>`,
     // Bug 3 fix: the torrent-selection state reads as an explicit call to
     // action on the task view itself — the operator is told plainly what the
     // job is waiting for and which button resolves it, not just shown a raw

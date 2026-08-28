@@ -10,6 +10,8 @@ import { escapeHtml } from '../constants.js';
 import { requireCredentials } from '../runtime.js';
 import { renderInteractiveView } from '../views.js';
 import { loadTaskList } from './tasks.js';
+// bug-60: shared status glyph set (identical marks as before, now canonical).
+import { statusEmoji } from '../anim.js';
 
 export async function showDone(env, chatId, messageId = null) {
   const { credentials, entries } = await loadTaskList(env, chatId);
@@ -22,7 +24,7 @@ export async function showDone(env, chatId, messageId = null) {
   } else {
     for (const entry of done) {
       const state = String(entry.status.state);
-      const mark = state === 'complete' ? '✅' : state === 'cancelled' ? '⛔' : '⚠️';
+      const mark = statusEmoji(state);
       lines.push(`${mark} <b>${escapeHtml(entry.label)}</b> — ${escapeHtml(state)}`);
       const row = [{ text: `${mark} Open ${entry.label}`, callback_data: `task:open:${entry.label}` }];
       if (state === 'complete' && entry.status.release_url) row.push({ text: 'Release', url: entry.status.release_url });

@@ -273,9 +273,34 @@ test('Feature 4: a new task shows 🆕 in /tasks; a seen one does not', async ()
   });
   try { await showTasks(env, CHAT); } finally { restore(); }
   const text = String(sent[0].payload.text || '');
-  assert.match(text, /<b>🆕 A<\/b>/, 'unseen task A must carry the 🆕 marker');
-  assert.doesNotMatch(text, /<b>🆕 B<\/b>/, 'seen task B must not carry the marker');
-  assert.match(text, /<b>B<\/b>/);
+  // bug-60: rows now carry the canonical state glyph after the 🆕 marker
+  // (e.g. `<b>🆕 ⚙️ A</b>`), so assert the marker precedes the label rather
+  // than matching the label edge exactly.
+  assert.match(text, /<b>🆕 ⚙️ A<\/b>/, 'unseen task A must carry the 🆕 marker');
+  assert.doesNotMatch(text, /<b>🆕 ⚙️ B<\/b>/, 'seen task B must not carry the marker');
+  assert.match(text, /<b>⚙️ B<\/b>/);
+});
+
+test('bug-60: /tasks shows a live working bar while any job is active, and per-state glyphs', async () => {
+  const kv = makeKv();
+  const env = await makeEnv(kv);
+  await ensureTaskLabel(env, CHAT, 'job-active');
+  await ensureTaskLabel(env, CHAT, 'job-fin');
+  const sent = [];
+  const restore = installFetch({
+    files: {
+      'jobs/job-active/status.json': makeStatus('job-active', 'stage_b_running', 200),
+      'jobs/job-fin/status.json': makeStatus('job-fin', 'complete', 100),
+    },
+    sent,
+  });
+  try { await showTasks(env, CHAT); } finally { restore(); }
+  const text = String(sent[0].payload.text || '');
+  // The live hint line uses the shared indeterminate bar from progress.js.
+  assert.match(text, /working — open a task for its live progress/, 'active list must carry the live hint line');
+  // Canonical per-state glyphs: stage B renders 🎬, complete renders ✅.
+  assert.match(text, /<b>(?:🆕 )?🎬 A<\/b>/, 'stage_b_running row must carry the 🎬 glyph');
+  assert.match(text, /<b>(?:🆕 )?✅ B<\/b>/, 'complete row must carry the ✅ glyph');
 });
 
 test('Feature 4: opening a task clears its 🆕 marker on the next /tasks render', async () => {

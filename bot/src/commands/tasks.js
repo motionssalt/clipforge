@@ -25,6 +25,10 @@ import { buttons } from '../telegram.js';
 import { escapeHtml, describeTaskState } from '../constants.js';
 import { requireCredentials } from '../runtime.js';
 import { renderInteractiveView } from '../views.js';
+// bug-60: canonical per-state glyphs + the shared indeterminate bar so the
+// list reads as part of the bot-wide animation design language.
+import { isActiveState, statusEmoji } from '../anim.js';
+import { indeterminateBar } from '../progress.js';
 
 const MAX_LISTED = 15;
 
@@ -74,6 +78,11 @@ export async function showTasks(env, chatId, messageId = null, pendingDeleteLabe
   const active = entries;
   const lines = ['<b>Tasks</b>'];
   const rows = [];
+  // bug-60: when any job is actively working, a live hint line carries the
+  // shared indeterminate bar so the list signals forward motion at a glance
+  // (and the per-task view's progress bar animates on every open/refresh).
+  const anyActive = active.some((entry) => entry.status && isActiveState(entry.status.state));
+  if (anyActive) lines.push(`${indeterminateBar()} <i>working — open a task for its live progress</i>`);
   if (!active.length) {
     lines.push('No tasks yet. Start one with 🎬 New video.');
   } else {
@@ -81,8 +90,11 @@ export async function showTasks(env, chatId, messageId = null, pendingDeleteLabe
       const unreadable = !entry.status;
       const stateText = describeTaskState(entry.status, { unreadable });
       const termState = entry.status ? String(entry.status.state) : '';
-      const terminalMark = termState === 'complete' ? '✅ ' : termState === 'error' ? '⚠️ ' : termState === 'cancelled' ? '⛔ ' : '';
-      const marker = (entry.seen ? '' : '🆕 ') + terminalMark;
+      // bug-60: the canonical statusEmoji set replaces the three hand-picked
+      // terminal marks, so active states now show a distinct glyph too
+      // (⚙️ stage A, 🎬 stage B, 📂 awaiting file, …) instead of nothing.
+      const stateMark = `${statusEmoji(termState, { unreadable })} `;
+      const marker = (entry.seen ? '' : '🆕 ') + stateMark;
       const isPendingDelete = pendingDeleteLabel && entry.label === pendingDeleteLabel;
       if (isPendingDelete) {
         lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — <b>Confirm Delete?</b>`);
