@@ -1,35 +1,55 @@
 {
-  "sweep_complete": true,
-  "started_at": "2026-08-28T07:00:00Z",
+  "sweep_complete": false,
+  "started_at": "2026-08-28T09:00:00Z",
   "bugs": [
     {
-      "id": "bug-40",
-      "title": "Extend face-centered crop to detect animal faces",
-      "status": "done",
-      "notes": "Extend face-centered crop (bug-36) to animal faces; verify anime faces. FINDINGS: (1) CRITICAL pre-existing breakage \u2014 FaceCenterEngine.analyze was dead code: it sat at module level (dedented out of the class) after _load_anime_cascades, so engine.analyze() always raised AttributeError, was caught by plan_scenes' try/except, and EVERY scene silently fell back to the safe centre crop \u2014 neither human, anime, nor animal centering was actually running. (2) The bug-36 'anime' fallback looked up lbpcascade_animeface.xml inside cv2.data.haarcascades, but opencv-python-headless does NOT ship that file (verified on 5.0 and 4.10 installs), so it silently degraded to haarcascade_frontalface_default (human-only). FIX (f2ecafd): analyze() restored as a proper method; cascades loaded once in __init__; lbpcascade_animeface.xml (nagadomi, MIT) vendored into pipeline/stage_b/cascades/ and looked up there first; animal faces via OpenCV's shipped haarcascade_frontalcatface[_extended] plus a lazy YOLOv8n fallback (new optional ultralytics>=8.2,<9 dep) covering COCO animal classes (bird/cat/dog/horse/sheep/cow/elephant/bear/zebra/giraffe), detections filtered to animal classes at conf>=0.4. All tiers best-effort: any failure keeps the safe centred crop, render never fails. VERIFIED: vendored cascade loads and haar cascade detects a real face (Lena) under OpenCV 4.10 (CI version); stubbed-YOLO tests confirm animal-class filtering, confidence gating, correct normalized centres, and ultralytics-absent path returning []. 7 new ReframeDetectionTierTests; 48/48 stage_b tests pass; full pipeline suite 267 pass with only 3 pre-existing failures (confirmed identical on the pre-change base commit). HONEST LIMITS: no real anime/cat/dog image was downloadable in the sandbox, so real-photo cascade/YOLO recall is assumed from the upstream models (anime cascade params match the author's detect.py exactly); first CI run will auto-download yolov8n.pt (~6MB) at predict time \u2014 if the runner has no egress to that host, the tier logs a warning and falls through harmlessly.",
-      "commit": "f2ecafd"
+      "id": "bug-44",
+      "title": "Pasted production.json still shows \"received part one\" — replace with receiving animation",
+      "status": "pending",
+      "notes": "Split production.json paste UX: while receiving split bubbles, show a 'Receiving .json file...' style indicator (never a partial/'part one' message); resolve cleanly to success once fully assembled. Reported a third time (prior bug-27/bug-38 'done' statuses NOT trusted) — re-investigate from current code.",
+      "commit": ""
     },
     {
-      "id": "bug-41",
-      "title": "Multi-file music upload (bug-28) not actually applying",
-      "status": "done",
-      "notes": "Multi-file music upload (bug-28) not actually applying. ROOT CAUSE: bug-28's 'done' status did NOT reflect working code \u2014 the current handleMusicUploadMessage uploaded the FIRST audio file immediately and then called clearFlow(), ending the music_upload flow after exactly one file; every subsequent file fell out of the flow and was silently dropped. The upload prompt (ml:upload) also had NO Done button at all, only Cancel \u2014 the batch behavior the update_notice.json changelog advertised was never shipped. FIX (75ce07e, bot/src/index.js): ml:upload now seeds state.pending.uploaded=[] and renders a prompt with an explicit 'Done' button (ml:uploaddone); handleMusicUploadMessage STAGES each file as {name, file_id} in the KV flow state (kept alive, running count shown, same filename re-sent = latest wins) instead of uploading+exiting; ml:uploaddone drains the staged list \u2014 downloads each file from Telegram and commits it to audio-library/ via putBinaryFile, reports per-file added/failed, then clearFlow + library re-render. Also fixed: Cancel (set:music) now clears a live music_upload flow so a cancelled session cannot keep swallowing audio files. VERIFIED: node --check clean; 93/93 bot tests pass; staging state machine simulated in Node (collects N files, dedupes latest-wins, Done drains all). LIMITS: index.js internals are not exported so no direct unit test of the handlers exists (consistent with the existing suite, which only tests exported modules); end-to-end Telegram behavior assumed from the flow routing in handleMessage. NOTE: file_ids are fetched at Done time and expire ~1h after send \u2014 a user who waits longer would get per-file failure messages, which the handler now reports instead of crashing.",
-      "commit": "75ce07e"
+      "id": "bug-45",
+      "title": "Zero-setup cloning — bot auto-creates the GitHub repo via API from the user's PAT",
+      "status": "pending",
+      "notes": "Remove requirement that the user manually create a GitHub repo before cloning. New flow: user provides GitHub PAT + optional repo name (or bot auto-names); bot creates the repo via GitHub API using the PAT, then proceeds with clone setup against it. Must verify PAT scope allows repo creation; note clearly if not.",
+      "commit": ""
     },
     {
-      "id": "bug-42",
-      "title": "Workflow dispatch must relay back to bot as the FIRST step",
-      "status": "done",
-      "notes": "Workflow dispatch must relay back to bot as the FIRST step. FINDINGS: the bot learns a run started by polling jobs/<id>/status.json, but the earliest status write sat at step ~7 in both stage-a.yml ('Write initial status (stage_a_running)') and stage-b.yml ('Write stage_b_running status') \u2014 behind Python setup, ffmpeg and pip dependency installation (minutes). bug-26/bug-35 only added bot/UI-layer acks (spinner, dispatch ack) and never moved the workflow-side signal earlier \u2014 confirming the suspicion in the report. FIX (e396f3c): added a 'Notify bot that the run started (first step)' step to BOTH stage-a.yml and stage-b.yml, placed immediately after checkout + HEAD re-attach (the only prerequisites for committing status) and BEFORE Set up Python / any install / processing. It writes status.json via pipeline/status.py (verified stdlib-only \u2014 runs with no setup) with state stage_a_running/stage_b_running + run id/URL + code-ref, commits and pushes with the same 3-attempt rebase-retry pattern the existing status steps use, and is continue-on-error so a notification failure can never fail the real job. --mode is deliberately omitted on the early write (write_status merges; prior mode preserved \u2014 verified locally). SCOPE AUDIT: stage-a.yml covers fresh runs, Stage A restarts, and series continuations (all dispatch the same workflow); stage-b.yml covers renders and Stage B restarts. publish.yml intentionally NOT changed \u2014 it is not a job-lifecycle workflow: its dispatches write publishing.status (not job state), 'discover' has no job_id at all, and its first meaningful step is its existing request/secret validation; telegram-relay.yml hands off to a Stage A run which now self-notifies; cleanup/diagnostics are not bot-dispatched job runners. VERIFIED: both YAML files parse; step positions confirmed (stage-a index 2, stage-b index 3); the exact CLI invocation was simulated locally incl. the bug-13/15 terminal->running restart guard (passes). LIMIT: not exercised in a real Actions run \u2014 the pre-existing later status steps remain as the authoritative fallback.",
-      "commit": "e396f3c"
+      "id": "bug-46",
+      "title": "News-push feature to clones, with optional recurring interval (min 6h)",
+      "status": "pending",
+      "notes": "Main account can push a 'news' message to all connected clone deployments. One-off push + optional recurring push on a set interval (minimum 6 hours). Settings UI/flow at implementer's judgment; scheduling likely via scheduled GitHub Actions workflow or Cloudflare Worker cron, matching existing scheduled-behavior architecture (e.g. Zernio smart schedule).",
+      "commit": ""
     },
     {
-      "id": "bug-43",
-      "title": "Torrent method failing again (recurring regression)",
-      "status": "done",
-      "notes": "Torrent method 'failing again'. ANSWER: it was candidate (1) \u2014 the exit-3 parking rendering \u2014 not candidate (2). ROOT CAUSE: stage-a.yml's 'Ingest source' step tried to capture the ingest exit code via 'code=$?' + a case branch, but GitHub Actions' bash shell runs with -eo pipefail already enabled and the step's own 'set -uo pipefail' does NOT clear -e. So when ingest.py correctly parked a multi-file torrent with SystemExit(3) (writing torrent-selection.json + awaiting_torrent_selection status), bash aborted the script BEFORE code=$? ran: the step rendered RED/failed, the 'Park for torrent selection' step (gated on result == 'awaiting_torrent') was skipped, and the 'On failure' step (if: failure()) overwrote the parked status with 'Stage A failed'. Confirmed against the real repo record: jobs/manual-1787899627063/status.json shows state=error with 'Stage A failed' even though torrent-selection.json exists \u2014 the exact screenshot scenario in the report. FIX (8fb63a4): 'set +e' around the ingest invocation (restored with 'set -e' right after capturing the code), so exit 3 lands as result=awaiting_torrent, the Park step commits the status, every downstream step is gated on result=='ok', and the run ends neutral/green while the bot presents the file picker. Exit 0 -> ok and exit 2 (genuine ingest error) behavior unchanged (real errors still fail red). CANDIDATE (2) \u2014 actual download regression vs legacy (bug-04): NOT reproduced. _download_torrent_payload's aria2 flags are byte-for-byte identical to _legacy/.github/workflows/stage-a.yml's torrent download command (select-file, trackers, DHT/PEX/LPD, timeouts all match), and bug-04's magnet-metadata fix (check=False + find_saved_metadata success signal) is intact in _resolve_magnet_metadata. VERIFIED: simulated old vs new step under 'bash -eo pipefail' \u2014 old form exits 3 with the result output never written (red step); new form maps 3->awaiting_torrent (exit 0), 0->ok, 2->failed (exit 2). YAML parses; downstream gating audited (all processing steps require result=='ok'); diagnostics.yml already uses the correct set +e pattern; no other workflow captures exit codes unsafely. 267 pipeline tests pass; the 3 failures are the same pre-existing ones confirmed on the pre-change base. LIMIT: not exercised in a real Actions run \u2014 but the bash -e semantics are deterministic and were reproduced locally.",
-      "commit": "8fb63a4"
+      "id": "bug-47",
+      "title": "Remove duplicate Zernio settings from completed-task view; verify publishing end-to-end",
+      "status": "pending",
+      "notes": "Zernio publishing settings appear both in main Settings and on a completed Stage B task view — remove from the completed-task view entirely; keep only in main Settings. Also re-verify automatic Zernio publishing actually works end-to-end when enabled (prior bug-24 fix not trusted — confirm against current behavior).",
+      "commit": ""
+    },
+    {
+      "id": "bug-48",
+      "title": "Series task flow dead-ends after a part completes — missing next-part and copy-prompt actions, no way to revisit completed parts",
+      "status": "pending",
+      "notes": "After a series-mode part finishes (Stage B complete), task view lacks: (1) action to proceed to the next part, (2) the copy-prompt button (exists for non-series tasks per prior bug-09/bug-10 — confirm whether simply missing from series-complete view), (3) a way to later view/access previously completed series parts (e.g. from /done or a dedicated series view) for re-download/repost.",
+      "commit": ""
+    },
+    {
+      "id": "bug-49",
+      "title": "Series tasks must not expire until the entire series is complete",
+      "status": "pending",
+      "notes": "Current 12h task expiry (per prior bug-03/bug-37) appears to apply per-part even in series mode. For series-mode tasks, no part of an incomplete series may be cleaned up/expired until every part reaches a completed/terminal state. Must not break general (non-series) expiry/cleanup behavior.",
+      "commit": ""
+    },
+    {
+      "id": "bug-50",
+      "title": "Remove the series-mode toggle from the /new task-creation flow",
+      "status": "pending",
+      "notes": "Series mode is controlled as a default/setting in main Settings (already exists there), not a per-task choice. Remove the series toggle/option from the /new wizard entirely; task creation follows the current Settings value without asking per task.",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-28T08:00:00Z"
+  ]
 }
