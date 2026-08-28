@@ -28,6 +28,13 @@
       "status": "done",
       "notes": "VERIFIED — no code change warranted; the intended behavior is already live. All three hypotheses checked:\n(a) DIFFERENT VIEW: swept every completed-Stage-B-task render path. (1) Main task view taskKeyboard (bot/src/runtime.js:70-100) renders only publish ACTIONS (\"📣 Publish (Zernio)\" -> showZernioPublishMenu) plus Download/Send video/Refresh/Delete — no settings shortcut. (2) The publish submenu zernioPublishKeyboard (bot/src/zernio.js:320) renders only Publish now/Smart schedule/Choose date and time + per-post retry/reschedule/cancel + back-to-task — no settings button (bug-47 fix intact, comment in code). (3) /done (bot/src/commands/done.js) lists completed tasks with Open/Release/Series-parts rows only. So the only place Zernio CONFIG exists is main Settings → Zernio publishing — exactly what the user asked for.\n(b) STALE DEPLOY: bug-47 (ce32973) shipped in deploy run 33158491832 on e644922 @ 2026-08-28T09:15Z — both \"Deploy Bot A Worker\" and \"Deploy Bot B relay Worker\" steps succeeded (verified via Actions API). The user re-report predates that green deploy — same broken-deploy window bug-51 documented (failed run 33159083660 @ 09:22Z skipped both deploy steps, so anything checked between the bug-47 code landing and a successful redeploy still showed the old menu).\n(c) SECOND RENDER PATH: taskKeyboard has exactly ONE caller (showTask, runtime.js:162). renderInteractiveView edits the active message in place, so a stale PRE-deploy Telegram message in the user's history can still display the retired keyboard until they re-open the task — a display artifact, not a code path. No second renderer exists.\nCONCLUSION: current deployed behavior matches the requirement. Reproduction step for the user: re-open the completed task (or tap Refresh) on the live bot — the completed-task view and its publish submenu no longer carry a Zernio settings shortcut.",
       "commit": ""
+    },
+    {
+      "id": "bug-55",
+      "title": "Series task still stops at complete with no next-part/copy-prompt button — verify against actual current behavior",
+      "status": "in_progress",
+      "notes": "Starting investigation. Static audit says taskKeyboard (runtime.js) has the \"▶ Start next part\" button gated on plan.is_final !== true (touched by bug-51), showTask passes plan, and bug-48 added a series copy-prompt row + task:parts. Verify: (1) caller passes plan, (2) series-specific copy-prompt actually implemented, (3) task:parts view works. Also consider deploy freshness — bug-48/49/50 were blocked by the failed 09:22Z deploy until bug-51's fix landed at 09:44Z.",
+      "commit": ""
     }
   ]
 }
