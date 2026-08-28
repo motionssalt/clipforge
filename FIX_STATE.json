@@ -35,6 +35,13 @@
       "status": "done",
       "notes": "VERIFIED — code fully correct and live; the report is explained by the blocked-deploy window. All three audit questions resolved:\n(1) CALLER PASSES PLAN: showTask (bot/src/runtime.js:128-131,162) fetches readProductionPlan alongside readStatus and calls taskKeyboard(status, label, plan) WITH the plan. The next-part gating can fire correctly.\n(2) SERIES COPY-PROMPT: implemented — taskKeyboard (runtime.js:81) renders \"📋 Copy prompt\" (task:prompt:<label>) for completed manual series parts, and sendAgentPrompt (index.js) is series-aware (bug-14: embeds the exact series_id/part/start_seconds so Stage B cross-check passes). This is the same action as task creation but is explicitly wired into the completed-series view, satisfying bug-48's intent.\n(3) SERIES-PARTS REVISIT: works — \"📚 Series parts\" row on the completed task view (runtime.js:94, task:parts handler -> showSeriesParts index.js) AND a \"Series parts · <label>\" row under each /done entry (commands/done.js:33). Both present and functional.\nDEPLOY-FRESHNESS ROOT CAUSE of the user report: bug-48 (c8b7be0) landed the buttons, but the first deploy run carrying bug-48/49/50 (run 33159083660 on 65b7da4 @ 09:22Z) FAILED at the bot test step and SKIPPED both wrangler deploys — so none of it deployed. The features went live only when bug-51's fix shipped green at 09:44Z (run 33160635806 on 4494eec). A user checking between bug-48 landing and the 09:44Z deploy saw no buttons — exactly the reported behavior.\nEMPIRICAL PROOF (node, current main): taskKeyboard({state:complete,mode:manual,series:{enabled:true,is_final:false}}, label, plan) renders [📋 Copy prompt][▶ Start next part][📚 Series parts]; with plan.series.is_final:true the next-part button is correctly suppressed; with no plan the buttons still render (status.is_final:false governs). No code change needed.",
       "commit": ""
+    },
+    {
+      "id": "bug-56",
+      "title": "Deploy-freshness cross-check (Bot A/B deployed version vs origin/main)",
+      "status": "in_progress",
+      "notes": "Starting cross-check. Strong evidence already gathered in bug-53/54/55 that the 09:22Z failed run (65b7da4) explains the three re-reports. Now directly verify: latest deploy run head_sha vs latest origin/main bot/** commit; whether any deploy gap remains; whether the auto-deploy pipeline has a systemic sync issue.",
+      "commit": ""
     }
   ]
 }
