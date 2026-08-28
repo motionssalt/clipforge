@@ -4,8 +4,8 @@
     {
       "id": "bug-66",
       "title": "Auto-login after Shadow Clone creation + live percentage during creation",
-      "status": "pending",
-      "notes": "Seeded 2026-08-28. Two parts: (1) verify auto-login (putCredentials + showHome) still fires at the point where the NEW async clone-creation flow (bug-63: GitHub Actions workflow dispatch instead of synchronous Worker copy) is confirmed complete; if the completion handler doesn't log the user in, add it. (2) verify the progress display during clone creation renders a live percentage (e.g. 'Copying files... 42% (34/80)'); if only bar/file-count, add percentage reusing done/total values, respecting existing Telegram edit-rate throttling.",
+      "status": "in_progress",
+      "notes": "Seeded 2026-08-28. Two parts: (1) verify auto-login (putCredentials + showHome) still fires at the point where the NEW async clone-creation flow (bug-63: GitHub Actions workflow dispatch instead of synchronous Worker copy) is confirmed complete; if the completion handler doesn't log the user in, add it. (2) verify the progress display during clone creation renders a live percentage (e.g. 'Copying files... 42% (34/80)'); if only bar/file-count, add percentage reusing done/total values, respecting existing Telegram edit-rate throttling. [in_progress 2026-08-28] Beginning investigation: locating async clone-creation completion handler (bug-63 flow) and progress rendering.",
       "commit": ""
     },
     {
