@@ -86,6 +86,21 @@ function parseRepo(repo) {
   return { owner: match[1], name: match[2] };
 }
 
+/**
+ * bug-53: normalize any repo reference ("owner/name", mixed case, pasted
+ * github.com URL, trailing ".git"/slash, surrounding whitespace) to the
+ * canonical lowercase "owner/name" slug used by owner-identity comparisons.
+ * Returns '' when the value cannot be a repo reference at all.
+ */
+export function normalizeRepoSlug(value) {
+  let text = String(value || '').trim().toLowerCase();
+  if (!text) return '';
+  text = text.replace(/^https?:\/\/(?:www\.)?github\.com\//, '').replace(/^git@github\.com:/, '');
+  text = text.split(/[?#]/)[0].replace(/\/+$/, '').replace(/\.git$/, '');
+  const match = /^([a-z0-9_.-]+)\/([a-z0-9_.-]+)$/.exec(text);
+  return match ? `${match[1]}/${match[2]}` : '';
+}
+
 function encodePath(path) {
   return String(path).split('/').map(encodeURIComponent).join('/');
 }
@@ -172,7 +187,11 @@ export async function validateConnection(pat, repo) {
   if (!repository || repository.permissions && repository.permissions.push === false) {
     throw new Error('The GitHub token can read this repository but cannot write to it.');
   }
-  return { login: user.login || '', repo: `${spec.owner}/${spec.name}`, private: !!repository.private };
+  // bug-53: persist the API-canonical full_name (exact owner/name casing)
+  // rather than the user-typed string, so the stored repo always matches the
+  // owner-identity gate — same source of truth as the clone-creation path.
+  const canonical = repository.full_name ? String(repository.full_name) : `${spec.owner}/${spec.name}`;
+  return { login: user.login || '', repo: canonical, private: !!repository.private };
 }
 
 /**
