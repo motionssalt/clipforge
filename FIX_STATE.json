@@ -4,8 +4,8 @@
     {
       "id": "bug-61",
       "title": "Series Part 2+ re-runs full Stage A instead of reusing Part 1's evidence",
-      "status": "pending",
-      "notes": "Seeded from sweep brief. Suspected causes: (1) stage-a-request.json for a 'start next part' action carries the ORIGINAL full source spec instead of a series-continuation request; (2) stage-a.yml reuse step gates on steps.req.outputs.series_source_job_id but the request JSON nests it as series.source_job_id — the id:req parsing step may never populate that output. Reuse step logic itself appears complete/correct.",
+      "status": "in_progress",
+      "notes": "ROOT CAUSE CONFIRMED against production: p2 stage-a-request.json DOES contain series.source_job_id (\"series-1787915980098\"), and the id:req step in stage-a.yml DOES extract it correctly into steps.req.outputs.series_source_job_id \u2014 so the reuse step DID fire (did not fall through to re-ingest). It failed because release \"clipforge-series-1787915980098\" DOES NOT EXIST (gh release view: not found): Part 1 never ran under job id series-1787915980098. The evidence actually lives under release clipforge-manual-1787915955571 (transcript.json, scene_index.json, key_moments.json, screenshots.zip, source_input.bin all present). Origin: wizard.js wizardToRequest() hardcoded series.source_job_id='' for Part 1; series.js nextPartRequestBody then fell back to continuation.seriesId (the brand-new series job id that never ingested), making the reuse gate pass but the gh release download fail. FIX (3 files): wizard.js sets source_job_id=seriesId for Part 1 (Part 1 is its own evidence source); series.js fallback chain now source_job_id || series_id || continuation.seriesId so pre-fix blank Part 1 requests also recover; stage-a.yml reuse download adds --clobber so re-runs do not abort on partial workspace files. Failed run 33174996402 used headSha 86300693.",
       "commit": ""
     },
     {
