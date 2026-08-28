@@ -3,30 +3,30 @@
   "bugs": [
     {
       "id": "bug-51",
-      "title": "Shadow Clone creation stalls forever on 'Preparing repository…'",
-      "status": "pending",
-      "notes": "Seeded 2026-08-28 (fresh sweep). Symptom: progress message stuck at first indeterminate stage, no success/error ever shown, /start works afterwards (flow died silently). Prior sweep claimed fix at commit a5037b7 (split into beginShadowCloneCreation/pollShadowCloneJob/finalizeShadowClone + cron-resumed KV clone job) — DO NOT TRUST; re-verify from current code and live behavior. Investigate in order: (1) unhandled rejection paths escaping try/catch in handleClonePatMessage / cron tick; (2) Workers request duration limits on any inline work; (3) renderInteractiveView/onProgress 429 throws. Every clone attempt must end in success OR clear error message — never silent stall. Verify end-to-end vs live GitHub API with realistic-size repo.",
+      "title": "Shadow Clone creation stalls forever on 'Preparing repository\u2026'",
+      "status": "in_progress",
+      "notes": "Seeded 2026-08-28 (fresh sweep). Symptom: progress message stuck at first indeterminate stage, no success/error ever shown, /start works afterwards (flow died silently). Prior sweep claimed fix at commit a5037b7 (split into beginShadowCloneCreation/pollShadowCloneJob/finalizeShadowClone + cron-resumed KV clone job) \u2014 DO NOT TRUST; re-verify from current code and live behavior. Investigate in order: (1) unhandled rejection paths escaping try/catch in handleClonePatMessage / cron tick; (2) Workers request duration limits on any inline work; (3) renderInteractiveView/onProgress 429 throws. Every clone attempt must end in success OR clear error message \u2014 never silent stall. Verify end-to-end vs live GitHub API with realistic-size repo. [in_progress 2026-08-28] Re-verifying from current code: reading clone creation flow (beginShadowCloneCreation/pollShadowCloneJob/finalizeShadowClone in bot/src/github.js), the webhook handler and cron tick in bot/src/index.js, wrangler.bot-a.jsonc triggers, and the clone-job tests to confirm whether the a5037b7 mechanism actually exists and is sound, then attempting a live end-to-end creation with the session PAT.",
       "commit": ""
     },
     {
       "id": "bug-52",
       "title": "Shadow Clones should relay through central Bot A/Bot B, not need their own",
       "status": "pending",
-      "notes": "Seeded 2026-08-28 (fresh sweep). Architecture change: clones should hand the relay step to central Bot A/Bot B via authenticated per-clone-scoped mechanism; central secrets must NOT be copied to clones. Prior sweep claimed at commit 226555a that the architecture already exists (clones are repos, not Workers; central Bot A serves all chats) and added multi-tenant tests — re-verify this claim against current code: audit all 7 isOriginalRepo call sites, bot/src/relay.js, handleRelayVideo, sealed-payload tests. Preserve sealed-payload security model multi-tenant.",
+      "notes": "Seeded 2026-08-28 (fresh sweep). Architecture change: clones should hand the relay step to central Bot A/Bot B via authenticated per-clone-scoped mechanism; central secrets must NOT be copied to clones. Prior sweep claimed at commit 226555a that the architecture already exists (clones are repos, not Workers; central Bot A serves all chats) and added multi-tenant tests \u2014 re-verify this claim against current code: audit all 7 isOriginalRepo call sites, bot/src/relay.js, handleRelayVideo, sealed-payload tests. Preserve sealed-payload security model multi-tenant.",
       "commit": ""
     },
     {
       "id": "bug-53",
       "title": "README.md out of date for Shadow Clone setup",
       "status": "pending",
-      "notes": "Seeded 2026-08-28 (fresh sweep). Update README.md (and linked docs) for the current Shadow Clone flow: accurate create/connect steps matching post-bug-51 bot behavior; document bug-52 cross-repo relay only if actually done+merged; document ALL Actions secrets a clone needs (CLOUDFLARE_API_TOKEN at minimum — check deploy-bots.yml and cleanup.yml for the full list). Prior sweep claimed rewrite at commit 8743550 — verify it matches actual current bot flow and workflow files; invent nothing.",
+      "notes": "Seeded 2026-08-28 (fresh sweep). Update README.md (and linked docs) for the current Shadow Clone flow: accurate create/connect steps matching post-bug-51 bot behavior; document bug-52 cross-repo relay only if actually done+merged; document ALL Actions secrets a clone needs (CLOUDFLARE_API_TOKEN at minimum \u2014 check deploy-bots.yml and cleanup.yml for the full list). Prior sweep claimed rewrite at commit 8743550 \u2014 verify it matches actual current bot flow and workflow files; invent nothing.",
       "commit": ""
     },
     {
       "id": "bug-54",
       "title": "Clone Deploy Bots fails: CLOUDFLARE_API_TOKEN never provisioned",
       "status": "pending",
-      "notes": "Seeded 2026-08-28 (fresh sweep). Real Actions log on fresh clone (clipforge-clone-zuaua5): wrangler deploy fails for missing CLOUDFLARE_API_TOKEN; bug-68 failure-alert step also fails (exit 1) because BOTB_MTPROTO_BOT_TOKEN absent. Prior sweep claimed fix at commit 4f1328d (settings-screen secrets note + ::error:: annotation in alert step; announceDeployFailure verified cross-repo by construction) — re-verify all of it from current code: (a) setup flow tells user which secrets and where; (b) check whether ANY secret provisioning happens in clone creation; (c) announceDeployFailure polling works cross-repo; (d) alert step degradation/annotation clarity. Documented manual step is acceptable; do not redesign onboarding.",
+      "notes": "Seeded 2026-08-28 (fresh sweep). Real Actions log on fresh clone (clipforge-clone-zuaua5): wrangler deploy fails for missing CLOUDFLARE_API_TOKEN; bug-68 failure-alert step also fails (exit 1) because BOTB_MTPROTO_BOT_TOKEN absent. Prior sweep claimed fix at commit 4f1328d (settings-screen secrets note + ::error:: annotation in alert step; announceDeployFailure verified cross-repo by construction) \u2014 re-verify all of it from current code: (a) setup flow tells user which secrets and where; (b) check whether ANY secret provisioning happens in clone creation; (c) announceDeployFailure polling works cross-repo; (d) alert step degradation/annotation clarity. Documented manual step is acceptable; do not redesign onboarding.",
       "commit": ""
     }
   ]
