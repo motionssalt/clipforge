@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-61",
@@ -11,9 +11,10 @@
     {
       "id": "bug-62",
       "title": "Zernio 'Publish' button still shown on a task already published automatically",
-      "status": "in_progress",
-      "notes": "ROOT CAUSE CONFIRMED: (1) taskKeyboard() in bot/src/runtime.js shows \"\ud83d\udce3 Publish (Zernio)\" UNCONDITIONALLY for every state==complete task \u2014 it never reads status.publishing.status. (2) The writeback side is HEALTHY: publish.yml \"Mark publishing as requested\" sets publishing.status=publishing with the idempotency key, and \"Persist publishing state\" (if: always()) writes the final aggregate status (published/partial/scheduled/failed) back to jobs/<id>/status.json. So after an automatic publish the status IS published \u2014 the bot just ignores it. FIX: pure helper zernioTaskPublishButton() in bot/src/zernio.js \u2014 published/partial -> \"\u2705 View publish status\", publishing/scheduled -> \"\u23f3 View publish status\" (both open the existing task:pub menu which carries the per-post records and retry/cancel actions), not_requested/failed/cancelled keep \"\ud83d\udce3 Publish (Zernio)\" (failed stays retryable). taskKeyboard uses it; showTask also surfaces the \u00a76.2 summary line when publishing.status != not_requested. Tests added to bot/test/zernio.test.mjs.",
-      "commit": ""
+      "status": "done",
+      "notes": "ROOT CAUSE CONFIRMED: (1) taskKeyboard() in bot/src/runtime.js shows \"\ud83d\udce3 Publish (Zernio)\" UNCONDITIONALLY for every state==complete task \u2014 it never reads status.publishing.status. (2) The writeback side is HEALTHY: publish.yml \"Mark publishing as requested\" sets publishing.status=publishing with the idempotency key, and \"Persist publishing state\" (if: always()) writes the final aggregate status (published/partial/scheduled/failed) back to jobs/<id>/status.json. So after an automatic publish the status IS published \u2014 the bot just ignores it. FIX: pure helper zernioTaskPublishButton() in bot/src/zernio.js \u2014 published/partial -> \"\u2705 View publish status\", publishing/scheduled -> \"\u23f3 View publish status\" (both open the existing task:pub menu which carries the per-post records and retry/cancel actions), not_requested/failed/cancelled keep \"\ud83d\udce3 Publish (Zernio)\" (failed stays retryable). taskKeyboard uses it; showTask also surfaces the \u00a76.2 summary line when publishing.status != not_requested. Tests added to bot/test/zernio.test.mjs. FIX COMMITTED in 9c89d47. Bot suite passes including new zernioTaskPublishButton tests covering every \u00a76.2 status. Writeback verified healthy in publish.yml (Mark-publishing-requested + Persist-publishing-state steps), so the button state now tracks reality for both automatic (stage-b dispatch -> publish.yml) and manual publishes.",
+      "commit": "9c89d47"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T13:36:48Z"
 }
