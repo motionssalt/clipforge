@@ -183,11 +183,10 @@ function nav(extra = []) {
 }
 
 export function seriesKeyboard(wizard) {
-  const seriesMark = wizard.series ? '☑' : '▢';
-  // bug-33: the mode choice is gone (bug-30 removed the automatic mode).
-  // The Series toggle moves to the source step so it remains reachable.
+  void wizard;
+  // bug-50: the per-task series toggle is removed from /new. Series mode is
+  // a default owned by main Settings; the source step only offers Cancel.
   return [
-    [{ text: `Series ${seriesMark}`, callback_data: 'wz:series:toggle' }],
     [{ text: 'Cancel', callback_data: 'wz:cancel' }]
   ];
 }
@@ -239,7 +238,7 @@ export function stepPrompt(wizard, options = {}) {
   switch (wizard.step) {
     case 'source':
       return {
-        text: '<b>New video — step 1/5: source</b>\n\nSend the video, or paste a direct link / Google Drive link / magnet URI / public t.me channel-post link, or upload a <code>.torrent</code> file (≤ 1 MB).\n\nToggle <b>Series</b> to chain this video into sequential cliffhanger parts.',
+        text: '<b>New video — step 1/5: source</b>\n\nSend the video, or paste a direct link / Google Drive link / magnet URI / public t.me channel-post link, or upload a <code>.torrent</code> file (≤ 1 MB).',
         keyboard: seriesKeyboard(wizard)
       };
     case 'focus':
@@ -257,6 +256,6 @@ export function stepPrompt(wizard, options = {}) {
         keyboard: confirmKeyboard()
       };
     default:
-      return { text: '<b>New video</b>', keyboard: seriesKeyboard(wizard) };
+      return { text: '<b>New video</b>', keyboard: nav([]) };
   }
 }

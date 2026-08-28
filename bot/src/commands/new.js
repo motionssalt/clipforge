@@ -8,6 +8,7 @@ import { buttons } from '../telegram.js';
 import { requireCredentials } from '../runtime.js';
 import { renderInteractiveView } from '../views.js';
 import { newWizard, stepPrompt } from '../wizard.js';
+import { readSeriesSettings } from '../github.js';
 
 /** Render the wizard's current step into the chat's active view. */
 export async function renderWizardStep(env, chatId, messageId = null, extra = '') {
@@ -28,9 +29,13 @@ export async function handleNew(env, chatId, messageId = null) {
   const credentials = await requireCredentials(env, chatId, messageId);
   if (!credentials) return;
   await clearFlow(env, chatId);
+  // bug-50: the wizard inherits the Settings series default — no per-task toggle.
+  const seriesSettings = await readSeriesSettings(credentials, credentials.repo).catch(() => null);
+  const wizard = newWizard();
+  wizard.series = Boolean(seriesSettings && seriesSettings.enabled === true);
   const state = await getState(env, chatId);
   state.flow = 'wizard';
-  state.pending = { wizard: newWizard() };
+  state.pending = { wizard };
   await putState(env, chatId, state);
   return renderWizardStep(env, chatId, messageId);
 }
