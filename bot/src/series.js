@@ -143,8 +143,13 @@ export function nextPartRequestBody(request, continuation, context) {
       enabled: true,
       series_id: continuation.seriesId,
       // The original source job id is carried forward unchanged so every
-      // part can reuse Part 1's Stage A evidence.
-      source_job_id: String(reqSeries.source_job_id || continuation.seriesId),
+      // part can reuse Part 1's Stage A evidence. bug-61: fall back to the
+      // series_id (== Part 1's job id), NOT continuation.seriesId, when a
+      // pre-bug-61 Part 1 request left source_job_id blank — otherwise part
+      // >= 3 would self-reference the continuation's own job id and the reuse
+      // step would try to download evidence from a release that can never
+      // exist (exactly how series-1787915980098-p2 failed).
+      source_job_id: String(reqSeries.source_job_id || reqSeries.series_id || continuation.seriesId),
       part: continuation.part,
       start_seconds: continuation.startSeconds,
       context: String(context || '').slice(0, MAX_CONTEXT_CHARS),

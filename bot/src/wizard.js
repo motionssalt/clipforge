@@ -165,7 +165,11 @@ export function wizardToRequest(wizard, seriesId) {
     series: {
       enabled: series,
       series_id: series ? String(seriesId || '') : '',
-      source_job_id: '',
+      // bug-61: Part 1 is its own Stage A evidence source. Persist the series
+      // id (== Part 1's job id) here instead of '' so later parts reuse THIS
+      // job's release evidence; a blank here made Part 2+ point its
+      // source_job_id at a job id that never ingested anything (no release).
+      source_job_id: series ? String(seriesId || '') : '',
       part: series ? 1 : 0,
       start_seconds: 0,
       context: ''

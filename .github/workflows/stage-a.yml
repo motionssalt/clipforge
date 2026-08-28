@@ -239,9 +239,11 @@ jobs:
           set -euo pipefail
           source_job="${{ steps.req.outputs.series_source_job_id }}"
           mkdir -p work/series-source
+          # --clobber: a re-run of this workflow reuses the workspace, and a
+          # partial first download would otherwise abort the retry.
           gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
             --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
-            --pattern 'screenshots.zip' --pattern 'source_input.bin'
+            --pattern 'screenshots.zip' --pattern 'source_input.bin' --clobber
           mkdir -p work/screenshots
           cp work/series-source/transcript.json work/transcript.json
           cp work/series-source/scene_index.json work/scene_index.json
