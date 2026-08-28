@@ -18,7 +18,7 @@
     {
       "id": "bug-65",
       "title": "Remove manual 'push update to clones' trigger — updates to clones must be fully automatic",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Design reversal: remove manual 'Push update to clones' button from Settings; on every push to main on the main account, automatically propagate the update to all connected clones reusing the existing sync/copy logic; preserve the changelog/notification-to-clone-owner behavior; preserve owner-identity gating (main vs clone) for source-of-truth determination.",
       "commit": ""
     }
