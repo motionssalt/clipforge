@@ -25,8 +25,8 @@
     {
       "id": "bug-50",
       "title": "Add a \"Delete clone\" button to clone settings",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting. Plan: github.js gains deleteRepository (DELETE /repos/{owner}/{repo}); index.js adds a '\ud83d\uddd1\ufe0f Delete clone' button to the 'set:github' screen -> a two-step confirmation (first screen explains irreversibility, second requires an explicit 'Yes, permanently delete <repo>' tap) -> on success reuse the disconnect path (deleteCredentials + clearFlow) and return home with a distinct 'repository deleted' message; on failure, local connection state is NOT cleared and 403/404 surfaces plain scope guidance (classic PAT delete_repo / fine-grained Administration write).",
       "commit": ""
     }
   ]
