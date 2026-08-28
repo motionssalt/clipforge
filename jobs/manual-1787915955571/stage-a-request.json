@@ -3,7 +3,8 @@
   "job_id": "manual-1787915955571",
   "source": {
     "kind": "torrent_file",
-    "value": "path:jobs/manual-1787915955571/source.torrent"
+    "value": "path:jobs/manual-1787915955571/source.torrent",
+    "torrent_file_index": "2"
   },
   "options": {
     "whisper_model": "base",
@@ -25,5 +26,5 @@
     "ref": "audio-library/LOUCURA LETAL (ULTRA SLOWED).m4a",
     "source": "default"
   },
-  "saved_at_epoch": 1787915980
+  "saved_at_epoch": 1787918182
 }
