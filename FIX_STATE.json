@@ -1,12 +1,13 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-55",
       "title": "Default transcript language should be English (\"en\"), not auto-detect",
-      "status": "in_progress",
-      "notes": "Seeded 2026-08-28 (fresh sweep). [in_progress 2026-08-28] Investigating all default-language sites: bot/src/github.js buildStageARequest, pipeline/stage_a/transcribe.py, .github/workflows/stage-a.yml, schemas/stage_a_request.schema.json, CLI --lang, plus repo-wide sweep for other transcription 'auto' fallbacks and any bot-side language settings screen.  Change default transcription language from \"auto\" to \"en\" at every layer where the default is actually applied: bot/src/github.js buildStageARequest options fallback, pipeline/stage_a/transcribe.py build_default_transcriber + Transcriber class defaults, .github/workflows/stage-a.yml opts.get(\"language\", ...) fallback, and any CLI --lang default. Preserve explicit \"auto\" passthrough (language=None -> faster-whisper auto-detect). Update schemas/stage_a_request.schema.json only if it declares a JSON Schema default. Sweep repo (excluding _legacy/, jobs/, node_modules) for other transcription-language \"auto\" fallbacks. Run pytest pipeline/tests and npm test bot/test; update only tests asserting the old default, not tests of the explicit auto-detect feature.",
-      "commit": null
+      "status": "done",
+      "notes": "Seeded 2026-08-28 (fresh sweep). [in_progress 2026-08-28] Investigated all default-language sites. [done 2026-08-28] Changed default 'auto' -> 'en' at EVERY layer where a default is applied: (1) bot/src/github.js buildStageARequest options fallback String(options.language || 'en') \u2014 verified NO bot-side wizard/settings screen lets a user choose language per task (the only 'language' references in bot/src are github.js, the series.js passthrough of the prior part's language, and unrelated 'design language' comments), so the single fallback is the only bot-side default site; (2) pipeline/stage_a/transcribe.py FasterWhisperTranscriber.__init__ + transcribe_to_json parameter defaults and CLI --lang default, usage doc updated; (3) .github/workflows/stage-a.yml opts.get('language', 'en') AND the invalid-value fallback (was 'auto') both -> 'en'; (4) pipeline/stage_a/ingest.py torrent stage_a_inputs fallback; (5) pipeline/plan/series.py next-part request fallback; (6) pipeline/stage_b/run.py whisper_lang param + --whisper-lang CLI default and stage_b/captions.py lang param + --lang CLI default \u2014 stage-b.yml never passes these, so these defaults are live on every real Stage B run; (7) ARCHITECTURE.md contract example updated to 'en'. Explicit 'auto' still works: auto-detect code paths (language=None -> faster-whisper) untouched in transcribe.py:134 and captions.py:163. schemas/stage_a_request.schema.json declares no JSON Schema 'default' for language \u2014 no schema change needed. Repo-wide sweep (excl. _legacy/, jobs/, node_modules) confirms no other transcription-language 'auto' default sites remain; remaining 'auto' literals are explicit-value code paths and test fixtures. Tests: pipeline pytest 263 passed / 13 failed \u2014 IDENTICAL failure set on pristine main (verified via git stash), all pre-existing environment issues (cv2/ultralytics missing, telegram stubs), none assert on the language default; bot npm test 64 pass / 6 fail \u2014 identical on pristine main, pre-existing. No test asserted 'auto' as the correct default, so no test expectations needed changing; fixtures passing 'auto' explicitly were left untouched (they exercise the auto-detect feature).",
+      "commit": "1c4d56e"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T23:59:00Z"
 }
