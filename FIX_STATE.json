@@ -11,9 +11,9 @@
     {
       "id": "bug-48",
       "title": "No visible progress indicator while a Shadow Clone is being created",
-      "status": "in_progress",
-      "notes": "Starting. Plan: immediate in-progress message after PAT is received (renderFreshView before createPrivateShadowClone), plus throttled incremental copy progress via an onProgress callback threaded into createPrivateShadowClone, editing the same message. Will follow existing render/edit patterns in bot/src/index.js.",
-      "commit": ""
+      "status": "done",
+      "notes": "IMPLEMENTED AND VERIFIED. bot/src/index.js handleClonePatMessage: immediately after the PAT message is deleted (\u00a78.1.5), the already-acknowledged PAT prompt message is edited in place into an in-progress state ('Creating your Shadow Clone \u2014 this can take a minute \u2014 the bot is working.' + indeterminate 'Preparing repository\u2026' bar) via the standard renderInteractiveView self-edit \u2014 instant feedback, no extra chat messages, no new messaging mechanism. Incremental progress: createPrivateShadowClone (bot/src/github.js) gained an optional third arg { onProgress({stage, done, total}) } reporting stages source -> copy (once per 4-file chunk) -> finalize; the handler renders 'Copying files\u2026 done/total' with the existing progress.js progressBar into the same status message, throttled to at most one edit per ~3s AND >=12 files since the last edit (progress.js documents Telegram's ~1 edit/s/chat limit; the copy loop emits once per 4 files, i.e. ~1/s, so the throttle cuts edit volume ~12x), with the terminal copy-complete event always rendered. Reporting is best-effort: a throwing callback cannot break the clone (verified). Error/success paths unchanged (renderFreshView error view / success sendMessage + showHome). VERIFIED end-to-end against the live GitHub API: a real clone creation emitted 79 well-formed events \u2014 source(done 0/302) once, copy 77 times strictly monotonic 4..302/302, finalize(302/302) once \u2014 and a deliberately throwing callback on the first event did not affect the clone (302 files, repo cleaned up after). Bot test suite: 110/110 pass. Fix commit a650209.",
+      "commit": "a650209"
     },
     {
       "id": "bug-49",
