@@ -26,8 +26,8 @@
     {
       "id": "bug-43",
       "title": "Torrent method failing again (recurring regression)",
-      "status": "pending",
-      "notes": "Two candidates: (1) exit-code-3 torrent-selection parking renders as failure instead of awaiting input; (2) actual torrent download regression vs _legacy (bug-04). Determine which and fix.",
+      "status": "in_progress",
+      "notes": "Two candidates: (1) exit-code-3 torrent-selection parking renders as failure instead of awaiting input; (2) actual torrent download regression vs _legacy (bug-04). Determine which and fix. | [2026-08-28] Started investigation.",
       "commit": null
     }
   ]
