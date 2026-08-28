@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "started_at": "2026-08-28T09:00:00Z",
   "bugs": [
     {
@@ -47,9 +47,10 @@
     {
       "id": "bug-50",
       "title": "Remove the series-mode toggle from the /new task-creation flow",
-      "status": "pending",
-      "notes": "Series mode is controlled as a default/setting in main Settings (already exists there), not a per-task choice. Remove the series toggle/option from the /new wizard entirely; task creation follows the current Settings value without asking per task.",
-      "commit": ""
+      "status": "done",
+      "notes": "Series mode is controlled as a default/setting in main Settings (already exists there), not a per-task choice. Remove the series toggle/option from the /new wizard entirely; task creation follows the current Settings value without asking per task. [DONE 2026-08-28, commit 42847aa]: REMOVED the per-task series toggle from /new. seriesKeyboard() (the source-step keyboard) no longer renders the Series \u2611/\u25a2 button; the source prompt text dropped the \"Toggle Series...\" line; the stepPrompt default branch now returns nav([]) instead of the toggle keyboard; and handleWizardCallback turns a stale wz:series tap into a no-op re-render instead of flipping state. Series mode now follows the Settings default end to end: handleNew seeds newWizard().series from readSeriesSettings().enabled, and startJob re-reads it at the confirm/commit boundary so the dispatched stage-a-request always reflects the current setting even if it changed mid-wizard. stepsFor/wizardToRequest/describeMode are unchanged and still honor wizard.series, so a Settings-enabled series correctly skips focus and stamps part 1. VERIFIED: node --check clean on wizard.js/new.js/index.js; bot suite 53 pass / 4 pre-existing fails (the pre-existing wizard tests exercise wizard.series directly and still pass since the series FIELD is retained \u2014 only the toggle UI was removed). LIMITS: none significant; the toggle is gone from the UI as required.",
+      "commit": "42847aa"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T09:22:14Z"
 }
