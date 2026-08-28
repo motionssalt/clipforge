@@ -124,11 +124,36 @@ def run_stage_b(
         run=run_info,
     )
 
-    _write(job_id, enabled=write_status, state="stage_b_running",
-           message="Stage B: validating production.json", **status_kwargs)
+    # ---- bug-57: sync status.series from the plan BEFORE any render step --- #
+    # The task header, the Zernio-publish suppression, and the series
+    # next-part affordance in the bot all read status.series — which used to
+    # stay at its zeroed defaults (enabled:false, part:0) because nothing ever
+    # copied the plan's series data into status.json. Sync it as the very
+    # first status write of the run, from the RAW document (best-effort:
+    # pre-validation), so the bot reflects the series even when the plan
+    # subsequently fails boundary validation. After successful validation the
+    # block is re-synced from the validated/normalized plan below, so a
+    # malformed-but-parseable document can never leave a corrupt series block.
+    try:
+        raw_document = json.loads(Path(production_json).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raw_document = None
+    if isinstance(raw_document, dict):
+        _write(job_id, enabled=write_status, state="stage_b_running",
+               message="Stage B: validating production.json",
+               series=common.plan_series_block(raw_document), **status_kwargs)
+    else:
+        _write(job_id, enabled=write_status, state="stage_b_running",
+               message="Stage B: validating production.json", **status_kwargs)
 
     # ---- Boundary validation (§13 invariant #5) ---------------------------- #
     plan = common.load_production_plan(production_json)
+
+    # bug-57 (authoritative sync): re-write status.series from the VALIDATED,
+    # normalized plan so the block is guaranteed schema-correct from here on.
+    _write(job_id, enabled=write_status, state="stage_b_running",
+           message="Stage B: validating production.json",
+           series=common.plan_series_block(plan), **status_kwargs)
 
     # ---- Optional music ----------------------------------------------------- #
     music_path = common.resolve_music_ref(music_ref, job_id=job_id, work_dir=work_dir) \

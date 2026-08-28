@@ -23,6 +23,70 @@ from typing import Any
 
 from pipeline.plan import schema as plan_schema
 
+
+# --------------------------------------------------------------------------- #
+# bug-57: status.series sync from production.json                             #
+# --------------------------------------------------------------------------- #
+
+def plan_series_block(document: dict[str, Any]) -> dict[str, Any]:
+    """Derive the status.json ``series`` block from a production.json document.
+
+    Accepts the raw (pre-validation) production.json so callers can sync
+    ``jobs/<id>/status.json`` even when the plan later fails boundary
+    validation — the bot needs ``series.enabled`` to render the task header
+    and series affordances regardless of whether the render itself proceeds.
+
+    A plan counts as a series plan whenever it declares series data in either
+    documented shape: the nested §7.3 ``series`` object OR any legacy flat
+    ``series_*`` sibling (same test ``pipeline.plan.schema._extract_series``
+    uses). All status fields are derived from the plan with the exact
+    per-field nested-wins precedence of ``normalize_plan`` — never left at
+    their zeroed defaults. Non-series plans return the all-off block, and
+    individual values are defensively coerced (bool/str/int) so a malformed
+    plan can never crash a status write.
+    """
+    if not isinstance(document, dict):
+        return {"enabled": False, "series_id": "", "part": 0,
+                "start_seconds": 0, "is_final": False}
+    declares = isinstance(document.get("series"), dict) or any(
+        flat_key in document for flat_key in plan_schema._NESTED_TO_FLAT.values()
+    )
+    if not declares:
+        return {"enabled": False, "series_id": "", "part": 0,
+                "start_seconds": 0, "is_final": False}
+    # Nested series object first, legacy flat ``series_*`` siblings fill any
+    # field the nested object did not define (same per-field nested-wins
+    # precedence as ``normalize_plan``). Deliberately self-contained so it
+    # also works on a raw document whose non-series fields are unvalidated.
+    series: dict[str, Any] = {}
+    nested = document.get("series")
+    if isinstance(nested, dict):
+        series = dict(nested)
+    for flat_key, nested_key in (
+        ("series_id", "series_id"),
+        ("series_part", "part"),
+        ("series_start_seconds", "start_seconds"),
+        ("series_final", "is_final"),
+    ):
+        if nested_key not in series and flat_key in document:
+            series[nested_key] = document[flat_key]
+    return {
+        "enabled": True,
+        "series_id": str(series.get("series_id") or ""),
+        "part": _as_nonneg_int(series.get("part")),
+        "start_seconds": _as_nonneg_int(series.get("start_seconds")),
+        "is_final": bool(series.get("is_final", False)),
+    }
+
+
+def _as_nonneg_int(value: Any) -> int:
+    """Best-effort non-negative int for series part/start_seconds."""
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 # --------------------------------------------------------------------------- #
 # Repository-relative locations                                                #
 # --------------------------------------------------------------------------- #

@@ -443,6 +443,30 @@ jobs:
           print("production.json passed the Stage B boundary validation.")
           PY
 
+          # bug-57: sync status.series from the plan the moment production.json
+          # is resolved AND validated — the task header, Zernio-publish
+          # suppression, and the next-part affordance in the bot all read
+          # status.series, which used to stay zeroed forever. The Stage B
+          # pipeline re-syncs it from the raw document as its very first
+          # status write too, but doing it here means the block is correct
+          # even before that first write lands, and covers every future
+          # production.json-accepting path that runs this boundary step.
+          # plan_series_block handles the nested and legacy flat shapes with
+          # nested-wins precedence and defensive coercions; the plan passed
+          # validation just above, so this can only write a well-formed block.
+          # Failure here must never fail the run (non-authoritative write).
+          JID="$jid" PYTHONPATH="$GITHUB_WORKSPACE" python - <<'PY' || echo "WARN: status.series sync failed" >&2
+          import json, os
+          from pathlib import Path
+          from pipeline import status as status_mod
+          from pipeline.stage_b.common import plan_series_block
+
+          jid = os.environ["JID"]
+          plan_doc = json.loads(Path("work/production.json").read_text(encoding="utf-8"))
+          status_mod.write_status(jid, series=plan_series_block(plan_doc))
+          print("status.series synced from production.json.")
+          PY
+
       - name: Resolve optional background music
         shell: bash
         env:

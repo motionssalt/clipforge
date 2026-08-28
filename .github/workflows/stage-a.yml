@@ -85,10 +85,31 @@ jobs:
             echo "invalid job_id; skipping early bot notification" >&2
             exit 0
           fi
+          # bug-57: keep status.series in sync with the durable request from
+          # the very first status write. The bot seeds series at job creation,
+          # but any rewrite path that loses it (e.g. an archived/restarted
+          # status record) used to leave the block zeroed forever, which broke
+          # the task header, Zernio suppression, and the next-part affordance.
+          # The request JSON is the authoritative pre-plan series source; its
+          # block lacks is_final, which the Stage B plan sync fills in later.
+          series_json="$(python - "$job_id" <<'PY' || true
+          import json, sys
+          try:
+              req = json.load(open(f"jobs/{sys.argv[1]}/stage-a-request.json", encoding="utf-8"))
+              print(json.dumps(req.get("series") or {}))
+          except (OSError, json.JSONDecodeError):
+              pass
+          PY
+          )"
+          series_args=()
+          if [ -n "$series_json" ] && [ "$series_json" != "{}" ]; then
+            series_args=(--series-json "$series_json")
+          fi
           python -m pipeline.status "$job_id" \
             --state stage_a_running \
             --message "Stage A run started on GitHub Actions — setting up." \
             --release-tag "clipforge-$job_id" \
+            "${series_args[@]}" \
             --workflow-run-id "${{ github.run_id }}" \
             --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --code-ref "$(git rev-parse HEAD)" || { echo "WARN: status write failed" >&2; exit 0; }

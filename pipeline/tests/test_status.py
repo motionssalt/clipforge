@@ -143,5 +143,78 @@ class SchemaConformanceTests(unittest.TestCase):
         jsonschema.validate(rec, schema)
 
 
+class PlanSeriesSyncTests(unittest.TestCase):
+    """bug-57: status.series must be synced from production.json, not left
+    at zeroed defaults — that desync was the root cause of the task header
+    showing "manual-<id>", the Zernio publish button staying visible on
+    series parts, and the missing next-part flow."""
+
+    def setUp(self) -> None:
+        import tempfile
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def tearDown(self) -> None:
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _seed(self, series_block: dict) -> None:
+        status.write_status(
+            "job-1", state="queued", mode="manual", series=series_block,
+            root=self.tmp,
+        )
+
+    def test_plan_series_block_nested_shape(self) -> None:
+        from pipeline.stage_b.common import plan_series_block
+        block = plan_series_block({
+            "title": "x",
+            "series": {
+                "series_id": "series-1", "part": 2, "start_seconds": 628,
+                "end_seconds": 900, "is_final": False, "summary": "…",
+            },
+        })
+        self.assertEqual(block, {
+            "enabled": True, "series_id": "series-1", "part": 2,
+            "start_seconds": 628, "is_final": False,
+        })
+
+    def test_plan_series_block_flat_shape(self) -> None:
+        from pipeline.stage_b.common import plan_series_block
+        block = plan_series_block({
+            "series_id": "s-1", "series_part": 3,
+            "series_start_seconds": 10, "series_final": True,
+        })
+        self.assertEqual(block, {
+            "enabled": True, "series_id": "s-1", "part": 3,
+            "start_seconds": 10, "is_final": True,
+        })
+
+    def test_plan_series_block_non_series_and_garbage(self) -> None:
+        from pipeline.stage_b.common import plan_series_block
+        off = {"enabled": False, "series_id": "", "part": 0,
+               "start_seconds": 0, "is_final": False}
+        self.assertEqual(plan_series_block({"title": "x"}), off)
+        self.assertEqual(plan_series_block(None), off)
+        self.assertEqual(plan_series_block({}), off)
+        # Garbage in a declared series never crashes; values coerce safely.
+        block = plan_series_block({"series_part": "x", "series_final": "yes"})
+        self.assertTrue(block["enabled"])
+        self.assertEqual(block["part"], 0)
+        self.assertIs(block["is_final"], True)
+
+    def test_write_status_syncs_series_from_plan(self) -> None:
+        """The exact bug-57 scenario: a job whose status.series is zeroed
+        gets its series block restored from the plan via write_status."""
+        from pipeline.stage_b.common import plan_series_block
+        self._seed({})  # zeroed series block, as the broken job had
+        doc = {
+            "series": {"series_id": "series-9", "part": 1,
+                       "start_seconds": 0, "is_final": False},
+        }
+        rec = status.write_status("job-1", series=plan_series_block(doc), root=self.tmp)
+        self.assertTrue(rec["series"]["enabled"])
+        self.assertEqual(rec["series"]["series_id"], "series-9")
+        self.assertEqual(rec["series"]["part"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

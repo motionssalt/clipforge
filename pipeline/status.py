@@ -314,8 +314,22 @@ def _main(argv: list[str] | None = None) -> int:
     ap.add_argument("--workflow-run-id", type=int, default=None)
     ap.add_argument("--workflow-run-url", default=None)
     ap.add_argument("--code-ref", default=None)
+    ap.add_argument("--series-json", default=None, metavar="JSON",
+                    help="bug-57: sync the status series block from this JSON object "
+                         "(e.g. the request's series block); any subset of "
+                         "enabled/series_id/part/start_seconds/is_final")
     ap.add_argument("--out-dir", default="jobs")
     args = ap.parse_args(argv)
+
+    series_updates: dict[str, Any] | None = None
+    if args.series_json is not None:
+        try:
+            parsed = json.loads(args.series_json)
+        except json.JSONDecodeError:
+            raise SystemExit(f"--series-json is not valid JSON: {args.series_json!r}")
+        if not isinstance(parsed, dict):
+            raise SystemExit("--series-json must be a JSON object")
+        series_updates = parsed
 
     assets = _parse_kv_list(args.asset)
     run_updates: dict[str, Any] = {}
@@ -335,6 +349,7 @@ def _main(argv: list[str] | None = None) -> int:
         release_url=args.release_url,
         assets=assets or None,
         run=run_updates or None,
+        series=series_updates,
         root=args.out_dir,
     )
     print(f"wrote {status_path(args.job_id, root=args.out_dir)} state={record['state']}")
