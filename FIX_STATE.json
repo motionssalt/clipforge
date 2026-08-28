@@ -4,8 +4,8 @@
     {
       "id": "bug-51",
       "title": "Confirm bug-44..bug-50 fixes are actually live in deployed bots (deploy pipeline verification)",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation: checking GitHub Actions deploy runs for bug-44..bug-50 commits.",
       "commit": ""
     },
     {
