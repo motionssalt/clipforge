@@ -214,7 +214,15 @@ async function autoCloneRepositoryName(credentials, login) {
   throw new Error('Could not find a free repository name automatically. Send a name yourself instead.');
 }
 
-export async function createPrivateShadowClone(pat, requestedName) {
+export async function createPrivateShadowClone(pat, requestedName, options = {}) {
+  // bug-48: optional progress reporter ({stage, done, total}) so the bot can
+  // keep a live status message while the clone is being built. Reporting is
+  // strictly best-effort: a failing callback must never break the clone.
+  const report = async (stage, done, total) => {
+    if (typeof options.onProgress !== 'function') return;
+    try { await options.onProgress({ stage, done: Number(done) || 0, total: Number(total) || 0 }); }
+    catch { /* progress display is best-effort */ }
+  };
   const identity = await getGitHubIdentity(pat);
   const credentials = { githubPat: String(pat), repo: '', geminiKeys: [] };
   // bug-45: an empty/blank requestedName means "choose for me" (zero-setup
@@ -237,6 +245,7 @@ export async function createPrivateShadowClone(pat, requestedName) {
     ? sourceTree.tree.filter((entry) => entry && entry.type === 'blob' && sourcePathAllowed(entry.path))
     : [];
   if (!files.length) throw new Error('The ClipForge source tree did not contain any cloneable files.');
+  await report('source', 0, files.length);
 
   let target;
   try {
@@ -333,6 +342,7 @@ export async function createPrivateShadowClone(pat, requestedName) {
   const bootstrapCommitSha = bootstrap && bootstrap.commit && bootstrap.commit.sha;
   const bootstrapTreeSha = bootstrap && bootstrap.commit && bootstrap.commit.tree && bootstrap.commit.tree.sha;
   if (!bootstrapCommitSha || !bootstrapTreeSha) throw new Error('GitHub did not return a bootstrap commit for the new repository.');
+  await report('copy', 0, files.length);
 
   const entries = [];
   const copyChunkSize = 4;
@@ -349,7 +359,9 @@ export async function createPrivateShadowClone(pat, requestedName) {
         return { path: file.path, mode: file.mode || '100644', type: 'blob', sha: targetBlob.sha };
       }));
       entries.push(...copied);
+      await report('copy', entries.length, files.length);
     }
+    await report('finalize', files.length, files.length);
     // bug-46: build the final tree on top of the bootstrap commit's tree via
     // base_tree, so the .clipforge-sync.json bootstrap file is preserved
     // (and its blob is re-used automatically). The overlay tree carries only
