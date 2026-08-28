@@ -11,8 +11,8 @@
     {
       "id": "bug-52",
       "title": "Add Instagram publishing support via Zernio (auto Reel + Story on publish)",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation: mapping existing Zernio integration (bot settings UI, publish workflow, pipeline/publish/zernio.py) and verifying Zernio API docs for Instagram Reel + Story.",
       "commit": ""
     }
   ]
