@@ -263,35 +263,89 @@ export async function createPrivateShadowClone(pat, requestedName) {
   }
   const repo = target && target.full_name ? String(target.full_name) : `${identity.login}/${name}`;
   const targetCredentials = { ...credentials, repo };
+
+  // bug-46: GitHub's Git Data API (POST .../git/blobs, .../git/trees,
+  // .../git/commits) returns HTTP 409 "Git Repository is empty." for every
+  // call against a repo that has zero refs. auto_init:false + a straight
+  // blobs/trees/commits/refs sequence is therefore unreachable on a freshly
+  // created target — the very first POST /git/blobs fails, and the raw
+  // GitHub message was previously bubbled to the user by handleClonePatMessage
+  // as a misleading "check your PAT scopes" hint. The Contents API
+  // (PUT .../contents/<path>) DOES work on an empty repo and creates the
+  // first commit + refs/heads/<branch> in one call, so we use it to
+  // bootstrap the ref with the sync marker before switching to the Git Data
+  // API (which is faster for the bulk file copy).
+  const sync = { source: SHADOW_CLONE_SOURCE, synced_sha: sourceCommitSha, synced_at: new Date().toISOString() };
+  const syncPayload = `${JSON.stringify(sync, null, 2)}\n`;
+  let bootstrap;
+  try {
+    bootstrap = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/contents/.clipforge-sync.json`, {
+      method: 'PUT',
+      body: {
+        message: `Initialize Shadow Clone from ${SHADOW_CLONE_SOURCE}@${sourceCommitSha.slice(0, 7)}`,
+        content: b64encode(syncPayload),
+        branch: DEFAULT_BRANCH
+      }
+    });
+  } catch (error) {
+    if (error instanceof GitHubError) {
+      throw new Error(`GitHub could not initialize the new repository: ${error.message}`);
+    }
+    throw error;
+  }
+  const bootstrapCommitSha = bootstrap && bootstrap.commit && bootstrap.commit.sha;
+  const bootstrapTreeSha = bootstrap && bootstrap.commit && bootstrap.commit.tree && bootstrap.commit.tree.sha;
+  if (!bootstrapCommitSha || !bootstrapTreeSha) throw new Error('GitHub did not return a bootstrap commit for the new repository.');
+
   const entries = [];
   const copyChunkSize = 4;
-  for (let index = 0; index < files.length; index += copyChunkSize) {
-    const chunk = files.slice(index, index + copyChunkSize);
-    const copied = await Promise.all(chunk.map(async (file) => {
-      const sourceBlob = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/blobs/${encodeURIComponent(file.sha)}`);
-      if (!sourceBlob || sourceBlob.encoding !== 'base64' || typeof sourceBlob.content !== 'string') throw new Error(`Could not read source file ${file.path}.`);
-      const targetBlob = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/blobs`, {
-        method: 'POST', body: { content: sourceBlob.content.replace(/\n/g, ''), encoding: 'base64' }
-      });
-      if (!targetBlob || !targetBlob.sha) throw new Error(`Could not copy source file ${file.path}.`);
-      return { path: file.path, mode: file.mode || '100644', type: 'blob', sha: targetBlob.sha };
-    }));
-    entries.push(...copied);
+  try {
+    for (let index = 0; index < files.length; index += copyChunkSize) {
+      const chunk = files.slice(index, index + copyChunkSize);
+      const copied = await Promise.all(chunk.map(async (file) => {
+        const sourceBlob = await githubRequest(credentials, `/repos/${encodeURIComponent(sourceOwner)}/${encodeURIComponent(sourceName)}/git/blobs/${encodeURIComponent(file.sha)}`);
+        if (!sourceBlob || sourceBlob.encoding !== 'base64' || typeof sourceBlob.content !== 'string') throw new Error(`Could not read source file ${file.path}.`);
+        const targetBlob = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/blobs`, {
+          method: 'POST', body: { content: sourceBlob.content.replace(/\n/g, ''), encoding: 'base64' }
+        });
+        if (!targetBlob || !targetBlob.sha) throw new Error(`Could not copy source file ${file.path}.`);
+        return { path: file.path, mode: file.mode || '100644', type: 'blob', sha: targetBlob.sha };
+      }));
+      entries.push(...copied);
+    }
+    // bug-46: build the final tree on top of the bootstrap commit's tree via
+    // base_tree, so the .clipforge-sync.json bootstrap file is preserved
+    // (and its blob is re-used automatically). The overlay tree carries only
+    // the newly copied source files.
+    const tree = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/trees`, {
+      method: 'POST', body: { base_tree: bootstrapTreeSha, tree: entries }
+    });
+    if (!tree || !tree.sha) throw new Error('Could not create the Shadow Clone file tree.');
+    const commit = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/commits`, {
+      method: 'POST', body: {
+        message: `Shadow clone from ${SHADOW_CLONE_SOURCE}@${sourceCommitSha.slice(0, 7)}`,
+        tree: tree.sha,
+        parents: [bootstrapCommitSha]
+      }
+    });
+    if (!commit || !commit.sha) throw new Error('Could not create the Shadow Clone commit.');
+    // bug-46: PATCH the existing ref (created by the bootstrap PUT) rather
+    // than POST /git/refs, which would fail with 422 because refs/heads/<default>
+    // now exists.
+    await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs/heads/${encodeURIComponent(DEFAULT_BRANCH)}`, {
+      method: 'PATCH', body: { sha: commit.sha, force: false }
+    });
+  } catch (error) {
+    // bug-46: replace the raw GitHub API message with something that is
+    // accurate for the actual failure mode (Git Data API write against a
+    // freshly-created repo) so handleClonePatMessage's catch-all does not
+    // misdirect users to re-check PAT scopes when the underlying problem is
+    // repo-side and not permission-related.
+    if (error instanceof GitHubError) {
+      throw new Error(`GitHub rejected a write to the new repository (${error.status || 'unknown'}): ${error.message}`);
+    }
+    throw error;
   }
-  const sync = { source: SHADOW_CLONE_SOURCE, synced_sha: sourceCommitSha, synced_at: new Date().toISOString() };
-  const syncBlob = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/blobs`, {
-    method: 'POST', body: { content: b64encode(`${JSON.stringify(sync, null, 2)}\n`), encoding: 'base64' }
-  });
-  entries.push({ path: '.clipforge-sync.json', mode: '100644', type: 'blob', sha: syncBlob.sha });
-  const tree = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/trees`, { method: 'POST', body: { tree: entries } });
-  if (!tree || !tree.sha) throw new Error('Could not create the Shadow Clone file tree.');
-  const commit = await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/commits`, {
-    method: 'POST', body: { message: `Shadow clone from ${SHADOW_CLONE_SOURCE}@${sourceCommitSha.slice(0, 7)}`, tree: tree.sha, parents: [] }
-  });
-  if (!commit || !commit.sha) throw new Error('Could not create the Shadow Clone commit.');
-  await githubRequest(targetCredentials, `/repos/${encodeURIComponent(identity.login)}/${encodeURIComponent(name)}/git/refs`, {
-    method: 'POST', body: { ref: `refs/heads/${DEFAULT_BRANCH}`, sha: commit.sha }
-  });
   return { repo, login: identity.login, sourceSha: sourceCommitSha, copiedFiles: files.length };
 }
 
