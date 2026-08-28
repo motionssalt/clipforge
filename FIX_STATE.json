@@ -4,8 +4,8 @@
     {
       "id": "bug-68",
       "title": "Deploy-failure Telegram alert silently skips itself on clones because BOTB_MTPROTO_BOT_TOKEN secret is unset",
-      "status": "pending",
-      "notes": "Seeded 2026-08-28. Confirmed via a real failed Deploy Bots run on clone motionssalt/clipforge-clone-y59fyk: the alert step (bug-58) detects missing BOTB_MTPROTO_BOT_TOKEN, logs a warning to the Actions log, and exits 0 without notifying anyone. Clone owners get no Telegram notification of blocked deploys. Fix must ensure a clone owner whose Deploy Bots run fails actually receives a Telegram alert; investigate how clone secrets/bot tokens are provisioned before choosing approach.",
+      "status": "in_progress",
+      "notes": "Seeded 2026-08-28. Confirmed via a real failed Deploy Bots run on clone motionssalt/clipforge-clone-y59fyk: the alert step (bug-58) detects missing BOTB_MTPROTO_BOT_TOKEN, logs a warning to the Actions log, and exits 0 without notifying anyone. Clone owners get no Telegram notification of blocked deploys. Fix must ensure a clone owner whose Deploy Bots run fails actually receives a Telegram alert; investigate how clone secrets/bot tokens are provisioned before choosing approach. [in_progress 2026-08-28] Beginning investigation: reading deploy workflow alert step, clone provisioning flow, and bot token secret patterns.",
       "commit": ""
     }
   ]
