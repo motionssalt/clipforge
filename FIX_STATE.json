@@ -5,9 +5,9 @@
     {
       "id": "bug-40",
       "title": "Extend face-centered crop to detect animal faces",
-      "status": "in_progress",
-      "notes": "Extend per-scene face-centered horizontal crop (bug-36) so it also detects/centers animal faces; verify anime faces still working. | [2026-08-28] Started investigation.",
-      "commit": null
+      "status": "done",
+      "notes": "Extend face-centered crop (bug-36) to animal faces; verify anime faces. FINDINGS: (1) CRITICAL pre-existing breakage \u2014 FaceCenterEngine.analyze was dead code: it sat at module level (dedented out of the class) after _load_anime_cascades, so engine.analyze() always raised AttributeError, was caught by plan_scenes' try/except, and EVERY scene silently fell back to the safe centre crop \u2014 neither human, anime, nor animal centering was actually running. (2) The bug-36 'anime' fallback looked up lbpcascade_animeface.xml inside cv2.data.haarcascades, but opencv-python-headless does NOT ship that file (verified on 5.0 and 4.10 installs), so it silently degraded to haarcascade_frontalface_default (human-only). FIX (f2ecafd): analyze() restored as a proper method; cascades loaded once in __init__; lbpcascade_animeface.xml (nagadomi, MIT) vendored into pipeline/stage_b/cascades/ and looked up there first; animal faces via OpenCV's shipped haarcascade_frontalcatface[_extended] plus a lazy YOLOv8n fallback (new optional ultralytics>=8.2,<9 dep) covering COCO animal classes (bird/cat/dog/horse/sheep/cow/elephant/bear/zebra/giraffe), detections filtered to animal classes at conf>=0.4. All tiers best-effort: any failure keeps the safe centred crop, render never fails. VERIFIED: vendored cascade loads and haar cascade detects a real face (Lena) under OpenCV 4.10 (CI version); stubbed-YOLO tests confirm animal-class filtering, confidence gating, correct normalized centres, and ultralytics-absent path returning []. 7 new ReframeDetectionTierTests; 48/48 stage_b tests pass; full pipeline suite 267 pass with only 3 pre-existing failures (confirmed identical on the pre-change base commit). HONEST LIMITS: no real anime/cat/dog image was downloadable in the sandbox, so real-photo cascade/YOLO recall is assumed from the upstream models (anime cascade params match the author's detect.py exactly); first CI run will auto-download yolov8n.pt (~6MB) at predict time \u2014 if the runner has no egress to that host, the tier logs a warning and falls through harmlessly.",
+      "commit": "f2ecafd"
     },
     {
       "id": "bug-41",
