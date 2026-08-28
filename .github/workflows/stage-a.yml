@@ -271,8 +271,17 @@ jobs:
           CLIPFORGE_TELEGRAM_API_HASH: ${{ secrets.CLIPFORGE_TELEGRAM_API_HASH }}
           CLIPFORGE_TELEGRAM_SESSION: ${{ secrets.CLIPFORGE_TELEGRAM_SESSION }}
         run: |
+          # bug-43: Actions' bash shell already runs with -eo pipefail, and
+          # 'set -uo pipefail' does NOT clear -e — so a non-zero ingest exit
+          # aborted the script before code=$? ran, the exit-3 torrent-selection
+          # park surfaced as a RED failed step, the Park step was skipped, and
+          # the 'On failure' step overwrote the parked
+          # awaiting_torrent_selection status with 'Stage A failed' (observed
+          # in job manual-1787899627063). Explicitly disable -e around the
+          # ingest invocation so exit code 3 is captured and handled below.
           set -uo pipefail
           mkdir -p work
+          set +e
           python -m pipeline.stage_a.ingest "${{ steps.req.outputs.job_id }}" work
           code=$?
           set -e
