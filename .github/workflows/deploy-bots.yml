@@ -13,6 +13,18 @@ name: Deploy Bots — Cloudflare Workers
 # Worker runtime secrets (TELEGRAM_BOT_TOKEN, KV_ENCRYPTION_KEY, …) are NOT
 # set here — they are managed with `wrangler secret put` per the comments in
 # each wrangler config and are never touched by CI.
+#
+# bug-58: a failed test step used to silently skip the wrangler deploys — the
+# only "alert" was the Actions UI, so blocked deploys were discovered by the
+# user noticing a landed fix still misbehaving live (see bug-56). The final
+# step below (`if: failure()`) now pages the owner on Telegram whenever ANY
+# step fails. It uses Bot B's token (BOTB_MTPROTO_BOT_TOKEN, already an
+# Actions secret on this central repo for telegram-relay.yml) and posts to
+# DEPLOY_ALERT_CHAT_ID when that secret is set, falling back to the internal
+# relay group (-5405387856, same non-secret id as INTERNAL_RELAY_GROUP_CHAT_ID
+# in bot/wrangler.bot-a.jsonc — Bot B is a member there). No Cloudflare-scoped
+# secret is touched by the alert path. The alert itself is best-effort: it
+# must never mask the original failure.
 
 on:
   push:
@@ -69,3 +81,40 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bot
           command: deploy --config wrangler.bot-b.jsonc
+
+      - name: Alert owner on Telegram when the deploy is blocked
+        # bug-58: fires on ANY earlier step failure — bot tests failing (the
+        # documented silent-skip case), npm ci, or a wrangler deploy itself.
+        # Best-effort and self-skipping when the token secret is absent, so it
+        # can never turn a failed run into a differently-failed run.
+        if: ${{ failure() }}
+        working-directory: .
+        shell: bash
+        env:
+          ALERT_BOT_TOKEN: ${{ secrets.BOTB_MTPROTO_BOT_TOKEN }}
+          ALERT_CHAT_ID: ${{ secrets.DEPLOY_ALERT_CHAT_ID }}
+        run: |
+          set -uo pipefail
+          if [ -z "${ALERT_BOT_TOKEN:-}" ]; then
+            echo "BOTB_MTPROTO_BOT_TOKEN secret not available; skipping deploy-failure Telegram alert." >&2
+            exit 0
+          fi
+          chat_id="${ALERT_CHAT_ID:-}"
+          if [ -z "$chat_id" ]; then
+            # Internal relay group — same id as INTERNAL_RELAY_GROUP_CHAT_ID in
+            # bot/wrangler.bot-a.jsonc (a public var, not a secret).
+            chat_id="-5405387856"
+          fi
+          short_sha="${GITHUB_SHA:0:7}"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          text="⚠️ Deploy blocked: a Deploy Bots step failed on commit ${short_sha}; the Cloudflare Workers were NOT fully updated. Check the Actions run: ${run_url}"
+          payload=$(python3 -c 'import json,sys; print(json.dumps({"chat_id": sys.argv[1], "text": sys.argv[2], "disable_web_page_preview": True}))' "$chat_id" "$text")
+          if curl --fail --silent --show-error --max-time 20 \
+              -H 'Content-Type: application/json' -d "$payload" \
+              "https://api.telegram.org/bot${ALERT_BOT_TOKEN}/sendMessage" >/dev/null; then
+            echo "Deploy-failure alert sent to Telegram chat ${chat_id}."
+          else
+            echo "WARN: Telegram deploy-failure alert could not be delivered." >&2
+          fi
+          # Never fail (or change the outcome of) the workflow from here.
+          exit 0
