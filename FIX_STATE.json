@@ -5,8 +5,8 @@
     {
       "id": "bug-40",
       "title": "Extend face-centered crop to detect animal faces",
-      "status": "pending",
-      "notes": "Extend per-scene face-centered horizontal crop (bug-36) so it also detects/centers animal faces; verify anime faces still working.",
+      "status": "in_progress",
+      "notes": "Extend per-scene face-centered horizontal crop (bug-36) so it also detects/centers animal faces; verify anime faces still working. | [2026-08-28] Started investigation.",
       "commit": null
     },
     {
