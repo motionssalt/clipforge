@@ -3,11 +3,33 @@
  * Also owns the settings snapshot loader shared with commands/settings.js.
  */
 
-import { getCredentials } from '../storage.js';
+import { getCredentials, getAnnouncedNews, setAnnouncedNews } from '../storage.js';
 import {
   readSeriesSettings, readZernioSettings, tryGetJsonFile
 } from '../github.js';
 import { MUSIC_DEFAULT_PATH, TTS_SETTINGS_PATH, WATERMARK_PATH } from '../constants.js';
+import { sendMessage } from '../telegram.js';
+import { escapeHtml } from '../constants.js';
+
+// bug-46: news broadcasts are published by the main account into the SOURCE
+// repo at this path; every clone announces a new publication once per chat.
+const NEWS_PATH = 'docs/news.json';
+const NEWS_SOURCE_REPO = 'motionssalt/clipforge';
+
+/** Announce the latest main-account news broadcast once per publication. */
+async function announceNews(env, chatId, credentials) {
+  try {
+    const result = await tryGetJsonFile(credentials, NEWS_SOURCE_REPO, NEWS_PATH).catch(() => null);
+    const doc = result && result.document && typeof result.document === 'object' ? result.document : null;
+    const message = doc && String(doc.message || '').trim();
+    const marker = doc && String(doc.published_at || '');
+    if (!message || !marker) return;
+    const announced = await getAnnouncedNews(env, chatId);
+    if (announced === marker) return;
+    await setAnnouncedNews(env, chatId, marker);
+    await sendMessage(env, chatId, `\ud83d\udcf0 <b>News from ClipForge</b>\n\n${escapeHtml(message)}`);
+  } catch { /* news is best-effort — never block the home screen */ }
+}
 import {
   ONBOARDING_TEXT, homeKeyboard, homeText, onboardingKeyboard, renderInteractiveView
 } from '../views.js';
@@ -51,7 +73,9 @@ export async function showHome(env, chatId, messageId = null) {
     return renderInteractiveView(env, chatId, ONBOARDING_TEXT, { replyMarkup: onboardingKeyboard() }, messageId);
   }
   const snapshot = await loadSnapshot(credentials);
-  return renderInteractiveView(env, chatId, homeText(snapshot), { replyMarkup: homeKeyboard() }, messageId);
+  const view = await renderInteractiveView(env, chatId, homeText(snapshot), { replyMarkup: homeKeyboard() }, messageId);
+  await announceNews(env, chatId, credentials);
+  return view;
 }
 
 /** /start is the home screen. */

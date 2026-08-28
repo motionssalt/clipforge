@@ -205,6 +205,17 @@ export async function setAnnouncedUpdate(env, chatId, marker) {
   await env.CLIPFORGE_BOT_KV.put(key(chatId, 'update_notice'), String(marker || ''));
 }
 
+// bug-46: the last announced news marker (docs/news.json's published_at) from
+// the main account. Stored per chat so a pushed news message is announced
+// exactly once per publication.
+export async function getAnnouncedNews(env, chatId) {
+  return env.CLIPFORGE_BOT_KV.get(key(chatId, 'news_notice'));
+}
+
+export async function setAnnouncedNews(env, chatId, marker) {
+  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'news_notice'), String(marker || ''));
+}
+
 export async function markUpdateSeen(env, updateId) {
   if (!Number.isInteger(updateId)) return false;
   const updateKey = `telegram:update:${updateId}`;

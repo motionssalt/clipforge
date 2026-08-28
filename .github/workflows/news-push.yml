@@ -1,0 +1,60 @@
+name: News broadcast — recurring re-push
+
+# bug-46: the main account's news message lives in docs/news.json. When it
+# carries interval_hours (minimum 6), this scheduled workflow re-bumps
+# published_at once the interval has elapsed, which makes every connected
+# clone re-announce the current message. One-off pushes (interval_hours 0)
+# are never touched. Runs only in the source repo — clones skip via the
+# repository guard below. No external secrets: GITHUB_TOKEN suffices.
+
+on:
+  schedule:
+    - cron: "37 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebroadcast:
+    name: Re-broadcast news when the interval elapses
+    if: github.repository == 'motionssalt/clipforge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Bump published_at when the recurring interval has elapsed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, sys
+          from datetime import datetime, timezone
+          p = pathlib.Path('docs/news.json')
+          if not p.exists():
+              print('no news.json — nothing to do'); sys.exit(0)
+          doc = json.loads(p.read_text())
+          interval = int(doc.get('interval_hours') or 0)
+          message = str(doc.get('message') or '').strip()
+          if interval < 6 or not message:
+              print('recurring off or no message — nothing to do'); sys.exit(0)
+          published = datetime.fromisoformat(str(doc.get('published_at')).replace('Z', '+00:00'))
+          age_h = (datetime.now(timezone.utc) - published).total_seconds() / 3600
+          if age_h < interval:
+              print(f'interval not elapsed ({age_h:.1f}h < {interval}h) — skipping'); sys.exit(0)
+          doc['published_at'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+          p.write_text(json.dumps(doc, indent=2) + '\n')
+          print(f're-broadcast after {age_h:.1f}h')
+          PY
+          if [ -n "$(git status --porcelain docs/news.json)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add docs/news.json
+            git commit -m "clipforge: recurring news re-broadcast"
+            for attempt in 1 2 3; do
+              if git push; then break; fi
+              git pull --rebase --autostash || true
+              sleep 2
+            done
+          fi
