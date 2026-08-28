@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "started_at": "2026-08-28T07:00:00Z",
   "bugs": [
     {
@@ -26,9 +26,10 @@
     {
       "id": "bug-43",
       "title": "Torrent method failing again (recurring regression)",
-      "status": "in_progress",
-      "notes": "Two candidates: (1) exit-code-3 torrent-selection parking renders as failure instead of awaiting input; (2) actual torrent download regression vs _legacy (bug-04). Determine which and fix. | [2026-08-28] Started investigation.",
-      "commit": null
+      "status": "done",
+      "notes": "Torrent method 'failing again'. ANSWER: it was candidate (1) \u2014 the exit-3 parking rendering \u2014 not candidate (2). ROOT CAUSE: stage-a.yml's 'Ingest source' step tried to capture the ingest exit code via 'code=$?' + a case branch, but GitHub Actions' bash shell runs with -eo pipefail already enabled and the step's own 'set -uo pipefail' does NOT clear -e. So when ingest.py correctly parked a multi-file torrent with SystemExit(3) (writing torrent-selection.json + awaiting_torrent_selection status), bash aborted the script BEFORE code=$? ran: the step rendered RED/failed, the 'Park for torrent selection' step (gated on result == 'awaiting_torrent') was skipped, and the 'On failure' step (if: failure()) overwrote the parked status with 'Stage A failed'. Confirmed against the real repo record: jobs/manual-1787899627063/status.json shows state=error with 'Stage A failed' even though torrent-selection.json exists \u2014 the exact screenshot scenario in the report. FIX (8fb63a4): 'set +e' around the ingest invocation (restored with 'set -e' right after capturing the code), so exit 3 lands as result=awaiting_torrent, the Park step commits the status, every downstream step is gated on result=='ok', and the run ends neutral/green while the bot presents the file picker. Exit 0 -> ok and exit 2 (genuine ingest error) behavior unchanged (real errors still fail red). CANDIDATE (2) \u2014 actual download regression vs legacy (bug-04): NOT reproduced. _download_torrent_payload's aria2 flags are byte-for-byte identical to _legacy/.github/workflows/stage-a.yml's torrent download command (select-file, trackers, DHT/PEX/LPD, timeouts all match), and bug-04's magnet-metadata fix (check=False + find_saved_metadata success signal) is intact in _resolve_magnet_metadata. VERIFIED: simulated old vs new step under 'bash -eo pipefail' \u2014 old form exits 3 with the result output never written (red step); new form maps 3->awaiting_torrent (exit 0), 0->ok, 2->failed (exit 2). YAML parses; downstream gating audited (all processing steps require result=='ok'); diagnostics.yml already uses the correct set +e pattern; no other workflow captures exit codes unsafely. 267 pipeline tests pass; the 3 failures are the same pre-existing ones confirmed on the pre-change base. LIMIT: not exercised in a real Actions run \u2014 but the bash -e semantics are deterministic and were reproduced locally.",
+      "commit": "8fb63a4"
     }
-  ]
+  ],
+  "completed_at": "2026-08-28T08:00:00Z"
 }
