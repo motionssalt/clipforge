@@ -3,10 +3,12 @@
  * Also owns the settings snapshot loader shared with commands/settings.js.
  */
 
-import { getCredentials, getAnnouncedNews, setAnnouncedNews } from '../storage.js';
+import { getCredentials, getAnnouncedNews, setAnnouncedNews, getAnnouncedUpdate, setAnnouncedUpdate } from '../storage.js';
 import {
   getRepositoryVisibility, readSeriesSettings, readZernioSettings, tryGetJsonFile
 } from '../github.js';
+import { isOriginalRepo } from '../identity.js';
+import { checkCloneUpdates, applyCloneUpdates } from '../clone-sync.js';
 import { MUSIC_DEFAULT_PATH, TTS_SETTINGS_PATH, WATERMARK_PATH } from '../constants.js';
 import { sendMessage } from '../telegram.js';
 import { escapeHtml } from '../constants.js';
@@ -15,6 +17,9 @@ import { escapeHtml } from '../constants.js';
 // repo at this path; every clone announces a new publication once per chat.
 const NEWS_PATH = 'docs/news.json';
 const NEWS_SOURCE_REPO = 'motionssalt/clipforge';
+// bug-65: the changelog file the main account publishes into the SOURCE repo;
+// its published_at marker is what tells a clone a new update has arrived.
+const UPDATE_NOTICE_PATH = 'docs/update_notice.json';
 
 /** Announce the latest main-account news broadcast once per publication. */
 async function announceNews(env, chatId, credentials) {
@@ -41,6 +46,48 @@ async function safeDoc(credentials, path) {
   } catch {
     return null;
   }
+}
+
+
+// bug-65: updates the main account publishes from the source repo apply to a
+// clone AUTOMATICALLY — there is no clone-side "Apply update" button anymore.
+// The main account keeps its manual publish control (it decides WHEN an update
+// goes out); the clone side applies it on receipt. Detection piggybacks on the
+// home screen (the same passive touchpoint that announces news broadcasts): the
+// source repo's docs/update_notice.json carries a published_at marker; when it
+// advances past the marker stored in this chat, the pending update is applied
+// immediately and the owner gets a passive after-the-fact changelog. Best-effort
+// throughout — a sync failure never blocks the home screen; the marker is only
+// stored after a successful apply, so a failed attempt retries on the next home
+// screen render instead of being silently swallowed.
+async function autoSyncFromSource(env, chatId, credentials) {
+  try {
+    const result = await tryGetJsonFile(credentials, NEWS_SOURCE_REPO, UPDATE_NOTICE_PATH).catch(() => null);
+    const doc = result && result.document && typeof result.document === 'object' ? result.document : null;
+    const marker = doc && String(doc.published_at || doc.version || '');
+    if (!marker) return;
+    const announced = await getAnnouncedUpdate(env, chatId);
+    if (announced === marker) return;
+    const plan = await checkCloneUpdates(credentials);
+    if (plan.upToDate) {
+      await setAnnouncedUpdate(env, chatId, marker);
+      return;
+    }
+    const result2 = await applyCloneUpdates(credentials, plan);
+    await setAnnouncedUpdate(env, chatId, marker);
+    const previewLimit = 10;
+    const preview = plan.changes.slice(0, previewLimit)
+      .map((c) => `\u2022 <code>${escapeHtml(c.path)}</code> <i>${escapeHtml(c.status)}</i>`).join('\n');
+    const more = plan.changes.length > previewLimit ? `\n\u2026and ${plan.changes.length - previewLimit} more` : '';
+    const summary = doc && String(doc.summary || '').trim();
+    await sendMessage(env, chatId,
+      `\u2b06\ufe0f <b>Your clone was updated automatically</b>\n\n` +
+      `From the main ClipForge account @ <code>${escapeHtml(plan.sourceSha.slice(0, 7))}</code>` +
+      ` \u2014 commit <code>${escapeHtml((result2.commitSha || '').slice(0, 7))}</code>.\n` +
+      `${result2.applied} file${result2.applied === 1 ? '' : 's'} updated:\n\n${preview}${more}\n\n` +
+      (summary ? `${escapeHtml(summary)}\n\n` : '') +
+      `Your per-clone paths (branding/, jobs/, audio-library/, key/account files) were excluded and preserved.`);
+  } catch { /* auto-sync is best-effort — never block the home screen */ }
 }
 
 /** One batched read of the small branding/ JSONs behind the home + settings screens. */
@@ -80,6 +127,12 @@ export async function showHome(env, chatId, messageId = null) {
   const snapshot = await loadSnapshot(credentials);
   const view = await renderInteractiveView(env, chatId, homeText(snapshot), { replyMarkup: homeKeyboard() }, messageId);
   await announceNews(env, chatId, credentials);
+  // bug-65: only a connected CLONE auto-syncs; the main account (connected to
+  // the source repo itself) is already on the latest code and must never
+  // rewrite its own repo from this path.
+  if (!isOriginalRepo(env, credentials.repo)) {
+    await autoSyncFromSource(env, chatId, credentials);
+  }
   return view;
 }
 
