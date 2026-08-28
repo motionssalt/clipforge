@@ -9,11 +9,12 @@
     ],
     "youtube": [
       "6a8e09b877555aae01785097"
-    ]
+    ],
+    "instagram": []
   },
   "smart_schedule": {
     "timezone": "UTC",
-    "interval_hours": 24,
+    "interval_hours": 6,
     "preferred_time": "19:30",
     "queue_depth": 4,
     "start_mode": "next_available",
