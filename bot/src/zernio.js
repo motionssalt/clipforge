@@ -19,7 +19,20 @@
 import { escapeHtml } from './constants.js';
 import { buttons } from './telegram.js';
 
-export const ZERNIO_PLATFORMS = ['tiktok', 'youtube'];
+export const ZERNIO_PLATFORMS = ['tiktok', 'youtube', 'instagram'];
+export const ZERNIO_PLATFORM_LABELS = { tiktok: 'TikTok', youtube: 'YouTube', instagram: 'Instagram' };
+
+/**
+ * bug-52: Instagram publishing requires a Business or Creator account
+ * (personal accounts cannot post via the API) and every Instagram publish
+ * automatically posts BOTH a Reel and a Story — no content-type selection.
+ * Zernio also cannot fetch Instagram media from Google Drive / Dropbox /
+ * OneDrive / iCloud share links; ClipForge always uploads the final MP4 via
+ * Zernio's media presign endpoint and passes the direct CDN publicUrl, which
+ * satisfies this requirement.
+ */
+export const INSTAGRAM_ACCOUNT_GUIDANCE =
+  'Instagram publishing requires an Instagram <b>Business or Creator</b> account connected to Zernio (personal accounts cannot post via the API). Each Instagram publish automatically posts both a Reel and a Story.';
 export const ZERNIO_MODES = ['publish_now', 'manual_schedule', 'smart_schedule'];
 export const POST_ID_PATTERN = /^[A-Za-z0-9._-]{3,200}$/;
 export const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,200}$/;
@@ -52,7 +65,7 @@ export function defaultZernioSettings() {
     enabled: false,
     auto_publish: false,
     automatic_mode: 'smart_schedule',
-    target_accounts: { tiktok: [], youtube: [] },
+    target_accounts: { tiktok: [], youtube: [], instagram: [] },
     smart_schedule: {
       timezone: 'UTC',
       interval_hours: 24,
@@ -86,7 +99,9 @@ export function zernioSettingsOrDefault(value) {
       tiktok: Array.isArray(current.target_accounts && current.target_accounts.tiktok)
         ? current.target_accounts.tiktok.map(String) : [],
       youtube: Array.isArray(current.target_accounts && current.target_accounts.youtube)
-        ? current.target_accounts.youtube.map(String) : []
+        ? current.target_accounts.youtube.map(String) : [],
+      instagram: Array.isArray(current.target_accounts && current.target_accounts.instagram)
+        ? current.target_accounts.instagram.map(String) : []
     },
     smart_schedule: {
       timezone: String(smart.timezone || 'UTC'),
@@ -153,7 +168,7 @@ export function applySmartScheduleField(settings, field, rawValue) {
 
 /** Active, selectable accounts from the committed snapshot, per platform. */
 export function activeZernioAccounts(accounts) {
-  const out = { tiktok: [], youtube: [] };
+  const out = { tiktok: [], youtube: [], instagram: [] };
   for (const account of Array.isArray(accounts) ? accounts : []) {
     const platform = String(account && account.platform || '').toLowerCase();
     const id = String(account && (account.id || account._id) || '').trim();
@@ -283,7 +298,7 @@ export function zernioTargetsKeyboard(settings, accounts) {
     if (!ZERNIO_PLATFORMS.includes(platform) || !id) continue;
     const usable = account.isActive !== false && account.enabled !== false && account.needsReconnection !== true;
     const selected = (settings.target_accounts[platform] || []).includes(id);
-    const title = `${platform === 'tiktok' ? 'TikTok' : 'YouTube'} · ${account.displayName || account.username || id}`;
+    const title = `${ZERNIO_PLATFORM_LABELS[platform] || platform} · ${account.displayName || account.username || id}`;
     rows.push([{
       text: `${selected ? '✓ ' : ''}${telegramButtonText(title, 50)}${usable ? '' : ' (unavailable)'}`,
       callback_data: usable ? `ztarget:${platform}:${id}` : 'ztarget:noop'
@@ -348,7 +363,10 @@ export function zernioSettingsText(config) {
   lines.push(`Controls: ${settings.enabled ? 'enabled' : 'disabled'}`);
   lines.push(`Automatic publishing: ${settings.auto_publish ? (settings.automatic_mode === 'publish_now' ? 'publish now' : 'smart schedule') : 'off'}`);
   lines.push(`Targets: ${selected.length ? selected.map((group) => `${group.platform}: ${group.account_ids.length}`).join(' · ') : 'none selected'}`);
-  lines.push(`Accounts: ${active.tiktok.length} TikTok · ${active.youtube.length} YouTube active`);
+  lines.push(`Accounts: ${active.tiktok.length} TikTok · ${active.youtube.length} YouTube · ${active.instagram.length} Instagram active`);
+  // bug-52: surface the Business/Creator requirement wherever connection
+  // guidance is shown for Instagram.
+  lines.push(INSTAGRAM_ACCOUNT_GUIDANCE);
   lines.push(`Smart schedule: ${escapeHtml(settings.smart_schedule.timezone)} · every ${settings.smart_schedule.interval_hours} hour(s) · preferred time ${settings.smart_schedule.preferred_time} · queue ${settings.smart_schedule.queue_depth}`);
   if (settings.smart_schedule.start_mode === 'custom') {
     lines.push(`First slot: ${escapeHtml(settings.smart_schedule.custom_start || 'missing')}`);
@@ -367,7 +385,7 @@ export function zernioPublishText(config, publishing, label, jobId) {
   ];
   if (!config.secretConfigured) lines.push('Save a Zernio API key in settings before submitting a request.');
   else if (!config.settings.enabled) lines.push('Enable Zernio publishing controls in settings before submitting a request.');
-  else if (!targets.length) lines.push('Select at least one active TikTok or YouTube target account in settings.');
+  else if (!targets.length) lines.push('Select at least one active TikTok, YouTube, or Instagram target account in settings.');
   else {
     lines.push(`Targets: ${targets.map((group) => `${group.platform} (${group.account_ids.length})`).join(' · ')}`);
     lines.push(`Timezone: ${escapeHtml(config.settings.smart_schedule.timezone)}`);

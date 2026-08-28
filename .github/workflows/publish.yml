@@ -136,7 +136,7 @@ jobs:
           echo "post_id=$POST_ID" >> "$GITHUB_OUTPUT"
           echo "Resolved manual dispatch: action=$ACTION post_id=${POST_ID:-<none>}"
 
-      - name: Discover active TikTok and YouTube accounts
+      - name: Discover active TikTok, YouTube, and Instagram accounts
         if: inputs.action == 'discover'
         shell: bash
         run: |
@@ -148,7 +148,7 @@ jobs:
           data = json.loads(Path('/tmp/zernio_accounts.json').read_text(encoding='utf-8'))
           accounts = []
           for account in data.get('accounts', []):
-              if account.get('platform') in {'tiktok', 'youtube'}:
+              if account.get('platform') in {'tiktok', 'youtube', 'instagram'}:
                   accounts.append(account)
           Path('branding').mkdir(exist_ok=True)
           Path('branding/zernio_accounts.json').write_text(json.dumps({
@@ -157,7 +157,7 @@ jobs:
               'updated_at_epoch': int(time.time()),
               'accounts': accounts,
           }, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
-          print(f'Persisted {len(accounts)} TikTok/YouTube account records (no API secret stored).')
+          print(f'Persisted {len(accounts)} TikTok/YouTube/Instagram account records (no API secret stored).')
           PY
 
       - name: Commit discovered accounts
@@ -289,7 +289,7 @@ jobs:
           set -euo pipefail
           targets="$TARGETS_JSON"
           if [[ "$targets" == '[]' || -z "$targets" ]]; then
-            echo 'targets_json must include at least one selected TikTok or YouTube account.' >&2
+            echo 'targets_json must include at least one selected TikTok, YouTube, or Instagram account.' >&2
             exit 1
           fi
           if [[ -z "$REQUEST_ID" && '${{ inputs.action }}' == manual ]]; then

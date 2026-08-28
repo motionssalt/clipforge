@@ -158,8 +158,10 @@ class ValidationHelpers(unittest.TestCase):
     def test_validate_platform(self):
         self.assertEqual(validate_platform("tiktok"), "tiktok")
         self.assertEqual(validate_platform("YouTube"), "youtube")
+        # bug-52: Instagram is a first-class Zernio platform now.
+        self.assertEqual(validate_platform("Instagram"), "instagram")
         with self.assertRaises(ZernioError):
-            validate_platform("instagram")
+            validate_platform("facebook")
 
     def test_validate_mode(self):
         for mode in ("publish_now", "manual_schedule", "smart_schedule"):
@@ -301,7 +303,12 @@ class Targets(unittest.TestCase):
 
     def test_normalize_targets_rejects_unknown_platform(self):
         with self.assertRaises(TargetValidationError):
-            normalize_targets([{"platform": "instagram", "account_ids": ["A"]}])
+            normalize_targets([{"platform": "facebook", "account_ids": ["A"]}])
+        # bug-52: instagram is accepted.
+        self.assertEqual(
+            normalize_targets([{"platform": "instagram", "account_ids": ["IG1"]}]),
+            [{"platform": "instagram", "account_ids": ["IG1"]}],
+        )
 
     def test_encode_decode_roundtrip(self):
         original = [{"platform": "tiktok", "account_ids": ["a", "b"]}]
@@ -314,11 +321,11 @@ class Targets(unittest.TestCase):
 
     def test_targets_from_settings(self):
         settings = {
-            "target_accounts": {"tiktok": ["A"], "youtube": []},
+            "target_accounts": {"tiktok": ["A"], "youtube": [], "instagram": ["IG1"]},
         }
         self.assertEqual(
             targets_from_settings(settings),
-            [{"platform": "tiktok", "account_ids": ["A"]}],
+            [{"platform": "tiktok", "account_ids": ["A"]}, {"platform": "instagram", "account_ids": ["IG1"]}],
         )
 
     def test_automatic_fields_disabled(self):
@@ -396,11 +403,14 @@ class Queue(unittest.TestCase):
                 {"id": "Y1", "platform": "youtube", "needsReconnection": True},
                 {"id": "Y2", "platform": "youtube", "enabled": False},
                 {"id": "Y3", "platform": "youtube"},
+                {"id": "IG1", "platform": "instagram"},
+                {"id": "IG2", "platform": "instagram", "needsReconnection": True},
             ],
         }
         result = active_accounts(accounts_doc)
         self.assertEqual([a["id"] for a in result["tiktok"]], ["A1"])
         self.assertEqual([a["id"] for a in result["youtube"]], ["Y3"])
+        self.assertEqual([a["id"] for a in result["instagram"]], ["IG1"])
 
 
 # --------------------------------------------------------------------------- #
@@ -1046,6 +1056,41 @@ class Payload(unittest.TestCase):
         )
         self.assertNotIn("title", payload)
         self.assertNotIn("tags", payload)
+
+    def test_instagram_payload_posts_reel_and_story(self):
+        # bug-52: every Instagram publish emits BOTH a Reel entry (no
+        # contentType — a single video auto-publishes as a Reel per the Zernio
+        # docs) and a Story entry (contentType="story"), with no user
+        # selection between content types.
+        payload = build_platform_payload(
+            {"title": "T", "caption": "cap", "hashtags": ["#a"]},
+            "instagram", ["IG1", "IG2"], "https://cdn/x.mp4",
+            mode="publish_now",
+        )
+        self.assertNotIn("title", payload)
+        self.assertNotIn("tags", payload)
+        self.assertTrue(payload["publishNow"])
+        self.assertEqual(
+            payload["platforms"],
+            [
+                {"platform": "instagram", "accountId": "IG1"},
+                {"platform": "instagram", "accountId": "IG1", "contentType": "story"},
+                {"platform": "instagram", "accountId": "IG2"},
+                {"platform": "instagram", "accountId": "IG2", "contentType": "story"},
+            ],
+        )
+        # Media stays a direct CDN URL (presign publicUrl) — never a
+        # Drive/Dropbox/OneDrive/iCloud share link.
+        self.assertEqual(payload["mediaItems"], [{"type": "video", "url": "https://cdn/x.mp4"}])
+
+    def test_instagram_payload_scheduled_carries_both_content_types(self):
+        payload = build_platform_payload(
+            {"title": "T"}, "instagram", ["IG1"], "https://cdn/x.mp4",
+            mode="manual_schedule", scheduled_for="2026-09-01T19:30:00", timezone="UTC",
+        )
+        self.assertEqual(payload["scheduledFor"], "2026-09-01T19:30:00")
+        kinds = [entry.get("contentType", "reel") for entry in payload["platforms"]]
+        self.assertEqual(kinds, ["reel", "story"])
 
     def test_schedule_requires_scheduled_for(self):
         with self.assertRaises(ZernioError):

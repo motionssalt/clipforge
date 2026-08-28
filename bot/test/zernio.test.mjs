@@ -33,7 +33,7 @@ test('defaultZernioSettings matches the legacy shape', () => {
   assert.equal(settings.enabled, false);
   assert.equal(settings.auto_publish, false);
   assert.equal(settings.automatic_mode, 'smart_schedule');
-  assert.deepEqual(settings.target_accounts, { tiktok: [], youtube: [] });
+  assert.deepEqual(settings.target_accounts, { tiktok: [], youtube: [], instagram: [] });
   assert.deepEqual(settings.smart_schedule, {
     timezone: 'UTC', interval_hours: 24, preferred_time: '19:30',
     queue_depth: 4, start_mode: 'next_available', custom_start: ''
@@ -51,7 +51,7 @@ test('zernioSettingsOrDefault preserves explicit values and coerces types', () =
     enabled: true,
     auto_publish: true,
     automatic_mode: 'publish_now',
-    target_accounts: { tiktok: ['A1', 7], youtube: 'oops' },
+    target_accounts: { tiktok: ['A1', 7], youtube: 'oops', instagram: ['IG9'] },
     smart_schedule: {
       timezone: 'Europe/London', interval_hours: 6, preferred_time: '07:45',
       queue_depth: '9', start_mode: 'custom', custom_start: '2026-09-01T08:00'
@@ -60,7 +60,7 @@ test('zernioSettingsOrDefault preserves explicit values and coerces types', () =
   assert.equal(settings.enabled, true);
   assert.equal(settings.auto_publish, true);
   assert.equal(settings.automatic_mode, 'publish_now');
-  assert.deepEqual(settings.target_accounts, { tiktok: ['A1', '7'], youtube: [] });
+  assert.deepEqual(settings.target_accounts, { tiktok: ['A1', '7'], youtube: [], instagram: ['IG9'] });
   assert.equal(settings.smart_schedule.timezone, 'Europe/London');
   assert.equal(settings.smart_schedule.interval_hours, 6);
   assert.equal(settings.smart_schedule.preferred_time, '07:45');
@@ -160,11 +160,13 @@ const ACCOUNTS = [
   { platform: 'tiktok', id: '' },
 ];
 
-test('activeZernioAccounts filters to active tiktok/youtube only', () => {
+test('activeZernioAccounts filters to active tiktok/youtube/instagram only', () => {
   const active = activeZernioAccounts(ACCOUNTS);
   assert.deepEqual(active.tiktok.map((a) => a.id), ['TT1']);
   assert.deepEqual(active.youtube.map((a) => a.id), ['YT1']);
-  assert.deepEqual(activeZernioAccounts(null), { tiktok: [], youtube: [] });
+  // bug-52: Instagram accounts are now selectable.
+  assert.deepEqual(active.instagram.map((a) => a.id), ['IG1']);
+  assert.deepEqual(activeZernioAccounts(null), { tiktok: [], youtube: [], instagram: [] });
 });
 
 test('zernioTargets builds the publish.yml targets_json shape', () => {
@@ -194,8 +196,13 @@ test('toggleZernioTarget adds and removes selections', () => {
 test('toggleZernioTarget refuses unavailable accounts and bad ids', () => {
   const settings = defaultZernioSettings();
   assert.throws(() => toggleZernioTarget(settings, ACCOUNTS, 'tiktok', 'TT2'), /unavailable or requires reconnection/);
-  assert.throws(() => toggleZernioTarget(settings, ACCOUNTS, 'instagram', 'IG1'), /invalid/);
   assert.throws(() => toggleZernioTarget(settings, ACCOUNTS, 'tiktok', 'ab'), /invalid/);
+  // bug-52: Instagram accounts are toggleable when active...
+  toggleZernioTarget(settings, ACCOUNTS, 'instagram', 'IG1');
+  assert.deepEqual(settings.target_accounts.instagram, ['IG1']);
+  // ...but unknown platforms and unknown instagram ids are still refused.
+  assert.throws(() => toggleZernioTarget(settings, ACCOUNTS, 'facebook', 'FB1'), /invalid/);
+  assert.throws(() => toggleZernioTarget(settings, ACCOUNTS, 'instagram', 'NOPE'), /unavailable or requires reconnection/);
 });
 
 // ------------------------------------------------------------------------ //
@@ -338,6 +345,10 @@ test('zernioSettingsText and zernioPublishText never leak secrets and escape HTM
   assert.match(text, /secured in GitHub Actions \(opaque\)/);
   assert.match(text, /Europe\/&lt;script&gt;/);
   assert.doesNotMatch(text, /ZERNIO_API_KEY=[^\s]*/);
+  // bug-52: the settings screen surfaces the Instagram Business/Creator
+  // account requirement and the automatic Reel + Story behavior.
+  assert.match(text, /Business or Creator/);
+  assert.match(text, /Reel and a Story/);
 
   const publishText = zernioPublishText(config, { status: 'scheduled', posts: [{}] }, 'A</b>', 'job-1');
   assert.match(publishText, /A&lt;\/b&gt;/);
@@ -353,7 +364,7 @@ test('zernioPublishText explains each gating state', () => {
 
   const noTargets = makeConfig({ secretConfigured: true });
   noTargets.settings.enabled = true;
-  assert.match(zernioPublishText(noTargets, null, label, 'j'), /Select at least one active TikTok or YouTube/);
+  assert.match(zernioPublishText(noTargets, null, label, 'j'), /Select at least one active TikTok, YouTube, or Instagram/);
 
   const ready = makeConfig({ secretConfigured: true });
   ready.settings.enabled = true;

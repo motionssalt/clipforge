@@ -47,8 +47,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 API_BASE = os.environ.get("ZERNIO_API_BASE", "https://zernio.com/api/v1").rstrip("/")
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
-PLATFORMS: tuple[str, ...] = ("tiktok", "youtube")
+PLATFORMS: tuple[str, ...] = ("tiktok", "youtube", "instagram")
 PLATFORM_SET = set(PLATFORMS)
+# Instagram publishes BOTH a Reel and a Story for every publish (bug-52):
+# per docs.zernio.com/platforms/instagram, omitting contentType publishes a
+# single video as a Reel automatically; contentType="story" targets Stories.
+INSTAGRAM_CONTENT_TYPES: tuple[str, ...] = ("reel", "story")
 MODES: set[str] = {"publish_now", "manual_schedule", "smart_schedule"}
 PUBLISHING_MODES = MODES  # legacy alias
 
@@ -366,7 +370,7 @@ def remove_queue_item(queue: dict[str, Any], job_id: str) -> dict[str, Any]:
 
 
 def active_accounts(accounts_doc: dict[str, Any]) -> dict[str, list[dict[str, str]]]:
-    result: dict[str, list[dict[str, str]]] = {"tiktok": [], "youtube": []}
+    result: dict[str, list[dict[str, str]]] = {platform: [] for platform in PLATFORMS}
     for account in accounts_doc.get("accounts", []) if isinstance(accounts_doc, dict) else []:
         if not isinstance(account, dict):
             continue
@@ -403,7 +407,7 @@ def now_epoch() -> int:
 
 
 def normalize_targets(value: Any, *, allow_empty: bool = False) -> list[dict[str, Any]]:
-    """Accept only non-empty TikTok/YouTube groups with string account IDs."""
+    """Accept only non-empty TikTok/YouTube/Instagram groups with string account IDs."""
     if not isinstance(value, list):
         raise TargetValidationError("targets must be a JSON array")
     out: list[dict[str, Any]] = []
@@ -414,7 +418,7 @@ def normalize_targets(value: Any, *, allow_empty: bool = False) -> list[dict[str
         platform = target.get("platform")
         ids = target.get("account_ids")
         if platform not in PLATFORM_SET:
-            raise TargetValidationError("target platform must be tiktok or youtube")
+            raise TargetValidationError("target platform must be tiktok, youtube, or instagram")
         if platform in seen_platforms:
             raise TargetValidationError("each platform may appear only once")
         if not isinstance(ids, list) or not ids:
@@ -684,7 +688,7 @@ def production_metadata(doc: dict[str, Any]) -> dict[str, Any]:
 def validate_platform(value: str) -> str:
     platform = str(value or "").strip().lower()
     if platform not in PLATFORM_SET:
-        raise ZernioError("Unsupported Zernio platform; choose TikTok or YouTube.")
+        raise ZernioError("Unsupported Zernio platform; choose TikTok, YouTube, or Instagram.")
     return platform
 
 
@@ -731,9 +735,24 @@ def build_platform_payload(
     if not media_url or not media_url.startswith(("https://", "http://")):
         raise ZernioError("Zernio media URL must be an absolute HTTP(S) URL.")
     meta = production_metadata(production)
+    platforms: list[dict[str, Any]] = []
+    for account_id in ids:
+        if platform == "instagram":
+            # bug-52: every Instagram publish posts BOTH a Reel and a Story —
+            # no user selection. Per docs.zernio.com/platforms/instagram a
+            # single video without contentType publishes as a Reel; adding
+            # contentType="story" publishes the same video to Stories. The
+            # platformPostUrl/status come back per platform entry, so the two
+            # entries stay individually trackable. The media URL must be a
+            # direct CDN URL (Zernio presign publicUrl) — Drive/Dropbox/
+            # OneDrive/iCloud share links return HTML Instagram cannot fetch.
+            platforms.append({"platform": platform, "accountId": account_id})
+            platforms.append({"platform": platform, "accountId": account_id, "contentType": "story"})
+        else:
+            platforms.append({"platform": platform, "accountId": account_id})
     payload: dict[str, Any] = {
         "content": caption_with_visible_hashtags(meta["caption"], meta["hashtags"]),
-        "platforms": [{"platform": platform, "accountId": account_id} for account_id in ids],
+        "platforms": platforms,
         "mediaItems": [{"type": "video", "url": media_url}],
         "hashtags": meta["hashtags"],
         "metadata": {"source": "clipforge"},
