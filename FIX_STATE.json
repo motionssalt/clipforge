@@ -4,8 +4,8 @@
     {
       "id": "bug-57",
       "title": "status.json series.enabled not synced from production.json \u2014 root cause of 'shows as manual', missing next-part flow, and Zernio still showing on series tasks",
-      "status": "pending",
-      "notes": "Confirmed via job jobs/manual-1787902548797/: production.json has correct series_id/part/is_final but status.json series is zeroed (enabled:false, series_id:'', part:0, is_final:false). Find where status.json is written after production.json resolves (likely Stage A workflow) and always sync status.series from plan. Verify all 3 symptoms after fix. Consider low-cost one-time backfill script for already-completed jobs.",
+      "status": "in_progress",
+      "notes": "Confirmed via job jobs/manual-1787902548797/: production.json has correct series_id/part/is_final but status.json series is zeroed (enabled:false, series_id:'', part:0, is_final:false). Find where status.json is written after production.json resolves (likely Stage A workflow) and always sync status.series from plan. Verify all 3 symptoms after fix. Consider low-cost one-time backfill script for already-completed jobs. | Started investigation.",
       "commit": ""
     },
     {
