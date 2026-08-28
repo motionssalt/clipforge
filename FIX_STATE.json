@@ -19,8 +19,8 @@
     {
       "id": "bug-42",
       "title": "Workflow dispatch must relay back to bot as the FIRST step",
-      "status": "pending",
-      "notes": "Move/ensure notify-bot-of-run-start is step 1 of every bot-dispatched workflow (Stage A, Stage B, restarts, others), before any setup/install/processing.",
+      "status": "in_progress",
+      "notes": "Move/ensure notify-bot-of-run-start is step 1 of every bot-dispatched workflow (Stage A, Stage B, restarts, others), before any setup/install/processing. | [2026-08-28] Started investigation.",
       "commit": null
     },
     {
