@@ -4,7 +4,7 @@
     {
       "id": "bug-63",
       "title": "Shadow Clone creation silently stalls mid-copy — likely Worker execution timeout, resulting repo has only .clipforge-sync.json",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Suspected Cloudflare Worker single-request execution time limit exceeded during the sequential bulk file copy (chunks of 4, 2 API calls/file) in createPrivateShadowClone(). Bootstrap commit (.clipforge-sync.json) lands first via Contents API and survives; the rest never completes. Fix: move the long-running bulk copy out of a single Worker invocation (likely into a GitHub Actions workflow dispatched from the Worker, matching existing Stage A/B patterns), preserving the bootstrap-first/default-branch handling logic. Update progress reporting accordingly.",
       "commit": ""
     },
