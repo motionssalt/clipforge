@@ -29,6 +29,15 @@ CIN_FRAME_HEIGHT = 1200
 DEFAULT_SCENE_THRESHOLD = 0.35
 FACE_SAMPLES_PER_SCENE = 3
 MIN_FACE_CONFIDENCE = 0.55
+# bug-36: real faces (InsightFace) AND stylised/anime faces (OpenCV
+# animeface cascade) are both detected; whichever sees a face wins. The
+# cascade's rectangles carry no confidence, so they use a neutral 0.6 (just
+# above MIN_FACE_CONFIDENCE) and compete on size.
+_ANIME_CASCADE_CONFIDENCE = 0.6
+_ANIME_CASCADE_FILES = (
+    "lbpcascade_animeface.xml",
+    "haarcascade_frontalface_default.xml",
+)
 
 _SCENE_LINE_RE = re.compile(r"pts_time:(?P<t>[0-9]+(?:\.[0-9]+)?)")
 
@@ -149,6 +158,20 @@ class FaceCenterEngine:
         self.app = FaceAnalysis(name="buffalo_sc", allowed_modules=["detection"])
         self.app.prepare(ctx_id=-1, det_size=(640, 640))
 
+def _load_anime_cascades(cv2) -> list:
+    """bug-36: OpenCV cascade classifiers that catch stylised/anime faces the
+    CNN detector misses. Best-effort: missing cascade files yield no extras."""
+    cascades = []
+    for name in _ANIME_CASCADE_FILES:
+        path = os.path.join(cv2.data.haarcascades, name)
+        if not os.path.isfile(path):
+            continue
+        cascade = cv2.CascadeClassifier(path)
+        if not cascade.empty():
+            cascades.append(cascade)
+    return cascades
+
+
     def analyze(self, image_path: str) -> list[dict]:
         import cv2
 
@@ -159,26 +182,46 @@ class FaceCenterEngine:
         if height <= 0 or width <= 0:
             return []
         detections: list[dict] = []
-        for face in self.app.get(image):
-            confidence = float(getattr(face, "det_score", 0.0) or 0.0)
-            if confidence < MIN_FACE_CONFIDENCE:
-                continue
-            x1, y1, x2, y2 = [float(v) for v in face.bbox.tolist()]
+
+        def _record(x1, y1, x2, y2, confidence):
             box_width = max(0.0, x2 - x1)
             box_height = max(0.0, y2 - y1)
             area_fraction = (box_width * box_height) / float(width * height)
             if area_fraction <= 0:
-                continue
-            prominence = confidence * math.sqrt(area_fraction)
+                return
             detections.append(
                 {
                     "center_x": clamp01((x1 + x2) / (2.0 * width)),
                     "center_y": clamp01((y1 + y2) / (2.0 * height)),
                     "confidence": confidence,
                     "area_fraction": area_fraction,
-                    "prominence": prominence,
+                    "prominence": confidence * math.sqrt(area_fraction),
                 }
             )
+
+        for face in self.app.get(image):
+            confidence = float(getattr(face, "det_score", 0.0) or 0.0)
+            if confidence < MIN_FACE_CONFIDENCE:
+                continue
+            x1, y1, x2, y2 = [float(v) for v in face.bbox.tolist()]
+            _record(x1, y1, x2, y2, confidence)
+
+        # bug-36: if the CNN found nothing, try the anime/stylised cascade so
+        # anime content is face-centred too. Runs only as a fallback.
+        if not detections:
+            try:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                gray = cv2.equalizeHist(gray)
+                for cascade in _load_anime_cascades(cv2):
+                    for (cx, cy, cw, ch) in cascade.detectMultiScale(
+                        gray, scaleFactor=1.1, minNeighbors=5, minSize=(24, 24)
+                    ):
+                        _record(float(cx), float(cy), float(cx + cw), float(cy + ch), _ANIME_CASCADE_CONFIDENCE)
+                    if detections:
+                        break
+            except Exception:
+                pass
+
         return detections
 
 

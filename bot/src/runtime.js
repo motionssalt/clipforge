@@ -10,6 +10,7 @@ import { isTerminal } from './jobs.js';
 import { buttons } from './telegram.js';
 import { escapeHtml, redact, describeTaskState } from './constants.js';
 import { ONBOARDING_TEXT, onboardingKeyboard, renderInteractiveView } from './views.js';
+import { progressLine } from './progress.js';
 
 /** Map internal errors to short, secret-free user text (§13 invariant #1). */
 export function userError(error) {
@@ -121,7 +122,11 @@ export async function showTask(env, chatId, label, messageId = null) {
     state === 'awaiting_torrent_selection'
       ? `⏳ <b>${escapeHtml(describeTaskState(status))}</b> — tap <b>📂 Choose video file</b> below and pick the file to process.`
       : '',
-    escapeHtml(status.message || '')
+    escapeHtml(status.message || ''),
+    // bug-35: a live progress bar reflects the current stage so the operator
+    // sees forward motion at a glance instead of a bare state name. It
+    // updates each time the task view is (re)opened/refreshed.
+    progressLine(status)
   ];
   const series = status.series && typeof status.series === 'object' ? status.series : {};
   if (series.enabled === true) lines.push(`Series: part ${Number(series.part) || 1}${series.is_final === true ? ' (final)' : ''}`);
