@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "job_id": "manual-1788023189426",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:3C7B3848F2B973BF31FB944F91C726AC20D26261&dn=Rick and Morty Season 1-4 Upscale 2160p x265 - Uncensored&tr=udp://tracker.opentrackr.org:1337/announce&tr=udp://9.rarbg.com:2810/announce&tr=udp://tracker.openbittorrent.com:6969/announce&tr=http://tracker.openbittorrent.com:80/announce&tr=udp://opentracker.i2p.rocks:6969/announce&tr=https://opentracker.i2p.rocks:443/announce&tr=udp://open.stealth.si:80/announce&tr=udp://tracker.torrent.eu.org:451/announce&tr=udp://tracker.tiny-vps.com:6969/announce&tr=udp://tracker.moeking.me:6969/announce&tr=udp://tracker.dler.org:6969/announce&tr=udp://p4p.arenabg.com:1337/announce&tr=udp://open.demonii.com:1337/announce&tr=udp://movies.zsw.ca:6969/announce&tr=udp://tracker.opentrackr.org:1337/announce&tr=http://tracker.openbittorrent.com:80/announce&tr=udp://opentracker.i2p.rocks:6969/announce&tr=udp://tracker.internetwarriors.net:1337/announce&tr=udp://tracker.leechers-paradise.org:6969/announce&tr=udp://coppersurfer.tk:6969/announce&tr=udp://tracker.zer0day.to:1337/announce"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": 60,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788023208180",
+    "source_job_id": "manual-1788023189426",
+    "part": 1,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/180DB_ [130] (Intro Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788023208
+}
