@@ -160,8 +160,16 @@ jobs:
           opts = data.get("options", {})
           wm = opts.get("whisper_model", "base")
           put("whisper_model", wm if wm in ("tiny", "base", "small") else "base")
-          lang = str(opts.get("language", "en"))
-          put("language", lang if re.fullmatch(r"[A-Za-z-]{2,12}", lang) else "en")
+          # bug-65: default is auto-detect ("auto") so Whisper can identify the
+          # real source language; the translate task then renders any
+          # non-English audio into English. Never force "en" here — that would
+          # suppress detection of genuinely non-English audio.
+          lang = str(opts.get("language", "auto"))
+          put("language", lang if re.fullmatch(r"[A-Za-z-]{2,12}", lang) else "auto")
+          # bug-65: translation to English is the default pipeline behavior; a
+          # request may explicitly opt out with options.task = "transcribe".
+          task = str(opts.get("task", "translate_to_english"))
+          put("task", task if task in ("transcribe", "translate_to_english") else "translate_to_english")
           put("vision_assist", "true" if opts.get("enable_vision_assist", True) else "false")
           series = data.get("series", {})
           put("series_enabled", "true" if series.get("enabled") else "false")
@@ -417,7 +425,8 @@ jobs:
           ffmpeg -y -i "$ORIGINAL_PATH" -vn -ac 1 -ar 16000 -c:a pcm_s16le work/audio.wav
           python -m pipeline.stage_a.transcribe work/audio.wav work/transcript.json \
             --model "${{ steps.req.outputs.whisper_model }}" \
-            --lang "${{ steps.req.outputs.language }}"
+            --lang "${{ steps.req.outputs.language }}" \
+            --task "${{ steps.req.outputs.task }}"
 
       - name: Local vision-assist stack (shots, key moments, composites)
         if: ${{ steps.ingest.outputs.result == 'ok' && steps.req.outputs.vision_assist == 'true' }}

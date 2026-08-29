@@ -142,6 +142,10 @@ export function nextPartRequestBody(request, continuation, context, currentJobId
     options: {
       whisper_model: options.whisper_model,
       language: options.language,
+      // bug-65: carry an explicit task choice (e.g. a "transcribe" opt-out)
+      // across series parts; buildStageARequest defaults it to
+      // "translate_to_english" when absent.
+      task: options.task,
       target_duration_seconds: options.target_duration_seconds,
       // Series Mode has no editorial-focus override. Each part is bounded by
       // its persisted source window and continuity context instead.

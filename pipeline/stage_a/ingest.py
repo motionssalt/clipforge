@@ -625,7 +625,10 @@ def write_torrent_selection(
         "selected_index": chosen,
         "stage_a_inputs": {
             "whisper_model": options.get("whisper_model", "base"),
-            "language": options.get("language", "en"),
+            # bug-65: default is auto-detect ("auto"), matching the new
+            # pipeline default (translate_to_english + auto-detect). A forced
+            # "en" here would mislabel auto-detected non-English sources.
+            "language": options.get("language", "auto"),
             "target_duration_seconds": str(options.get("target_duration_seconds", 120)),
             "focus": options.get("focus", ""),
         },

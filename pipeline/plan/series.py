@@ -244,7 +244,9 @@ def derive_next_part(root: Path, job_id: str) -> dict[str, Any]:
             },
             "options": {
                 "whisper_model": whisper_model,
-                "language": str(req_options.get("language") or "en"),
+                # bug-65: default is auto-detect ("auto"), matching the new
+                # pipeline default (translate_to_english + auto-detect).
+                "language": str(req_options.get("language") or "auto"),
                 "target_duration_seconds": target_duration,
                 # Series Mode has no editorial-focus override. Each part is
                 # bounded by its persisted source window and continuity

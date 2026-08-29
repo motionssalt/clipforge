@@ -15,7 +15,21 @@ tuning block below.
 
 Usage:
     python -m pipeline.stage_a.transcribe <input> <output_json>
-        [--model base|small|tiny] [--lang en|auto|ja|...] (default: en)
+        [--model base|small|tiny] [--lang auto|en|ja|...] (default: auto)
+        [--task translate_to_english|transcribe] (default: translate_to_english)
+
+bug-65: faster-whisper's ``transcribe()`` takes TWO independent knobs that must
+not be conflated — ``language`` (what language the audio IS; None = auto-detect
+from the first ~30s) and ``task`` (what to DO: ``"transcribe"`` keeps the source
+language, ``"translate"`` always outputs English regardless of source). The
+operator's requirement is "any non-English audio becomes English automatically",
+so the pipeline default is ``task=translate_to_english`` with the source
+language auto-detected. Whenever translation is requested the language hint is
+forced to None (auto-detect): a forced language — especially a wrongly-assumed
+"en" — both disables Whisper's own detection of genuinely non-English audio AND
+means there is nothing to translate FROM, so translation would never trigger.
+``task=transcribe`` stays available as an explicit opt-out for preserving the
+original language.
 """
 from __future__ import annotations
 
@@ -116,11 +130,20 @@ class FasterWhisperTranscriber:
     """
 
     ALLOWED_SIZES = {"tiny", "base", "small"}
+    # bug-65: public task vocabulary, mapped 1:1 onto faster-whisper's own
+    # task="transcribe"/"translate" values (no second internal vocabulary that
+    # would need re-translating at the call site).
+    ALLOWED_TASKS = {"transcribe", "translate_to_english"}
+    _FW_TASK = {"transcribe": "transcribe", "translate_to_english": "translate"}
 
-    def __init__(self, model_size: str = "base", language: str = "en"):
+    def __init__(self, model_size: str = "base", language: str = "auto", task: str = "translate_to_english"):
         if model_size not in self.ALLOWED_SIZES:
             raise ValueError(
                 f"model_size must be one of {sorted(self.ALLOWED_SIZES)} (CPU perf cap), got {model_size!r}"
+            )
+        if task not in self.ALLOWED_TASKS:
+            raise ValueError(
+                f"task must be one of {sorted(self.ALLOWED_TASKS)}, got {task!r}"
             )
         # Import lazily so the module is importable without the dep for tests.
         from faster_whisper import WhisperModel  # type: ignore
@@ -131,10 +154,28 @@ class FasterWhisperTranscriber:
         t0 = time.time()
         self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
         print(f"Model loaded in {time.time() - t0:.1f}s", flush=True)
-        self.language = None if language == "auto" else language
+        self.task = task
+        self.fw_task = self._FW_TASK[task]
+        # bug-65: when translating, the source language MUST be auto-detected
+        # (None). Forcing a language — above all a wrongly-assumed "en" — tells
+        # Whisper the audio already IS that language, which both suppresses
+        # detection of genuinely non-English audio and leaves nothing to
+        # translate FROM. For plain transcription the caller's hint is honoured
+        # as before ("auto" -> None = auto-detect, staying in source language).
+        if self.fw_task == "translate":
+            self.language = None
+        else:
+            self.language = None if language == "auto" else language
+        # Captured after each transcribe() call so transcribe_to_json can
+        # persist the ACTUALLY detected source language into transcript.json.
+        self.last_info = None
 
     def transcribe(self, path: str) -> Iterable[Segment]:
-        print(f"Transcribing {path} (language={self.language or 'auto-detect'})", flush=True)
+        print(
+            f"Transcribing {path} (task={self.fw_task}, "
+            f"language={self.language or 'auto-detect'})",
+            flush=True,
+        )
 
         vad_parameters = {
             "threshold": 0.5,
@@ -147,15 +188,17 @@ class FasterWhisperTranscriber:
         segments, info = self.model.transcribe(
             path,
             language=self.language,
+            task=self.fw_task,
             beam_size=5,
             vad_filter=True,
             vad_parameters=vad_parameters,
             word_timestamps=True,
             condition_on_previous_text=False,
         )
+        self.last_info = info
         print(
             f"Detected language: {info.language} (prob={info.language_probability:.2f}), "
-            f"duration={info.duration:.1f}s",
+            f"task={self.fw_task}, duration={info.duration:.1f}s",
             flush=True,
         )
 
@@ -184,9 +227,9 @@ class FasterWhisperTranscriber:
             i += 1
 
 
-def build_default_transcriber(model_size: str, language: str) -> Transcriber:
+def build_default_transcriber(model_size: str, language: str, task: str = "translate_to_english") -> Transcriber:
     """Single choke point for choosing the backend. Swap here if ever needed."""
-    return FasterWhisperTranscriber(model_size=model_size, language=language)
+    return FasterWhisperTranscriber(model_size=model_size, language=language, task=task)
 
 
 def transcribe_to_json(
@@ -194,7 +237,8 @@ def transcribe_to_json(
     output_json: str,
     *,
     model: str = "base",
-    language: str = "en",
+    language: str = "auto",
+    task: str = "translate_to_english",
 ) -> dict:
     """Transcribe ``input_path`` and write the transcript payload to disk.
 
@@ -204,7 +248,7 @@ def transcribe_to_json(
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"input not found: {input_path}")
 
-    tx = build_default_transcriber(model, language)
+    tx = build_default_transcriber(model, language, task)
     segs: list[Segment] = []
     t0 = time.time()
     for seg in tx.transcribe(input_path):
@@ -214,10 +258,25 @@ def transcribe_to_json(
     elapsed = time.time() - t0
 
     duration = segs[-1]["end"] if segs else 0.0
+    info = getattr(tx, "last_info", None)
+    detected_language = getattr(info, "language", None) if info is not None else None
+    detected_probability = getattr(info, "language_probability", None) if info is not None else None
     payload = {
         "backend": "faster-whisper",
         "model": model,
         "language_hint": language,
+        # bug-65: persist WHAT ACTUALLY RAN, not only what was requested, so the
+        # transcript alone can distinguish "English because the source was
+        # English" from "English translation of originally-Japanese audio" —
+        # previously visible only in ephemeral Actions logs (the stdout
+        # 'Detected language' line). detected_language is Whisper's auto-detected
+        # SOURCE language; under task=translate_to_english it is the language
+        # the English text was translated FROM.
+        "task": task,
+        "detected_language": detected_language,
+        "detected_language_probability": (
+            round(float(detected_probability), 4) if detected_probability is not None else None
+        ),
         "audio_duration_seconds": duration,
         "generated_at_epoch": int(time.time()),
         "segments": segs,
@@ -240,14 +299,26 @@ def main() -> None:
     ap.add_argument("input_path")
     ap.add_argument("output_json")
     ap.add_argument("--model", default="base", choices=sorted(FasterWhisperTranscriber.ALLOWED_SIZES))
-    ap.add_argument("--lang", default="en")
+    ap.add_argument(
+        "--lang",
+        default="auto",
+        help="source-language hint ('auto' = auto-detect, the default). Forced to "
+             "auto-detect whenever --task translate_to_english is in effect.",
+    )
+    ap.add_argument(
+        "--task",
+        default="translate_to_english",
+        choices=sorted(FasterWhisperTranscriber.ALLOWED_TASKS),
+        help="'translate_to_english' (default): any non-English audio is translated to "
+             "English; 'transcribe': keep the source language (explicit opt-out).",
+    )
     args = ap.parse_args()
 
     if not os.path.exists(args.input_path):
         print(f"Input not found: {args.input_path}", file=sys.stderr)
         sys.exit(2)
 
-    transcribe_to_json(args.input_path, args.output_json, model=args.model, language=args.lang)
+    transcribe_to_json(args.input_path, args.output_json, model=args.model, language=args.lang, task=args.task)
 
 
 if __name__ == "__main__":

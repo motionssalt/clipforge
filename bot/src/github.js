@@ -1488,7 +1488,7 @@ const MUSIC_SOURCES = new Set(['none', 'default', 'explicit_library', 'job_uploa
  * ``request`` shape:
  *   {
  *     source:  { kind, value, relay?, torrent_file_index? },
- *     options: { whisper_model?, language?, target_duration_seconds?, focus?,
+ *     options: { whisper_model?, language?, task?, target_duration_seconds?, focus?,
  *                enable_vision_assist? },
  *     mode:    'manual' | 'automatic',
  *     series:  { enabled, series_id, source_job_id, part, start_seconds, context },
@@ -1531,7 +1531,13 @@ export function buildStageARequest(jobId, request) {
     },
     options: {
       whisper_model: whisperModel,
-      language: String(options.language || 'en'),
+      // bug-65: default is auto-detect ("auto") so Whisper identifies the real
+      // source language; the translate task then renders any non-English audio
+      // into English. Never force "en" — that would suppress detection of
+      // genuinely non-English audio. task="transcribe" is the explicit opt-out
+      // that preserves the original language.
+      language: String(options.language || 'auto'),
+      task: options.task === 'transcribe' ? 'transcribe' : 'translate_to_english',
       target_duration_seconds: targetDuration,
       focus: String(options.focus || ''),
       enable_vision_assist: options.enable_vision_assist !== false

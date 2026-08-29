@@ -37,7 +37,8 @@
       "required": ["whisper_model", "language", "target_duration_seconds", "focus", "enable_vision_assist"],
       "properties": {
         "whisper_model":           { "type": "string", "enum": ["tiny", "base", "small"] },
-        "language":                { "type": "string" },
+        "language":                { "type": "string", "description": "Source-language hint for faster-whisper; \"auto\" (the default) = auto-detect. Forced to auto-detect whenever task is translate_to_english (bug-65)." },
+        "task":                    { "type": "string", "enum": ["transcribe", "translate_to_english"], "default": "translate_to_english", "description": "bug-65: default auto-translates any non-English audio to English (faster-whisper task=translate, language auto-detected). \"transcribe\" explicitly preserves the original language." },
         "target_duration_seconds": { "type": "integer", "minimum": 1 },
         "focus":                   { "type": "string" },
         "enable_vision_assist":    { "type": "boolean" }

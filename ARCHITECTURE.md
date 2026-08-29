@@ -364,7 +364,8 @@ restart. This is the durable record of "what the user asked for."
   },
   "options": {
     "whisper_model": "tiny | base | small",
-    "language": "en",
+    "language": "auto",
+    "task": "translate_to_english | transcribe",
     "target_duration_seconds": 120,
     "focus": "",
     "enable_vision_assist": true
