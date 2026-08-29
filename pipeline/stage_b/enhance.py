@@ -2,9 +2,8 @@
 
 The picture chain is, in order:
 
-    light hqdn3d shimmer denoise → supplied 3D color-cube grade → 2x
-    lanczos upscale → sharpen on the upsampled frame → rescale BACK to the
-    source's own 9:10 frame → gradfun debanding → yuv420p
+    light hqdn3d shimmer denoise → supplied 3D color-cube grade →
+    sharpen at the frame's NATIVE resolution → gradfun debanding → yuv420p
 
 Rationale (hard-won, do not relitigate):
 
@@ -18,6 +17,14 @@ Rationale (hard-won, do not relitigate):
   960x540 gradient-tile reference image (a mood reference, NOT a valid HALD
   CLUT identity — never feed that image to ``haldclut`` directly). It is the
   only color transform in this stage and runs BEFORE the sharpeners.
+* bug-60: the sharpeners run at the merged video's native resolution. The
+  2x upscale/sharpen/rescale-back scaffold that used to sit between the LUT
+  and the sharpeners (bug-11's technique, bug-25's rescale fix — see those
+  comments below for the history) was removed: its per-axis caps made the
+  upscale non-uniform on 16:9 sources (1920x1080 -> 2160x2160, then a flat
+  /2 rescale -> 1080x1080, stretching every non-square source before the
+  reframe stage), and its final lanczos downscale low-pass-blurred away most
+  of the sharpening that had just been applied. Do NOT reintroduce it.
 * ``cas`` restores texture/edge definition in a locally content-aware way.
 * ``unsharp`` sharpens line ink specifically (luma threshold keeps it off flat
   regions; zeroed chroma matrix avoids chromatic fringing).
@@ -43,36 +50,27 @@ LUT_FILTER = "haldclut=shortest=1"
 LUT_GRID_SOURCE = common.LUT_GRID_SOURCE
 LUT_ASSET = common.LUT_HALD_ASSET
 
-# bug-11: detail-preserving 2x lanczos upscale to pseudo-4K (capped at
-# 2160x3840) inserted between the color grade and the sharpeners, so cas/
-# unsharp work on the upsampled frame — the AE-style "scale up, then
-# sharpen" pass. CPU-only (lanczos/cas/unsharp are all CPU filters), safe
-# for GitHub Actions runners; no GPU dependency introduced.
-UPSCALE = "scale=w='min(2160,2*iw)':h='min(3840,2*ih)':flags=lanczos"
-# bug-25: the 2x upscale must NOT be left in the delivered file. It used to
-# stop the pipeline here, so final.mp4 came out at 2x the source resolution.
-# The captions/reframe stage then ran
-# ``scale=1080:1200:force_original_aspect_ratio=increase,crop=1080:1200`` on
-# that 2x frame — force_original_aspect_ratio=increase scales the source's
-# aspect onto the TARGET box and crops the overflow, so a frame that was
-# already the target shape gets its aspect re-interpreted and force-cropped
-# to 9:10. That is the vertical-stretch regression. And because the final
-# crop happened AFTER the sharpeners, the sharpening was partially cropped /
-# rescaled away (the missing-sharpening complaint). Fix: upscale only to give
-# the sharpeners a bigger canvas, then rescale back to the SOURCE'S OWN
-# frame so enhance is resolution-neutral and the sharpened detail survives
-# all the way to delivery.`` setsar=1`` keeps pixels square; the source's
-# own SAR is restored below, never hardcoded 1080x1200 here.
-RESCALE_BACK = (
-    "scale=w='trunc(iw/2/2)*2':h='trunc(ih/2/2)*2':flags=lanczos,setsar=1"
-)
+# bug-11 history: a detail-preserving 2x lanczos upscale to pseudo-4K used
+# to be inserted between the color grade and the sharpeners, so cas/unsharp
+# worked on the upsampled frame (the AE-style "scale up, then sharpen" pass).
+# bug-25 history: that upscale used to leak into the delivered file, and a
+# rescale-back-to-source stage was added so enhance stayed resolution-neutral.
+# bug-60: BOTH stages were then removed entirely. The upscale's per-axis caps
+# (2160 width / 3840 height) made the scale factor non-uniform on 16:9 sources
+# (1920x1080 -> 2160x2160, not a proportional 2160x1215), and the rescale-back
+# divided both axes by a flat /2 — output came out 1080x1080, visibly
+# stretched, before the reframe/crop stage ever saw it. Independently, the
+# final lanczos downscale was itself a low-pass blur that undid a large
+# fraction of the sharpening just applied. Sharpening at native resolution is
+# measurably sharper AND aspect-correct, with zero upscale complexity. setsar=1
+# is still applied at the end of the chain below; never drop it.
 EDGE_SHARPEN = "cas=strength=0.75"
 LINE_SHARPEN = "unsharp=7:7:0.85:5:5:0.35"
 DEBAND = "gradfun=1.2:16"
 
 FILTER_CHAIN = (
-    f"{DENOISE},{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},{LINE_SHARPEN},"
-    f"{RESCALE_BACK},{DEBAND},format=yuv420p,setsar=1"
+    f"{DENOISE},{LUT_FILTER},{EDGE_SHARPEN},{LINE_SHARPEN},"
+    f"{DEBAND},format=yuv420p,setsar=1"
 )
 
 # Mobile-safe encoding parameters (same contract as render.py).
@@ -88,10 +86,12 @@ X264_BUFSIZE = "16M"
 
 
 def _level_and_vbv(src: str) -> tuple[str, str, str]:
-    """Return (level, maxrate, bufsize) sized for the upscaled output.
+    """Return (level, maxrate, bufsize) for the enhanced output.
 
-    bug-11: 2160x3840 needs H.264 Level 5.1 (Level 4.0 tops out below it);
-    anything smaller keeps the original Level 4.0 contract.
+    bug-60: output now stays at the source's own resolution (the 2x upscale
+    scaffold is gone), so the fixed Level 4.0 / 8M / 16M contract below covers
+    every realistic input. The probe is kept only as a safety net for inputs
+    already larger than ~2048px on an axis, which still get Level 5.1.
     """
     try:
         data = common.probe_json(src)
@@ -101,8 +101,7 @@ def _level_and_vbv(src: str) -> tuple[str, str, str]:
                 width = int(stream.get("width") or 0)
                 height = int(stream.get("height") or 0)
                 break
-        out_w, out_h = min(2160, 2 * width), min(3840, 2 * height)
-        if max(out_w, out_h) > 2048 or (out_w * out_h) > (2048 * 2048):
+        if max(width, height) > 2048 or (width * height) > (2048 * 2048):
             return "5.1", "20M", "40M"
     except Exception:
         pass
@@ -110,12 +109,12 @@ def _level_and_vbv(src: str) -> tuple[str, str, str]:
 
 
 def enhance_one(src: str, dst: str) -> None:
-    """Denoise, upscale, apply the supplied color cube, and sharpen one video."""
+    """Denoise, apply the supplied color cube, and sharpen one video."""
     level, maxrate, bufsize = _level_and_vbv(src)
     graph = (
         f"[0:v]{DENOISE}[denoised];"
-        f"[denoised][1:v]{LUT_FILTER},{UPSCALE},{EDGE_SHARPEN},"
-        f"{LINE_SHARPEN},{RESCALE_BACK},{DEBAND},format=yuv420p,setsar=1[enhanced]"
+        f"[denoised][1:v]{LUT_FILTER},{EDGE_SHARPEN},"
+        f"{LINE_SHARPEN},{DEBAND},format=yuv420p,setsar=1[enhanced]"
     )
     cmd = [
         "ffmpeg", "-y",
