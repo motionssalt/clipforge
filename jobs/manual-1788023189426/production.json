@@ -1,0 +1,102 @@
+{
+  "video_duration_seconds": 1265,
+  "title": "Rick Exposes an Alien School Simulation Part 1",
+  "series": {
+    "series_id": "series-1788023208180",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 186,
+    "is_final": false,
+    "summary": "Morty is tricked by simulated classmates demanding Rick's dark matter formula before Rick rescues him into a shower to expose the alien illusion."
+  },
+  "hashtags": [
+    "#rickandmorty",
+    "#adultswim",
+    "#scifi",
+    "#cartoon",
+    "#mindbending",
+    "#aliens"
+  ],
+  "youtube_tags": [
+    "rick and morty",
+    "rick and morty part 1",
+    "rick sanchez",
+    "morty smith",
+    "alien simulation",
+    "concentrated dark matter",
+    "zigerian scammers",
+    "adult swim animation",
+    "scifi animation",
+    "simulation chamber",
+    "school simulation",
+    "cartoon clips"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 94,
+      "end_seconds": 118,
+      "voiceover_text": "Morty thinks he just solved an impossible math question, but something is completely off. His teacher is staring at him with unnatural excitement. Instead of failing him, the teacher declares Morty the smartest student in school. The entire class erupts into wild applause. Morty walks up to the chalkboard, glowing with unexpected pride. He prepares to teach the room, loving the sudden attention. Then the excitement takes a bizarre turn. The teacher leans in close and demands Rick's secret formula for concentrated dark matter.",
+      "keywords": [
+        {
+          "word": "impossible",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "smartest",
+          "color": "#4A90E2"
+        },
+        {
+          "word": "demands",
+          "color": "#E65100"
+        },
+        {
+          "word": "concentrated",
+          "color": "#9C27B0"
+        }
+      ]
+    },
+    {
+      "start_seconds": 134,
+      "end_seconds": 151,
+      "voiceover_text": "His dream crush Jessica suddenly leans forward and offers to be his girlfriend if he spills the recipe. Morty is overwhelmed with excitement and prepares to talk. Right before he speaks, a frantic Rick bursts through the door in pure panic. He screams about an emergency and violently drags a confused Morty out into the hallway.",
+      "keywords": [
+        {
+          "word": "girlfriend",
+          "color": "#E91E63"
+        },
+        {
+          "word": "panic",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "drags",
+          "color": "#FF9800"
+        }
+      ]
+    },
+    {
+      "start_seconds": 164,
+      "end_seconds": 186,
+      "voiceover_text": "In the locker room, Rick forces Morty into a running shower and demands they strip naked. Morty panics about missing class, but Rick drops a terrifying truth. Their school, the teacher, and Jessica are complete holographic illusions inside an alien simulation chamber. Extraterrestrial scammers are monitoring their every move to steal Rick's dark matter fuel. The shower is their only blind spot because the aliens are disgusted by human nudity.",
+      "keywords": [
+        {
+          "word": "shower",
+          "color": "#00BCD4"
+        },
+        {
+          "word": "holographic",
+          "color": "#9C27B0"
+        },
+        {
+          "word": "simulation",
+          "color": "#3F51B5"
+        },
+        {
+          "word": "scammers",
+          "color": "#FF5722"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60
+}
