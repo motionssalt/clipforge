@@ -22,7 +22,12 @@
   // message instead of the killed-request silence at "Preparing repository…".
   "triggers": {
     "crons": ["* * * * *"]
-  },
+  }
+  // bug-62: no trailing comma above — nothing follows this object before the
+  // closing brace, and while JSONC/JSON5 tolerate trailing commas, the
+  // scripts/reclaim-stale-task-labels.mjs parser stripping comments to
+  // whitespace and then calling strict JSON.parse does not. The parser has
+  // also been hardened, but keeping the source clean prevents a re-trip.
   // Secret bindings (set via `wrangler secret put`, never committed):
   //   TELEGRAM_BOT_TOKEN        — Bot A's Telegram bot token
   //   KV_ENCRYPTION_KEY         — base64 32-byte AES-256-GCM key for credential envelopes

@@ -36,11 +36,22 @@ const REPO = String(process.env.REPO || process.env.GITHUB_REPOSITORY || '').tri
 const GH_TOKEN = String(process.env.GITHUB_TOKEN || '').trim();
 if (!REPO) { console.error('REPO (owner/name) is required.'); process.exit(2); }
 
+// bug-62: JSONC parsing lives in ./jsonc.mjs so it can be imported by a test
+// (bot/test/wrangler-jsonc-parse.test.mjs) without executing this CLI's
+// top-level env checks. The previous inline implementation stripped
+// block/line comments but forgot that JSONC also legitimately allows a
+// trailing comma before a closing } or ] — a comment-authored file like
+// bot/wrangler.bot-a.jsonc had a { ... }, // comment... } shape that, after
+// the comment lines were blanked to whitespace, became { ... },   } which
+// strict JSON.parse rejects with "Expected double-quoted property name in
+// JSON at position ... (line ... column 1)" — the exact hourly-cleanup.yml
+// failure. The extracted helper strips trailing commas too, so future JSONC
+// authoring in these files can't retrip the same failure.
+import { parseWranglerJsonc } from './jsonc.mjs';
+
 function kvNamespaceId() {
-  const raw = readFileSync(new URL('../bot/wrangler.bot-a.jsonc', import.meta.url), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/^[ \t]*\/\/[^\n]*$/gm, '');
-  const binding = (JSON.parse(raw).kv_namespaces || []).find((b) => b.binding === 'CLIPFORGE_BOT_KV');
+  const raw = readFileSync(new URL('../bot/wrangler.bot-a.jsonc', import.meta.url), 'utf8');
+  const binding = (parseWranglerJsonc(raw).kv_namespaces || []).find((b) => b.binding === 'CLIPFORGE_BOT_KV');
   if (!binding || !binding.id) throw new Error('CLIPFORGE_BOT_KV namespace id not found in bot/wrangler.bot-a.jsonc');
   return binding.id;
 }
