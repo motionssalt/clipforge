@@ -3,7 +3,8 @@
   "job_id": "manual-1787978239962",
   "source": {
     "kind": "torrent_file",
-    "value": "path:jobs/manual-1787978239962/source.torrent"
+    "value": "path:jobs/manual-1787978239962/source.torrent",
+    "torrent_file_index": "1"
   },
   "options": {
     "whisper_model": "base",
@@ -25,5 +26,5 @@
     "ref": "audio-library/180DB_ [130] (Intro Slowed).m4a",
     "source": "default"
   },
-  "saved_at_epoch": 1787978275
+  "saved_at_epoch": 1787978930
 }
