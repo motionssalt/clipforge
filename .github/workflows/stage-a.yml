@@ -265,7 +265,7 @@ jobs:
           attempt=1
           until gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
             --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
-            --pattern 'screenshots.zip' --pattern 'source_input.bin' --clobber; do
+            --pattern 'screenshots.zip' --pattern 'source_input.bin' --pattern 'analysis_720p.mp4' --clobber; do
             if [ "$attempt" -ge 6 ]; then
               echo "release clipforge-$source_job still unavailable after $attempt attempts" >&2
               exit 1
@@ -274,12 +274,21 @@ jobs:
             sleep 15
             attempt=$((attempt + 1))
           done
-          mkdir -p work/screenshots
+          mkdir -p work/screenshots work/analysis
           cp work/series-source/transcript.json work/transcript.json
           cp work/series-source/scene_index.json work/scene_index.json
           cp work/series-source/key_moments.json work/key_moments.json
           unzip -q work/series-source/screenshots.zip -d work/screenshots
           cp work/series-source/source_input.bin work/original.bin
+          # bug: series continuations reused Part 1's transcript/scenes/screenshots
+          # but never fetched analysis_720p.mp4, so the bundle-assembly step later
+          # failed with "no 720p analysis copy found for the bundle" on every
+          # Part >= 2. Copy it alongside the other reused evidence.
+          if [ ! -f work/series-source/analysis_720p.mp4 ]; then
+            echo "series reuse: analysis_720p.mp4 missing from clipforge-$source_job release (it may have auto-deleted after ~12h — see the release body note); cannot assemble Part >= 2 without it" >&2
+            exit 1
+          fi
+          cp work/series-source/analysis_720p.mp4 work/analysis/analysis_720p.mp4
           python - <<'PY'
           import json
           rec = {"version": 1, "job_id": "${{ steps.req.outputs.job_id }}",
