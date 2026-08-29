@@ -17,27 +17,40 @@ name: Deploy Bots — Cloudflare Workers
 # bug-58: a failed test step used to silently skip the wrangler deploys — the
 # only "alert" was the Actions UI, so blocked deploys were discovered by the
 # user noticing a landed fix still misbehaving live (see bug-56). The final
-# step below (`if: failure()`) now pages the owner on Telegram whenever ANY
-# step fails. It uses Bot B's token (BOTB_MTPROTO_BOT_TOKEN, already an
-# Actions secret on this central repo for telegram-relay.yml) and posts to
-# DEPLOY_ALERT_CHAT_ID when that secret is set, falling back to the internal
-# relay group (-5405387856, same non-secret id as INTERNAL_RELAY_GROUP_CHAT_ID
-# in bot/wrangler.bot-a.jsonc — Bot B is a member there). No Cloudflare-scoped
-# secret is touched by the alert path. The alert itself is best-effort: it
-# must never mask the original failure.
+# step below (`if: failure()`) pages the owner on Telegram whenever an
+# earlier step in this workflow fails. It uses Bot B's token
+# (BOTB_MTPROTO_BOT_TOKEN, already an Actions secret on this central repo
+# for telegram-relay.yml) and posts to DEPLOY_ALERT_CHAT_ID when that secret
+# is set, falling back to the internal relay group (-5405387856, same
+# non-secret id as INTERNAL_RELAY_GROUP_CHAT_ID in bot/wrangler.bot-a.jsonc
+# — Bot B is a member there). No Cloudflare-scoped secret is touched by
+# the alert path. The alert itself is best-effort: it must never mask the
+# original failure.
 #
-# bug-68: BOTB_MTPROTO_BOT_TOKEN exists ONLY on this central repo (the relay
-# subsystem is central-only, ARCHITECTURE.md §9.2), so on every Shadow Clone
-# the alert step below used to log a warning and exit 0 — the clone owner was
-# never told their deploy was blocked. Clones have no bot token of their own
-# (§10: one shared Bot A serves all users), so the durable fix is bot-side:
-# the shared Bot A polls the CONNECTED repo's Deploy Bots runs with the
-# owner's PAT on the home-screen touchpoint and DMs the owner on a failure
-# (see announceDeployFailure in bot/src/commands/start.js). This workflow-side
-# step remains the real-time alert for the main account; on a clone it now
-# fails loudly (after logging the pointer) instead of silently succeeding, so
-# a missing-secret clone run stays visibly failed in the Actions UI rather
-# than looking like a clean skip.
+# bug-68 / bug-63: Shadow Clones share the central Bot A (ARCHITECTURE.md
+# §10: one shared Bot A serves all users) and have neither Cloudflare
+# credentials nor a Bot B token of their own — they are not supposed to run
+# their own Bot A/B Worker deployment at all. bug-63 fix: the wrangler
+# deploy steps and the workflow-side Telegram alert step are gated to the
+# central repo only via `if: github.repository == 'motionssalt/clipforge'`
+# (same pattern as news-push.yml's rebroadcast job); on a clone they are
+# genuinely skipped in the Actions UI instead of failing loudly on missing
+# secrets. The bot test suite (npm ci + npm test) still runs on every repo
+# — that is useful CI and needs no secrets. Clone owners are still notified
+# of a failed Deploy Bots run by the shared Bot A polling their repo with
+# their own PAT on the home-screen touchpoint (announceDeployFailure in
+# bot/src/commands/start.js) — that mechanism triggers on the run's overall
+# conclusion, not on this alert step, so failing bot tests on a clone still
+# land in the owner's DM. The workflow-side alert step is the real-time
+# alert for the main account and stays unchanged there.
+#
+# bug-63 (previous clone-side alert behavior, removed): the clone branch of
+# the alert step used to `exit 1` on purpose so the run stayed visibly red
+# in the Actions UI. With the wrangler deploy steps gated to central-only,
+# a clone run only turns red when a genuine CI failure happens (e.g. bot
+# tests failing) — that failing step keeps the run red on its own; the
+# alert step no longer needs to force-fail on clones and is skipped there
+# instead.
 
 on:
   push:
@@ -80,6 +93,11 @@ jobs:
         run: npm test
 
       - name: Deploy Bot A Worker
+        # bug-63: central-only — Shadow Clones share the central Bot A/B
+        # deployment (§10) and have no Cloudflare credentials. Skipped on
+        # every repo other than motionssalt/clipforge instead of failing
+        # loudly on the missing CLOUDFLARE_API_TOKEN / ACCOUNT_ID.
+        if: github.repository == 'motionssalt/clipforge'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -88,6 +106,8 @@ jobs:
           command: deploy --config wrangler.bot-a.jsonc
 
       - name: Deploy Bot B relay Worker
+        # bug-63: central-only (same rationale as Deploy Bot A Worker above).
+        if: github.repository == 'motionssalt/clipforge'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -96,11 +116,20 @@ jobs:
           command: deploy --config wrangler.bot-b.jsonc
 
       - name: Alert owner on Telegram when the deploy is blocked
-        # bug-58: fires on ANY earlier step failure — bot tests failing (the
-        # documented silent-skip case), npm ci, or a wrangler deploy itself.
-        # Best-effort and self-skipping when the token secret is absent, so it
-        # can never turn a failed run into a differently-failed run.
-        if: ${{ failure() }}
+        # bug-58: fires on ANY earlier step failure on this workflow — bot
+        # tests failing (the documented silent-skip case), npm ci, or a
+        # wrangler deploy itself. Best-effort: never turns a failed run into
+        # a differently-failed run.
+        #
+        # bug-63: gated to central-only. On Shadow Clones the wrangler
+        # deploy steps are also central-only (see above), so this step's
+        # only remaining trigger there would be a failing test/install step,
+        # which already keeps the run red on its own; and the clone owner
+        # is notified separately by the shared Bot A's failed-Deploy-Bots
+        # poll (announceDeployFailure in bot/src/commands/start.js), which
+        # triggers on the run's overall conclusion, not on this step. The
+        # previous clone branch (log-and-exit-1) is therefore removed.
+        if: ${{ failure() && github.repository == 'motionssalt/clipforge' }}
         working-directory: .
         shell: bash
         env:
@@ -109,22 +138,12 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "${ALERT_BOT_TOKEN:-}" ]; then
-            # bug-68: this is a Shadow Clone (BOTB_MTPROTO_BOT_TOKEN exists
-            # only on the central repo). The owner is notified by the shared
-            # Bot A polling this repo's failed Deploy Bots runs
-            # (bot/src/commands/start.js#announceDeployFailure) — but do NOT
-            # exit 0 here: a green "alert" step on a failed clone run reads
-            # as if the alert went out. Fail loudly so the run stays visibly
-            # red in the Actions UI; the original failure is already recorded
-            # by the failing step, and this step runs only under failure().
-            echo "BOTB_MTPROTO_BOT_TOKEN secret not available on this repo (Shadow Clone): no workflow-side Telegram alert possible." >&2
-            echo "The clone owner is notified via the shared ClipForge bot's deploy-failure poll (bug-68)." >&2
-            # bug-54: a bare "exit 1" here reads in the Actions UI exactly like
-            # a broken alert step (a second unexplained red X). Emit an explicit
-            # error annotation so the run's summary page explains WHY this step
-            # intentionally fails on a clone, and what the owner should do.
-            echo "::error title=Deploy blocked on a Shadow Clone::This run failed because a Deploy Bots step above failed (a fresh clone is missing CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID — add them under repo Settings -> Secrets and variables -> Actions, then re-run). This alert step fails on purpose on clones so the failure stays visible; the owner is also notified in Telegram by the shared ClipForge bot."
-            exit 1
+            # Defensive: BOTB_MTPROTO_BOT_TOKEN is expected on the central
+            # repo (used by telegram-relay.yml). If it's ever unset here,
+            # log and self-skip — the Actions UI already shows the failure
+            # and this step must not mask it.
+            echo "BOTB_MTPROTO_BOT_TOKEN secret not available on the central repo — skipping workflow-side Telegram alert." >&2
+            exit 0
           fi
           chat_id="${ALERT_CHAT_ID:-}"
           if [ -z "$chat_id" ]; then
