@@ -11,8 +11,8 @@
     {
       "id": "bug-61",
       "title": "Retune the sharpening chain for a noticeably crisper pop now that the scaffold is gone \u2014 verify empirically on real content, do not guess parameter values",
-      "status": "pending",
-      "notes": "Seeded from sweep prompt. Depends on bug-60. Starting estimate from synthetic frame: cas=strength=0.9 + unsharp=7:7:1.0:5:5:0.35 measured ~5.4x sharper than old scaffolded chain. Must bracket cas 0.75/0.85/0.9/0.95 and unsharp luma 0.85/0.95/1.0/1.1 on REAL anime-style footage, inspect for ringing/halos on line art and amplified noise in flat fills; pick strongest artifact-free setting; evaluate hqdn3d 0.8:0.6:3.0:2.0 adequacy (change only if needed); evaluate smartblur-based clarity pass (include only if measurably better). Do NOT touch eq/LUT color. Record all tried/rejected values in notes.",
+      "status": "in_progress",
+      "notes": "Seeded from sweep prompt. Depends on bug-60. Starting estimate from synthetic frame: cas=strength=0.9 + unsharp=7:7:1.0:5:5:0.35 measured ~5.4x sharper than old scaffolded chain. Must bracket cas 0.75/0.85/0.9/0.95 and unsharp luma 0.85/0.95/1.0/1.1 on REAL anime-style footage, inspect for ringing/halos on line art and amplified noise in flat fills; pick strongest artifact-free setting; evaluate hqdn3d 0.8:0.6:3.0:2.0 adequacy (change only if needed); evaluate smartblur-based clarity pass (include only if measurably better). Do NOT touch eq/LUT color. Record all tried/rejected values in notes. | in_progress: bug-60 done and confirmed on origin/main; starting empirical retune.",
       "commit": ""
     }
   ]
