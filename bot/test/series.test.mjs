@@ -140,9 +140,12 @@ test('manualSeriesContinuation returns the next part coordinates (nested + flat)
 
 test('buildSeriesContext orders, skips empty summaries, and caps at 8000 chars', () => {
   assert.equal(buildSeriesContext([]), '(No prior summaries.)');
+  // bug-56: each line is prefixed with "Prior events (Part N):" rather than a
+  // bare "Part N:" — an AI reading the resulting prompt used to be able to
+  // copy that bare Part number into its own production.json series.part.
   assert.equal(
     buildSeriesContext([{ part: 2, summary: 'Second.' }, { part: 1, summary: 'First.' }, { part: 3, summary: '  ' }]),
-    'Part 1: First.\nPart 2: Second.',
+    'Prior events (Part 1): First.\nPrior events (Part 2): Second.',
   );
   const long = buildSeriesContext([{ part: 1, summary: 'x'.repeat(9000) }]);
   assert.ok(long.length <= 8000);
@@ -153,7 +156,7 @@ test('nextPartRequestBody mirrors the automatic continuation with mode manual', 
     source: { kind: 'torrent_file', value: 'path:jobs/series-1-p1/source.torrent', torrent_file_index: '3' },
     music: { ref: 'audio-library/theme.mp3', source: 'explicit_library' },
   });
-  const body = nextPartRequestBody(request, { seriesId: 'series-1', part: 2, startSeconds: 120 }, 'Part 1: Recap one.');
+  const body = nextPartRequestBody(request, { seriesId: 'series-1', part: 2, startSeconds: 120 }, 'Prior events (Part 1): Recap one.');
   assert.equal(body.mode, 'manual');
   assert.equal(body.source.kind, 'torrent_file');
   assert.equal(body.source.torrent_file_index, '3');
@@ -164,7 +167,7 @@ test('nextPartRequestBody mirrors the automatic continuation with mode manual', 
     source_job_id: 'series-1-p1',
     part: 2,
     start_seconds: 120,
-    context: 'Part 1: Recap one.',
+    context: 'Prior events (Part 1): Recap one.',
   });
   assert.deepEqual(body.music, { ref: 'audio-library/theme.mp3', source: 'explicit_library' });
 });

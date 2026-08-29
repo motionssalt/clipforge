@@ -96,17 +96,27 @@ export function manualSeriesContinuation(status, request, plan) {
 }
 
 /**
- * Build the ``Part N: <summary>`` context string for a series (the same
- * derivation pipeline/plan/series.py performs for the automatic path), capped
- * at 8000 chars. ``entries`` is an array of {part, summary}; unsummarized
- * parts are skipped.
+ * Build the ``Prior events (Part N): <summary>`` context string for a series
+ * (the same derivation pipeline/plan/series.py performs for the automatic
+ * path), capped at 8000 chars. ``entries`` is an array of {part, summary};
+ * unsummarized parts are skipped.
+ *
+ * bug-56: the leading token is intentionally ``Prior events (Part N):`` rather
+ * than a bare ``Part N:`` prefix. An AI reading the resulting prompt used to
+ * see a bare ``Part 1:`` inside this continuity block even when it was
+ * currently authoring Part 2, and could plausibly copy that number into the
+ * production.json ``series.part`` field instead of the current-part value
+ * stated elsewhere in the prompt. Prefixing every summary with ``Prior events``
+ * makes the passage unmistakably about earlier parts.
  */
 export function buildSeriesContext(entries) {
   const sorted = (Array.isArray(entries) ? entries : [])
     .filter((entry) => isInteger(Number(entry && entry.part)) && String(entry && entry.summary || '').trim() !== '')
     .map((entry) => [Number(entry.part), String(entry.summary).trim()])
     .sort((a, b) => a[0] - b[0]);
-  const text = sorted.map(([part, summary]) => `Part ${part}: ${summary}`).join('\n');
+  const text = sorted
+    .map(([part, summary]) => `Prior events (Part ${part}): ${summary}`)
+    .join('\n');
   return (text || '(No prior summaries.)').slice(0, MAX_CONTEXT_CHARS);
 }
 
