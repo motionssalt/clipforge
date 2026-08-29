@@ -82,8 +82,9 @@ MIN_RECONCILED_TO_PLANNED_RATIO = 0.75
 # file are measured with ffmpeg loudnorm (EBU R128 integrated loudness), and
 # the music gain is computed so its perceived level lands at
 # MUSIC_TO_VOICE_LOUDNESS_RATIO of the vocals — regardless of how loud the
-# uploaded music file already is. Side-chain ducking then lowers the bed only
-# while narration is present.
+# uploaded music file already is. This is a CONSTANT gain applied for the
+# whole clip (bug-59): no per-moment ducking/compression is layered on top,
+# so the background level does not fluctuate as narration starts and stops.
 VOICEOVER_VOLUME = 1.00
 # Fallback only: used when a loudness measurement cannot be obtained (e.g. a
 # silent/corrupt music file). Mirrors the legacy fixed one-third amplitude.
@@ -96,10 +97,6 @@ MUSIC_TO_VOICE_LOUDNESS_RATIO = 0.30
 # the bed can neither blast nor vanish entirely.
 MUSIC_GAIN_MIN_DB = -40.0
 MUSIC_GAIN_MAX_DB = 24.0
-MUSIC_DUCK_THRESHOLD = 0.015
-MUSIC_DUCK_RATIO = 10
-MUSIC_DUCK_ATTACK_MS = 20
-MUSIC_DUCK_RELEASE_MS = 350
 MIX_LIMITER_CEILING = 0.99
 
 
@@ -360,16 +357,17 @@ def produce_merged_video(src: str | Path, plan: list[dict], vo_wavs: list[str],
             f"volume={music_volume:.6f}"
             f"[music_reduced]"
         )
-        parts.append("[acat]asplit=2[voice_mix][voice_sidechain]")
+        # bug-59: the bed is already gain-staged to a CONSTANT loudness-matched
+        # level by resolve_music_volume() above (MUSIC_TO_VOICE_LOUDNESS_RATIO,
+        # measured via LUFS so a quiet upload is boosted and a loud one is cut
+        # down to the same target ratio). Previously this constant level was
+        # then fed through sidechaincompress, ducking it further any time the
+        # voiceover was present and letting it rise back in gaps — the
+        # operator wants a flat, non-fluctuating background level for the
+        # whole clip instead. music_reduced is mixed in directly at its
+        # already-correct constant gain; no per-moment compression is applied.
         parts.append(
-            f"[music_reduced][voice_sidechain]"
-            f"sidechaincompress=threshold={MUSIC_DUCK_THRESHOLD}:"
-            f"ratio={MUSIC_DUCK_RATIO}:attack={MUSIC_DUCK_ATTACK_MS}:"
-            f"release={MUSIC_DUCK_RELEASE_MS}:makeup=1"
-            f"[music_ducked]"
-        )
-        parts.append(
-            f"[voice_mix][music_ducked]amix=inputs=2:duration=first:normalize=0,"
+            f"[acat][music_reduced]amix=inputs=2:duration=first:normalize=0,"
             f"alimiter=limit={MIX_LIMITER_CEILING}"
             f"[aout]"
         )

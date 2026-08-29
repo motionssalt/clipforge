@@ -7,6 +7,7 @@ exercised through their pure-Python decision logic only.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import tempfile
@@ -557,6 +558,74 @@ class BrandingTests(unittest.TestCase):
             common.sanitize_job_id("!!!")
         with self.assertRaises(common.StageBError):
             common.sanitize_job_id("x" * 121)
+
+
+# --------------------------------------------------------------------------- #
+# constant loudness-matched background gain (bug-59)                          #
+# --------------------------------------------------------------------------- #
+
+class MusicGainForRatioTests(unittest.TestCase):
+    """bug-59: the background bed must sit at a CONSTANT, loudness-matched
+    level for the whole clip (no per-moment ducking layered on top — see
+    produce_merged_video, which mixes music_reduced directly rather than
+    through sidechaincompress). These tests cover the gain math that
+    determines that constant level; they intentionally do not invoke ffmpeg.
+    """
+
+    def test_quiet_music_is_boosted_to_target_ratio(self) -> None:
+        # A much quieter upload (-40 LUFS) under -16 LUFS vocals must be
+        # boosted, not left at its own (much lower) natural level.
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-40.0)
+        self.assertGreater(gain_db, 0.0)
+        # Applying the gain should land the music at exactly
+        # MUSIC_TO_VOICE_LOUDNESS_RATIO's perceived level relative to voice.
+        target_lufs = -16.0 + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
+        self.assertAlmostEqual(-40.0 + gain_db, target_lufs, places=6)
+
+    def test_loud_music_is_cut_down_to_target_ratio(self) -> None:
+        # A louder-than-target upload (-10 LUFS) under -16 LUFS vocals must
+        # be attenuated down to the same target ratio, not left blaring.
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-10.0)
+        self.assertLess(gain_db, 0.0)
+        target_lufs = -16.0 + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
+        self.assertAlmostEqual(-10.0 + gain_db, target_lufs, places=6)
+
+    def test_gain_clamped_to_sane_bounds(self) -> None:
+        # A pathologically quiet upload should be boosted heavily but never
+        # past MUSIC_GAIN_MAX_DB (so the bed can't blast).
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-90.0)
+        self.assertEqual(gain_db, render.MUSIC_GAIN_MAX_DB)
+        # A pathologically loud upload should be cut heavily but never past
+        # MUSIC_GAIN_MIN_DB (so the bed can't be silenced entirely).
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=30.0)
+        self.assertEqual(gain_db, render.MUSIC_GAIN_MIN_DB)
+
+    def test_gain_is_constant_regardless_of_voiceover_dynamics(self) -> None:
+        # bug-59: the whole point of this function is that it returns ONE
+        # gain value for the ENTIRE clip, computed once from each track's
+        # single integrated-loudness measurement. It takes no per-sample or
+        # per-moment signal, so calling it twice with the same two
+        # measurements must always return the identical constant gain —
+        # there is nothing in this function that could vary by playback
+        # position, unlike the sidechaincompress stage this bug removed.
+        first = render.music_gain_db_for_ratio(voice_lufs=-18.5, music_lufs=-27.2)
+        second = render.music_gain_db_for_ratio(voice_lufs=-18.5, music_lufs=-27.2)
+        self.assertEqual(first, second)
+
+    def test_no_ducking_constants_remain(self) -> None:
+        # bug-59: sidechain ducking was removed entirely; these names must
+        # no longer exist as module attributes so nothing can accidentally
+        # reintroduce a dependency on them.
+        for name in (
+            "MUSIC_DUCK_THRESHOLD",
+            "MUSIC_DUCK_RATIO",
+            "MUSIC_DUCK_ATTACK_MS",
+            "MUSIC_DUCK_RELEASE_MS",
+        ):
+            self.assertFalse(
+                hasattr(render, name),
+                f"render.{name} should have been removed with sidechain ducking (bug-59)",
+            )
 
 
 if __name__ == "__main__":
