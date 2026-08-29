@@ -1,7 +1,7 @@
 {
   "version": 1,
   "enabled": true,
-  "auto_publish": false,
+  "auto_publish": true,
   "automatic_mode": "publish_now",
   "target_accounts": {
     "tiktok": [
