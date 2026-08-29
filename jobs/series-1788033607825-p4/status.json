@@ -3,42 +3,24 @@
   "job_id": "series-1788033607825-p4",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "series-1788033607825",
-    "part": 4,
-    "start_seconds": 688,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
+    "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "stage_b_queued",
-  "message": "Production plan uploaded — Stage B dispatched.",
-  "created_at_epoch": 1788042695,
-  "updated_at_epoch": 1788044970,
-=======
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1788042695,
-  "updated_at_epoch": 1788044980,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1788085895,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1788045101,
+  "updated_at_epoch": 1788045101,
+  "expires_at_epoch": 1788088301,
   "release_tag": "clipforge-series-1788033607825-p4",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788033607825-p4",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/00_READ_THIS_FIRST.txt",
-    "analysis_720p.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/analysis_720p.mp4",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788033607825-p4/transcript.json",
-    "analysis_bundle_url": ""
-  },
+  "release_url": "",
+  "assets": {},
   "run": {
     "workflow_run_id": 33280305445,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33280305445",
-    "code_ref": "5f4bc71636da68e193451b5cad1199004b6e2bdb"
+    "code_ref": "10624ae1a11e770e5e5a5a95064ac9d8aa284c6f"
   },
   "publishing": {
     "status": "not_requested",
