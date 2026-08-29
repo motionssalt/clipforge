@@ -400,24 +400,63 @@ jobs:
           # though the bot validated it at upload. This runs the single source
           # of truth validator AND the Series cross-check against the durable
           # Stage A request before any render work begins.
+          #
+          # bug-56: when the durable request says this is a series job, run the
+          # reconciler FIRST — it silently auto-corrects the plan's series_id /
+          # part / start_seconds when they disagree with the durable request
+          # (those three fields come from the durable request; the operator
+          # does not retype them and they do not describe any content the AI
+          # actually generated, so overwriting is safe). Any remaining
+          # mismatch on other series fields, or on the safe fields with an
+          # unusable expected value, still hard-fails as before. Fields the
+          # AI legitimately owns (end_seconds, is_final, summary, cuts, …)
+          # are NEVER auto-corrected by the reconciler.
           JID="$jid" PYTHONPATH="$GITHUB_WORKSPACE" python - <<'PY'
           import json, os, sys
           from pathlib import Path
           from pipeline.plan.schema import validate_production_plan
           from pipeline.stage_b.common import normalize_plan
+          from pipeline.stage_b.series_reconcile import (
+              format_log_line,
+              reconcile_series_metadata,
+          )
 
           jid = os.environ["JID"]
-          plan = json.loads(Path("work/production.json").read_text(encoding="utf-8"))
-          errors = validate_production_plan(plan)
+          plan_path = Path("work/production.json")
+          plan = json.loads(plan_path.read_text(encoding="utf-8"))
 
-          # Series cross-check: when the durable Stage A request says this job
-          # is a series part, the plan must carry matching boundary metadata.
+          # Load the durable request once — used by the reconciler AND the
+          # residual cross-check below.
           request_path = Path("jobs") / jid / "stage-a-request.json"
+          request = None
           if request_path.exists():
               try:
                   request = json.loads(request_path.read_text(encoding="utf-8"))
               except json.JSONDecodeError:
                   request = {}
+
+          # bug-56: reconcile safe series metadata BEFORE any hard checks.
+          reconciliation = reconcile_series_metadata(plan, request)
+          print(format_log_line(reconciliation))
+          if reconciliation.changes:
+              # Write the corrected plan back so every downstream step
+              # (render, status.series sync, series continuation) sees the
+              # authoritative values.
+              plan_path.write_text(
+                  json.dumps(reconciliation.plan, ensure_ascii=False, indent=2),
+                  encoding="utf-8",
+              )
+              plan = reconciliation.plan
+
+          errors = validate_production_plan(plan)
+
+          # Residual Series cross-check: after reconciliation, any remaining
+          # mismatch between the durable Stage A request and the plan's
+          # series metadata is either (a) on a field the reconciler is not
+          # allowed to auto-correct, or (b) the reconciler declined to run
+          # because the request's expected values were themselves unusable.
+          # Both are hard failures with an unambiguous error message.
+          if isinstance(request, dict):
               series_req = request.get("series") or {}
               if isinstance(series_req, dict) and series_req.get("enabled"):
                   normalized = normalize_plan(plan)
@@ -435,7 +474,7 @@ jobs:
                   for key, value in expected.items():
                       if actual.get(key) != value:
                           errors.append(
-                              f"Series metadata mismatch for {key}: expected {value!r}, got {actual.get(key)!r}."
+                              f"Series metadata mismatch for {key}: expected {value!r}, got {actual.get(key)!r} (the reconciler was unable to auto-correct this — the durable stage-a-request.json's expected value for this field may itself be malformed; check jobs/{jid}/stage-a-request.json)."
                           )
           if errors:
               sys.stderr.write("Invalid production.json:\n- " + "\n- ".join(errors) + "\n")
