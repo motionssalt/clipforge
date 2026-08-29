@@ -1,13 +1,26 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
   "bugs": [
     {
-      "id": "bug-55",
-      "title": "Default transcript language should be English (\"en\"), not auto-detect",
-      "status": "done",
-      "notes": "Seeded 2026-08-28 (fresh sweep). [in_progress 2026-08-28] Investigated all default-language sites. [done 2026-08-28] Changed default 'auto' -> 'en' at EVERY layer where a default is applied: (1) bot/src/github.js buildStageARequest options fallback String(options.language || 'en') \u2014 verified NO bot-side wizard/settings screen lets a user choose language per task (the only 'language' references in bot/src are github.js, the series.js passthrough of the prior part's language, and unrelated 'design language' comments), so the single fallback is the only bot-side default site; (2) pipeline/stage_a/transcribe.py FasterWhisperTranscriber.__init__ + transcribe_to_json parameter defaults and CLI --lang default, usage doc updated; (3) .github/workflows/stage-a.yml opts.get('language', 'en') AND the invalid-value fallback (was 'auto') both -> 'en'; (4) pipeline/stage_a/ingest.py torrent stage_a_inputs fallback; (5) pipeline/plan/series.py next-part request fallback; (6) pipeline/stage_b/run.py whisper_lang param + --whisper-lang CLI default and stage_b/captions.py lang param + --lang CLI default \u2014 stage-b.yml never passes these, so these defaults are live on every real Stage B run; (7) ARCHITECTURE.md contract example updated to 'en'. Explicit 'auto' still works: auto-detect code paths (language=None -> faster-whisper) untouched in transcribe.py:134 and captions.py:163. schemas/stage_a_request.schema.json declares no JSON Schema 'default' for language \u2014 no schema change needed. Repo-wide sweep (excl. _legacy/, jobs/, node_modules) confirms no other transcription-language 'auto' default sites remain; remaining 'auto' literals are explicit-value code paths and test fixtures. Tests: pipeline pytest 263 passed / 13 failed \u2014 IDENTICAL failure set on pristine main (verified via git stash), all pre-existing environment issues (cv2/ultralytics missing, telegram stubs), none assert on the language default; bot npm test 64 pass / 6 fail \u2014 identical on pristine main, pre-existing. No test asserted 'auto' as the correct default, so no test expectations needed changing; fixtures passing 'auto' explicitly were left untouched (they exercise the auto-detect feature).",
-      "commit": "1c4d56e"
+      "id": "bug-56",
+      "title": "Series metadata validation is too strict/brittle — fix root cause (prompt ambiguity) and make validator recoverable (safe auto-correct of durable-request fields, clearer errors for ambiguous ones); do NOT just delete the safety check",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
+    },
+    {
+      "id": "bug-57",
+      "title": "\"Start next part\" button (callback_data task:next:<label>) has no handler — dead callback in bot/src",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
+    },
+    {
+      "id": "bug-58",
+      "title": "\"Copy prompt\" after starting a new series part shows previous part's prompt/label; investigate whether bug-57's fix alone resolves this or whether label→jobId mapping is stale",
+      "status": "pending",
+      "notes": "",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-28T23:59:00Z"
+  ]
 }
