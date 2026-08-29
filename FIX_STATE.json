@@ -4,8 +4,8 @@
     {
       "id": "bug-56",
       "title": "Series metadata validation is too strict/brittle — fix root cause (prompt ambiguity) and make validator recoverable (safe auto-correct of durable-request fields, clearer errors for ambiguous ones); do NOT just delete the safety check",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting investigation: read pipeline/plan/prompt.py SERIES MODE block, bot/src/series.js buildSeriesContext, and .github/workflows/stage-b.yml Series cross-check.",
       "commit": ""
     },
     {
