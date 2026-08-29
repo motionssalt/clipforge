@@ -3,21 +3,21 @@
   "bugs": [
     {
       "id": "bug-56",
-      "title": "Series metadata validation is too strict/brittle — fix root cause (prompt ambiguity) and make validator recoverable (safe auto-correct of durable-request fields, clearer errors for ambiguous ones); do NOT just delete the safety check",
-      "status": "in_progress",
-      "notes": "Starting investigation: read pipeline/plan/prompt.py SERIES MODE block, bot/src/series.js buildSeriesContext, and .github/workflows/stage-b.yml Series cross-check.",
-      "commit": ""
+      "title": "Series metadata validation is too strict/brittle \u2014 fix root cause (prompt ambiguity) and make validator recoverable (safe auto-correct of durable-request fields, clearer errors for ambiguous ones); do NOT just delete the safety check",
+      "status": "done",
+      "notes": "Verified a prior session's pushed commits a51204d/4ea7cdd/d8e15bd/7ca0135 constitute a complete, correct fix. Root cause: prompt.py SERIES_DIRECTIVE now states current part unambiguously and forbids copying part numbers from continuity text; series.js buildSeriesContext emits \"Prior events (Part N):\" instead of bare \"Part N:\"; fallback in prompt.py line ~1322 also reworded; series_id restated next to the production.json field spec. Recoverable failure: new pipeline/stage_b/series_reconcile.py auto-corrects series_id/part/start_seconds (both nested and flat shapes) from the durable stage-a-request.json with a logged change list, wired into stage-b.yml before the residual hard cross-check; end_seconds and non-metadata fields are never auto-corrected and still hard-fail with the expected value in the error. Tests: 42 passed across test_series.py, test_stage_b_series_reconcile.py, test_plan_cross_validation.py, covering wrong-part auto-correct (2a), non-series job untouched (2b), correct plan untouched (2c). The 13 failures elsewhere in pipeline/tests are pre-existing environment issues (cv2 CascadeClassifier stub, stage_a network, cleanup timing) in modules untouched by this fix \u2014 not regressions.",
+      "commit": "a51204d"
     },
     {
       "id": "bug-57",
-      "title": "\"Start next part\" button (callback_data task:next:<label>) has no handler — dead callback in bot/src",
+      "title": "\"Start next part\" button (callback_data task:next:<label>) has no handler \u2014 dead callback in bot/src",
       "status": "pending",
       "notes": "",
       "commit": ""
     },
     {
       "id": "bug-58",
-      "title": "\"Copy prompt\" after starting a new series part shows previous part's prompt/label; investigate whether bug-57's fix alone resolves this or whether label→jobId mapping is stale",
+      "title": "\"Copy prompt\" after starting a new series part shows previous part's prompt/label; investigate whether bug-57's fix alone resolves this or whether label\u2192jobId mapping is stale",
       "status": "pending",
       "notes": "",
       "commit": ""
