@@ -10,28 +10,17 @@
     "is_final": false
   },
   "state": "stage_a_running",
-<<<<<<< Updated upstream
   "message": "Stage A starting — ingesting source (torrent_file)",
-  "created_at_epoch": 1788018733,
-  "updated_at_epoch": 1788018733,
-  "expires_at_epoch": 1788061933,
-=======
-  "message": "Stage A run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1788018231,
-  "updated_at_epoch": 1788020705,
-  "expires_at_epoch": 1788061431,
->>>>>>> Stashed changes
+  "created_at_epoch": 1788020737,
+  "updated_at_epoch": 1788020737,
+  "expires_at_epoch": 1788063937,
   "release_tag": "clipforge-manual-1788018196050",
   "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 33261385686,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33261385686",
-<<<<<<< Updated upstream
-    "code_ref": "a67fe3639c9b702a5669cd9fc90c056fd54f03ae"
-=======
-    "code_ref": "c5d67e56d3eb44536a1e5af2565a74f4ff70d9ec"
->>>>>>> Stashed changes
+    "code_ref": "3ae548f0122cd3395350594ebba5de85d20a77c7"
   },
   "publishing": {
     "status": "not_requested",
