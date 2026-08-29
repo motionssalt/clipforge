@@ -18,7 +18,7 @@
     "timezone": "UTC",
     "interval_hours": 6,
     "preferred_time": "12:00",
-    "queue_depth": 4,
+    "queue_depth": 100,
     "start_mode": "next_available",
     "custom_start": ""
   }
