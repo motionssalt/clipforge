@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "job_id": "manual-1788018196050",
+  "torrent_name": "Rick and Morty - S02 - 2160p HDR Ai Upscale -Mesc",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Rick and Morty  - S02E01 - A Rickle in Time - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 2466050581
+    },
+    {
+      "index": 4,
+      "path": "Rick and Morty - S02E02 - Mortynight Run - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 2219833476
+    },
+    {
+      "index": 5,
+      "path": "Rick and Morty - S02E03 - Auto Erotic Assimilation - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1835597499
+    },
+    {
+      "index": 6,
+      "path": "Rick and Morty - S02E04 - Total Rickal - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1844770572
+    },
+    {
+      "index": 7,
+      "path": "Rick and Morty - S02E05 - Get Schwifty - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1935024407
+    },
+    {
+      "index": 8,
+      "path": "Rick and Morty - S02E06 - The Ricks Must Be Crazy - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 2071664498
+    },
+    {
+      "index": 9,
+      "path": "Rick and Morty - S02E07 - Big Trouble in Little Sanchez - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1804829783
+    },
+    {
+      "index": 10,
+      "path": "Rick and Morty - S02E08 - Interdimensional Cable 2- Tempting Fate - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1759002347
+    },
+    {
+      "index": 11,
+      "path": "Rick and Morty - S02E09 - Look Who's Purging Now - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1787424544
+    },
+    {
+      "index": 12,
+      "path": "Rick and Morty - S02E10 - The Wedding Squanchers - 2160p HDR Ai Upscale -Mesc.mkv",
+      "length": 1860116046
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "60",
+    "focus": ""
+  }
+}
