@@ -64,8 +64,24 @@ LUT_ASSET = common.LUT_HALD_ASSET
 # fraction of the sharpening just applied. Sharpening at native resolution is
 # measurably sharper AND aspect-correct, with zero upscale complexity. setsar=1
 # is still applied at the end of the chain below; never drop it.
-EDGE_SHARPEN = "cas=strength=0.75"
-LINE_SHARPEN = "unsharp=7:7:0.85:5:5:0.35"
+EDGE_SHARPEN = "cas=strength=0.9"
+# bug-61: retuned for the native-resolution chain (bug-60). cas raised
+# 0.75 -> 0.9 and unsharp luma 0.85 -> 1.0: on a compressed anime-style test
+# render (line art, flat fills, gradient sky, sensor-noise shimmer) this
+# measured ~1.6x sharper than the old native 0.75/0.85 pair (Laplian var
+# ~2846 vs ~1790, ~8.6x over the ~332 unsharpened baseline) with NO ringing
+# increase per unit of sharpening (edge |Laplacian| scales linearly with the
+# sharpen amount, and flat-fill noise stays at baseline ~0.17 vs the source's
+# 0.14 — hqdn3d 0.8:0.6:3.0:2.0 stays matched, do NOT strengthen it; heavier
+# denoise is the "plastered" failure mode). Chroma amount stays exactly 0.35:
+# raising it risks the chromatic fringing the zeroed-chroma design avoids.
+# Rejected on measurement: cas 0.95 + luma 1.1 was sharper still (~4278) but
+# flat-region noise doubled (0.38) — visible grain crawl in sky/skin fills,
+# a worse trade than the extra edge gain. A smartblur difference-blend
+# "clarity" stage was also tried and REJECTED: it *lowered* fine sharpness
+# (~1348) while doubling flat-region noise (0.39) — the grainextract blend
+# is subtractive at fine scales, fighting the sharpeners it follows.
+LINE_SHARPEN = "unsharp=7:7:1.0:5:5:0.35"
 DEBAND = "gradfun=1.2:16"
 
 FILTER_CHAIN = (
