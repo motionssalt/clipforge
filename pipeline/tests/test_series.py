@@ -229,7 +229,7 @@ class DeriveNextPartTests(unittest.TestCase):
         self.assertEqual(series["source_job_id"], "series-123-p1")
         self.assertEqual(series["part"], 2)
         self.assertEqual(series["start_seconds"], 120)
-        self.assertEqual(series["context"], "Part 1: Part one recap.")
+        self.assertEqual(series["context"], "Prior events (Part 1): Part one recap.")
         self.assertEqual(request["options"]["focus"], "")
 
     def test_continuation_payload_flat_plan(self) -> None:
@@ -243,7 +243,7 @@ class DeriveNextPartTests(unittest.TestCase):
         payload = derive_next_part(self.root, "series-123-p1")
         self.assertTrue(payload["continue"])
         self.assertEqual(payload["request"]["series"]["start_seconds"], 90)
-        self.assertEqual(payload["request"]["series"]["context"], "Part 1: Flat recap.")
+        self.assertEqual(payload["request"]["series"]["context"], "Prior events (Part 1): Flat recap.")
 
     def test_context_chains_prior_summaries_in_order(self) -> None:
         _write_job(
@@ -263,7 +263,7 @@ class DeriveNextPartTests(unittest.TestCase):
         self.assertEqual(payload["request"]["series"]["start_seconds"], 240)
         self.assertEqual(
             payload["request"]["series"]["context"],
-            "Part 1: First.\nPart 2: Second.",
+            "Prior events (Part 1): First.\nPrior events (Part 2): Second.",
         )
 
     def test_context_capped_at_8000_chars(self) -> None:

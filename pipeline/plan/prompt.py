@@ -183,12 +183,20 @@ ClipForge guidance; read it through that thread, not through the whole video.
 
 SERIES_DIRECTIVE = """\
 ################################################################################
-## SERIES MODE — PART {series_part}
+## SERIES MODE — YOU ARE AUTHORING PART {series_part} (not any other part number)
 ################################################################################
 This is Part {series_part} of a sequential ClipForge series. Use only source
 footage from {series_start_seconds}s onward. Do not recap, say "previously on",
-or replay earlier material. Prior-part continuity notes are private guidance:
+or replay earlier material.
+
+The block below is PRIVATE CONTEXT ABOUT EARLIER PARTS ONLY, for narrative
+continuity. Any part numbers mentioned inside it refer to ALREADY-COMPLETED
+parts, NOT to the part you are authoring now. The part number for THIS
+production.json is EXACTLY {series_part} — do NOT copy any part number that
+appears inside the private context below.
+---BEGIN PRIOR-PART CONTEXT---
 {series_context}
+---END PRIOR-PART CONTEXT---
 
 HOOK & CLIFFHANGER CRAFT (this part's narration is judged by these rules):
 
@@ -255,11 +263,30 @@ HOOK & CLIFFHANGER CRAFT (this part's narration is judged by these rules):
     (9) Does the cliffhanger feel earned rather than inserted?
     (10) Does the script stop at the most compelling possible moment?
 
-In production.json include a nested "series" object with fields: series_id
-(EXACTLY "{series_id}" — copy it verbatim, it is the durable id of this whole
-series, NOT this job's id), part ({series_part}), start_seconds
-({series_start_seconds}), end_seconds, is_final (boolean), and a concise
-non-empty summary of THIS part. Put "Part {series_part}" directly in title.
+In production.json include a nested "series" object with fields:
+  * series_id      -> EXACTLY "{series_id}" (copy it verbatim, character for
+                      character; it is the durable id of this WHOLE series,
+                      NOT this job's id. Do NOT use any other id you may have
+                      seen elsewhere in your context — the correct value is
+                      "{series_id}").
+  * part           -> EXACTLY the integer {series_part} (the part YOU are
+                      authoring right now). Any other part number that appears
+                      anywhere in this prompt — inside the prior-part context
+                      above, in example snippets, or in your own scratch notes
+                      — describes a DIFFERENT, ALREADY-COMPLETED part. Do NOT
+                      use those numbers here; the value MUST be {series_part}.
+  * start_seconds  -> EXACTLY the integer {series_start_seconds}.
+  * end_seconds    -> your chosen end second for this part (integer > start).
+  * is_final       -> boolean.
+  * summary        -> a concise non-empty summary of THIS part (Part
+                      {series_part}).
+Also put the literal string "Part {series_part}" directly in title.
+
+BEFORE RETURNING production.json, DOUBLE-CHECK: series.series_id equals
+"{series_id}" character-for-character, AND series.part equals {series_part}
+(not {series_part} minus 1, not any part number quoted inside the prior-part
+context block above). If either is wrong the pipeline will auto-correct it and
+log a warning; both being right the first time avoids that warning entirely.
 ################################################################################
 
 """
@@ -1292,7 +1319,9 @@ def main() -> None:
     series_enabled = args.series_part is not None or args.series_start_seconds is not None
     if series_enabled and (args.series_part is None or args.series_part < 1 or args.series_start_seconds is None or args.series_start_seconds < 0):
         ap.error("Series prompts require a positive part number and a non-negative start timestamp.")
-    series_context = (os.environ.get(args.series_context_env, "") if args.series_context_env else "").strip() or "(Part 1: no prior parts.)"
+    # bug-56: fallback string no longer leads with a bare "Part 1:" prefix so
+    # an AI author cannot mistake it for the current-part number.
+    series_context = (os.environ.get(args.series_context_env, "") if args.series_context_env else "").strip() or "(No prior parts — this is the first part of the series.)"
     series_block = SERIES_DIRECTIVE.format(series_part=args.series_part, series_start_seconds=args.series_start_seconds, series_context=series_context, series_id=args.series_id or "", next_part=(args.series_part or 0) + 1) if series_enabled else ""
 
     # Compose the focus-conditional blocks. Supplied focus preserves its

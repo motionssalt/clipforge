@@ -25,8 +25,10 @@ Derivation semantics are preserved from the legacy tool:
 * the request must name its original ``series.source_job_id``;
 * the persisted history must be complete and end exactly at the completed
   part (a gap or an unexpected later part is a hard error, not a guess);
-* the context string is ``Part N: <summary>`` lines joined with newlines,
-  capped at 8000 chars;
+* the context string is ``Prior events (Part N): <summary>`` lines joined
+  with newlines, capped at 8000 chars (bug-56: the leading token is
+  deliberately not a bare ``Part N:`` so an AI author cannot copy that
+  number into its own production.json ``series.part`` field);
 * the next job id ``<series_id>-p<N+1>`` must satisfy the §6.3 identity rule
   (character set ``[A-Za-z0-9._-]``, max 120 chars);
 * music carries forward only for the shared default or a permanent
@@ -181,8 +183,15 @@ def derive_next_part(root: Path, job_id: str) -> dict[str, Any]:
             "Series history is incomplete or contains an unexpected later part."
         )
 
+    # bug-56: prefix every summary with ``Prior events (Part N):`` rather
+    # than a bare ``Part N:``. The bare prefix inside the continuity block
+    # was mistakable by an AI author for the current-part number stated
+    # elsewhere in the prompt, and correlated with production.json being
+    # submitted with the wrong series.part value.
     context = "\n".join(
-        f"Part {number}: {summary}" for number, _, summary in prior if summary
+        f"Prior events (Part {number}): {summary}"
+        for number, _, summary in prior
+        if summary
     ) or "(No prior summaries.)"
 
     next_part = part + 1
