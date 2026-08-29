@@ -2,7 +2,7 @@
   "version": 1,
   "enabled": true,
   "auto_publish": true,
-  "automatic_mode": "publish_now",
+  "automatic_mode": "smart_schedule",
   "target_accounts": {
     "tiktok": [
       "6a23f25a2b2567671af5f0f7"
