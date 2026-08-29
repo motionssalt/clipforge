@@ -979,12 +979,39 @@ def _resolve_magnet_metadata(magnet_uri: str, info: dict[str, Any], metadata_dir
     # file saved", not the exit code. The new port used check=True with
     # --max-tries=3 and no stop timeout, so every successful metadata fetch was
     # raised as IngestError and the torrent method always failed.
+    # Peer-discovery fix (bug-64): this invocation previously enabled neither
+    # DHT nor peer exchange, so the only route to peers was whatever trackers
+    # happened to be embedded in the magnet URI itself. Magnets with few,
+    # stale, or dead embedded trackers then produced a characteristic stall:
+    # one tracker-sourced connection (CN:1), byte count frozen at a fixed
+    # value, 0% for the entire run until --bt-stop-timeout fired. DHT/PEX give
+    # aria2 tracker-independent peer discovery and metadata exchange; verified
+    # live against a tracker-less well-seeded magnet (Sintel test torrent) in
+    # a fresh environment: CN:0 -> CN:29 within ~15s and the .torrent saved in
+    # ~23s, with no prior DHT routing table -- aria2's built-in bootstrap is
+    # sufficient, so no --dht-file-path warm-up file is needed in CI.
+    # --bt-tracker= is ADDITIVE in aria2 (it merges with, never replaces, the
+    # magnet's embedded announce entries; confirmed empirically via debug log
+    # showing both embedded and flag trackers active), so it only widens the
+    # net. --bt-stop-timeout raised 120 -> 180: DHT discovery has a real
+    # warm-up latency tracker-only fetching does not, and the stalled-single-
+    # connection failure mode now has a genuine fallback path that needs that
+    # extra time; the outer `timeout 600` / subprocess timeout=620 still bound
+    # a truly dead swarm, so user-facing failure latency is unchanged in the
+    # worst case. Success detection is unchanged: the saved-metadata-file
+    # check below (bug-04) remains the only success signal.
     try:
         subprocess.run(
             ["timeout", "600", "aria2c", f"--dir={metadata_dir}",
              "--bt-metadata-only=true", "--bt-save-metadata=true",
-             "--seed-time=0", "--seed-ratio=0", "--bt-stop-timeout=120",
+             "--seed-time=0", "--seed-ratio=0", "--bt-stop-timeout=180",
              "--connect-timeout=60", "--timeout=60",
+             "--enable-dht=true", "--enable-dht6=true",
+             "--enable-peer-exchange=true",
+             "--bt-tracker=udp://tracker.opentrackr.org:1337/announce,"
+             "udp://open.stealth.si:80/announce,"
+             "udp://exodus.desync.com:6969/announce,"
+             "udp://tracker.torrent.eu.org:451/announce",
              "--max-tries=1", "--file-allocation=none", magnet_uri],
             check=False, timeout=620,
         )
