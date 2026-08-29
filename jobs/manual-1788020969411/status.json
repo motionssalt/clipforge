@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (magnet)",
+  "state": "error",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33263116622",
   "created_at_epoch": 1788020981,
-  "updated_at_epoch": 1788021024,
+  "updated_at_epoch": 1788021148,
   "expires_at_epoch": 1788064181,
   "release_tag": "clipforge-manual-1788020969411",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788020969411",
