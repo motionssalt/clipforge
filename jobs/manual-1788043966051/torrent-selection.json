@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "job_id": "manual-1788043966051",
+  "torrent_name": "[Trix] Golden Boy - AV1 MiNi",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "[Trix] Golden Boy 01 (BD 576p AV1) [7DF639E3].mkv",
+      "length": 165555891
+    },
+    {
+      "index": 2,
+      "path": "[Trix] Golden Boy 02 (BD 576p AV1) [394A4011].mkv",
+      "length": 144149506
+    },
+    {
+      "index": 3,
+      "path": "[Trix] Golden Boy 03 (BD 576p AV1) [A35D9482].mkv",
+      "length": 146366643
+    },
+    {
+      "index": 4,
+      "path": "[Trix] Golden Boy 04 (BD 576p AV1) [2DD7BA3D].mkv",
+      "length": 159546927
+    },
+    {
+      "index": 5,
+      "path": "[Trix] Golden Boy 05 (BD 576p AV1) [3F5D18F2].mkv",
+      "length": 163610571
+    },
+    {
+      "index": 6,
+      "path": "[Trix] Golden Boy 06 (BD 576p AV1) [CB9DA474].mkv",
+      "length": 151393051
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "60",
+    "focus": ""
+  }
+}
