@@ -76,43 +76,29 @@ async function readJobStatus(jobId) {
   } catch { return { error: 'unparseable' }; }
 }
 
-// bug-49: a series part's label is never reclaimed while any sibling part
-// is still non-terminal — mirrors expired.py's series_is_complete guard.
-const seriesPartsCache = new Map();
-async function seriesIncomplete(seriesId) {
-  if (!seriesId) return false;
-  if (seriesPartsCache.has(seriesId)) return seriesPartsCache.get(seriesId);
-  let incomplete = false;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/jobs`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${GH_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'clipforge-task-label-reclamation/1.0' } });
-    const listing = res.ok ? await res.json() : [];
-    for (const item of Array.isArray(listing) ? listing : []) {
-      if (!item || item.type !== 'dir') continue;
-      const st = await readJobStatus(String(item.name));
-      const doc = st && st.doc ? st.doc : null;
-      if (!doc) continue;
-      const ser = doc.series && typeof doc.series === 'object' ? doc.series : {};
-      if (String(ser.series_id || '') !== seriesId) continue;
-      if (!['complete', 'error', 'cancelled'].includes(String(doc.state))) { incomplete = true; break; }
-    }
-  } catch { incomplete = false; }
-  seriesPartsCache.set(seriesId, incomplete);
-  return incomplete;
-}
+// bug-49 + bug-66 + bug-67: the series guard lives in the extracted lib so
+// classify()/seriesIncomplete() are unit-testable and stay in lockstep with
+// expired.py's series_is_complete() (incl. the bug-66 is_final requirement).
+// bug-67: classify() now checks series membership BEFORE the terminal-state
+// short-circuit, so a finished non-final part of an incomplete series keeps
+// its label instead of being reclaimed at the next hourly cleanup.
+import { classify as classifyVerdict, makeSeriesIncomplete } from './reclaim-stale-task-labels-lib.mjs';
 
-async function classify(result) {
-  // Mirrors pipeline.cleanup.expired: no readable status => expired.
-  if (result.missing || result.error === 'unparseable') return 'stale:no-readable-status';
-  if (result.error) return `unknown:${result.error}`;
-  const doc = result.doc || {};
-  if (['complete', 'error', 'cancelled'].includes(String(doc.state))) return `stale:terminal-${doc.state}`;
-  const ser = doc.series && typeof doc.series === 'object' ? doc.series : {};
-  if (ser.enabled === true && String(ser.series_id || '') && await seriesIncomplete(String(ser.series_id))) {
-    return 'active'; // bug-49: series still running — keep the label.
+const seriesIncomplete = makeSeriesIncomplete(async () => {
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/jobs`, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${GH_TOKEN}`, 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'clipforge-task-label-reclamation/1.0' } });
+  const listing = res.ok ? await res.json() : [];
+  const items = Array.isArray(listing) ? listing : [];
+  const out = [];
+  for (const item of items) {
+    if (!item || item.type !== 'dir') continue;
+    const st = await readJobStatus(String(item.name));
+    out.push({ jobId: String(item.name), doc: st && st.doc ? st.doc : null });
   }
-  const expires = Number(doc.expires_at_epoch);
-  if (Number.isFinite(expires) && expires > 0 && expires < NOW) return 'stale:ttl-expired';
-  return 'active';
+  return out;
+});
+
+function classify(result) {
+  return classifyVerdict(result, { now: NOW, seriesIncomplete });
 }
 
 const report = { ran_at_epoch: NOW, repo: REPO, mode: APPLY ? 'apply' : 'dry-run', chats: [] };
