@@ -1,5 +1,5 @@
 {
-  "sweep_complete": false,
+  "sweep_complete": true,
   "bugs": [
     {
       "id": "bug-62",
@@ -11,9 +11,10 @@
     {
       "id": "bug-63",
       "title": "Shadow Clones should not attempt to deploy a Cloudflare Worker \u2014 skip deploy-bots.yml deploy steps entirely on clones",
-      "status": "in_progress",
-      "notes": "Seeded from sweep prompt. .github/workflows/deploy-bots.yml currently runs wrangler deploy on every clone push touching bot/**, which fails loudly because clones have no CLOUDFLARE_API_TOKEN/ACCOUNT_ID and are not supposed to run their own Bot A/B Worker at all (clones share the central Bot A per \u00a710). Fix by gating deploy jobs/steps with `if: github.repository == 'motionssalt/clipforge'` (same pattern as news-push.yml). Keep bot test suite (npm ci / npm test) running on all repos including clones. Reconsider bug-58/bug-68 failure-alert step \u2014 if deploy step no longer runs on clones, alert has nothing to fire on and can also be gated to central repo (verify no other step on clones can still fail in a way this alert must catch). Do not change central-repo behavior. Verify: on a clone, tests run + deploy shown as skipped in Actions UI + no Telegram deploy-blocked alert. | in_progress: starting investigation of deploy-bots.yml current structure and the news-push.yml gating pattern to mirror.",
-      "commit": ""
+      "status": "done",
+      "notes": "Seeded from sweep prompt. .github/workflows/deploy-bots.yml currently runs wrangler deploy on every clone push touching bot/**, which fails loudly because clones have no CLOUDFLARE_API_TOKEN/ACCOUNT_ID and are not supposed to run their own Bot A/B Worker at all (clones share the central Bot A per \u00a710). Fix by gating deploy jobs/steps with `if: github.repository == 'motionssalt/clipforge'` (same pattern as news-push.yml). Keep bot test suite (npm ci / npm test) running on all repos including clones. Reconsider bug-58/bug-68 failure-alert step \u2014 if deploy step no longer runs on clones, alert has nothing to fire on and can also be gated to central repo (verify no other step on clones can still fail in a way this alert must catch). Do not change central-repo behavior. Verify: on a clone, tests run + deploy shown as skipped in Actions UI + no Telegram deploy-blocked alert. | in_progress: starting investigation of deploy-bots.yml current structure and the news-push.yml gating pattern to mirror. | DONE (commit 13cc506): Applied `if: github.repository == 'motionssalt/clipforge'` (mirroring news-push.yml:21) to both wrangler deploy steps ('Deploy Bot A Worker', 'Deploy Bot B relay Worker'). Applied the same gate combined with the existing failure() to the 'Alert owner on Telegram when the deploy is blocked' step, and removed the clone branch (log-and-exit-1). Rationale traced: bug-68's announceDeployFailure poll in bot/src/commands/start.js triggers on the workflow run's overall conclusion (listWorkflowRuns filters status=='completed' && conclusion=='failure'), NOT on the alert step, so removing the clone-branch exit-1 doesn't break clone-owner notification \u2014 a failing bot test/npm-ci step on a clone still turns the whole run red, which the poll finds. Test steps (Checkout, Set up Node.js, Install bot dependencies, Run bot test suite) intentionally left with no `if` \u2014 useful CI on every repo, needs no secrets. Header comments record bug-63 rationale alongside bug-58/bug-68 history. Verified: bot npm test 127/127 pass post-edit; YAML parses cleanly; step-level `if` inventory matches plan (4 ungated test steps, 2 deploy steps with `github.repository == 'motionssalt/clipforge'`, 1 alert step with `failure() && github.repository == 'motionssalt/clipforge'`). Central-repo behavior unchanged: the same deploy runs, the same alert path (BOTB_MTPROTO_BOT_TOKEN with DEPLOY_ALERT_CHAT_ID or the -5405387856 internal-relay fallback), the same failure() trigger. Confidence: high on gating correctness; end-to-end clone-run appearance can only be confirmed by an actual clone push to a non-motionssalt/clipforge repo, but the gating expression is a straight copy of the pattern that already works for news-push.yml.",
+      "commit": "13cc506"
     }
-  ]
+  ],
+  "completed_at": "2026-08-29T17:15:00Z"
 }
