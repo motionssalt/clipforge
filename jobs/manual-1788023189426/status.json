@@ -10,9 +10,9 @@
     "is_final": false
   },
   "state": "stage_a_running",
-  "message": "Stage A run started on GitHub Actions — setting up.",
+  "message": "Stage A starting — ingesting source (magnet)",
   "created_at_epoch": 1788023209,
-  "updated_at_epoch": 1788024554,
+  "updated_at_epoch": 1788024577,
   "expires_at_epoch": 1788066409,
   "release_tag": "clipforge-manual-1788023189426",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788023189426",
@@ -20,7 +20,7 @@
   "run": {
     "workflow_run_id": 33265745331,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33265745331",
-    "code_ref": "0c5da59222a3c0becd10ac3f1bad9aab7dae5b39"
+    "code_ref": "7c0de18022eb937a290b69e6da32bf3a3d7bab78"
   },
   "publishing": {
     "status": "not_requested",
