@@ -1,0 +1,147 @@
+{
+  "video_duration_seconds": 1265,
+  "title": "Rick Walks Right Into The Trap | Part 4",
+  "series": {
+    "series_id": "series-1788033607825",
+    "part": 4,
+    "start_seconds": 688,
+    "end_seconds": 830,
+    "is_final": false,
+    "summary": "Rick returns to his garage believing he escaped the Zigerians, but unlocking his safe reveals he is still trapped in a nested simulation designed to steal his secrets."
+  },
+  "hashtags": [
+    "#rickandmorty",
+    "#adultswim",
+    "#scifi",
+    "#plottwist",
+    "#animation",
+    "#cliffhanger",
+    "#mindblown"
+  ],
+  "youtube_tags": [
+    "rick and morty",
+    "rick and morty part 4",
+    "rick and morty simulation",
+    "rick sanchez",
+    "morty smith",
+    "m night shaym aliens",
+    "zigerian scammers",
+    "prince nebulon",
+    "simulation inside a simulation",
+    "rick safe code",
+    "adult swim",
+    "plot twist",
+    "cartoon clip",
+    "sci fi animation"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 760,
+      "end_seconds": 782,
+      "voiceover_text": "Rick believes he finally pulled off the ultimate escape. He rushes into his garage with armfuls of stolen alien tech, convinced he outsmarted the scammers. Morty follows close behind. Rick walks straight over to his hidden wall console to stash the processors. He punches his secret code into the keypad. Every movement is confident. He feels completely safe in his own home. But something is slightly off.",
+      "keywords": [
+        {
+          "word": "escape",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "outsmarted",
+          "color": "#4ADE80"
+        },
+        {
+          "word": "code",
+          "color": "#FACC15"
+        },
+        {
+          "word": "off",
+          "color": "#F87171"
+        }
+      ]
+    },
+    {
+      "start_seconds": 782,
+      "end_seconds": 798,
+      "voiceover_text": "The heavy safe door swings open. Rick places the loot inside, but suddenly freezes. The keypad glitches. A chilling realization hits him as Morty speaks in a flat, robotic monotone. The garage walls instantly dissolve into glowing digital static. The entire escape was an illusion. Rick is still trapped inside a simulation.",
+      "keywords": [
+        {
+          "word": "freezes",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "glitches",
+          "color": "#FACC15"
+        },
+        {
+          "word": "dissolve",
+          "color": "#FB923C"
+        },
+        {
+          "word": "illusion",
+          "color": "#F87171"
+        },
+        {
+          "word": "simulation",
+          "color": "#EF4444"
+        }
+      ]
+    },
+    {
+      "start_seconds": 798,
+      "end_seconds": 810,
+      "voiceover_text": "The holographic grid fades away, leaving Rick and Morty stranded on the command bridge of the Zigerian mothership. The alien crew watches in triumph as their intercom announces the simulation has ended. Rick stares in disbelief.",
+      "keywords": [
+        {
+          "word": "stranded",
+          "color": "#F87171"
+        },
+        {
+          "word": "triumph",
+          "color": "#4ADE80"
+        },
+        {
+          "word": "disbelief",
+          "color": "#FB923C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 810,
+      "end_seconds": 826,
+      "voiceover_text": "Prince Nebulon steps forward with a mocking laugh. He reveals the entire breakout was an elaborate setup. The scammers never cared about dark matter. They staged the fake escape specifically to get Rick to unlock his safe. Rick scoffs defiantly, claiming he will simply reach Earth first and change the combination.",
+      "keywords": [
+        {
+          "word": "mocking",
+          "color": "#FACC15"
+        },
+        {
+          "word": "setup",
+          "color": "#F87171"
+        },
+        {
+          "word": "defiantly",
+          "color": "#38BDF8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 826,
+      "end_seconds": 830,
+      "voiceover_text": "Nebulon smirks coldly. He declares Rick is never going home, ordering armed guards to attack.",
+      "keywords": [
+        {
+          "word": "coldly",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "never",
+          "color": "#EF4444"
+        },
+        {
+          "word": "attack",
+          "color": "#F87171"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60
+}
