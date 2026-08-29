@@ -9,36 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "stage_b_queued",
-  "message": "Production plan uploaded — Stage B dispatched.",
-  "created_at_epoch": 1788024680,
-  "updated_at_epoch": 1788026729,
-=======
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1788024680,
-  "updated_at_epoch": 1788026737,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1788067880,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1788026849,
+  "updated_at_epoch": 1788026849,
+  "expires_at_epoch": 1788070049,
   "release_tag": "clipforge-manual-1788023189426",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788023189426",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/00_READ_THIS_FIRST.txt",
-    "analysis_720p.mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/analysis_720p.mp4",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788023189426/transcript.json",
-    "analysis_bundle_url": ""
-  },
+  "release_url": "",
+  "assets": {},
   "run": {
     "workflow_run_id": 33267323172,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33267323172",
-    "code_ref": "9e524a127c8bbf4ec8a27948697a6aad42d79b90"
+    "code_ref": "1e9fa9e0ccd42394102c7782cd66a8d7ccfd3376"
   },
   "publishing": {
     "status": "not_requested",
