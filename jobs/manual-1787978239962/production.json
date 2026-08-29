@@ -1,0 +1,131 @@
+{
+  "video_duration_seconds": 1405,
+  "title": "Dark Curse Haunts Mountain Village Part 1",
+  "hashtags": [
+    "#shiki",
+    "#animerecap",
+    "#anime",
+    "#mysteryanime",
+    "#horroranime",
+    "#vampireanime"
+  ],
+  "youtube_tags": [
+    "shiki",
+    "shiki anime",
+    "shiki recap",
+    "megumi shimizu",
+    "toshio ozaki",
+    "kanemasa mansion",
+    "kirishiki family",
+    "sotoba village",
+    "anime recap",
+    "mystery anime",
+    "horror anime",
+    "anime mystery",
+    "anime moments",
+    "shiki part 1"
+  ],
+  "series": {
+    "series_id": "series-1787978275321",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 1221,
+    "is_final": false,
+    "summary": "When unexplained decaying corpses are found in the isolated mountain village of Sotoba and an eccentric family moves into a dark European mansion at midnight, teenage Megumi Shimizu vanishes into the woods and suddenly dies of an unexplainable, blood-draining illness."
+  },
+  "cuts": [
+    {
+      "start_seconds": 414,
+      "end_seconds": 442,
+      "voiceover_text": "A terrifying discovery inside a secluded mountain home shatters the peace of Sotoba. Three decomposing corpses lie rotting in the summer heat, but forensic inspection reveals a chilling contradiction. The elderly woman died of natural causes several days after her husband. That means she lived silently alongside his decaying body without ever alerting neighbors or calling for help. Doctor Toshio Ozaki inspects the grim scene in disbelief. The bizarre circumstances defy all medical logic. He is deeply unsettled by what could cause an entire household to perish in such total, horrifying isolation.",
+      "keywords": [
+        {
+          "word": "terrifying",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "contradiction",
+          "color": "#DD6B20"
+        },
+        {
+          "word": "disbelief",
+          "color": "#3182CE"
+        },
+        {
+          "word": "isolation",
+          "color": "#805AD5"
+        }
+      ]
+    },
+    {
+      "start_seconds": 690,
+      "end_seconds": 721,
+      "voiceover_text": "In the dead of night, a massive moving van and an expensive luxury sedan crawl through the pitch-black village roads. The disoriented driver steps out and frantically asks local residents for directions to Kanemasa. That is the secluded hilltop where an imposing European-style castle was recently built. He apologizes for the loud disturbance and formally announces the arrival of his eccentric employers, the Kirishiki family. Villagers stare in disbelief as furniture is quietly unloaded under the cover of darkness. The secretive midnight arrival sparks immediate suspicion and dread across the tight-knit mountain community.",
+      "keywords": [
+        {
+          "word": "pitch-black",
+          "color": "#718096"
+        },
+        {
+          "word": "Kanemasa",
+          "color": "#D69E2E"
+        },
+        {
+          "word": "Kirishiki",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "suspicion",
+          "color": "#DD6B20"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1095,
+      "end_seconds": 1126,
+      "voiceover_text": "Shortly after fifteen-year-old Megumi Shimizu walks up the secluded mountain path to visit the new mansion, she completely disappears into the dark woods. A frantic nighttime search party scours the dense forest slopes with flashlights until discovering the young girl collapsed and unresponsive among the trees. At the local clinic, Doctor Toshio Ozaki rushes to examine her rapidly failing condition. He is utterly baffled by what he finds. There is no external trauma aside from tiny, insect-like puncture wounds on her neck. Yet her pulse is racing and her blood pressure is crashing from a severe, unexplained loss of blood.",
+      "keywords": [
+        {
+          "word": "disappears",
+          "color": "#805AD5"
+        },
+        {
+          "word": "unresponsive",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "puncture",
+          "color": "#DD6B20"
+        },
+        {
+          "word": "unexplained",
+          "color": "#3182CE"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1189,
+      "end_seconds": 1221,
+      "voiceover_text": "Despite emergency treatment and careful monitoring, Megumi fades rapidly as her vital signs collapse inside her bedroom. Her skin turns ghostly pale and her breathing slows to a faint whisper while her devastated family watches in helpless despair. Within days of walking up to the mysterious Western mansion, Megumi Shimizu abruptly passes away from acute, catastrophic anemia. The entire village is plunged into profound shock and grief. Doctor Ozaki is terrified by the young girl's sudden death, realizing an unseen, predatory force has just arrived in Sotoba to claim its first victim.",
+      "keywords": [
+        {
+          "word": "collapse",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "despair",
+          "color": "#805AD5"
+        },
+        {
+          "word": "passes",
+          "color": "#DD6B20"
+        },
+        {
+          "word": "predatory",
+          "color": "#E53E3E"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
