@@ -1,0 +1,154 @@
+{
+  "video_duration_seconds": 1377,
+  "series": {
+    "series_id": "series-1787949354863",
+    "part": 2,
+    "start_seconds": 1180,
+    "end_seconds": 1377,
+    "is_final": true,
+    "summary": "L reveals how he deduced Kira's location to Japan's Kanto region, prompting an explosive battle of wits as Light and L simultaneously declare war and proclaim that they are justice."
+  },
+  "title": "Light and L Declare War Part 2",
+  "hashtags": [
+    "#deathnote",
+    "#lightyagami",
+    "#llawliet",
+    "#anime",
+    "#kiravsl",
+    "#mindgames",
+    "#animetwt"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "l lawliet",
+    "death note part 2",
+    "kira vs l",
+    "i am justice",
+    "death note anime",
+    "anime mind games",
+    "light declares war",
+    "l vs kira battle of wits",
+    "death note episode 2",
+    "death note full scene",
+    "shinigami ryuk"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 1185,
+      "end_seconds": 1214,
+      "voiceover_text": "L exposes the fatal flaw in Kira's unstoppable killing spree. Speaking through the blank screen, the detective reveals that Kira's very first victim was a minor hostage taker reported only on Japanese news. While the public believed this broadcast was global, L transmitted it exclusively to Japan's Kanto region as targeted bait. Kira walked straight into the trap. By striking down the decoy on live television, Light confirmed his remote murder ability and his exact location. L coldly warns that Kira's execution is approaching fast.",
+      "keywords": [
+        {
+          "word": "fatal flaw",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "Kanto",
+          "color": "#3182CE"
+        },
+        {
+          "word": "trap",
+          "color": "#DD6B20"
+        },
+        {
+          "word": "execution",
+          "color": "#805AD5"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1215,
+      "end_seconds": 1241,
+      "voiceover_text": "In the bedroom, Ryuk hovers in sheer disbelief, marveling at how easily L dismantled Light's anonymity. The shinigami warns Light that he is facing a truly dangerous adversary. On screen, L presses his advantage. The detective announces that he will not rest until he discovers how Kira commits these impossible murders. But to solve the mystery, he must first capture Kira in person. L issues a calm parting challenge before abruptly ending the live transmission. The studio feed cuts out.",
+      "keywords": [
+        {
+          "word": "Ryuk",
+          "color": "#805AD5"
+        },
+        {
+          "word": "adversary",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "capture",
+          "color": "#DD6B20"
+        },
+        {
+          "word": "challenge",
+          "color": "#3182CE"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1251,
+      "end_seconds": 1271,
+      "voiceover_text": "Light stands frozen as the screen goes dark, his shock giving way to intense excitement. He accepts L's declaration of war with a defiant smirk. Both masterminds are now locked in a deadly duel without knowing the other's face or name. The rules of their clash are absolute: whoever gets uncovered first will lose his life and face execution. Neither will back down.",
+      "keywords": [
+        {
+          "word": "smirk",
+          "color": "#D69E2E"
+        },
+        {
+          "word": "declaration of war",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "deadly duel",
+          "color": "#DD6B20"
+        },
+        {
+          "word": "uncovered",
+          "color": "#3182CE"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1271,
+      "end_seconds": 1298,
+      "voiceover_text": "Tension explodes across both sides of the screen. In his room, Light points fiercely at his monitor, vowing to hunt down L and destroy him. At the same instant, L sits in his secluded headquarters, determined to track Kira straight to the execution chamber. Their voices rise in dramatic unison. Both men declare with furious conviction that they embody true justice, each absolutely confident in his supreme intellect and righteous cause. A visual clash of titans seals their mutual challenge.",
+      "keywords": [
+        {
+          "word": "explodes",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "unison",
+          "color": "#3182CE"
+        },
+        {
+          "word": "true justice",
+          "color": "#D69E2E"
+        },
+        {
+          "word": "clash",
+          "color": "#DD6B20"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1357,
+      "end_seconds": 1377,
+      "voiceover_text": "As the police mobilize to assist L, Light regains complete control. A dark, predatory grin spreads across his face. He turns to Ryuk, revealing that he will use the police investigation itself to expose L's identity and eliminate him forever. The world's greatest psychological game of cat and mouse between two geniuses has officially begun. Light prepares his next move.",
+      "keywords": [
+        {
+          "word": "predatory grin",
+          "color": "#D69E2E"
+        },
+        {
+          "word": "investigation",
+          "color": "#3182CE"
+        },
+        {
+          "word": "eliminate",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "cat and mouse",
+          "color": "#805AD5"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
