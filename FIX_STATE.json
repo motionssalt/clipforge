@@ -4,7 +4,7 @@
     {
       "id": "bug-64",
       "title": "Magnet metadata fetch stalls forever at a fixed byte count with one connected peer that never progresses — DHT and peer exchange are not enabled for the metadata-only aria2 invocation",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Seeded from sweep prompt. Metadata-only aria2c invocation in pipeline/stage_a/ingest.py (~line 974, logs 'Fetching magnet metadata via aria2 (metadata-only, bounded)') lacks --enable-dht=true / --enable-dht6=true / --enable-peer-exchange=true, unlike _download_torrent_payload() which sets DHT+PEX. Observed failure: CN:1, byte count frozen at 395KiB(0%) for the entire run until --bt-stop-timeout=120 killed it. Fix: add DHT/DHT6/PEX flags to the metadata-only invocation; consider DHT bootstrap warm-up, supplementary --bt-tracker (additive only), and whether 120s stop-timeout is still right. Must NOT reintroduce exit-code-based success check (bug-04 comment at lines 975-981 stays). Verify empirically against a live well-seeded magnet if internet allows; be honest in notes about what was tested. Add a bug-64 note after the existing bug-04 comment block without altering it.",
       "commit": ""
     }
