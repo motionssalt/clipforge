@@ -1,27 +1,19 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
   "bugs": [
     {
-      "id": "bug-56",
-      "title": "Series metadata validation is too strict/brittle \u2014 fix root cause (prompt ambiguity) and make validator recoverable (safe auto-correct of durable-request fields, clearer errors for ambiguous ones); do NOT just delete the safety check",
-      "status": "done",
-      "notes": "Verified a prior session's pushed commits a51204d/4ea7cdd/d8e15bd/7ca0135 constitute a complete, correct fix. Root cause: prompt.py SERIES_DIRECTIVE now states current part unambiguously and forbids copying part numbers from continuity text; series.js buildSeriesContext emits \"Prior events (Part N):\" instead of bare \"Part N:\"; fallback in prompt.py line ~1322 also reworded; series_id restated next to the production.json field spec. Recoverable failure: new pipeline/stage_b/series_reconcile.py auto-corrects series_id/part/start_seconds (both nested and flat shapes) from the durable stage-a-request.json with a logged change list, wired into stage-b.yml before the residual hard cross-check; end_seconds and non-metadata fields are never auto-corrected and still hard-fail with the expected value in the error. Tests: 42 passed across test_series.py, test_stage_b_series_reconcile.py, test_plan_cross_validation.py, covering wrong-part auto-correct (2a), non-series job untouched (2b), correct plan untouched (2c). The 13 failures elsewhere in pipeline/tests are pre-existing environment issues (cv2 CascadeClassifier stub, stage_a network, cleanup timing) in modules untouched by this fix \u2014 not regressions.",
-      "commit": "a51204d"
+      "id": "bug-60",
+      "title": "Enhancement pass's 2x-upscale scaffold stretches the frame AND makes sharpening measurably worse — remove it entirely, sharpen at native resolution",
+      "status": "pending",
+      "notes": "Seeded from sweep prompt. Root cause to re-verify empirically: UPSCALE='scale=w=min(2160,2*iw):h=min(3840,2*ih):flags=lanczos' has per-axis caps so 1920x1080 -> 2160x2160 (non-uniform scale), then RESCALE_BACK divides both axes by a flat /2 -> 1080x1080 (wrong aspect) before reframe. Also, the final lanczos downscale low-pass-blurs away most of the sharpening gain (prior measurement: native cas+unsharp ~2923 Laplacian variance vs ~865 through the scaffold round trip). Fix: remove UPSCALE/RESCALE_BACK, keep cas/unsharp at native res, keep setsar=1, document bug-60 rationale alongside bug-11/bug-25 history, add regression test asserting no 2*iw/2*ih in FILTER_CHAIN.",
+      "commit": ""
     },
     {
-      "id": "bug-57",
-      "title": "\"Start next part\" button (callback_data task:next:<label>) has no handler \u2014 dead callback in bot/src",
-      "status": "done",
-      "notes": "DEAD CALLBACK CLAIM REFUTED BY ACTUAL CODE: handleTaskCallback in bot/src/index.js contains \"if (action === 'next') return startNextSeriesPart(env, chatId, label, messageId);\" \u2014 the task:next:<label> button emitted by runtime.js is fully routed. startNextSeriesPart (index.js ~1394) reuses the canonical continuation logic: manualSeriesContinuation(status, request, plan) -> nextPartJobId -> nextPartRequestBody, with a duplicate-dispatch guard (existing stage-a-request/status check), writes queued status with full series block, dispatches Stage A, assigns a FRESH label via ensureTaskLabel, and renders a view whose only action opens the NEW part (task:open:<nextLabel>) \u2014 it never leaves the user on the completed prior part. Verified by reading the full dispatch table (all task: prefixes) and the handler body end-to-end. Confusion likely stems from stale git history: an older sweep used bug-57/58 ids for unrelated issues (status.series sync / deploy alerts), so earlier session notes were misleading. No code change needed. Bot suite: 122/122 pass after npm ci.",
-      "commit": "(no code change required \u2014 handler verified present at commit a51204d)"
-    },
-    {
-      "id": "bug-58",
-      "title": "\"Copy prompt\" after starting a new series part shows previous part's prompt/label; investigate whether bug-57's fix alone resolves this or whether label\u2192jobId mapping is stale",
-      "status": "done",
-      "notes": "RESOLVED BY VERIFICATION OF bug-57 (hypothesis a): the \"Start next part\" flow (startNextSeriesPart) genuinely creates a new continuation job (nextPartJobId + nextPartRequestBody), saves its own stage-a-request.json, dispatches Stage A, assigns the new job a fresh label via the normal ensureTaskLabel path (no bypass), and the resulting view links to task:open:<nextLabel> \u2014 so the operator taps Copy prompt on the NEW task. sendAgentPrompt is parameterized by label and reads that job's own stage-a-request.json fresh (request.series.part / series_id), so it emits the new part's prompt with the new part number, series_id and start_seconds. Label reuse semantics are covered by existing bot tests (\"a freed label is reused by the next new task\", \"deleting the earliest label frees A for reuse\") and the continuation path calls the same ensureTaskLabel every other new task uses. No second bug found upstream: getJobIdForLabel has no stale mapping for the new label because it is newly created. The observed stale prompt is fully explained by the (disproven) assumption that the button did nothing; since the handler exists and works, the symptom cannot occur as described. Bot suite 122/122 pass.",
-      "commit": "(no code change required \u2014 verified against current main at a51204d)"
+      "id": "bug-61",
+      "title": "Retune the sharpening chain for a noticeably crisper pop now that the scaffold is gone — verify empirically on real content, do not guess parameter values",
+      "status": "pending",
+      "notes": "Seeded from sweep prompt. Depends on bug-60. Starting estimate from synthetic frame: cas=strength=0.9 + unsharp=7:7:1.0:5:5:0.35 measured ~5.4x sharper than old scaffolded chain. Must bracket cas 0.75/0.85/0.9/0.95 and unsharp luma 0.85/0.95/1.0/1.1 on REAL anime-style footage, inspect for ringing/halos on line art and amplified noise in flat fills; pick strongest artifact-free setting; evaluate hqdn3d 0.8:0.6:3.0:2.0 adequacy (change only if needed); evaluate smartblur-based clarity pass (include only if measurably better). Do NOT touch eq/LUT color. Record all tried/rejected values in notes.",
+      "commit": ""
     }
-  ],
-  "completed_at": "2026-08-29T00:00:00Z"
+  ]
 }
