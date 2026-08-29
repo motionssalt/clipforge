@@ -4,8 +4,8 @@
     {
       "id": "bug-66",
       "title": "Cleanup deleted ALL jobs, not a small/unlucky subset - series_is_complete() ignores the is_final flag, wiping mid-series jobs",
-      "status": "pending",
-      "notes": "Seeded fresh for this sweep (prior sweep's FIX_STATE.json was marked sweep_complete for bug-65 and contained no bug-66 entry). Prior session confirmed root cause with evidence but could not push; this session must re-verify against current repo state, implement the fix, add regression tests, perform the metadata recovery, and actually push everything to origin/main.",
+      "status": "in_progress",
+      "notes": "PUSH ACCESS CONFIRMED this session: seed commit 0a7dcd1 pushed and verified visible on origin/main. Beginning re-verification of prior session findings against current repo state: confirm 1d6ad63 deletion commit, its parent, the three deleted jobs, the sibling series comparison, and current state of pipeline/cleanup/expired.py series_is_complete().",
       "commit": ""
     }
   ]
