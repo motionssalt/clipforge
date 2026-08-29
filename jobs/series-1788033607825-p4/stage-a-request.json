@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "series-1788033607825-p4",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:3C7B3848F2B973BF31FB944F91C726AC20D26261&dn=Rick and Morty Season 1-4 Upscale 2160p x265 - Uncensored&tr=udp://tracker.opentrackr.org:1337/announce&tr=udp://9.rarbg.com:2810/announce&tr=udp://tracker.openbittorrent.com:6969/announce&tr=http://tracker.openbittorrent.com:80/announce&tr=udp://opentracker.i2p.rocks:6969/announce&tr=https://opentracker.i2p.rocks:443/announce&tr=udp://open.stealth.si:80/announce&tr=udp://tracker.torrent.eu.org:451/announce&tr=udp://tracker.tiny-vps.com:6969/announce&tr=udp://tracker.moeking.me:6969/announce&tr=udp://tracker.dler.org:6969/announce&tr=udp://p4p.arenabg.com:1337/announce&tr=udp://open.demonii.com:1337/announce&tr=udp://movies.zsw.ca:6969/announce&tr=udp://tracker.opentrackr.org:1337/announce&tr=http://tracker.openbittorrent.com:80/announce&tr=udp://opentracker.i2p.rocks:6969/announce&tr=udp://tracker.internetwarriors.net:1337/announce&tr=udp://tracker.leechers-paradise.org:6969/announce&tr=udp://coppersurfer.tk:6969/announce&tr=udp://tracker.zer0day.to:1337/announce",
+    "torrent_file_index": "4"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": 60,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788033607825",
+    "source_job_id": "manual-1788033555523",
+    "part": 4,
+    "start_seconds": 688,
+    "context": "Part 1: Morty is tricked by simulated classmates demanding Rick's dark matter formula before Rick rescues him into a shower to expose the alien illusion.\nPart 2: Rick uses the shower to evade the prudish Zigerian scammers while the alien crew accidentally abducts Jerry and throttles his simulation to five percent.\nPart 3: Rick exploits the simulation's glitches, overloads the CPU with a chaotic rap concert, and escapes the chamber with Morty to raid the mothership."
+  },
+  "music": {
+    "ref": "audio-library/180DB_ [130] (Intro Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788042694
+}
