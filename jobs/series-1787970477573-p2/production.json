@@ -1,0 +1,130 @@
+{
+  "video_duration_seconds": 1379,
+  "title": "Ryuk Offers A Deadly Deal Part 2",
+  "hashtags": [
+    "#deathnote",
+    "#lightyagami",
+    "#ryuk",
+    "#anime",
+    "#animerecap",
+    "#shinigamieyes"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "ryuk",
+    "shinigami eyes",
+    "death note recap",
+    "anime recap",
+    "kira",
+    "l lawliet",
+    "death note clip",
+    "fbi agent death note",
+    "anime moments",
+    "death note part 2",
+    "anime shorts"
+  ],
+  "series": {
+    "series_id": "series-1787970477573",
+    "part": 2,
+    "start_seconds": 768,
+    "end_seconds": 1278,
+    "is_final": false,
+    "summary": "As terrified police detectives abandon the task force and L deploys FBI agents to shadow suspects with police ties, Ryuk warns Light that an undercover agent is tailing him and offers a deal to grant him the Shinigami Eyes for half his remaining lifespan."
+  },
+  "cuts": [
+    {
+      "start_seconds": 768,
+      "end_seconds": 799,
+      "voiceover_text": "Panic spreads through police headquarters as terrified detectives realize Kira can execute anyone across the country with supernatural reach. Two officers abruptly step forward and drop their formal transfer requests onto the desk. They are utterly unwilling to sacrifice their lives on an impossible case. Their dread is overwhelming. L remains safely hidden behind a digital screen, but every detective in the room carries a badge that displays their real name and face to the public. If Kira discovers who is hunting him, their identities guarantee an instant execution. The task force is breaking apart in real time.",
+      "keywords": [
+        {
+          "word": "supernatural",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "transfer",
+          "color": "#FF9500"
+        },
+        {
+          "word": "identities",
+          "color": "#FF3B30"
+        },
+        {
+          "word": "execution",
+          "color": "#FF2D55"
+        }
+      ]
+    },
+    {
+      "start_seconds": 881,
+      "end_seconds": 908,
+      "voiceover_text": "Across the city, L launches an aggressive counter-strike in total secrecy. Undercover FBI agents have just arrived in Japan to shadow anyone with inside access to police headquarters. L has narrowed his search down to a precise list of one hundred and forty-one people with police connections. He knows Kira is intercepting confidential investigation files from within the force. That revelation draws a silent, deadly net around the precinct chief and his immediate household, putting Light right in the crosshairs.",
+      "keywords": [
+        {
+          "word": "counter-strike",
+          "color": "#FF9500"
+        },
+        {
+          "word": "FBI",
+          "color": "#007AFF"
+        },
+        {
+          "word": "confidential",
+          "color": "#FFCC00"
+        },
+        {
+          "word": "crosshairs",
+          "color": "#FF3B30"
+        }
+      ]
+    },
+    {
+      "start_seconds": 980,
+      "end_seconds": 1015,
+      "voiceover_text": "While walking home through the busy city streets after class, Light receives an unexpected and chilling warning from Ryuk. The towering Shinigami hovers close behind him, complaining that someone is staring relentlessly in their direction. Light senses the immediate danger, keeping his composure while casually glancing back through the crowded avenue. A suspicious stranger in a dark trench coat is matching his exact pace. Light instantly realizes L has dispatched an undercover agent to track his daily movements. The psychological pressure spikes. Light knows he must discover his pursuer's real name and eliminate him before the trap snaps shut.",
+      "keywords": [
+        {
+          "word": "warning",
+          "color": "#FFCC00"
+        },
+        {
+          "word": "Ryuk",
+          "color": "#AF52DE"
+        },
+        {
+          "word": "undercover",
+          "color": "#5856D6"
+        },
+        {
+          "word": "trap",
+          "color": "#FF3B30"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1251,
+      "end_seconds": 1278,
+      "voiceover_text": "Ryuk leans close and offers Light the ultimate supernatural bargain. By forfeiting half of his remaining lifespan, Light can acquire the eyes of a Shinigami. With that terrifying vision, simply looking at a human's face instantly reveals their real name and exact lifespan above their head. Light would be able to identify and kill his FBI stalker on the spot, but the sacrifice would cut his life in half. Ryuk smirks and asks him: so, what are you going to do?",
+      "keywords": [
+        {
+          "word": "bargain",
+          "color": "#FF9500"
+        },
+        {
+          "word": "Shinigami",
+          "color": "#AF52DE"
+        },
+        {
+          "word": "lifespan",
+          "color": "#34C759"
+        },
+        {
+          "word": "sacrifice",
+          "color": "#FF3B30"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
