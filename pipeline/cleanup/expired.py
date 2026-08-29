@@ -282,18 +282,31 @@ def _part_is_terminal(root: str | Path, job_id: str) -> bool:
 
 
 def series_is_complete(root: str | Path, series_id: str) -> bool:
-    """bug-49: a series is complete only when EVERY known part is terminal.
+    """bug-49 + bug-66: a series is complete only when EVERY known part is
+    terminal AND at least one on-disk part is marked series_final/is_final.
+
+    bug-66: read_job_timing() already surfaced the is_final flag, but nothing
+    consumed it — so a mid-series job whose existing parts had all finished
+    (later parts not yet rendered, e.g. the series-1787970477573 incident in
+    cleanup commit 1d6ad63) looked "complete" and every part was reaped while
+    publishing was still scheduled. Require a final-marked part: a series with
+    zero parts marked is_final has not actually finished producing parts, so
+    it is INCOMPLETE regardless of how many existing parts are terminal.
+
     A missing/unreadable sibling status counts as INCOMPLETE, so a protected
     part is never reaped while any sibling is still alive or unknown."""
     if not series_id:
         return True
+    saw_final = False
     for jid in list_job_ids_from_disk(root):
         info = read_job_timing(root, jid)
         if info.get("series_id") != series_id:
             continue
         if not _part_is_terminal(root, jid):
             return False
-    return True
+        if info.get("series_final"):
+            saw_final = True
+    return saw_final
 
 
 # --------------------------------------------------------------------------- #

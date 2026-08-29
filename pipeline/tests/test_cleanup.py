@@ -24,6 +24,7 @@ from pipeline.cleanup.expired import (
     main,
     parse_iso8601,
     read_job_timing,
+    series_is_complete,
 )
 
 
@@ -109,12 +110,14 @@ class JobTiming(unittest.TestCase):
                 "state": "complete", "created_at_epoch": 100, "expires_at_epoch": 200,
             }), encoding="utf-8")
             self.assertEqual(read_job_timing(td, "job-1"),
-                             {"created_at_epoch": 100, "expires_at_epoch": 200})
+                             {"created_at_epoch": 100, "expires_at_epoch": 200,
+                              "series_id": "", "series_final": False})
 
     def test_missing_folder(self):
         with TemporaryDirectory() as td:
             self.assertEqual(read_job_timing(td, "nope"),
-                             {"created_at_epoch": None, "expires_at_epoch": None})
+                             {"created_at_epoch": None, "expires_at_epoch": None,
+                              "series_id": "", "series_final": False})
 
     def test_unreadable_json(self):
         with TemporaryDirectory() as td:
@@ -122,7 +125,22 @@ class JobTiming(unittest.TestCase):
             job.mkdir(parents=True)
             (job / "status.json").write_text("{not json", encoding="utf-8")
             self.assertEqual(read_job_timing(td, "job-2"),
-                             {"created_at_epoch": None, "expires_at_epoch": None})
+                             {"created_at_epoch": None, "expires_at_epoch": None,
+                              "series_id": "", "series_final": False})
+
+    def test_reads_series_fields(self):
+        """bug-49/bug-66: series_id and the is_final flag are surfaced."""
+        with TemporaryDirectory() as td:
+            job = Path(td) / "jobs" / "series-x-p2"
+            job.mkdir(parents=True)
+            (job / "status.json").write_text(json.dumps({
+                "state": "complete", "created_at_epoch": 100, "expires_at_epoch": 200,
+                "series": {"enabled": True, "series_id": "series-x", "part": 2,
+                           "is_final": True},
+            }), encoding="utf-8")
+            self.assertEqual(read_job_timing(td, "series-x-p2"),
+                             {"created_at_epoch": 100, "expires_at_epoch": 200,
+                              "series_id": "series-x", "series_final": True})
 
     def test_list_job_ids_skips_hidden(self):
         with TemporaryDirectory() as td:
@@ -167,6 +185,121 @@ class ExpiryDecision(unittest.TestCase):
         expired, reason = job_is_expired(timing, now=self.NOW, ttl=100)
         self.assertTrue(expired)
         self.assertIn("no readable timing", reason)
+
+
+class SeriesCompleteness(unittest.TestCase):
+    """bug-66 regression coverage: series_is_complete must require BOTH every
+    existing part terminal AND at least one part actually marked is_final.
+
+    Incident replay (cleanup commit 1d6ad63): series-1787970477573 had parts 1
+    and 2 both terminal but NEITHER marked is_final (part 3 never rendered).
+    The pre-fix code treated the series as complete and reaped both parts
+    while publishing was still scheduled. The sibling series-1787978275321 had
+    a p2 genuinely marked is_final: true, so reaping its finished p1 was
+    correct and must keep working.
+    """
+
+    NOW = 1_800_000_000
+
+    def _write_part(self, td, job_id, *, series_id, part, is_final, state,
+                    expired=True):
+        job = Path(td) / "jobs" / job_id
+        job.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "state": state,
+            "created_at_epoch": self.NOW - 1000,
+            "expires_at_epoch": self.NOW - 1 if expired else self.NOW + 3600,
+            "series": {"enabled": True, "series_id": series_id, "part": part,
+                       "is_final": is_final},
+        }
+        (job / "status.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    def test_mid_series_no_final_part_is_incomplete(self):
+        """Incident case: every existing part terminal, NONE marked is_final
+        -> series is INCOMPLETE (later parts still expected)."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "series-a-p1", series_id="series-a", part=1,
+                             is_final=False, state="complete")
+            self._write_part(td, "series-a-p2", series_id="series-a", part=2,
+                             is_final=False, state="complete")
+            self.assertFalse(series_is_complete(td, "series-a"))
+
+    def test_terminal_final_part_makes_series_complete(self):
+        """Sibling-series correct behavior: a terminal, is_final-marked final
+        part means the series really is complete and may be reaped."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "series-b-p1", series_id="series-b", part=1,
+                             is_final=False, state="complete")
+            self._write_part(td, "series-b-p2", series_id="series-b", part=2,
+                             is_final=True, state="complete")
+            self.assertTrue(series_is_complete(td, "series-b"))
+
+    def test_live_sibling_still_protects_series(self):
+        """bug-49 unchanged: a non-terminal sibling keeps the series
+        incomplete even when another part IS marked is_final."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "series-c-p1", series_id="series-c", part=1,
+                             is_final=True, state="complete")
+            self._write_part(td, "series-c-p2", series_id="series-c", part=2,
+                             is_final=False, state="stage_b_running",
+                             expired=False)
+            self.assertFalse(series_is_complete(td, "series-c"))
+
+    def test_end_to_end_incident_replay(self):
+        """Full mocked cleanup run replaying 1d6ad63: expired mid-series jobs
+        with no is_final part must be PROTECTED (folders and releases kept);
+        the sibling series with a true is_final p2 must reap its finished p1
+        exactly as the real run legitimately did."""
+        import time as time_mod
+
+        with TemporaryDirectory() as td:
+            # Incident series: p1 + p2 terminal, neither is_final.
+            self._write_part(td, "manual-incident-p1", series_id="series-inc",
+                             part=1, is_final=False, state="complete")
+            self._write_part(td, "series-inc-p2", series_id="series-inc",
+                             part=2, is_final=False, state="complete")
+            # Correctly-reaped sibling series: p1 terminal, p2 terminal+final.
+            self._write_part(td, "manual-final-p1", series_id="series-fin",
+                             part=1, is_final=False, state="complete")
+            self._write_part(td, "series-fin-p2", series_id="series-fin",
+                             part=2, is_final=True, state="complete")
+
+            fake = _FakeGitHub(
+                releases=[
+                    {"id": 31, "tag_name": "clipforge-manual-incident-p1",
+                     "created_at": "", "body": ""},
+                    {"id": 32, "tag_name": "clipforge-series-inc-p2",
+                     "created_at": "", "body": ""},
+                    {"id": 33, "tag_name": "clipforge-manual-final-p1",
+                     "created_at": "", "body": ""},
+                    {"id": 34, "tag_name": "clipforge-series-fin-p2",
+                     "created_at": "", "body": ""},
+                ],
+                branches=[],
+            )
+            real_time = time_mod.time
+            time_mod.time = lambda: self.NOW
+            try:
+                rc = main(env={
+                    "GITHUB_TOKEN": "test-token",
+                    "GITHUB_REPOSITORY": "owner/repo",
+                    "CLIPFORGE_TTL_SECONDS": "43200",
+                }, root=td, opener=fake.opener, log=lambda *a, **k: None)
+            finally:
+                time_mod.time = real_time
+
+            self.assertEqual(rc, 0)
+            deleted = "\n".join(fake.deleted)
+            # Incident series fully protected: nothing deleted, folders kept.
+            self.assertNotIn("/releases/31", deleted)
+            self.assertNotIn("/releases/32", deleted)
+            self.assertTrue((Path(td) / "jobs" / "manual-incident-p1").exists())
+            self.assertTrue((Path(td) / "jobs" / "series-inc-p2").exists())
+            # Finished series reaped normally: both parts' releases deleted.
+            self.assertIn("/releases/33", deleted)
+            self.assertIn("/releases/34", deleted)
+            self.assertFalse((Path(td) / "jobs" / "manual-final-p1").exists())
+            self.assertFalse((Path(td) / "jobs" / "series-fin-p2").exists())
 
 
 class ParseIso(unittest.TestCase):
