@@ -11,8 +11,8 @@
     {
       "id": "bug-57",
       "title": "\"Start next part\" button (callback_data task:next:<label>) has no handler \u2014 dead callback in bot/src",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Investigating: searching bot/src for any handler of the task:next: callback emitted by runtime.js.",
       "commit": ""
     },
     {
