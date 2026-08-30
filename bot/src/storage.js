@@ -2,8 +2,11 @@
  * Bot A storage layer, split by backend (kv-minimization migration):
  *
  *   KV (CLIPFORGE_BOT_KV) — per-chat encrypted credentials + Bot A → Bot B
- *       relay staging records, plus the temporary telegram:update:{id}
- *       webhook dedup marker (phase 6 removes that one).
+ *       relay staging records, and nothing else. kv-minimization phase 6
+ *       removed the telegram:update:{id} webhook dedup marker: Bot A's
+ *       webhook handlers are idempotent by construction instead, so a
+ *       redelivered update is a safe no-op (see the phase-6 audit in
+ *       MIGRATION_PROGRESS.json).
  *   D1 (CLIPFORGE_BOT_D1) — task labels/options, Shadow Clone job records
  *       (bug-51), and announcement markers.
  *
@@ -15,7 +18,6 @@
 
 import { decryptCredentials, encryptCredentials } from './crypto.js';
 
-const UPDATE_TTL_SECONDS = 24 * 60 * 60;
 const RELAY_TTL_SECONDS = 12 * 60 * 60;
 
 function key(chatId, suffix) {
@@ -218,15 +220,6 @@ export async function getAnnouncedNews(env, chatId) {
 
 export async function setAnnouncedNews(env, chatId, marker) {
   await setAnnouncement(env, chatId, 'news_notice', marker);
-}
-
-export async function markUpdateSeen(env, updateId) {
-  if (!Number.isInteger(updateId)) return false;
-  const updateKey = `telegram:update:${updateId}`;
-  const exists = await env.CLIPFORGE_BOT_KV.get(updateKey);
-  if (exists) return true;
-  await env.CLIPFORGE_BOT_KV.put(updateKey, '1', { expirationTtl: UPDATE_TTL_SECONDS });
-  return false;
 }
 
 // ------------------------------------------------------------------------ //
