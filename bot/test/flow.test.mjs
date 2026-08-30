@@ -228,6 +228,31 @@ test('tpm carries the task label; tppm carries label + Zernio post id', () => {
     { op: 'tppm', args: ['AB', 'post_1788089510438'], messageId: 990 });
 });
 
+// --- music-upload batch payloads (kv-minimization phase 5 step 5.7) ------- //
+
+test('mupl carries the staged {u:[{name,file_id}]} list; Done reads it from the keyboard message', () => {
+  const list = { u: [{ name: 'track one.m4a', file_id: 'AAID123' }, { name: 'b.mp3', file_id: 'BBID456' }] };
+  const token = encodeToken(list);
+  assert.ok(!token.includes(':'), 'list token must never break the payload grammar');
+  const payload = makePayload('mupl', token);
+  assert.match(payload, /^cf:mupl:[A-Za-z0-9._~-]+$/);
+  // Reply path: a replied audio file routes to handleMusicUploadMessage.
+  const reply = { message_id: 1002, text: '', reply_to_message: botMessageWithPayload(payload, 1001) };
+  const parsed = parseFlowReply(reply);
+  assert.equal(parsed.op, 'mupl');
+  assert.deepEqual(decodeToken(parsed.args[0]), list);
+  // Button path: Done reads the SAME marker off callback.message.
+  assert.deepEqual(parseFlowMessage(botMessageWithPayload(payload, 1001)), { op: 'mupl', args: [token], messageId: 1001 });
+});
+
+test('mupl with a garbage list token decodes to an empty batch, never throws', () => {
+  const payload = makePayload('mupl', 'not-a-real-token');
+  const parsed = parseFlowReply({ message_id: 2, text: '', reply_to_message: botMessageWithPayload(payload, 1) });
+  assert.equal(parsed.op, 'mupl');
+  const decoded = decodeToken(parsed.args[0]);
+  assert.equal(decoded, null); // handler defaults to { uploaded: [] }
+});
+
 test('every ARG_RE-legal task label survives makePayload without escaping', () => {
   // ensureTaskLabel emits A..Z, AA.., AB.., etc. (nextLabel base-26).
   // Every character is ARG_RE-safe: no marker escaping ever needed.
