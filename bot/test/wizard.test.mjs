@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  MAX_TORRENT_BYTES, TELEGRAM_PUBLIC_POST_RE, classifySourceText, describeMusic,
-  describeSource, libraryKeyboard, nextStep, newWizard, previousStep, stepsFor,
+  MAX_TORRENT_BYTES, TELEGRAM_PUBLIC_POST_RE, classifySourceText, decodeWizardToken, describeMusic,
+  describeSource, encodeWizardToken, libraryKeyboard, nextStep, newWizard, previousStep, stepsFor,
   wizardComplete, wizardSummaryLines, wizardToRequest
 } from '../src/wizard.js';
+import { encodeToken } from '../src/flow.js';
 import { taskKeyboard } from '../src/runtime.js';
 import { homeText, settingsText } from '../src/views.js';
 
@@ -155,4 +156,77 @@ test('home and settings screens render the §8.3/§8.6 summary', () => {
 
 test('torrent cap is 1 MB per §5', () => {
   assert.equal(MAX_TORRENT_BYTES, 1024 * 1024);
+});
+
+// --- stateless wizard token (kv-minimization phase 5 step 5.2) ----------- //
+// The wizard record rides inside the bot's own messages as the `wzs` marker
+// (ARCHITECTURE.md §8.9). Markers are user-replayable, so the decoder must
+// shape-validate and must never let a hostile token reach a handler.
+
+test('wizard token round-trips every field a live wizard carries', () => {
+  const wizard = newWizard();
+  wizard.step = 'music';
+  wizard.series = true;
+  wizard.source = { kind: 'telegram_relay', value: 'relay:private' };
+  wizard.relay = {
+    source_type: 'telegram_bot_forward', media_kind: 'video', file_id: 'x',
+    file_unique_id: 'u1', file_size: 12345, mime_type: 'video/mp4',
+    file_name: 'clip.mp4', source_message_id: 44, duration: 9,
+    internal_group_chat_id: -100123, internal_group_message_id: 77
+  };
+  wizard.focus = '';
+  wizard.duration = 180;
+  wizard.music = { ref: 'audio-library/a b.m4a', source: 'explicit_library' };
+  const decoded = decodeWizardToken(encodeWizardToken(wizard));
+  assert.equal(decoded.jobId, wizard.jobId);
+  assert.equal(decoded.step, 'music');
+  assert.equal(decoded.series, true);
+  assert.equal(decoded.mode, 'manual'); // constant, not carried
+  assert.deepEqual(decoded.source, wizard.source);
+  assert.equal(decoded.duration, 180);
+  assert.deepEqual(decoded.music, wizard.music);
+  // relay keeps exactly the subset startRelayJob re-validates and consumes
+  assert.deepEqual(decoded.relay, {
+    file_unique_id: 'u1', mime_type: 'video/mp4', file_size: 12345,
+    file_name: 'clip.mp4', duration: 9,
+    internal_group_chat_id: -100123, internal_group_message_id: 77
+  });
+});
+
+test('decodeWizardToken rejects malformed or hostile tokens', () => {
+  assert.equal(decodeWizardToken(''), null);
+  assert.equal(decodeWizardToken('not-a-token'), null);
+  assert.equal(decodeWizardToken(encodeToken({ v: 2, wizard: newWizard() })), null); // unknown version
+  assert.equal(decodeWizardToken(encodeToken({ v: 1 })), null); // missing wizard
+  const bad = (mutate) => {
+    const record = { v: 1, wizard: { ...newWizard() } };
+    mutate(record.wizard);
+    return decodeWizardToken(encodeToken(record));
+  };
+  // unknown source kind / empty value must not survive
+  assert.equal(bad((w) => { w.source = { kind: 'evil', value: 'x' }; }), null);
+  assert.equal(bad((w) => { w.source = { kind: 'url', value: '' }; }), null);
+  assert.equal(bad((w) => { w.source = 'url:https://x'; }), null);
+  // duration outside TARGET_DURATIONS must not survive
+  assert.equal(bad((w) => { w.duration = 42; }), null);
+  // unknown music source must not survive
+  assert.equal(bad((w) => { w.music = { ref: 'x', source: 'pirate' }; }), null);
+});
+
+test('decodeWizardToken sanitizes but keeps valid records (defaults applied)', () => {
+  const record = { v: 1, wizard: { jobId: 'manual-1234567890', step: 'focus', focus: 'a'.repeat(900) } };
+  const decoded = decodeWizardToken(encodeToken(record));
+  assert.equal(decoded.jobId, 'manual-1234567890');
+  assert.equal(decoded.step, 'focus');
+  assert.equal(decoded.focus.length, 500); // clamped like handleWizardMessage
+  assert.equal(decoded.series, false); // default, not inherited
+  assert.equal(decoded.duration, null);
+  assert.equal(decoded.music, null);
+});
+
+test('unknown step strings fall back to source, unknown jobIds to a fresh one', () => {
+  const record = { v: 1, wizard: { jobId: '../evil', step: 'nope' } };
+  const decoded = decodeWizardToken(encodeToken(record));
+  assert.match(decoded.jobId, /^manual-\d+$/); // fresh id, hostile one dropped
+  assert.equal(decoded.step, 'source');
 });

@@ -12,6 +12,7 @@
  */
 
 import { TARGET_DURATIONS } from './constants.js';
+import { encodeToken, decodeToken } from './flow.js';
 
 export const STEPS = ['source', 'focus', 'length', 'music', 'confirm'];
 
@@ -266,4 +267,85 @@ export function stepPrompt(wizard, options = {}) {
     default:
       return { text: '<b>New video</b>', keyboard: nav([]) };
   }
+}
+
+// --- stateless wizard token (kv-minimization phase 5, ARCHITECTURE.md §8.9) --
+//
+// The full wizard record no longer lives in a stored state.pending.wizard.
+// It rides inside the bot's OWN wizard messages as the invisible `wzs` flow
+// marker (encodeToken JSON), so a button callback re-reads its wizard from
+// callback.message.text and a force_reply answer re-reads it from
+// message.reply_to_message. Markers are user-visible/user-replayable, so the
+// decoder shape-validates every field before any handler may trust it.
+
+const WIZARD_STEPS = new Set([...STEPS]);
+const SOURCE_KINDS = new Set(['url', 'drive', 'magnet', 'torrent_file', 'telegram_channel', 'telegram_relay']);
+const MUSIC_SOURCES = new Set(['none', 'default', 'explicit_library']);
+
+/** wizard -> opaque base64url token for the `wzs` flow marker. */
+export function encodeWizardToken(wizard) {
+  return encodeToken({ v: 1, wizard });
+}
+
+/**
+ * `wzs` marker arg -> wizard record, or null when the token is malformed or
+ * fails shape validation. Tolerates older/newer records by keeping only the
+ * fields the current step machine understands; anything unexpected drops the
+ * whole token (the caller falls back to the "wizard expired, /new" path).
+ */
+export function decodeWizardToken(token) {
+  const decoded = decodeToken(token);
+  if (!decoded || decoded.v !== 1 || !decoded.wizard || typeof decoded.wizard !== 'object') return null;
+  const source = decoded.wizard;
+  const wizard = newWizard();
+
+  if (typeof source.jobId === 'string' && /^manual-\d{6,20}$/.test(source.jobId)) wizard.jobId = source.jobId;
+  if (typeof source.step === 'string' && WIZARD_STEPS.has(source.step)) wizard.step = source.step;
+  if (source.series === true) wizard.series = true;
+
+  if (source.source !== null && source.source !== undefined) {
+    if (typeof source.source !== 'object') return null;
+    const kind = String(source.source.kind || '');
+    const value = String(source.source.value || '');
+    if (!SOURCE_KINDS.has(kind) || !value) return null;
+    wizard.source = { kind, value };
+    if (typeof source.source.fileName === 'string' && source.source.fileName) {
+      wizard.source.fileName = source.source.fileName.slice(0, 200);
+    }
+    if (source.source.torrentFileIndex !== undefined && source.source.torrentFileIndex !== null) {
+      wizard.source.torrentFileIndex = String(source.source.torrentFileIndex).slice(0, 20);
+    }
+  }
+
+  if (typeof source.focus === 'string') wizard.focus = source.focus.slice(0, 500);
+
+  if (source.duration !== null && source.duration !== undefined) {
+    const duration = Number(source.duration);
+    if (!TARGET_DURATIONS.includes(duration)) return null;
+    wizard.duration = duration;
+  }
+
+  if (source.music !== null && source.music !== undefined) {
+    if (typeof source.music !== 'object') return null;
+    const musicSource = String(source.music.source || '');
+    if (!MUSIC_SOURCES.has(musicSource)) return null;
+    wizard.music = { ref: String(source.music.ref || '').slice(0, 500), source: musicSource };
+  }
+
+  if (source.relay !== null && source.relay !== undefined) {
+    if (typeof source.relay !== 'object') return null;
+    // The §9.2 staging record: only the fields startRelayJob re-validates and
+    // consumes (all re-checked for integer-ness there before any dispatch).
+    wizard.relay = {
+      file_unique_id: String(source.relay.file_unique_id || '').slice(0, 200),
+      mime_type: String(source.relay.mime_type || '').slice(0, 200),
+      file_size: Number(source.relay.file_size || 0),
+      file_name: String(source.relay.file_name || '').slice(0, 200),
+      duration: Number(source.relay.duration || 0),
+      internal_group_chat_id: Number(source.relay.internal_group_chat_id || 0),
+      internal_group_message_id: Number(source.relay.internal_group_message_id || 0)
+    };
+  }
+
+  return wizard;
 }
