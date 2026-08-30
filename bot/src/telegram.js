@@ -53,6 +53,26 @@ export async function deleteMessage(env, chatId, messageId) {
   return telegram(env, 'deleteMessage', { chat_id: chatId, message_id: messageId });
 }
 
+/**
+ * kv-minimization phase 5: send an input prompt as a ForceReply so the
+ * user's answer arrives as message.reply_to_message pointing back at the
+ * prompt — that reply edge, plus the invisible flow marker in the prompt
+ * text (src/flow.js), replaces the old stored state.flow/state.pending.
+ * `options.inlineRows` attaches a normal inline keyboard to the SAME
+ * message (e.g. a Cancel button); Telegram allows both markups together.
+ */
+export async function sendForceReply(env, chatId, text, options = {}) {
+  return telegram(env, 'sendMessage', {
+    chat_id: chatId,
+    text,
+    parse_mode: options.parseMode || 'HTML',
+    disable_web_page_preview: options.disablePreview !== false,
+    reply_markup: options.inlineRows
+      ? { inline_keyboard: options.inlineRows, force_reply: true, selective: true }
+      : { force_reply: true, selective: true }
+  });
+}
+
 export async function answerCallback(env, callbackId, text = '') {
   return telegram(env, 'answerCallbackQuery', { callback_query_id: callbackId, ...(text ? { text } : {}) });
 }

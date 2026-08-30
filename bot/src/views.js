@@ -1,12 +1,17 @@
 /**
  * Bot A view layer — the single self-editing status message
- * (ARCHITECTURE.md §8.1 principle 1, activeViewId mechanic preserved from
- * _legacy/telegram-bot/src/index.js) plus the §8.3 home screen and §8.6
+ * (ARCHITECTURE.md §8.1 principle 1) plus the §8.3 home screen and §8.6
  * settings screen composers.
+ *
+ * kv-minimization phase 5: the activeViewId that used to be persisted in
+ * the per-chat KV state record is gone. The edit target is now IMPLICIT in
+ * the update: button-press renders edit callback.message.message_id (the
+ * caller passes it in), and renders answering a user-sent message always
+ * start a fresh message (bug-01 behavior, unchanged). No navigation state
+ * is written to any datastore.
  */
 
 import { buttons, editMessage, sendMessage } from './telegram.js';
-import { getState, putState } from './storage.js';
 import { DEFAULT_VOICE, VOICES, escapeHtml } from './constants.js';
 
 /**
@@ -25,13 +30,10 @@ export function callbackMessageId(callback) {
  * send a fresh one otherwise. Ported verbatim from the legacy bot.
  */
 export async function renderInteractiveView(env, chatId, text, options = {}, messageId = null) {
-  const state = await getState(env, chatId);
-  const targetId = Number(messageId || state.activeViewId || 0);
+  const targetId = Number(messageId || 0);
   if (targetId > 0) {
     try {
       await editMessage(env, chatId, targetId, text, options);
-      state.activeViewId = targetId;
-      await putState(env, chatId, state);
       return { message_id: targetId, edited: true };
     } catch (error) {
       if (/message is not modified/i.test(String(error && error.message || ''))) {
@@ -39,10 +41,7 @@ export async function renderInteractiveView(env, chatId, text, options = {}, mes
       }
     }
   }
-  const sent = await sendMessage(env, chatId, text, options);
-  state.activeViewId = Number(sent && sent.message_id) || null;
-  await putState(env, chatId, state);
-  return sent;
+  return sendMessage(env, chatId, text, options);
 }
 
 /**
@@ -51,9 +50,6 @@ export async function renderInteractiveView(env, chatId, text, options = {}, mes
  * fresh message instead of editing a stale one. Preserved from legacy.
  */
 export async function renderFreshView(env, chatId, text, options = {}) {
-  const state = await getState(env, chatId);
-  state.activeViewId = null;
-  await putState(env, chatId, state);
   return renderInteractiveView(env, chatId, text, options, null);
 }
 

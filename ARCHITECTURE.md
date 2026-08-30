@@ -615,6 +615,69 @@ The old loop was conceptually fine but buried. The new presentation:
 
 That is the entire loop. No hidden state, no extra files, no ambiguity.
 
+### 8.9 Stateless menu/flow wire format (kv-minimization migration)
+
+Bot A keeps **no per-chat navigation record in any datastore**. Neither KV
+nor D1 ever stores `flow`, `pending`, `currentTask`, or `activeViewId`.
+The current step of an input flow travels inside the bot's own messages:
+
+**The flow marker.** Every input prompt and every wizard/keyboard message
+ends with an invisible `text_link` entity whose URL carries the payload:
+
+```
+<a href="https://cf.invalid/f/cf:<op>:<arg1>:<arg2>">&ZeroWidthSpace;</a>
+
+op   — [a-z][a-z0-9]{1,11}
+args — [A-Za-z0-9._~-]*  (never the ':' separator; base64url for blobs)
+```
+
+The `.invalid` TLD is reserved (RFC 2606): the link never resolves and only
+the zero-width-space anchor exists in the visible text. There is **no
+64-byte limit** on this channel (that limit applies to `callback_data`,
+which this design leaves unchanged); message text allows ~4 KB, so large
+records (the wizard object, the music-upload staging list) travel as
+base64url-encoded JSON token args (`encodeToken`/`decodeToken` in
+`bot/src/flow.js`).
+
+**Reply flows (free-text input).** The prompt is sent with
+`reply_markup = { force_reply: true, selective: true }`
+(`sendForceReply` in `bot/src/telegram.js`), optionally with an inline
+keyboard (e.g. a Cancel button) on the same message. The user's answer
+arrives as `message.reply_to_message` pointing back at the prompt;
+`parseFlowReply()` accepts the message only when the replied-to message
+(a) was sent by a bot and (b) carries a well-formed marker. Matching is by
+**opcode string**, not message id.
+
+**Button flows.** The same marker rides in the keyboard message's own
+text, so the callback handler reads its state back out of
+`callback.message` (`parseFlowMessage`) instead of a stored row, and
+`callback_data` stays a tiny opcode (`wz:dur:60`, `wz:confirm`, …).
+
+**Current opcodes** (args in brackets are payload args):
+
+| op | args | flow |
+| --- | --- | --- |
+| `wzs` | wizard-token | wizard step (button steps: source/focus text, length, music, confirm) |
+| `upl` | label | production.json upload (paste or .json file) |
+| `uplb` | label, buffer-token | multi-bubble paste reassembly (rides the ⏳ indicator) |
+| `upldone` | label, buffer-token | assembled-paste confirmation (replaces the old blind auto-dispatch) |
+| `clname` | — | Shadow Clone repo-name entry |
+| `patnew` | b64url(clone-name) | PAT entry for clone creation (`''` token = auto-name) |
+| `patc` | — | PAT entry for connecting an existing clone |
+| `repo` | — | owner/repo entry (PAT rides in encrypted credentials KV) |
+| `wm` | — | watermark text |
+| `news` | — | news broadcast compose |
+| `zkey` | — | Zernio API key |
+| `zsch` | field | smart-schedule field (timezone/interval/time/depth/custom_start) |
+| `tpm` | label | Zernio manual publish time |
+| `tppm` | label, post-id | Zernio manual reschedule time |
+| `mupl` | list-token | music-upload batch staging list (rides the collected-files view) |
+
+**Security note.** Markers are visible to the chat owner and can be
+re-injected. Decoded args are untrusted input: handlers shape-validate
+them (`decodeWizardToken` in `bot/src/wizard.js`), and the commit-boundary
+gates (e.g. the §9.1 clone gate re-check in `startJob`) stay in place.
+
 ---
 
 ## 9. Two subsystems that must not be redesigned
