@@ -1,0 +1,25 @@
+{
+  "migration": "kv-minimization",
+  "current_phase": "phase_1_task_labels",
+  "phases": {
+    "phase_0_d1_setup": { "status": "complete", "notes": "Session 1 (2026-08-30): D1 database clipforge-bot-state (id 720de60e-1a08-492a-9ce6-64cb9534098d, region WNAM) created; bot/migrations/0001_initial.sql (task_labels, task_options, clone_jobs, announcements) applied remotely — verified via sqlite_master query listing all 4 tables live. CLIPFORGE_BOT_D1 binding added to bot/wrangler.bot-a.jsonc (migrations_dir=migrations) and deployed to clipforge-bot-a (version 820ff912-9e81-4515-bc08-25747301bbad); Bot B config deliberately untouched. PRE-EXISTING BLOCKER FIXED on the way: tickCloneJob in bot/src/index.js declared `const job` then reassigned it (lines ~201/216), which failed esbuild and made EVERY Bot A deploy impossible — changed to `let` with a load-bearing comment. SELECT 1 against the live DB succeeded." },
+    "phase_1_task_labels": { "status": "in_progress", "notes": "" },
+    "phase_2_clonejob": { "status": "not_started", "notes": "" },
+    "phase_3_announcements": { "status": "not_started", "notes": "" },
+    "phase_4_remove_seen": { "status": "not_started", "notes": "" },
+    "phase_5_stateless_menu": { "status": "not_started", "notes": "" },
+    "phase_6_remove_botA_dedup": { "status": "not_started", "notes": "" },
+    "phase_7_kv_lockdown_verification": { "status": "not_started", "notes": "" }
+  },
+  "d1_database_name": "clipforge-bot-state",
+  "d1_database_id": "720de60e-1a08-492a-9ce6-64cb9534098d",
+  "commits": [],
+  "human_review_items": [
+    "Pre-existing deploy-blocker found on origin/main before migration work: tickCloneJob (bot/src/index.js) used `const job` + reassignment, so no Bot A build/deploy could succeed. Fixed to `let` as a prerequisite of phase 0's deploy gate. This bug predates the migration and affected ALL prior deploy attempts, not just D1 work."
+  ],
+  "resume_from": {
+    "file": "bot/src/storage.js",
+    "component": "phase_1_task_labels",
+    "next_operation": "Rewrite ensureTaskLabel/setTaskOptions/getTaskOptions/getJobIdForLabel/removeTask/taskLabels against env.CLIPFORGE_BOT_D1 (task_labels + task_options tables). Preserve bug-2 lowest-free-label logic over SQL. Do NOT remove `seen` yet (phase 4) — keep seen field flowing through options_json for now. Port bot/test/tasks.test.mjs + reclaim-stale-task-labels tests from KV mock to a D1 harness, npm test, commit, push."
+  }
+}

@@ -15,6 +15,18 @@
       "id": "b09957b233c247deb40cc703ffadc95d"
     }
   ],
+  // kv-minimization migration (phase 0): D1 takes over task labels/options,
+  // Shadow Clone job resume state (bug-51), and announcement markers from KV.
+  // KV remains only for credentials + relay handoff + relay dedup. Bot B
+  // deliberately does NOT get this binding (it never reads task/clone data).
+  "d1_databases": [
+    {
+      "binding": "CLIPFORGE_BOT_D1",
+      "database_name": "clipforge-bot-state",
+      "database_id": "720de60e-1a08-492a-9ce6-64cb9534098d",
+      "migrations_dir": "migrations"
+    }
+  ],
   // bug-51: the cron trigger drives the Shadow Clone job sweep
   // (scheduled() in src/index.js) — the webhook stages long-running clone
   // creations in KV and this once-a-minute tick resumes/finalizes/fails them,
