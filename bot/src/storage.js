@@ -213,14 +213,38 @@ export async function taskLabels(env, chatId) {
   return rows.map((row) => ({ label: row.label, jobId: row.job_id }));
 }
 
+// ------------------------------------------------------------------------ //
+// Announcement markers (kv-minimization phase 3: D1, was per-kind KV keys)    //
+// ------------------------------------------------------------------------ //
+//
+// One row per (chat_id, kind) in the announcements table, upsert on write —
+// the same "announced exactly once per marker" semantics as the KV keys they
+// replace. Kinds: 'update_notice' (bug-31), 'deploy_failure' (bug-68),
+// 'news_notice' (bug-46). Getters return null when no row exists, matching
+// the old KV.get() null-on-miss contract callers already rely on.
+
+async function getAnnouncement(env, chatId, kind) {
+  const row = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT marker FROM announcements WHERE chat_id = ? AND kind = ?'
+  ).bind(Number(chatId), kind).first();
+  return row ? row.marker : null;
+}
+
+async function setAnnouncement(env, chatId, kind, marker) {
+  await env.CLIPFORGE_BOT_D1.prepare(
+    `INSERT INTO announcements (chat_id, kind, marker) VALUES (?, ?, ?)
+     ON CONFLICT (chat_id, kind) DO UPDATE SET marker = excluded.marker`
+  ).bind(Number(chatId), kind, String(marker || '')).run();
+}
+
 // bug-31: the last announced clone-update marker (docs/update_notice.json's
 // published_at). Stored per chat so a pushed update is announced exactly once.
 export async function getAnnouncedUpdate(env, chatId) {
-  return env.CLIPFORGE_BOT_KV.get(key(chatId, 'update_notice'));
+  return getAnnouncement(env, chatId, 'update_notice');
 }
 
 export async function setAnnouncedUpdate(env, chatId, marker) {
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'update_notice'), String(marker || ''));
+  await setAnnouncement(env, chatId, 'update_notice', marker);
 }
 
 // bug-68: the last deploy-failure marker announced to this chat. The marker
@@ -228,22 +252,22 @@ export async function setAnnouncedUpdate(env, chatId, marker) {
 // if it lands on the same commit as a previously announced one (rerun after
 // fixing the cause must re-notify if it fails again).
 export async function getAnnouncedDeployFailure(env, chatId) {
-  return env.CLIPFORGE_BOT_KV.get(key(chatId, 'deploy_failure'));
+  return getAnnouncement(env, chatId, 'deploy_failure');
 }
 
 export async function setAnnouncedDeployFailure(env, chatId, marker) {
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'deploy_failure'), String(marker || ''));
+  await setAnnouncement(env, chatId, 'deploy_failure', marker);
 }
 
 // bug-46: the last announced news marker (docs/news.json's published_at) from
 // the main account. Stored per chat so a pushed news message is announced
 // exactly once per publication.
 export async function getAnnouncedNews(env, chatId) {
-  return env.CLIPFORGE_BOT_KV.get(key(chatId, 'news_notice'));
+  return getAnnouncement(env, chatId, 'news_notice');
 }
 
 export async function setAnnouncedNews(env, chatId, marker) {
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'news_notice'), String(marker || ''));
+  await setAnnouncement(env, chatId, 'news_notice', marker);
 }
 
 export async function markUpdateSeen(env, updateId) {
