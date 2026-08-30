@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "manual-1788116412985",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1788116412985/source.torrent"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 180,
+    "focus": "Hakujis tragic back story and death",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": false,
+    "series_id": "",
+    "source_job_id": "",
+    "part": 0,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/Sidney_Gish_Imposter_Syndrome_Slowed_but_only_the_best_part_.m4a",
+    "source": "explicit_library"
+  },
+  "saved_at_epoch": 1788116526
+}
