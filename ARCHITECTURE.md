@@ -516,8 +516,10 @@ wizard, and settings behind a single screen.**
 
 1. `/start` always shows the **same home screen** — a single self-editing
    message with inline buttons. Navigation edits that one message instead of
-   piling up new ones (the old bot already did this with `activeViewId`;
-   keep that mechanic).
+   piling up new ones (the old bot did this with a stored `activeViewId`;
+   kv-minimization made it stateless — the edit target is now implicit in
+   the update itself: button presses edit `callback.message.message_id`,
+   and renders answering a user-sent message always send fresh, §8.9).
 2. **Exactly one way to make a video:** the "New video" wizard. Manual vs
    Automatic is a *choice inside the wizard*, not separate commands.
 3. **Settings never interrupt a task.** All settings live behind "Settings".

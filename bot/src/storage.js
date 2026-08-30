@@ -1,62 +1,25 @@
 /**
- * Bot A KV storage layer (ARCHITECTURE.md §8: one persistent menu state,
- * per-chat encrypted credentials, task labels, relay staging records).
+ * Bot A storage layer, split by backend (kv-minimization migration):
  *
- * Ported essentially verbatim from _legacy/telegram-bot/src/storage.js. The
- * KV write-avoidance optimization in putState (skip unchanged writes) is
- * load-bearing for the daily KV write quota — preserve it.
+ *   KV (CLIPFORGE_BOT_KV) — per-chat encrypted credentials + Bot A → Bot B
+ *       relay staging records, plus the temporary telegram:update:{id}
+ *       webhook dedup marker (phase 6 removes that one).
+ *   D1 (CLIPFORGE_BOT_D1) — task labels/options, Shadow Clone job records
+ *       (bug-51), and announcement markers.
+ *
+ * The legacy per-chat `state` record (flow/pending/currentTask/activeViewId)
+ * is GONE (kv-minimization phase 5): menus and input flows are stateless
+ * (ARCHITECTURE.md §8.9) — the current step rides the bot's own messages
+ * as invisible markers, never a datastore row.
  */
 
 import { decryptCredentials, encryptCredentials } from './crypto.js';
 
-const STATE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const UPDATE_TTL_SECONDS = 24 * 60 * 60;
 const RELAY_TTL_SECONDS = 12 * 60 * 60;
 
 function key(chatId, suffix) {
   return `user:${String(chatId)}:${suffix}`;
-}
-
-export async function getState(env, chatId) {
-  const raw = await env.CLIPFORGE_BOT_KV.get(key(chatId, 'state'));
-  if (!raw) return { version: 1, flow: null, pending: {}, currentTask: null, activeViewId: null };
-  try {
-    const state = JSON.parse(raw);
-    if (!state || state.version !== 1 || typeof state !== 'object') throw new Error('bad state');
-    return {
-      version: 1,
-      flow: typeof state.flow === 'string' ? state.flow : null,
-      pending: state.pending && typeof state.pending === 'object' ? state.pending : {},
-      currentTask: typeof state.currentTask === 'string' ? state.currentTask : null,
-      activeViewId: Number.isInteger(Number(state.activeViewId)) && Number(state.activeViewId) > 0 ? Number(state.activeViewId) : null
-    };
-  } catch {
-    return { version: 1, flow: null, pending: {}, currentTask: null, activeViewId: null };
-  }
-}
-
-export async function putState(env, chatId, state) {
-  const stateKey = key(chatId, 'state');
-  const serialized = JSON.stringify({
-    version: 1,
-    flow: state.flow || null,
-    pending: state.pending || {},
-    currentTask: state.currentTask || null,
-    activeViewId: Number.isInteger(Number(state.activeViewId)) && Number(state.activeViewId) > 0 ? Number(state.activeViewId) : null
-  });
-  // View refreshes can revisit the exact same state. A read is far cheaper
-  // than consuming a daily KV write quota, so persist only a real change.
-  if (await env.CLIPFORGE_BOT_KV.get(stateKey) === serialized) return false;
-  await env.CLIPFORGE_BOT_KV.put(stateKey, serialized, { expirationTtl: STATE_TTL_SECONDS });
-  return true;
-}
-
-export async function clearFlow(env, chatId) {
-  const state = await getState(env, chatId);
-  state.flow = null;
-  state.pending = {};
-  await putState(env, chatId, state);
-  return state;
 }
 
 export async function getCredentials(env, chatId) {
