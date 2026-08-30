@@ -219,13 +219,19 @@ test('A: no user-facing copy may instruct the user to REPLY once a bare send wor
 // ISSUE B — fragment reassembly, ground truth                             //
 // ====================================================================== //
 
-// Faithful replica of handlePlanUploadMessage's text-capture + assembly:
-// each bubble is trimmed on capture (index.js: text = String(message.text
-// || '').trim()), then joined with NO separator. Fed through the REAL
-// validator. This is the exact data path, extracted so Issue B can be
-// tested at every split offset without driving the whole worker 400 times.
+// Faithful replica of handlePlanUploadMessage's text-capture + assembly
+// AFTER the paste-fix: EVERY bubble is captured RAW — never trimmed.
+// Trimming ANY bubble (even the first) deletes real characters from its
+// trailing end whenever a split lands inside a whitespace run or a string
+// value; the joined buffer must be byte-identical to the operator's
+// original paste. Fragments are joined with NO separator and the result
+// fed through the REAL validator. This is the exact data path, extracted
+// so Issue B can be tested at every split offset without driving the whole
+// worker 400 times. (Pre-fix this replica trimmed every bubble and the
+// sweep below failed at 312 offsets; it is kept as the permanent
+// regression pin.)
 function reassembleLikeHandler(fragments) {
-  const captured = fragments.map((f) => String(f || '').trim());
+  const captured = fragments.map((f) => String(f || ''));
   const joined = captured.join('');
   // stripCodeFence no-ops on this plan (no fence); looksLikePartialJson's
   // verdicts are asserted separately in the worker-level tests.
