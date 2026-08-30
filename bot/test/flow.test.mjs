@@ -154,6 +154,39 @@ test('uplb rejects garbage buffer tokens without corrupting the flow', () => {
   assert.equal(decodeToken('not-a-real-token'), null); // handler defaults to an empty buffer
 });
 
+// --- onboarding payloads (kv-minimization phase 5 step 5.4) -------------- //
+
+test('clname / patc / repo payloads are arg-less and route by opcode alone', () => {
+  for (const op of ['clname', 'patc', 'repo']) {
+    const payload = makePayload(op);
+    assert.equal(payload, `cf:${op}`);
+    const prompt = botMessageWithPayload(payload, 700);
+    const reply = { message_id: 701, text: 'answer', reply_to_message: prompt };
+    assert.deepEqual(parseFlowReply(reply), { op, args: [], messageId: 700 });
+  }
+});
+
+test('patnew carries the clone name as a b64url { n } token; empty n = auto-name', () => {
+  // decodeToken only returns plain OBJECTS (strings collapse to null by
+  // design), so the name rides as { n: name } — the uplb record pattern.
+  const named = makePayload('patnew', encodeToken({ n: 'my-clipforge.v2' }));
+  const parsedNamed = parseFlowReply({ message_id: 801, text: 'ghp_x', reply_to_message: botMessageWithPayload(named, 800) });
+  assert.equal(parsedNamed.op, 'patnew');
+  assert.deepEqual(decodeToken(parsedNamed.args[0]), { n: 'my-clipforge.v2' });
+  // bug-45 auto-name sentinel: { n: '' } must keep n as the empty string.
+  const auto = makePayload('patnew', encodeToken({ n: '' }));
+  const parsedAuto = parseFlowReply({ message_id: 901, text: 'ghp_x', reply_to_message: botMessageWithPayload(auto, 900) });
+  const autoArg = decodeToken(parsedAuto.args[0]);
+  assert.equal(autoArg && typeof autoArg.n === 'string' ? autoArg.n : null, '');
+});
+
+test('patnew with a garbage name token decodes to null so the handler fails closed', () => {
+  const payload = makePayload('patnew', 'not-a-real-token');
+  const parsed = parseFlowReply({ message_id: 2, text: 'ghp_x', reply_to_message: botMessageWithPayload(payload, 1) });
+  assert.equal(parsed.op, 'patnew');
+  assert.equal(decodeToken(parsed.args[0]), null); // handler re-asks for the name
+});
+
 test('every ARG_RE-legal task label survives makePayload without escaping', () => {
   // ensureTaskLabel emits A..Z, AA.., AB.., etc. (nextLabel base-26).
   // Every character is ARG_RE-safe: no marker escaping ever needed.

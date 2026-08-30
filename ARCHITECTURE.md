@@ -662,7 +662,7 @@ text, so the callback handler reads its state back out of
 | `uplb` | label, buffer-token | multi-bubble paste reassembly (rides the ⏳ indicator) |
 | `upldone` | label, buffer-token | assembled-paste confirmation (replaces the old blind auto-dispatch) |
 | `clname` | — | Shadow Clone repo-name entry |
-| `patnew` | b64url(clone-name) | PAT entry for clone creation (`''` token = auto-name) |
+| `patnew` | b64url(`{ n: clone-name }`) | PAT entry for clone creation (`n: ''` = auto-name sentinel; `decodeToken` returns only objects, so the name rides a one-field record, not a bare string) |
 | `patc` | — | PAT entry for connecting an existing clone |
 | `repo` | — | owner/repo entry (PAT rides in encrypted credentials KV) |
 | `wm` | — | watermark text |
