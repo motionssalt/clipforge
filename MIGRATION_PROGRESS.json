@@ -1,6 +1,6 @@
 {
   "migration": "kv-minimization",
-  "current_phase": "phase_2_clonejob",
+  "current_phase": "phase_3_announcements",
   "phases": {
     "phase_0_d1_setup": {
       "status": "complete",
@@ -11,11 +11,11 @@
       "notes": "Session 1 (2026-08-30): ensureTaskLabel/setTaskOptions/getTaskOptions/getJobIdForLabel/removeTask/taskLabels (+ markTaskSeen/isTaskSeen) rewritten against CLIPFORGE_BOT_D1 (task_labels + task_options tables). bug-2 lowest-free-label logic preserved verbatim over SQL (SELECT label set -> lowestFreeLabelIndex -> INSERT); the legacy monolithic user:<id>:tasks KV blob and its `next` high-water hint are gone. `seen` intentionally NOT removed yet (phase 4 scope) \u2014 it still flows through options_json unchanged. Test harness: bot/test/helpers/d1.mjs implements the Workers D1 API (prepare/bind/all/first/run/batch) on node:sqlite with the REAL migrations SQL as schema; tasks.test.mjs ported to it (KV stub retained only for credentials). scripts/reclaim-stale-task-labels.mjs ported from wrangler kv key list/get/put to wrangler d1 execute (same classify/seriesIncomplete decision lib, bug-62/66/67 logic untouched). npm test: 140/140 pass."
     },
     "phase_2_clonejob": {
-      "status": "in_progress",
-      "notes": ""
+      "status": "complete",
+      "notes": "Session 1 (2026-08-30): getCloneJob/putCloneJob/deleteCloneJob/listCloneJobChatIds rewritten against the clone_jobs D1 table. AES-256-GCM PAT envelope + per-chat AAD via crypto.js UNCHANGED (same encryptCredentials at put, decryptCredentials at get, same envelope field) \u2014 storage backend only. The clonejobid KV index key + CLONE_JOB_INDEX_KEY scan set are deleted: a row's existence in clone_jobs IS the sweep's scan set, so listCloneJobChatIds is `SELECT chat_id FROM clone_jobs` and the dead index-maintenance code is gone. putCloneJob upserts ON CONFLICT(chat_id). tickCloneJob/runCloneJobSweep in index.js (bug-51 cron path) call the same function names with the same shapes \u2014 no caller change needed; the `let job` fix from phase 0 keeps that module buildable. clone-jobs.test.mjs ported to makeD1() with an added upsert regression test; KV stub dropped (accidental KV access now fails loudly). npm test: 141/141 pass."
     },
     "phase_3_announcements": {
-      "status": "not_started",
+      "status": "in_progress",
       "notes": ""
     },
     "phase_4_remove_seen": {
@@ -43,7 +43,7 @@
   ],
   "resume_from": {
     "file": "bot/src/storage.js",
-    "component": "phase_2_clonejob",
-    "next_operation": "Rewrite getCloneJob/putCloneJob/deleteCloneJob/listCloneJobChatIds against the clone_jobs D1 table. Keep crypto.js AES-GCM pat envelope + per-chat AAD EXACTLY as-is (encrypt at put, decrypt at get, same field names). Drop the clonejobid KV index key and CLONE_JOB_INDEX_KEY scan set \u2014 listCloneJobChatIds becomes SELECT chat_id FROM clone_jobs. Verify tickCloneJob/runCloneJobSweep in index.js (bug-51 cron path) reads from D1 unchanged in behavior. Port bot/test/clone-jobs.test.mjs to makeD1(). npm test, commit, push."
+    "component": "phase_3_announcements",
+    "next_operation": "Rewrite getAnnouncedUpdate/setAnnouncedUpdate (kind=update_notice, bug-31), getAnnouncedDeployFailure/setAnnouncedDeployFailure (kind=deploy_failure, bug-68), getAnnouncedNews/setAnnouncedNews (kind=news_notice, bug-46) against the announcements D1 table: SELECT marker ... WHERE chat_id=? AND kind=?; upsert on write. Add announcement tests (no dedicated test file exists today \u2014 create coverage via makeD1() harness). npm test, commit, push."
   }
 }

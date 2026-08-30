@@ -256,35 +256,37 @@ export async function markUpdateSeen(env, updateId) {
 }
 
 // ------------------------------------------------------------------------ //
-// Shadow Clone job records (bug-51)                                         //
+// Shadow Clone job records (bug-51) — kv-minimization phase 2: D1-backed     //
 // ------------------------------------------------------------------------ //
 
 // bug-51: Shadow Clone creation can outlive any single Worker invocation
 // (the copy is a GitHub Actions run; Cloudflare kills long-lived requests —
 // which is exactly how the old flow stalled forever at "Preparing
 // repository…" with no terminal message). The webhook therefore stages the
-// in-flight creation as a KV job record and the cron trigger in index.js
+// in-flight creation as a job record and the cron trigger in index.js
 // resumes it: poll the copy status, finalize on completion, or fail the job
-// with a user-visible message. Two records per chat:
-//   user:<chatId>:clonejob   — the job record (PAT envelope is AES-GCM
-//                              encrypted with the chat's AAD, same as
-//                              credentials, so the KV value is not a secret
-//                              leak; it exists only until the job resolves)
-//   user:<chatId>:clonejobid — the chat's id in the global scan set below
-// KV has no per-prefix list with a usable guarantee for "every staged clone",
-// so a tiny index set is maintained alongside; the cron sweep lists it (one
-// read) and only touches chats that currently have a job. Stale ids are
-// skipped and pruned, so a lost delete can never wedge the sweep.
-const CLONE_JOB_TTL_SECONDS = 24 * 60 * 60;
-const CLONE_JOB_INDEX_KEY = 'clipforge:clone-jobs:index';
+// with a user-visible message.
+//
+// kv-minimization phase 2: the record moved from two KV keys
+// (user:<chatId>:clonejob + the global clipforge:clone-jobs:index scan set)
+// to one row in the D1 clone_jobs table. The PAT envelope is still AES-256-GCM
+// encrypted with the chat's AAD via crypto.js — the encryption algorithm,
+// envelope shape, and AAD are UNCHANGED; only the storage location moved.
+// A row's existence IS the cron sweep's scan set now, so the separate index
+// key and its maintenance are gone entirely: listCloneJobChatIds is a plain
+// SELECT, and a lost delete can no longer wedge the sweep (there is nothing
+// extra to lose).
+
+const CLONE_JOB_COLUMNS =
+  'chat_id, pat_envelope, repo, login, name, branch, source_sha, bootstrap_commit_sha, ' +
+  'total_files, started_at, last_advance_at, last_status_key, run_id, finalize_failed_at';
 
 export async function getCloneJob(env, chatId) {
-  const raw = await env.CLIPFORGE_BOT_KV.get(key(chatId, 'clonejob'));
-  if (!raw) return null;
-  let record;
-  try { record = JSON.parse(raw); } catch { return null; }
-  if (!record || typeof record !== 'object') return null;
-  const patEnvelope = typeof record.patEnvelope === 'string' ? record.patEnvelope : '';
+  const record = await env.CLIPFORGE_BOT_D1.prepare(
+    `SELECT ${CLONE_JOB_COLUMNS} FROM clone_jobs WHERE chat_id = ?`
+  ).bind(Number(chatId)).first();
+  if (!record) return null;
+  const patEnvelope = typeof record.pat_envelope === 'string' ? record.pat_envelope : '';
   let pat = null;
   try { pat = patEnvelope ? await decryptCredentials(patEnvelope, chatId, env.KV_ENCRYPTION_KEY) : null; }
   catch { return null; } // corrupt/undecryptable record: treat as stale, the sweep prunes it
@@ -292,69 +294,70 @@ export async function getCloneJob(env, chatId) {
   if (!githubPat) return null;
   return {
     version: 1,
-    chatId: Number(record.chatId) || Number(chatId),
+    chatId: Number(record.chat_id) || Number(chatId),
     githubPat,
     repo: String(record.repo || ''),
     login: String(record.login || ''),
     name: String(record.name || ''),
     branch: String(record.branch || 'main'),
-    sourceSha: String(record.sourceSha || ''),
-    bootstrapCommitSha: String(record.bootstrapCommitSha || ''),
-    totalFiles: Number(record.totalFiles) || 0,
-    startedAt: Number(record.startedAt) || Date.now(),
-    lastAdvanceAt: Number(record.lastAdvanceAt) || Number(record.startedAt) || Date.now(),
-    lastStatusKey: String(record.lastStatusKey || ''),
-    runId: record.runId || null,
-    finalizeFailedAt: Number(record.finalizeFailedAt) || 0
+    sourceSha: String(record.source_sha || ''),
+    bootstrapCommitSha: String(record.bootstrap_commit_sha || ''),
+    totalFiles: Number(record.total_files) || 0,
+    startedAt: Number(record.started_at) || Date.now(),
+    lastAdvanceAt: Number(record.last_advance_at) || Number(record.started_at) || Date.now(),
+    lastStatusKey: String(record.last_status_key || ''),
+    runId: record.run_id || null,
+    finalizeFailedAt: Number(record.finalize_failed_at) || 0
   };
 }
 
 export async function putCloneJob(env, chatId, job) {
   const patEnvelope = await encryptCredentials({ version: 1, githubPat: String(job.githubPat || ''), repo: '', pendingGithubPat: '' }, chatId, env.KV_ENCRYPTION_KEY);
-  const serialized = JSON.stringify({
-    version: 1,
-    chatId: Number(chatId),
+  const startedAt = Number(job.startedAt) || Date.now();
+  await env.CLIPFORGE_BOT_D1.prepare(
+    `INSERT INTO clone_jobs (${CLONE_JOB_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (chat_id) DO UPDATE SET
+       pat_envelope = excluded.pat_envelope,
+       repo = excluded.repo,
+       login = excluded.login,
+       name = excluded.name,
+       branch = excluded.branch,
+       source_sha = excluded.source_sha,
+       bootstrap_commit_sha = excluded.bootstrap_commit_sha,
+       total_files = excluded.total_files,
+       started_at = excluded.started_at,
+       last_advance_at = excluded.last_advance_at,
+       last_status_key = excluded.last_status_key,
+       run_id = excluded.run_id,
+       finalize_failed_at = excluded.finalize_failed_at`
+  ).bind(
+    Number(chatId),
     patEnvelope,
-    repo: String(job.repo || ''),
-    login: String(job.login || ''),
-    name: String(job.name || ''),
-    branch: String(job.branch || 'main'),
-    sourceSha: String(job.sourceSha || ''),
-    bootstrapCommitSha: String(job.bootstrapCommitSha || ''),
-    totalFiles: Number(job.totalFiles) || 0,
-    startedAt: Number(job.startedAt) || Date.now(),
-    lastAdvanceAt: Number(job.lastAdvanceAt) || Number(job.startedAt) || Date.now(),
-    lastStatusKey: String(job.lastStatusKey || ''),
-    runId: job.runId || null,
-    finalizeFailedAt: Number(job.finalizeFailedAt) || 0
-  });
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'clonejob'), serialized, { expirationTtl: CLONE_JOB_TTL_SECONDS });
-  // Maintain the scan set only when this chat is not already indexed.
-  if (!(await env.CLIPFORGE_BOT_KV.get(key(chatId, 'clonejobid')))) {
-    const ids = await listCloneJobChatIds(env);
-    if (!ids.includes(Number(chatId))) {
-      ids.push(Number(chatId));
-      await env.CLIPFORGE_BOT_KV.put(CLONE_JOB_INDEX_KEY, JSON.stringify(ids));
-    }
-    await env.CLIPFORGE_BOT_KV.put(key(chatId, 'clonejobid'), '1', { expirationTtl: CLONE_JOB_TTL_SECONDS });
-  }
+    String(job.repo || ''),
+    String(job.login || ''),
+    String(job.name || ''),
+    String(job.branch || 'main'),
+    String(job.sourceSha || ''),
+    String(job.bootstrapCommitSha || ''),
+    Number(job.totalFiles) || 0,
+    startedAt,
+    Number(job.lastAdvanceAt) || startedAt,
+    String(job.lastStatusKey || ''),
+    job.runId == null ? null : String(job.runId),
+    Number(job.finalizeFailedAt) || 0
+  ).run();
 }
 
 export async function deleteCloneJob(env, chatId) {
-  await env.CLIPFORGE_BOT_KV.delete(key(chatId, 'clonejob'));
-  await env.CLIPFORGE_BOT_KV.delete(key(chatId, 'clonejobid'));
-  const ids = (await listCloneJobChatIds(env)).filter((id) => id !== Number(chatId));
-  await env.CLIPFORGE_BOT_KV.put(CLONE_JOB_INDEX_KEY, JSON.stringify(ids));
+  await env.CLIPFORGE_BOT_D1.prepare(
+    'DELETE FROM clone_jobs WHERE chat_id = ?'
+  ).bind(Number(chatId)).run();
 }
 
 /** All chat ids with a staged Shadow Clone job (the cron sweep's scan set). */
 export async function listCloneJobChatIds(env) {
-  const raw = await env.CLIPFORGE_BOT_KV.get(CLONE_JOB_INDEX_KEY);
-  if (!raw) return [];
-  try {
-    const ids = JSON.parse(raw);
-    return Array.isArray(ids) ? ids.map((id) => Number(id)).filter((id) => Number.isSafeInteger(id)) : [];
-  } catch {
-    return [];
-  }
+  const { results: rows } = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT chat_id FROM clone_jobs'
+  ).all();
+  return rows.map((row) => Number(row.chat_id)).filter((id) => Number.isSafeInteger(id));
 }
