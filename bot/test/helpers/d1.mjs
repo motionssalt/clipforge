@@ -6,18 +6,23 @@
 // workerd/miniflare), so this helper implements the exact Workers D1 API
 // surface the code uses — prepare(sql).bind(...).{all,first,run}() and
 // batch([...]) — on top of node:sqlite's DatabaseSync, with the REAL
-// migration file (bot/migrations/0001_initial.sql) as the schema. Tests
-// therefore exercise the same SQL the worker executes, not a re-imagining
-// of it.
+// migration files (bot/migrations/*.sql, applied in filename order) as the
+// schema. Tests therefore exercise the same SQL the worker executes, not a
+// re-imagining of it. (restore-bare-send-recognition: the helper originally
+// loaded ONLY 0001_initial.sql; it now loads the whole migrations directory
+// so the 0002_awaiting_input.sql table exists in tests too.)
 
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
-const SCHEMA_PATH = new URL('../../migrations/0001_initial.sql', import.meta.url);
+const MIGRATIONS_DIR = new URL('../../migrations/', import.meta.url);
 
 export function makeD1() {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(SCHEMA_PATH, 'utf8'));
+  const migrationFiles = readdirSync(MIGRATIONS_DIR).filter((name) => name.endsWith('.sql')).sort();
+  for (const file of migrationFiles) {
+    db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'));
+  }
 
   function prepare(sql) {
     const stmt = db.prepare(sql);

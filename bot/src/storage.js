@@ -328,3 +328,62 @@ export async function listCloneJobChatIds(env) {
   ).all();
   return rows.map((row) => Number(row.chat_id)).filter((id) => Number.isSafeInteger(id));
 }
+
+// ------------------------------------------------------------------------ //
+// Awaiting-input marker (restore-bare-send-recognition)                      //
+// ------------------------------------------------------------------------ //
+// A MINIMAL, SCOPED, EXPIRING per-chat marker — deliberately NOT the legacy
+// state.flow/pending blob. One row per chat, written ONLY when the bot sends
+// a force_reply/flow-marker prompt (one write per prompt-sent — never per
+// keystroke or per menu navigation, so this does not reintroduce the
+// write-volume problem the kv-minimization migration solved). It lets a bare
+// send or a forward at an input step route exactly like a genuine reply:
+// parseFlowReply (the reply_to_message edge) remains the PRIMARY path and
+// always wins when both signals exist; this table is the fallback only.
+//
+// op/payload reuse the flow.js marker vocabulary and encoding VERBATIM — the
+// payload column stores the same 'cf:<op>:<arg…>' token the prompt message
+// itself carries. This table is NOT an update-dedup mechanism (phase 6 stays
+// removed) and must never serve double duty as one.
+
+// 15 minutes. RELAY_TTL_SECONDS (12 h) is a relay-handoff convention — far
+// too long for an input prompt. 15 min matches the implicit window the
+// pre-migration session state (and every force_reply prompt) assumed: long
+// enough for a user to find and forward a file, short enough that a stale
+// row cannot hijack an unrelated message hours later.
+export const AWAITING_INPUT_TTL_SECONDS = 15 * 60;
+
+/** Upsert the chat's awaiting-input marker (one row per chat). */
+export async function putAwaitingInput(env, chatId, op, payload, nowSeconds = Math.floor(Date.now() / 1000)) {
+  await env.CLIPFORGE_BOT_D1.prepare(
+    'INSERT OR REPLACE INTO awaiting_input (chat_id, op, payload, expires_at) VALUES (?, ?, ?, ?)'
+  ).bind(
+    Number(chatId),
+    String(op || ''),
+    payload == null ? null : String(payload),
+    nowSeconds + AWAITING_INPUT_TTL_SECONDS
+  ).run();
+}
+
+/**
+ * Read the chat's LIVE awaiting-input marker, or null. An expired row is
+ * deleted here (lazy sweep) and treated as absent — it is never honored.
+ */
+export async function getAwaitingInput(env, chatId, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const row = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT op, payload, expires_at FROM awaiting_input WHERE chat_id = ?'
+  ).bind(Number(chatId)).first();
+  if (!row) return null;
+  if (Number(row.expires_at) <= nowSeconds) {
+    await deleteAwaitingInput(env, chatId);
+    return null;
+  }
+  return { op: String(row.op || ''), payload: row.payload == null ? null : String(row.payload) };
+}
+
+/** Clear the chat's awaiting-input marker (flow completed or cancelled). */
+export async function deleteAwaitingInput(env, chatId) {
+  await env.CLIPFORGE_BOT_D1.prepare(
+    'DELETE FROM awaiting_input WHERE chat_id = ?'
+  ).bind(Number(chatId)).run();
+}
