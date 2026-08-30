@@ -387,3 +387,18 @@ export async function deleteAwaitingInput(env, chatId) {
     'DELETE FROM awaiting_input WHERE chat_id = ?'
   ).bind(Number(chatId)).run();
 }
+
+/**
+ * Consume-on-success delete used by the awaiting_input READ path: removes
+ * the row ONLY when it still holds the exact payload that was just handled.
+ * When the handler advanced the flow, the sendForceReply choke point already
+ * re-anchored the row to the next step's payload BEFORE this delete runs —
+ * the condition then fails, the new row survives, and the flow's marker
+ * stays live. When the handler completed without a new prompt, the payload
+ * still matches and the stale row is deleted so it cannot double-fire.
+ */
+export async function deleteAwaitingInputIfUnconsumed(env, chatId, expectedPayload) {
+  await env.CLIPFORGE_BOT_D1.prepare(
+    'DELETE FROM awaiting_input WHERE chat_id = ? AND (payload IS ? OR payload = ?)'
+  ).bind(Number(chatId), expectedPayload == null ? null : String(expectedPayload), expectedPayload == null ? null : String(expectedPayload)).run();
+}

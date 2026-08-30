@@ -3,6 +3,13 @@
  * only). Ported essentially verbatim from _legacy/telegram-bot/src/telegram.js.
  */
 
+// restore-bare-send-recognition: the single choke point for awaiting_input
+// writes. flow.js is PURE (no I/O) and storage.js imports only crypto.js,
+// so these imports introduce no cycle (commands/* import telegram.js; the
+// reverse never happens).
+import { extractFlowPayload, parsePayload } from './flow.js';
+import { putAwaitingInput } from './storage.js';
+
 function telegramUrl(token, method) {
   return `https://api.telegram.org/bot${token}/${method}`;
 }
@@ -62,7 +69,7 @@ export async function deleteMessage(env, chatId, messageId) {
  * message (e.g. a Cancel button); Telegram allows both markups together.
  */
 export async function sendForceReply(env, chatId, text, options = {}) {
-  return telegram(env, 'sendMessage', {
+  const result = await telegram(env, 'sendMessage', {
     chat_id: chatId,
     text,
     parse_mode: options.parseMode || 'HTML',
@@ -71,6 +78,47 @@ export async function sendForceReply(env, chatId, text, options = {}) {
       ? { inline_keyboard: options.inlineRows, force_reply: true, selective: true }
       : { force_reply: true, selective: true }
   });
+  // restore-bare-send-recognition (single choke point): if this prompt
+  // carries a flow marker, record it in awaiting_input so a BARE send or a
+  // forward (which never carries reply_to_message) routes exactly like a
+  // genuine reply. The marker appended by withFlowMarker always sits at the
+  // END of the text ('\n<a href="...cf:<op>:…">ZWSP</a>'), so its entity
+  // offset/length are known arithmetically — no HTML parsing needed. The
+  // upsert is ONE write per prompt-sent. A D1 hiccup must never break prompt
+  // delivery, so a write failure is swallowed (the reply path still works).
+  const marker = flowMarkerHtmlOf(text);
+  if (marker) {
+    const parsed = parsePayload(marker.payload);
+    if (parsed) {
+      try {
+        await putAwaitingInput(env, chatId, parsed.op, marker.payload);
+      } catch (error) {
+        console.warn('awaiting_input upsert failed', error && error.message ? error.message : error);
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Re-derive the flow marker embedded by flow.js withFlowMarker from an
+ * outgoing prompt's text: returns { payload } or null. The entity fed to
+ * extractFlowPayload uses the marker's known trailing position/length, so
+ * the SAME parser that reads replies validates the stored value.
+ */
+function flowMarkerHtmlOf(text) {
+  const raw = String(text || '');
+  const newline = raw.lastIndexOf('\n');
+  if (newline < 0) return null;
+  const markerHtml = raw.slice(newline + 1);
+  const hrefStart = markerHtml.indexOf('href="');
+  const hrefEnd = hrefStart < 0 ? -1 : markerHtml.indexOf('"', hrefStart + 6);
+  if (hrefStart < 0 || hrefEnd < 0) return null;
+  const url = markerHtml.slice(hrefStart + 6, hrefEnd);
+  const payload = extractFlowPayload({
+    entities: [{ type: 'text_link', url, offset: newline + 1, length: markerHtml.length }]
+  });
+  return payload ? { payload } : null;
 }
 
 export async function answerCallback(env, callbackId, text = '') {
