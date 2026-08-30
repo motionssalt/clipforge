@@ -260,32 +260,28 @@ test('Bug 3: the task view tells the operator plainly to pick a file', async () 
 });
 
 // ---------------------------------------------------------------------------
-// Feature 4 coverage: 🆕 on unseen tasks, cleared by opening, per-job (so a
-// reused label starts unseen again even if the old occupant was seen).
+// kv-minimization phase 4: the Feature 4 unseen-task marker (🆕) is removed
+// entirely — no storage, no UI branch. The assertions below pin the
+// post-removal rendering: rows show only the canonical state glyph.
 // ---------------------------------------------------------------------------
 
-test('Feature 4: a new task shows 🆕 in /tasks; a seen one does not', async () => {
-  const { setTaskOptions } = await import('../src/storage.js');
+test('kv-min phase 4: /tasks rows carry no 🆕 marker (feature removed)', async () => {
   const kv = makeKv();
   const env = await makeEnv(kv);
-  await ensureTaskLabel(env, CHAT, 'job-unseen');
-  await ensureTaskLabel(env, CHAT, 'job-seen');
-  await setTaskOptions(env, CHAT, 'job-seen', { seen: true });
+  await ensureTaskLabel(env, CHAT, 'job-a');
+  await ensureTaskLabel(env, CHAT, 'job-b');
   const sent = [];
   const restore = installFetch({
     files: {
-      'jobs/job-unseen/status.json': makeStatus('job-unseen', 'stage_a_running', 200),
-      'jobs/job-seen/status.json': makeStatus('job-seen', 'stage_a_running', 100),
+      'jobs/job-a/status.json': makeStatus('job-a', 'stage_a_running', 200),
+      'jobs/job-b/status.json': makeStatus('job-b', 'stage_a_running', 100),
     },
     sent,
   });
   try { await showTasks(env, CHAT); } finally { restore(); }
   const text = String(sent[0].payload.text || '');
-  // bug-60: rows now carry the canonical state glyph after the 🆕 marker
-  // (e.g. `<b>🆕 ⚙️ A</b>`), so assert the marker precedes the label rather
-  // than matching the label edge exactly.
-  assert.match(text, /<b>🆕 ⚙️ A<\/b>/, 'unseen task A must carry the 🆕 marker');
-  assert.doesNotMatch(text, /<b>🆕 ⚙️ B<\/b>/, 'seen task B must not carry the marker');
+  assert.doesNotMatch(text, /🆕/, 'no row may carry the removed unseen marker');
+  assert.match(text, /<b>⚙️ A<\/b>/);
   assert.match(text, /<b>⚙️ B<\/b>/);
 });
 
@@ -307,40 +303,12 @@ test('bug-60: /tasks shows a live working bar while any job is active, and per-s
   // The live hint line uses the shared indeterminate bar from progress.js.
   assert.match(text, /working — open a task for its live progress/, 'active list must carry the live hint line');
   // Canonical per-state glyphs: stage B renders 🎬, complete renders ✅.
-  assert.match(text, /<b>(?:🆕 )?🎬 A<\/b>/, 'stage_b_running row must carry the 🎬 glyph');
-  assert.match(text, /<b>(?:🆕 )?✅ B<\/b>/, 'complete row must carry the ✅ glyph');
+  assert.match(text, /<b>🎬 A<\/b>/, 'stage_b_running row must carry the 🎬 glyph');
+  assert.match(text, /<b>✅ B<\/b>/, 'complete row must carry the ✅ glyph');
 });
 
-test('Feature 4: opening a task clears its 🆕 marker on the next /tasks render', async () => {
-  const { showTask } = await import('../src/runtime.js');
-  const { isTaskSeen } = await import('../src/storage.js');
-  const kv = makeKv();
-  const env = await makeEnv(kv);
-  await ensureTaskLabel(env, CHAT, 'job-open-me');
-  assert.equal(await isTaskSeen(env, CHAT, 'job-open-me'), false);
-  const restore1 = installFetch({
-    files: { 'jobs/job-open-me/status.json': makeStatus('job-open-me', 'stage_a_running', 100) },
-    sent: [],
-  });
-  try { await showTask(env, CHAT, 'A'); } finally { restore1(); }
-  assert.equal(await isTaskSeen(env, CHAT, 'job-open-me'), true, 'open must mark seen');
-  const sent = [];
-  const restore2 = installFetch({
-    files: { 'jobs/job-open-me/status.json': makeStatus('job-open-me', 'stage_a_running', 100) },
-    sent,
-  });
-  try { await showTasks(env, CHAT); } finally { restore2(); }
-  assert.doesNotMatch(String(sent[0].payload.text || ''), /🆕/, 'marker must be gone after opening');
-});
-
-test('Feature 4: a label reused by a new task starts unseen (flag is per-job)', async () => {
-  const { ensureTaskLabel, removeTask, setTaskOptions, isTaskSeen } = await import('../src/storage.js');
-  const env = makeStorageEnv();
-  await ensureTaskLabel(env, CHAT, 'job-old-occupant');
-  await setTaskOptions(env, CHAT, 'job-old-occupant', { seen: true });
-  await removeTask(env, CHAT, 'A', 'job-old-occupant');
-  const label = await ensureTaskLabel(env, CHAT, 'job-new-occupant');
-  assert.equal(label, 'A', 'label A must be reused');
-  assert.equal(await isTaskSeen(env, CHAT, 'job-new-occupant'), false,
-    'the new occupant of label A must start unseen — no inheritance from the old job');
+test('kv-min phase 4: storage.js no longer exports task-seen helpers', async () => {
+  const storage = await import('../src/storage.js');
+  assert.equal(typeof storage.markTaskSeen, 'undefined', 'markTaskSeen must be deleted');
+  assert.equal(typeof storage.isTaskSeen, 'undefined', 'isTaskSeen must be deleted');
 });

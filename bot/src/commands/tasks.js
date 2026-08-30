@@ -20,7 +20,7 @@
  */
 
 import { readStatus } from '../github.js';
-import { taskLabels, getTaskOptions } from '../storage.js';
+import { taskLabels } from '../storage.js';
 import { buttons } from '../telegram.js';
 import { escapeHtml, describeTaskState } from '../constants.js';
 import { requireCredentials } from '../runtime.js';
@@ -48,12 +48,10 @@ export async function loadTaskList(env, chatId) {
   if (!credentials) return { credentials: null, entries: [] };
   const labels = (await taskLabels(env, chatId)).slice(0, MAX_LISTED);
   const entries = await Promise.all(labels.map(async ({ label, jobId }) => {
-    const [status, options] = await Promise.all([
-      readStatus(credentials, credentials.repo, jobId).catch(() => null),
-      getTaskOptions(env, chatId, jobId).catch(() => ({})),
-    ]);
-    // Feature 4: unseen is the default — only an explicit seen:true clears it.
-    return { label, jobId, status, seen: Boolean(options && options.seen === true) };
+    const status = await readStatus(credentials, credentials.repo, jobId).catch(() => null);
+    // kv-minimization phase 4: the 🆕 unseen marker is gone — no per-task
+    // options are read for list rendering at all anymore.
+    return { label, jobId, status };
   }));
   return { credentials, entries: sortTaskEntries(entries) };
 }
@@ -94,7 +92,7 @@ export async function showTasks(env, chatId, messageId = null, pendingDeleteLabe
       // terminal marks, so active states now show a distinct glyph too
       // (⚙️ stage A, 🎬 stage B, 📂 awaiting file, …) instead of nothing.
       const stateMark = `${statusEmoji(termState, { unreadable })} `;
-      const marker = (entry.seen ? '' : '🆕 ') + stateMark;
+      const marker = stateMark;
       const isPendingDelete = pendingDeleteLabel && entry.label === pendingDeleteLabel;
       if (isPendingDelete) {
         lines.push(`<b>${marker}${escapeHtml(entry.label)}</b> — <b>Confirm Delete?</b>`);

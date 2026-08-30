@@ -189,22 +189,9 @@ export async function removeTask(env, chatId, label, jobId) {
   return true;
 }
 
-// Feature 4 (unseen-task marker): the flag lives in task_options keyed by JOB
-// id, not by label — so a freed-and-reused letter never inherits the previous
-// occupant's seen state. New tasks default to unseen (absence of seen:true);
-// the marker clears on the operator's first open.
-// (kv-minimization phase 4 will remove this feature entirely; it is kept
-// intact here so phase 1 changes the storage backend and nothing else.)
-export async function markTaskSeen(env, chatId, jobId) {
-  if (await isTaskSeen(env, chatId, jobId)) return false;
-  await setTaskOptions(env, chatId, jobId, { seen: true });
-  return true;
-}
-
-export async function isTaskSeen(env, chatId, jobId) {
-  const record = await getTaskOptions(env, chatId, jobId);
-  return Boolean(record && record.seen === true);
-}
+// kv-minimization phase 4: the unseen-task marker (Feature 4: markTaskSeen/
+// isTaskSeen and the `seen` field in task options) is DELETED as a feature,
+// not just as storage. There is intentionally no seen tracking anywhere now.
 
 export async function taskLabels(env, chatId) {
   const { results: rows } = await env.CLIPFORGE_BOT_D1.prepare(
