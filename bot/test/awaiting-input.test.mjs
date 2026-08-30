@@ -355,3 +355,52 @@ test('a COMPLETED flow clears its marker — the next unrelated bare message is 
     assert.match(textOf(sent2), /was not expected/i, 'with the marker cleared, an unrelated send falls through normally');
   } finally { restore2(); }
 });
+
+// ---------------------------------------------------------------------- //
+// 7. Choke-point WRITE path: sending a marker prompt marks the chat.      //
+// ---------------------------------------------------------------------- //
+
+test('the sendForceReply choke point marks awaiting_input when a prompt is sent (drive /new end to end)', async () => {
+  const env = await makeEnv();
+  assert.equal(await getAwaitingInput(env, CHAT), null, 'no marker before any prompt');
+  const sent = [];
+  const restore = installFetch({ sent });
+  try {
+    await drive(env, {
+      update_id: 109,
+      message: {
+        message_id: 110,
+        from: { id: 1, is_bot: false },
+        chat: { id: CHAT, type: 'private' },
+        text: '/new',
+        entities: [{ type: 'bot_command', offset: 0, length: 4 }],
+      },
+    });
+    assert.match(textOf(sent), /send or forward/i, 'the wizard source-step prompt should be sent');
+  } finally { restore(); }
+  const row = await getAwaitingInput(env, CHAT);
+  assert.ok(row, 'the source-step prompt must mark the chat via the choke point');
+  assert.equal(row.op, 'wzs', 'the marker carries the wizard opcode');
+  // And the stored payload is the SAME cf: token the prompt text carries —
+  // it decodes back into a wizard record, so the read path can route it.
+  assert.match(String(row.payload), /^cf:wzs:/, 'payload reuses the flow.js cf: encoding verbatim');
+});
+
+test('a button press prunes a stale marker (routeCallback pre-dispatch prune)', async () => {
+  const env = await makeEnv();
+  await putAwaitingInput(env, CHAT, 'wm', makePayload('wm'));
+  const sent = [];
+  const restore = installFetch({ sent });
+  try {
+    await drive(env, {
+      update_id: 110,
+      callback_query: {
+        id: 'cb1',
+        from: { id: 1, is_bot: false },
+        message: { message_id: 60, chat: { id: CHAT, type: 'private' }, from: BOT_USER, text: 'menu' },
+        data: 'menu:home',
+      },
+    });
+  } finally { restore(); }
+  assert.equal(await getAwaitingInput(env, CHAT), null, 'any button press must prune the pending-input marker');
+});
