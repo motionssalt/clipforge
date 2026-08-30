@@ -187,6 +187,31 @@ test('patnew with a garbage name token decodes to null so the handler fails clos
   assert.equal(decodeToken(parsed.args[0]), null); // handler re-asks for the name
 });
 
+// --- settings-input payloads (kv-minimization phase 5 step 5.5) ---------- //
+
+test('gemkey / wm / news / zkey payloads are arg-less and route by opcode alone', () => {
+  for (const op of ['gemkey', 'wm', 'news', 'zkey']) {
+    const payload = makePayload(op);
+    assert.equal(payload, `cf:${op}`);
+    const reply = { message_id: 951, text: 'answer', reply_to_message: botMessageWithPayload(payload, 950) };
+    assert.deepEqual(parseFlowReply(reply), { op, args: [], messageId: 950 });
+  }
+});
+
+test('zsch payload carries the smart-schedule field name as a bare arg', () => {
+  // The field alphabet (timezone/interval/time/depth/custom_start) is ARG_RE-safe.
+  for (const field of ['timezone', 'interval', 'time', 'depth', 'custom_start']) {
+    const payload = makePayload('zsch', field);
+    assert.equal(payload, `cf:zsch:${field}`);
+    const reply = { message_id: 961, text: 'x', reply_to_message: botMessageWithPayload(payload, 960) };
+    assert.deepEqual(parseFlowReply(reply), { op: 'zsch', args: [field], messageId: 960 });
+  }
+  // A re-injected zsch marker with an unknown field still PARSES (the handler
+  // relies on applySmartScheduleField failing closed, not on the codec).
+  const forged = parseFlowReply({ message_id: 971, text: 'x', reply_to_message: botMessageWithPayload(makePayload('zsch', 'evil'), 970) });
+  assert.deepEqual(forged, { op: 'zsch', args: ['evil'], messageId: 970 });
+});
+
 test('every ARG_RE-legal task label survives makePayload without escaping', () => {
   // ensureTaskLabel emits A..Z, AA.., AB.., etc. (nextLabel base-26).
   // Every character is ARG_RE-safe: no marker escaping ever needed.

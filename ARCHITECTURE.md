@@ -665,6 +665,7 @@ text, so the callback handler reads its state back out of
 | `patnew` | b64url(`{ n: clone-name }`) | PAT entry for clone creation (`n: ''` = auto-name sentinel; `decodeToken` returns only objects, so the name rides a one-field record, not a bare string) |
 | `patc` | — | PAT entry for connecting an existing clone |
 | `repo` | — | owner/repo entry (PAT rides in encrypted credentials KV) |
+| `gemkey` | — | Gemini API key entry (dead UI since bug-30, converted anyway) |
 | `wm` | — | watermark text |
 | `news` | — | news broadcast compose |
 | `zkey` | — | Zernio API key |
