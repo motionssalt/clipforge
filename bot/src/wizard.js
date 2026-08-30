@@ -247,12 +247,12 @@ export function stepPrompt(wizard, options = {}) {
   switch (wizard.step) {
     case 'source':
       return {
-        // phase-5 sweep: the force_reply mechanism only attaches reply_to_message
-        // when the user actually replies (typed text, or a file sent from the
-        // reply compose box). Plain sends and FORWARDS never carry it, so the
-        // copy must ask for a reply explicitly — anything else falls through
-        // to the handleMessage reject branch.
-        text: '<b>New video — step 1/5: source</b>\n\n<b>Reply to this message</b> with the source: a video, a video file, or a <code>.torrent</code> file (≤ 1 MB) — or paste a direct link / Google Drive link / magnet URI / public t.me channel-post link as text.\n\n<i>Files must be sent as a reply to this prompt (hold the prompt → Reply); plain sends and forwards cannot be matched to this wizard.</i>',
+        // restore-bare-send-recognition: the reply-only copy shipped by 8f9e46e
+        // is reverted. A bare send / forward is a legitimate answer again — the
+        // awaiting_input marker (bot/migrations/0002_awaiting_input.sql) lets
+        // handleMessage recognise it with no reply_to_message edge, exactly as
+        // the legacy server-side state.flow did before kv-minimization.
+        text: '<b>New video — step 1/5: source</b>\n\nSend or forward the video, or paste a direct link / Google Drive link / magnet URI / public t.me channel-post link, or upload a <code>.torrent</code> file (≤ 1 MB).',
         keyboard: seriesKeyboard(wizard)
       };
     case 'focus':
