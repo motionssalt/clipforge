@@ -20,15 +20,22 @@
     "issue_a": {
       "status": "complete",
       "approach": "Copy-only fix, justified by the PASSING bare-send ground-truth tests (mechanism proven working, including the uplb edit-path re-anchor). The ⏳ indicator text and the beginPlanUpload prompt no longer instruct a reply; restored to the pre-migration bug-44-era wording found in git history (indicator: 'assembling pasted plan — this resolves automatically.'; prompt: 'Paste the JSON as a message, or send it as a .json file.' + 'Long pastes that Telegram splits into multiple bubbles are reassembled automatically — just keep pasting.'). The validation-failure view's trailing '— reply to the upload prompt to retry.' was also dropped for the same reason (a re-sent paste routes bare via awaiting_input).",
-      "commits": []
+      "commits": [
+        "1bfb0eb"
+      ]
     },
     "issue_b": {
       "status": "complete",
       "approach": "Fixed the proven defect only (no speculative double-fix): handlePlanUploadMessage now captures EVERY text bubble RAW (String(message.text || ''), never trimmed) so join('') reproduces the operator's original paste byte-for-byte regardless of where Telegram split it. Leading/trailing paste padding is unaffected because looksLikePartialJson and stripCodeFence each trim their own working copies and JSON.parse tolerates surrounding whitespace. Additionally, an empty/whitespace-only bubble arriving mid-paste (buffer non-empty) no longer drops the in-flight paste with '⚠️ Paste the production.json text' — it re-anchors the existing buffer via the extracted keepPlanPasteAlive() helper (which also deduplicates the indicator edit/repost + awaiting_input re-anchor block the partial branch already used). join('') and looksLikePartialJson were verified correct by the ground-truth sweep and deliberately left untouched.",
-      "commits": []
+      "commits": [
+        "1bfb0eb"
+      ]
     }
   },
-  "commits": [],
+  "commits": [
+    "c5c7ff8 (ground-truth verification)",
+    "1bfb0eb (Issue A copy + Issue B trim fix)"
+  ],
   "human_review_items": [
     "Cloudflare Bot A worker must be redeployed for the fix to reach production (this session cannot deploy; code + tests only).",
     "Optional UX follow-up: the indicator copy 'this resolves automatically' restores the bug-44 wording verbatim; if the operator prefers a more explicit 'no reply needed' hint, that is a pure copy tweak."
