@@ -29,7 +29,7 @@
   ],
   // bug-51: the cron trigger drives the Shadow Clone job sweep
   // (scheduled() in src/index.js) — the webhook stages long-running clone
-  // creations in KV and this once-a-minute tick resumes/finalizes/fails them,
+  // creations in the D1 clone_jobs table and this once-a-minute tick resumes/finalizes/fails them,
   // guaranteeing every attempt ends in a user-visible success or error
   // message instead of the killed-request silence at "Preparing repository…".
   "triggers": {

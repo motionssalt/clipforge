@@ -35,7 +35,7 @@ free to restructure everything *except* the two preserved subsystems listed in
 ## 2. Guiding principles (why this design looks the way it does)
 
 1. **One job, one lifecycle, one state machine.** The old system had states
-   scattered across Telegram KV, `jobs/<id>/status.json`, workflow inputs, and
+   scattered across Telegram chat-state storage, `jobs/<id>/status.json`, workflow inputs, and
    release metadata, which is why users found it confusing. The new design has
    a single `Job` entity with a small, explicit state machine (§6) and every
    stage *writes* and *reads* only that entity.
@@ -93,7 +93,7 @@ free to restructure everything *except* the two preserved subsystems listed in
 
 | Actor | What it is | Trust level |
 |---|---|---|
-| **Bot A** ("main bot") | Cloudflare Worker, the only Telegram bot the user talks to. Multi-tenant: one deployment serves every user. | Holds per-user encrypted credentials in KV. Holds the relay *encryption* key (shared secret with the central repo). |
+| **Bot A** ("main bot") | Cloudflare Worker, the only Telegram bot the user talks to. Multi-tenant: one deployment serves every user. | Holds per-user encrypted credentials and Bot A→Bot B relay staging records in KV (the only KV keys left after the kv-minimization migration). Holds the relay *encryption* key (shared secret with the central repo). |
 | **Bot B** ("relay bot") | Separate Cloudflare Worker. Exists solely to sit in the private internal relay group and route ready-markers to the central repo's `telegram-relay.yml`. | Holds the central repo's PAT. No user ever interacts with it. |
 | **User's clone repo** | A private GitHub repo the user owns. Hosts Actions, job state, releases, branding. | Holds user-scoped secrets only (`GEMINI_API_KEYS`, `ZERNIO_API_KEY`). Never holds MTProto or Bot-B credentials. |
 | **Original repo** (`motionssalt/clipforge`) | The central, trusted repo. | The *only* place MTProto session secrets and the relay workflow run. |
@@ -124,7 +124,7 @@ in the same place.
 │   │   ├── relay-worker.js          ← Bot B entry  [PRESERVED SUBSYSTEM #2]
 │   │   ├── relay.js                 ← relay caption/marker codecs [#2]
 │   │   ├── crypto.js                ← AES-256-GCM credential + relay sealing
-│   │   ├── storage.js               ← KV access layer
+│   │   ├── storage.js               ← storage layer: KV (credentials + relay) / D1 (§8.10)
 │   │   ├── github.js                ← GitHub API client (dispatch, files, releases)
 │   │   ├── commands/                ← one module per user-facing command (§8)
 │   │   ├── jobs.js                  ← job state machine read/write (§6)
@@ -334,7 +334,8 @@ Rules:
 - `job_id` = `<mode>-<epoch_ms>` (e.g. `manual-1787692652625`). Series parts
   get `<series_id>-p<N>`. Character set `[A-Za-z0-9._-]`, max 120 chars.
 - The bot assigns a short, stable **human label** per job (`A`, `B`, `C`…)
-  scoped to the Telegram chat, stored in KV. Users never type job ids.
+  scoped to the Telegram chat, stored in the D1 `task_labels` table (§8.10).
+  Users never type job ids.
 
 ---
 
@@ -680,6 +681,34 @@ text, so the callback handler reads its state back out of
 re-injected. Decoded args are untrusted input: handlers shape-validate
 them (`decodeWizardToken` in `bot/src/wizard.js`), and the commit-boundary
 gates (e.g. the §9.1 clone gate re-check in `startJob`) stay in place.
+
+---
+
+### 8.10 Storage backends (kv-minimization migration — authoritative)
+
+Bot A uses two Cloudflare storage backends with strictly separated duties.
+Nothing else may touch either backend:
+
+**KV (`CLIPFORGE_BOT_KV`) — three key families only:**
+| Key | Writer/reader | Purpose |
+| --- | --- | --- |
+| `user:<chatId>:credentials` | `getCredentials`/`putCredentials`/`deleteCredentials` (storage.js) | AES-256-GCM envelope of the chat's GitHub PAT + repo (§10) |
+| `relay:<chatId>:<jobId>` | `putRelayJob`/`getRelayJob` (storage.js, TTL 12 h) | Bot A → Bot B staged relay handoff record (§9.2) |
+| relay update-dedup keys | `markRelayUpdateSeen`/`alreadySeenRelayUpdate` (relay-worker.js, Bot B only) | Bot B's dedup gate on the internal relay group — protects the MTProto/bot-A→bot-B path; deliberately NOT removed by the migration |
+
+**D1 (`CLIPFORGE_BOT_D1`, database `clipforge-bot-state`) — Bot A only:**
+| Table | Primary key | Contents |
+| --- | --- | --- |
+| `task_labels` | (chat_id, label) | task label → job_id bindings; lowest-free-label reuse (§6.3) |
+| `task_options` | (chat_id, job_id) | per-task options JSON blob |
+| `clone_jobs` | (chat_id) | Shadow Clone resume records (bug-51), incl. the encrypted PAT envelope (same crypto.js AES-GCM, storage location only changed); a row's existence IS the cron sweep's scan set |
+| `announcements` | (chat_id, kind) | last-announced markers for kinds `update_notice`, `deploy_failure`, `news_notice` |
+
+Bot B (relay-worker) has **no D1 binding** — it never reads task, clone, or
+announcement data. Menu/flow navigation state lives in **no** datastore
+(§8.9). Bot A's webhook has **no update-dedup marker**: every handler is
+idempotent by construction (phase-6 audit in MIGRATION_PROGRESS.json).
+Schema source of truth: `bot/migrations/`.
 
 ---
 
