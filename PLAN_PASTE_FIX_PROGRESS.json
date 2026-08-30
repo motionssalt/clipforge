@@ -1,0 +1,30 @@
+{
+  "initiative": "fix-plan-paste-regression",
+  "baseline_commit": "ff5affe",
+  "current_step": "ground-truth-verified",
+  "ground_truth": {
+    "issue_a_bare_send_mechanism": {
+      "tested": true,
+      "result": "working",
+      "evidence": "bot/test/plan-paste-ground-truth.test.mjs run against unmodified ff5affe code: (1) 'A: a multi-bubble paste of a VALID plan assembles and dispatches with NO reply on any bubble' PASSED — a 2-bubble bare paste (upl awaiting_input row seeded exactly as the sendForceReply choke point writes it) routed bubble 1 via the upl row, re-anchored the row to uplb with the accumulated buffer (asserted via getAwaitingInput), routed bubble 2 via the uplb row, validated, committed jobs/<id>/production.json to the repo and dispatched Stage B. (2) 'A: a SECOND bare continuation fragment keeps the full buffer (re-anchor on indicator edit)' PASSED — 3 bare bubbles; after bubble 2 (indicator EDIT path, where the sendForceReply choke point cannot see the write) the row still carried BOTH accumulated fragments, and the full plan assembled and committed. The prior session's explicit putAwaitingInput re-anchor on the edit-success path IS reached and IS correct. (3) 'A: a genuine reply to the upl prompt still works' PASSED. HOWEVER the copy test FAILED: the ⏳ indicator text still says 'assembling pasted plan — reply the next fragment to this message.' and the beginPlanUpload prompt still says 'reply the first fragment to this prompt, then reply each following fragment to the ⏳ receiving indicator.' — both contradict the working bare-send mechanism. So Issue A is MECHANISM-WORKING + STALE-COPY. Why the operator's lived experience doesn't match: (a) the indicator copy itself instructs a reply, so the operator reasonably believed a reply was required; (b) Issue B below made the assembled JSON FAIL VALIDATION even when routing worked, and the validation-failure view says 'reply to the upload prompt to retry', further reinforcing the reply framing; (c) between 8f9e46e and 7b63eac bare sends genuinely were broken, which is the window the operator's memory covers.",
+      "root_cause_if_broken": ""
+    },
+    "issue_b_fragment_join": {
+      "tested": true,
+      "result": "safe_join_other_bug_found",
+      "evidence": "Exhaustive split-offset sweep over a REAL valid production.json (schema clipforge.production_plan/v1, nested cuts[].keywords array of {word,color} objects — the operator's shape — pretty-printed, 2-space indent): EVERY 2-fragment split offset was fed through the handler's exact capture+assembly path (per-bubble String(message.text||'').trim() then fragments.join('')) and the REAL parseAndValidateProductionPlan. 312 of the plan's offsets corrupt the document — every offset inside a whitespace run (newline+indent) or inside a string value adjacent to whitespace loses real characters because .trim() eats the leading whitespace of the later fragment and the trailing whitespace of the earlier one. Examples captured by the test: cut at '{\\n  \"schema\"' splits lose the newline and indent ('{\"schema\"...' — cosmetic but byte-corrupting); a split between 'mountain ' and 'sunrise' inside a keywords[].word string value deletes the space, yielding 'mountainsunrise' — silently wrong data committed to the repo; and splits that leave a fragment starting with ']' or '}' after eaten whitespace produce the operator's exact 'Unexpected token' validation failure class on operator-verified-valid JSON. Targeted single-split tests fail identically: mid-whitespace-run indent split, mid-string 'mountain sunrise' split, and token-boundary + empty-trailing-fragment cases (the last also fails today because the trailing bubble trims to '' and, with a live paste, the handler's `if (!text)` early-return fires BEFORE the buffer is consulted — dropping the whole paste with '⚠️ Paste the production.json text'). CONCLUSION: join('') with no separator is CORRECT (Telegram splits by length with no boundary characters added or removed; nothing in the bug-08/27/38/44 paper trail documents boundary mutation, and join('') reassembles losslessly whenever no trim has eaten characters). The defect is the PER-BUBBLE TRIM at capture time, introduced when bug-08's fragment buffering reused the single-bubble capture line. looksLikePartialJson is NOT defective: it re-scans the full joined text each time, so string/escape state across a boundary is correct BY CONSTRUCTION as long as the joined bytes are intact — investigation point 2's suspected inString/escaped cross-fragment bug does not exist in the current code shape.",
+      "root_cause": "Per-bubble .trim() in handlePlanUploadMessage's text capture (bot/src/index.js: text = String(message.text || '').trim()) deletes real characters at every split point that lands inside whitespace or inside a string value next to whitespace; and the `if (!text)` early-return discards an in-flight paste when a trailing/whitespace-only bubble arrives. join('') itself is byte-safe and must be KEPT."
+    }
+  },
+  "fixes": {
+    "issue_a": { "status": "not_started", "approach": "", "commits": [] },
+    "issue_b": { "status": "not_started", "approach": "", "commits": [] }
+  },
+  "commits": [],
+  "human_review_items": [],
+  "resume_from": {
+    "file": "bot/src/index.js",
+    "component": "handlePlanUploadMessage / beginPlanUpload",
+    "next_operation": "apply Issue B fix (capture fragments untrimmed; treat empty/whitespace-only bubble as a real fragment when a paste is in flight) and Issue A copy fix (indicator + beginPlanUpload prompt: drop 'reply' instructions; use pre-migration bug-44 wording 'assembling pasted plan — this resolves automatically.' and 'reassembled automatically' framing)"
+  }
+}
