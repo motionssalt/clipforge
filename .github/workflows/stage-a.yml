@@ -273,7 +273,7 @@ jobs:
           attempt=1
           until gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
             --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
-            --pattern 'screenshots.zip' --pattern 'source_input.bin' --pattern 'analysis_720p.mp4' --clobber; do
+            --pattern 'screenshots.zip' --pattern 'source_input.bin' --clobber; do
             if [ "$attempt" -ge 6 ]; then
               echo "release clipforge-$source_job still unavailable after $attempt attempts" >&2
               exit 1
@@ -288,15 +288,10 @@ jobs:
           cp work/series-source/key_moments.json work/key_moments.json
           unzip -q work/series-source/screenshots.zip -d work/screenshots
           cp work/series-source/source_input.bin work/original.bin
-          # bug: series continuations reused Part 1's transcript/scenes/screenshots
-          # but never fetched analysis_720p.mp4, so the bundle-assembly step later
-          # failed with "no 720p analysis copy found for the bundle" on every
-          # Part >= 2. Copy it alongside the other reused evidence.
-          if [ ! -f work/series-source/analysis_720p.mp4 ]; then
-            echo "series reuse: analysis_720p.mp4 missing from clipforge-$source_job release (it may have auto-deleted after ~12h — see the release body note); cannot assemble Part >= 2 without it" >&2
-            exit 1
-          fi
-          cp work/series-source/analysis_720p.mp4 work/analysis/analysis_720p.mp4
+          # bug-68: analysis_720p.mp4 is no longer produced, bundled, or
+          # uploaded anywhere — nothing downstream ever read it. Series reuse
+          # therefore neither downloads it nor requires it; bundle assembly
+          # no longer expects it either.
           python - <<'PY'
           import json
           rec = {"version": 1, "job_id": "${{ steps.req.outputs.job_id }}",
@@ -388,7 +383,12 @@ jobs:
           print("onnxruntime import: OK")
           PY
 
-      - name: Probe duration + build 720p analysis copy
+      # bug-68: this step used to also transcode a full 720p analysis copy
+      # (work/analysis/analysis_720p.mp4) for the release bundle. Nothing
+      # downstream ever consumed that file — it was generated, uploaded, and
+      # never read — so the transcode is removed entirely. Only the duration
+      # probe below is load-bearing (DURATION_SECONDS feeds scenes/prompt).
+      - name: Probe source duration
         if: ${{ steps.ingest.outputs.result == 'ok' }}
         shell: bash
         run: |
@@ -398,12 +398,6 @@ jobs:
           dur_int="$(python -c "import sys; print(int(round(float(sys.argv[1]))))" "$dur")"
           echo "DURATION_SECONDS=$dur_int" >> "$GITHUB_ENV"
           echo "Duration: $dur ($dur_int s)"
-          mkdir -p work/analysis
-          ffmpeg -y -i "$ORIGINAL_PATH" \
-            -vf "scale='min(1280,iw)':'-2'" \
-            -c:v libx264 -preset veryfast -crf 28 \
-            -c:a aac -b:a 96k \
-            work/analysis/analysis_720p.mp4
 
       - name: Recover duration from reused evidence
         if: ${{ steps.series_reuse.outputs.reused == 'true' }}
@@ -433,10 +427,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ORIGINAL_PATH="$(python -c "import json; print(json.load(open('jobs/${{ steps.req.outputs.job_id }}/ingest.json'))['original_path'])")"
           python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
             --state stage_a_running --message "Building local vision-assist indexes"
           python -m pipeline.stage_a.scenes all \
-            work/analysis/analysis_720p.mp4 \
+            "$ORIGINAL_PATH" \
             work/transcript.json \
             "$DURATION_SECONDS" \
             work \
@@ -447,8 +442,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ORIGINAL_PATH="$(python -c "import json; print(json.load(open('jobs/${{ steps.req.outputs.job_id }}/ingest.json'))['original_path'])")"
           mkdir -p work/screenshots
-          ffmpeg -y -i work/analysis/analysis_720p.mp4 \
+          ffmpeg -y -i "$ORIGINAL_PATH" \
             -vf "fps=1,scale='min(640,iw)':'-2',tile=3x2:padding=2:margin=2:color=black" \
             -vsync vfr -qscale:v 5 -start_number 0 work/screenshots_tmp/grid_%05d.jpg
           python - "$DURATION_SECONDS" <<'PY'
@@ -487,7 +483,7 @@ jobs:
             Assets: 00_READ_THIS_FIRST.txt (agent prompt), transcript.json,
             scene_index.json, key_moments.json, screenshots.zip,
             event_composites.zip (when vision assist produced events),
-            analysis_720p.mp4, source_input.bin (full-quality source for Stage B),
+            source_input.bin (full-quality source for Stage B),
             manifest.json.
 
             This release is automatically deleted ~12 hours after creation.

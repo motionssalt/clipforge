@@ -411,7 +411,8 @@ def _stage_work(tmp_path: Path, with_events: bool = True) -> Path:
     (work / "analysis").mkdir(parents=True)
     (work / "screenshots").mkdir()
     (work / "original.mp4").write_bytes(b"\0" * 32)
-    (work / "analysis" / "analysis_720p.mp4").write_bytes(b"\0" * 16)
+    # bug-68: analysis_720p.mp4 is deliberately absent — bundle assembly must
+    # succeed without it since nothing downstream ever consumed it.
     (work / "transcript.json").write_text(json.dumps({
         "audio_duration_seconds": 42.0, "segments": []}), encoding="utf-8")
     (work / "scene_index.json").write_text(json.dumps({
@@ -437,9 +438,13 @@ def test_run_bundle_produces_contract_assets(tmp_path, monkeypatch):
                                  jobs_root=str(jobs_root))
     bdir = work / "bundle"
     names = {a["name"] for a in manifest["assets"]}
-    assert {"source_input.bin", "analysis_720p.mp4", "transcript.json",
+    assert {"source_input.bin", "transcript.json",
             "screenshots.zip", "event_composites.zip", "scene_index.json",
             "key_moments.json", "00_READ_THIS_FIRST.txt", "manifest.json"} <= names
+    # bug-68: the dead 720p analysis copy must NOT be bundled anymore
+    assert "analysis_720p.mp4" not in names
+    assert not (bdir / "analysis_720p.mp4").exists()
+    assert "analysis_copy_720p" not in {a["purpose"] for a in manifest["assets"]}
     assert manifest["release_tag"] == "clipforge-job-bundle"
     # schema-required fields on hashed assets
     src = next(a for a in manifest["assets"] if a["name"] == "source_input.bin")

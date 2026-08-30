@@ -14,8 +14,10 @@ transcribe + scenes have run:
 
 The bundle directory also receives contract-named copies of the pipeline
 outputs the workflow produced: ``source_input.bin`` (original quality),
-``analysis_720p.mp4``, ``transcript.json``, ``scene_index.json``,
-``key_moments.json``. Asset download URLs are filled into the manifest by the
+``transcript.json``, ``scene_index.json``, ``key_moments.json``.
+(``analysis_720p.mp4`` was removed from the bundle by bug-68: nothing
+downstream ever read it, so it is no longer transcoded, bundled, or
+uploaded.) Asset download URLs are filled into the manifest by the
 workflow after the release is created (the ``url`` field is optional in the
 schema and left empty here).
 """
@@ -39,7 +41,6 @@ from .ingest import load_request
 # schemas/analysis_bundle.schema.json. Order is the release listing order.
 BUNDLE_ASSETS: list[tuple[str, str, bool]] = [
     ("source_input.bin", "source_full_quality", False),
-    ("analysis_720p.mp4", "analysis_copy_720p", False),
     ("transcript.json", "transcript", False),
     ("screenshots.zip", "baseline_composites", False),
     ("event_composites.zip", "dense_event_composites", True),
@@ -182,14 +183,8 @@ def run_bundle(
     if original_path is None or not original_path.is_file():
         raise BundleError("no original source video found for the bundle")
 
-    analysis_mp4 = work / "analysis" / "analysis_720p.mp4"
-    if not analysis_mp4.is_file():
-        legacy_compressed = work / "analysis" / "compressed.mp4"
-        if legacy_compressed.is_file():
-            analysis_mp4 = legacy_compressed
-        else:
-            raise BundleError("no 720p analysis copy found for the bundle")
-
+    # bug-68: the 720p analysis copy is no longer required, bundled, or even
+    # produced — nothing downstream ever consumed it.
     transcript_json = work / "transcript.json"
     scene_index_json = work / "scene_index.json"
     key_moments_json = work / "key_moments.json"
@@ -249,7 +244,6 @@ def run_bundle(
     # ---- stage contract-named copies ------------------------------------------
     staged: dict[str, Path] = {
         "source_input.bin": original_path,
-        "analysis_720p.mp4": analysis_mp4,
         "transcript.json": transcript_json,
         "scene_index.json": scene_index_json,
         "key_moments_json".replace("_json", ".json"): key_moments_json,

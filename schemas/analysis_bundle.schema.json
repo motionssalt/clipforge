@@ -23,7 +23,6 @@
             "type": "string",
             "enum": [
               "source_input.bin",
-              "analysis_720p.mp4",
               "transcript.json",
               "screenshots.zip",
               "event_composites.zip",
@@ -37,7 +36,6 @@
             "type": "string",
             "enum": [
               "source_full_quality",
-              "analysis_copy_720p",
               "transcript",
               "baseline_composites",
               "dense_event_composites",

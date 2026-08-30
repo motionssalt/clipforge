@@ -404,7 +404,6 @@ On success Stage A creates/updates release `clipforge-<job_id>` containing:
 | Asset | Content |
 |---|---|
 | `source_input.bin` | The original, full-quality source video (kept for Stage B). |
-| `analysis_720p.mp4` | Compressed 720p analysis copy (smaller, for agents). |
 | `transcript.json` | Timestamped faster-whisper transcript. |
 | `screenshots.zip` | Baseline 6-frame composites (one per 6s window). |
 | `event_composites.zip` | Dense composites for high-signal beats (if vision assist on). |
