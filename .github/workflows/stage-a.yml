@@ -559,35 +559,13 @@ jobs:
           # fills them in. Any other failure shape (source within the limit, a
           # missing PRE-source asset) is NOT the size-limit path and re-fails
           # here rather than being silently retried without the source.
-          python - "$tag" <<'PY'
-          import json, os, subprocess, sys
-          tag = sys.argv[1]
-          LIMIT = 2 * 1024**3  # GitHub's hard per-file release-asset limit: 2 GiB
-          src = "work/bundle/source_input.bin"
-          src_size = os.path.getsize(src) if os.path.exists(src) else 0
-          try:
-              rel = json.loads(subprocess.run(
-                  ["gh", "api", f"repos/{os.environ['GITHUB_REPOSITORY']}/releases/tags/{tag}"],
-                  capture_output=True, text=True, check=True).stdout)
-          except subprocess.CalledProcessError:
-              rel = {"assets": []}  # release never created (action crashed on the source)
-          present = {a.get("name") for a in rel.get("assets", [])}
-          # Assets that precede source_input.bin in the sorted upload order.
-          prefix = {"00_READ_THIS_FIRST.txt", "key_moments.json",
-                    "scene_index.json", "screenshots.zip"}
-          if os.path.exists("work/bundle/event_composites.zip"):
-              prefix.add("event_composites.zip")
-          missing_prefix = prefix - present
-          print(f"source_input.bin size: {src_size} bytes (2 GiB limit: {LIMIT})")
-          print(f"published assets: {sorted(present) or 'none'}")
-          if src_size > LIMIT and not missing_prefix:
-              print("CLASSIFIED: oversized-source release failure — retrying WITHOUT source_input.bin.")
-              sys.exit(0)
-          print("NOT a size-limit failure "
-                f"(source_oversized={src_size > LIMIT}, missing_prefix={sorted(missing_prefix)}). "
-                "Refusing to drop the source; re-failing.", file=sys.stderr)
-          sys.exit(1)
-          PY
+          # The classification itself lives in pipeline/stage_a/release_gate.py
+          # (unit-tested offline in pipeline/tests/test_release_gate.py across
+          # all four failure shapes) — the workflow runs the TESTED code rather
+          # than an inline copy that can silently drift from its tests.
+          # Exit 0 = confirmed size-limit failure (retry without the source);
+          # exit 1 = anything else (re-fail).
+          python -m pipeline.stage_a.release_gate "$tag" --bundle-dir work/bundle
 
           # ---- idempotent retry: re-upload everything EXCEPT source_input.bin ----
           # GitHub's asset API does NOT overwrite a same-named asset — a re-POST
