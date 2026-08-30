@@ -270,10 +270,14 @@ jobs:
           # bug-64: retry with backoff — a freshly-queued continuation can race
           # the source release's propagation, and the previous single attempt
           # died with "release not found" on any transient read miss.
+          # bug-69: download the reusable EVIDENCE separately from
+          # source_input.bin — Part 1's release may legitimately have no source
+          # (intentionally omitted because it exceeded the 2 GiB per-asset
+          # limit), and that must NOT fail the continuation here.
           attempt=1
           until gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
             --pattern 'transcript.json' --pattern 'scene_index.json' --pattern 'key_moments.json' \
-            --pattern 'screenshots.zip' --pattern 'source_input.bin' --clobber; do
+            --pattern 'screenshots.zip' --clobber; do
             if [ "$attempt" -ge 6 ]; then
               echo "release clipforge-$source_job still unavailable after $attempt attempts" >&2
               exit 1
@@ -287,7 +291,21 @@ jobs:
           cp work/series-source/scene_index.json work/scene_index.json
           cp work/series-source/key_moments.json work/key_moments.json
           unzip -q work/series-source/screenshots.zip -d work/screenshots
-          cp work/series-source/source_input.bin work/original.bin
+          # bug-69: try the release's source first (zero behavior change for the
+          # common case); when it was omitted from Part 1's release for size, fall
+          # through to re-fetching from Part 1's ORIGINAL saved source reference
+          # (series parts share one underlying source; Part 1's
+          # stage-a-request.json holds it — e.g. the exact torrent_file_index).
+          if gh release download "clipforge-$source_job" --repo "$GITHUB_REPOSITORY" --dir work/series-source \
+              --pattern 'source_input.bin' --clobber; then
+            cp work/series-source/source_input.bin work/original.bin
+            echo "series reuse: source_input.bin present in clipforge-$source_job — reused directly"
+          else
+            echo "series reuse: source_input.bin absent from clipforge-$source_job (omitted for size) — re-fetching from the original saved source reference"
+            python -m pipeline.stage_a.refetch_source "${{ steps.req.outputs.job_id }}" work/refetch \
+              --jobs-root jobs --source-job "$source_job"
+            cp work/refetch/original.* work/original.bin
+          fi
           # bug-68: analysis_720p.mp4 is no longer produced, bundled, or
           # uploaded anywhere — nothing downstream ever read it. Series reuse
           # therefore neither downloads it nor requires it; bundle assembly
@@ -468,8 +486,27 @@ jobs:
             --duration-seconds "$DURATION_SECONDS"
           ls -lh work/bundle/
 
+      # ---------------------------------------------------------------------
+      # bug-69: SEQUENCING — try the FULL bundle (including source_input.bin)
+      # exactly as today. There is deliberately NO pre-emptive size check that
+      # skips the source: it is only ever omitted in response to an ACTUAL
+      # upload failure caused by GitHub's 2 GiB per-asset limit. The step below
+      # is continue-on-error purely so a bash gate can (a) CLASSIFY the failure
+      # — only a confirmed per-asset size-limit signature may drop the source,
+      # any other failure re-fails immediately — and (b) drive an idempotent
+      # retry that re-uploads everything EXCEPT source_input.bin via the
+      # GitHub API directly (POST, overwriting same-named assets left over from
+      # a partially-succeeded first attempt, so nothing duplicates or errors).
+      # The body here intentionally does NOT mention source_input.bin: when the
+      # first attempt succeeds outright, GitHub keeps this action-authored body
+      # (the retry's PATCH never runs), so a full release is never mislabelled
+      # as a source-omitted one. The omitted-source body is applied ONLY on the
+      # confirmed failure path below.
+      # ---------------------------------------------------------------------
       - name: Create GitHub Release with the analysis bundle
+        id: release_full
         if: ${{ steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true' }}
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.req.outputs.release_tag }}
@@ -492,6 +529,186 @@ jobs:
           files: work/bundle/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Gate the release outcome / retry without an oversized source
+        id: release_gate
+        if: ${{ steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.release_full.outcome }}" = "success" ]; then
+            echo "Release published with the full bundle (including source_input.bin)."
+            echo "source_omitted=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          tag="${{ steps.req.outputs.release_tag }}"
+          echo "Full-bundle release attempt failed — inspecting the release to classify the cause."
+
+          # CLASSIFY: only treat this as the 2 GiB per-asset limit when the
+          # evidence actually says so. The gate is: source_input.bin is oversized
+          # (> 2 GiB) AND every asset that must have been uploaded BEFORE it was
+          # reached is present. work/bundle/* uploads in sorted order, and
+          # source_input.bin sorts second-to-last — so the pre-source prefix
+          # (00_READ_THIS_FIRST.txt .. screenshots.zip) MUST have landed before
+          # the source failed, while transcript.json (+ manifest.json when the
+          # action crashed before even creating the release) sort AFTER it and
+          # are therefore allowed to be missing — the idempotent retry below
+          # fills them in. Any other failure shape (source within the limit, a
+          # missing PRE-source asset) is NOT the size-limit path and re-fails
+          # here rather than being silently retried without the source.
+          python - "$tag" <<'PY'
+          import json, os, subprocess, sys
+          tag = sys.argv[1]
+          LIMIT = 2 * 1024**3  # GitHub's hard per-file release-asset limit: 2 GiB
+          src = "work/bundle/source_input.bin"
+          src_size = os.path.getsize(src) if os.path.exists(src) else 0
+          try:
+              rel = json.loads(subprocess.run(
+                  ["gh", "api", f"repos/{os.environ['GITHUB_REPOSITORY']}/releases/tags/{tag}"],
+                  capture_output=True, text=True, check=True).stdout)
+          except subprocess.CalledProcessError:
+              rel = {"assets": []}  # release never created (action crashed on the source)
+          present = {a.get("name") for a in rel.get("assets", [])}
+          # Assets that precede source_input.bin in the sorted upload order.
+          prefix = {"00_READ_THIS_FIRST.txt", "key_moments.json",
+                    "scene_index.json", "screenshots.zip"}
+          if os.path.exists("work/bundle/event_composites.zip"):
+              prefix.add("event_composites.zip")
+          missing_prefix = prefix - present
+          print(f"source_input.bin size: {src_size} bytes (2 GiB limit: {LIMIT})")
+          print(f"published assets: {sorted(present) or 'none'}")
+          if src_size > LIMIT and not missing_prefix:
+              print("CLASSIFIED: oversized-source release failure — retrying WITHOUT source_input.bin.")
+              sys.exit(0)
+          print("NOT a size-limit failure "
+                f"(source_oversized={src_size > LIMIT}, missing_prefix={sorted(missing_prefix)}). "
+                "Refusing to drop the source; re-failing.", file=sys.stderr)
+          sys.exit(1)
+          PY
+
+          # ---- idempotent retry: re-upload everything EXCEPT source_input.bin ----
+          # GitHub's asset API does NOT overwrite a same-named asset — a re-POST
+          # returns 422 'already_exists'. To stay idempotent against a partially-
+          # succeeded first attempt (some keep-assets already uploaded), DELETE any
+          # existing same-named asset first, then POST fresh. Create the release
+          # itself if the action crashed before creating it.
+          python - "$tag" <<'PY'
+          import json, os, subprocess, sys, glob, mimetypes
+          tag = sys.argv[1]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          job = "${{ steps.req.outputs.job_id }}"
+          try:
+              rel = json.loads(subprocess.run(
+                  ["gh", "api", f"repos/{repo}/releases/tags/{tag}"],
+                  capture_output=True, text=True, check=True).stdout)
+          except subprocess.CalledProcessError:
+              print("release not found — creating it (the first attempt crashed before creation)")
+              rel = json.loads(subprocess.run(
+                  ["gh", "api", "--method", "POST", f"repos/{repo}/releases",
+                   "-f", f"tag_name={tag}", "-f", f"name=ClipForge job {job}",
+                   "-F", "draft=false", "-F", "prerelease=true",
+                   "-F", "make_latest=false"],
+                  capture_output=True, text=True, check=True).stdout)
+          rel_id = rel["id"]
+          upload_base = f"https://uploads.github.com/repos/{repo}/releases/{rel_id}/assets"
+          existing = {a.get("name"): a.get("id") for a in rel.get("assets", [])}
+          for path in sorted(glob.glob("work/bundle/*")):
+              name = os.path.basename(path)
+              if name == "source_input.bin":
+                  print(f"SKIP (oversized, intentionally omitted): {name}")
+                  continue
+              if name in existing:
+                  print(f"delete leftover asset for clean re-upload: {name} (id={existing[name]})")
+                  subprocess.run(
+                      ["gh", "api", "--method", "DELETE",
+                       f"repos/{repo}/releases/assets/{existing[name]}"],
+                      check=True)
+              ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+              print(f"upload: {name}")
+              subprocess.run(
+                  ["gh", "api", "--method", "POST", "-H",
+                   f"Content-Type: {ctype}", "-F", f"data=@{path}",
+                   f"{upload_base}?name={name}"],
+                  check=True)
+          print("retry upload complete")
+          PY
+
+          # Record the INTENTIONAL omission unambiguously in the release body so
+          # anything reading it later (bot message, Stage B, a series
+          # continuation) can distinguish "legitimately no source — re-fetch it"
+          # from "this release is broken".
+          python - "$tag" <<'PY'
+          import json, os, subprocess, sys
+          tag = sys.argv[1]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          job = "${{ steps.req.outputs.job_id }}"
+          rel = json.loads(subprocess.run(
+              ["gh", "api", f"repos/{repo}/releases/tags/{tag}"],
+              capture_output=True, text=True, check=True).stdout)
+          body = (
+              "ClipForge Stage A analysis bundle (ARCHITECTURE.md §7.2).\n\n"
+              f"clipforge-job-id: {job}\n"
+              "stage: awaiting_plan\n"
+              "source-omitted: true\n\n"
+              "NOTE: source_input.bin was INTENTIONALLY OMITTED from this release — "
+              "the source exceeded GitHub's 2 GiB per-asset limit. This is not a "
+              "broken release. Stage B (or a series continuation) re-fetches the "
+              "source directly from the original source reference durably saved in "
+              f"jobs/{job}/stage-a-request.json.\n\n"
+              "Assets: 00_READ_THIS_FIRST.txt (agent prompt), transcript.json, "
+              "scene_index.json, key_moments.json, screenshots.zip, "
+              "event_composites.zip (when vision assist produced events), "
+              "manifest.json.\n\n"
+              "This release is automatically deleted ~12 hours after creation."
+          )
+          subprocess.run(
+              ["gh", "api", "--method", "PATCH",
+               f"repos/{repo}/releases/{rel['id']}",
+               "-f", f"body={body}"],
+              check=True)
+          print("release body updated: source omission recorded")
+          PY
+
+          echo "source_omitted=true" >> "$GITHUB_OUTPUT"
+
+      - name: Record an omitted source in the manifest (machine-readable)
+        if: ${{ steps.release_gate.outputs.source_omitted == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          p = "work/bundle/manifest.json"
+          m = json.load(open(p))
+          m["source_omitted"] = True
+          m["source_omitted_reason"] = (
+              "source_input.bin exceeded GitHub's 2 GiB per-asset release limit; "
+              "intentionally omitted. Re-fetch via the source object in "
+              "stage-a-request.json (pipeline.stage_a.refetch_source)."
+          )
+          # Reflect the omission in the asset list too: drop the entry entirely.
+          m["assets"] = [a for a in m["assets"] if a.get("name") != "source_input.bin"]
+          open(p, "w").write(json.dumps(m, ensure_ascii=False, indent=2) + "\n")
+          print("manifest updated: source_omitted=true")
+          PY
+          # Re-upload the corrected manifest. The retry already uploaded a
+          # manifest.json, and GitHub's asset API does not overwrite same-named
+          # assets (re-POST -> 422), so delete the leftover first, then POST.
+          tag="${{ steps.req.outputs.release_tag }}"
+          rel_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '.id')"
+          old_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --jq '.assets[] | select(.name=="manifest.json") | .id' | head -n 1)"
+          if [ -n "$old_id" ]; then
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$old_id" >/dev/null
+          fi
+          gh api --method POST -H "Content-Type: application/json" \
+            -F data=@work/bundle/manifest.json \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$rel_id/assets?name=manifest.json" >/dev/null
+          echo "corrected manifest re-uploaded"
 
       - name: Resolve release asset URLs
         id: assets

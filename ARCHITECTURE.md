@@ -412,6 +412,22 @@ On success Stage A creates/updates release `clipforge-<job_id>` containing:
 | `00_READ_THIS_FIRST.txt` | The analysis prompt (see below). |
 | `manifest.json` | Machine-readable index of all of the above (name, size, sha256, purpose). |
 
+**`source_input.bin` and the 2 GiB per-asset limit (bug-69).** GitHub imposes a hard
+2 GiB limit per release asset. Stage A always attempts the FULL bundle (source
+included) first — there is no pre-emptive size skip. Only if that upload actually
+fails on the oversized source does Stage A retry the release WITHOUT
+`source_input.bin` (keeping every other asset), and records the intentional
+omission unambiguously: the release body carries `source-omitted: true` and
+`manifest.json` gains `source_omitted: true` + `source_omitted_reason` (with the
+`source_input.bin` asset entry dropped). This is NOT a broken release. When the
+source is absent, Stage B (or a series continuation) re-fetches it directly from
+the original source reference durably saved in `jobs/<id>/stage-a-request.json`,
+via `pipeline/stage_a/refetch_source.py` — which reuses `ingest.py`'s existing
+per-kind resolution (url / drive / telegram_channel / telegram_relay / magnet /
+torrent_file) and, for torrents, the exact saved `torrent_file_index` with no
+interactive re-prompt. Series continuations share Part 1's underlying source and
+re-fetch from Part 1's saved source reference.
+
 **`00_READ_THIS_FIRST.txt`** is the *prompt* for Manual mode. It fully
 describes the task, the available evidence, the duration target, any focus
 directive, and — most importantly — the exact `production.json` shape to

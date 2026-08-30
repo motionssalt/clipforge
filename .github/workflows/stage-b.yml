@@ -150,13 +150,14 @@ jobs:
           cache: "pip"
           cache-dependency-path: pipeline/requirements.txt
 
-      - name: Install ffmpeg
+      - name: Install ffmpeg (+ aria2 for the bug-69 torrent source re-fetch)
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -q
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg aria2
           ffmpeg -version | head -n 1
+          aria2c --version | head -n 1
 
       - name: Install Python deps
         shell: bash
@@ -309,17 +310,26 @@ jobs:
             fi
             echo "Attempt ${attempt}: source asset not yet visible/ready."
           done
-          if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
-            echo "Could not find the source video asset (source_input.bin / original.*) in release ${RELEASE_TAG} after ${attempt} attempts. Final visible assets: [${asset_names:-none}]" >&2
-            exit 1
-          fi
+          # bug-69: a missing source asset is no longer automatically fatal — a
+          # Stage A release may INTENTIONALLY omit source_input.bin when it
+          # exceeded GitHub's 2 GiB per-asset limit (recorded in the release body
+          # as "source-omitted: true"). Record whether it was found and let the
+          # download step fall through to a deterministic re-fetch from the
+          # original source reference saved in stage-a-request.json.
           {
             echo "release_url=${release_url}"
             echo "orig_name=${orig_name}"
             echo "orig_id=${orig_id}"
+            if [ -n "$orig_id" ] && [ -n "$orig_name" ]; then
+              echo "source_found=true"
+            else
+              echo "Attempt ${attempt}: no source asset in release — will re-fetch from the saved source reference (bug-69 omitted-source path)."
+              echo "source_found=false"
+            fi
           } >> "$GITHUB_OUTPUT"
 
       - name: Download source video from release
+        if: ${{ steps.relmeta.outputs.source_found == 'true' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -329,8 +339,9 @@ jobs:
           orig_id="${{ steps.relmeta.outputs.orig_id }}"
           orig_name="${{ steps.relmeta.outputs.orig_name }}"
           if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
-            # Belt-and-suspenders: relmeta guarantees these are set, but keep
-            # the guard so an accidentally-empty output surfaces cleanly.
+            # Belt-and-suspenders: relmeta guarantees these are set when
+            # source_found=true, but keep the guard so an accidentally-empty
+            # output surfaces cleanly.
             echo "Could not find the source video asset (source_input.bin / original.*) in release ${{ steps.jid.outputs.release_tag }}" >&2
             exit 1
           fi
@@ -353,6 +364,34 @@ jobs:
           fi
           ls -lh "work/${orig_name}"
           echo "ORIGINAL_PATH=work/${orig_name}" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------------------------
+      # bug-69: source_input.bin was INTENTIONALLY omitted from the release
+      # (it exceeded the 2 GiB per-asset limit). Re-fetch the source DIRECTLY
+      # from the original source reference durably saved in
+      # jobs/<jid>/stage-a-request.json — reusing ingest.py's existing
+      # resolution (url / drive / telegram_channel / telegram_relay / magnet /
+      # torrent_file). For torrents the EXACT saved torrent_file_index is
+      # reused silently (no interactive re-prompt). A re-fetch failure is
+      # surfaced via the normal status/error path with a clearly-labelled
+      # re-fetch message (not confused with a first-time ingest failure).
+      # ---------------------------------------------------------------------
+      - name: Re-fetch omitted source from its original reference
+        if: ${{ steps.relmeta.outputs.source_found == 'false' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p work
+          JID="${{ steps.jid.outputs.job_id }}"
+          python -m pipeline.status "$JID" \
+            --state stage_b_running \
+            --message "source_input.bin was omitted from the release (over GitHub's 2 GiB per-asset limit); re-fetching the source from its original saved reference" || true
+          python -m pipeline.stage_a.refetch_source "$JID" work --jobs-root jobs
+          ORIG="$(ls work/original.* | head -n 1)"
+          ls -lh "$ORIG"
+          echo "ORIGINAL_PATH=$ORIG" >> "$GITHUB_ENV"
 
       - name: Resolve production.json
         shell: bash
