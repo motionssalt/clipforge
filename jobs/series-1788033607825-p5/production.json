@@ -1,0 +1,131 @@
+{
+  "video_duration_seconds": 1265,
+  "title": "Part 5: Rick Destroys The Alien Scammers",
+  "hashtags": [
+    "#RickAndMorty",
+    "#ZigerianScammers",
+    "#ConcentratedDarkMatter",
+    "#RickSanchez",
+    "#PrinceNebulon",
+    "#SciFiAnimation"
+  ],
+  "youtube_tags": [
+    "rick and morty",
+    "rick sanchez",
+    "zigerian scammers",
+    "prince nebulon",
+    "dark matter recipe",
+    "m night shaym aliens",
+    "rick and morty simulation",
+    "rick outsmarts aliens",
+    "adult swim",
+    "animated sci fi comedy",
+    "rick and morty season 1"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 1050,
+      "end_seconds": 1059,
+      "voiceover_text": "Trapped in another simulation, Rick faces his captor Prince Nebulon. He appears thoroughly defeated. He surrenders the dark matter formula and begs to go home. The aliens are ecstatic.",
+      "keywords": [
+        {
+          "word": "simulation",
+          "color": "#60A5FA"
+        },
+        {
+          "word": "surrenders",
+          "color": "#F87171"
+        },
+        {
+          "word": "ecstatic",
+          "color": "#34D399"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1065,
+      "end_seconds": 1077,
+      "voiceover_text": "Prince Nebulon gloats over his easy conquest. He snaps a mocking photo of Rick's bewildered face. The scammers laugh loudly at the helpless scientist. They escort Rick to an escape shuttle, convinced they have completely outplayed him.",
+      "keywords": [
+        {
+          "word": "gloats",
+          "color": "#FBBF24"
+        },
+        {
+          "word": "bewildered",
+          "color": "#A78BFA"
+        },
+        {
+          "word": "shuttle",
+          "color": "#38BDF8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1097,
+      "end_seconds": 1112,
+      "voiceover_text": "Inside the departing shuttle, Jerry lectures Rick on being gullible. He smugly welcomes his father-in-law to the club of universe fools. Rick stares out into deep space with calm composure. He offers only a subtle smirk, quietly letting Jerry believe they were defeated.",
+      "keywords": [
+        {
+          "word": "gullible",
+          "color": "#FB923C"
+        },
+        {
+          "word": "composure",
+          "color": "#4ADE80"
+        },
+        {
+          "word": "smirk",
+          "color": "#F472B6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1123,
+      "end_seconds": 1135,
+      "voiceover_text": "Meanwhile on the alien bridge, Prince Nebulon addresses his crew with pure joy. He thanks his loyal team for their hard work. He steps up to the synthesizer and pours the final ingredient into the dark matter chamber.",
+      "keywords": [
+        {
+          "word": "joy",
+          "color": "#FDE047"
+        },
+        {
+          "word": "ingredient",
+          "color": "#C084FC"
+        },
+        {
+          "word": "chamber",
+          "color": "#818CF8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1135,
+      "end_seconds": 1147,
+      "voiceover_text": "The mixture flares violently into a blinding blast. The entire Zigerian mothership vaporizes in an instant. Back on the shuttle, Rick casually sips his flask. His fake recipe wiped out the scammers in one decisive strike.",
+      "keywords": [
+        {
+          "word": "blinding",
+          "color": "#F87171"
+        },
+        {
+          "word": "vaporizes",
+          "color": "#EF4444"
+        },
+        {
+          "word": "decisive",
+          "color": "#10B981"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60,
+  "series": {
+    "series_id": "series-1788033607825",
+    "part": 5,
+    "start_seconds": 830,
+    "end_seconds": 1147,
+    "is_final": true,
+    "summary": "Rick outsmarts the Zigerian scammers by handing over a volatile fake dark matter formula that detonates their mothership in space."
+  }
+}
