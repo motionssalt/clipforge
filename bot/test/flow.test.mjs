@@ -212,6 +212,22 @@ test('zsch payload carries the smart-schedule field name as a bare arg', () => {
   assert.deepEqual(forged, { op: 'zsch', args: ['evil'], messageId: 970 });
 });
 
+// --- task publish prompt payloads (kv-minimization phase 5 step 5.6) ----- //
+
+test('tpm carries the task label; tppm carries label + Zernio post id', () => {
+  const tpm = makePayload('tpm', 'AB');
+  assert.equal(tpm, 'cf:tpm:AB');
+  assert.deepEqual(
+    parseFlowReply({ message_id: 981, text: '2026-09-01T09:00', reply_to_message: botMessageWithPayload(tpm, 980) }),
+    { op: 'tpm', args: ['AB'], messageId: 980 });
+  // POST_ID_PATTERN-shaped ids (e.g. post_1788…) are ARG_RE-safe: no escaping.
+  const tppm = makePayload('tppm', 'AB', 'post_1788089510438');
+  assert.equal(tppm, 'cf:tppm:AB:post_1788089510438');
+  assert.deepEqual(
+    parseFlowReply({ message_id: 991, text: 'x', reply_to_message: botMessageWithPayload(tppm, 990) }),
+    { op: 'tppm', args: ['AB', 'post_1788089510438'], messageId: 990 });
+});
+
 test('every ARG_RE-legal task label survives makePayload without escaping', () => {
   // ensureTaskLabel emits A..Z, AA.., AB.., etc. (nextLabel base-26).
   // Every character is ARG_RE-safe: no marker escaping ever needed.
