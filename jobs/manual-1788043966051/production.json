@@ -1,0 +1,88 @@
+{
+  "video_duration_seconds": 1771,
+  "title": "The Supercar Humiliation That Started It All: Part 1",
+  "series": {
+    "series_id": "series-1788044060809",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 78,
+    "is_final": false,
+    "summary": "Carefree traveler Kintaro Oe is humiliated after a speeding yellow supercar runs him into a pile of trash, sparking a fiery vow to chase the vehicle on his bicycle."
+  },
+  "hashtags": [
+    "#goldenboy",
+    "#kintaroe",
+    "#anime",
+    "#supercar",
+    "#bicyclerace",
+    "#animeclips"
+  ],
+  "youtube_tags": [
+    "golden boy episode 1",
+    "kintaro oe",
+    "golden boy anime",
+    "supercar vs bicycle",
+    "anime bike chase",
+    "golden boy part 1",
+    "kintaro mikazuki",
+    "retro anime clip",
+    "anime comedy",
+    "golden boy 1995"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 16,
+      "end_seconds": 39,
+      "voiceover_text": "A carefree cyclist has no idea his peaceful morning ride is about to turn deadly. Twenty-five-year-old traveler Kintaro Oe pedals smoothly through a quiet residential neighborhood. With his headphones in and his eyes squeezed shut, he joyfully belts out songs at the top of his lungs. He feels completely relaxed under the morning sun. Schoolgirls on the sidewalk watch him pass by without a care in the world. He is completely lost in his own euphoria.",
+      "keywords": [
+        {
+          "word": "carefree",
+          "color": "#4FC3F7"
+        },
+        {
+          "word": "euphoria",
+          "color": "#FFD54F"
+        }
+      ]
+    },
+    {
+      "start_seconds": 39,
+      "end_seconds": 58,
+      "voiceover_text": "Suddenly, danger tears straight into his path. A flashy yellow supercar roars around a blind corner at breakneck speed. Kintaro opens his eyes and sees the bumper inches from his face. Terror strikes him instantly. He violently jerks his handlebars sideways to dodge the impact. His bicycle flips through the air, sending him crashing headfirst into a massive pile of roadside garbage cans. He is utterly battered and humiliated.",
+      "keywords": [
+        {
+          "word": "supercar",
+          "color": "#FFCA28"
+        },
+        {
+          "word": "Terror",
+          "color": "#FF5252"
+        },
+        {
+          "word": "humiliated",
+          "color": "#FF7043"
+        }
+      ]
+    },
+    {
+      "start_seconds": 58,
+      "end_seconds": 78,
+      "voiceover_text": "Lying bruised beneath the trash, his silly grin vanishes completely. A dark shadow falls over his face as his eyes ignite with lethal focus. Pure defiance takes over. He locks his gaze onto his trusty mountain bike, Mikazuki-go. In the dark garage, Kintaro pulls down his sleek visor and kicks up the bike stand. He is ready to hunt down that supercar on two wheels.",
+      "keywords": [
+        {
+          "word": "defiance",
+          "color": "#FF3D00"
+        },
+        {
+          "word": "Mikazuki-go",
+          "color": "#00E676"
+        },
+        {
+          "word": "supercar",
+          "color": "#FFCA28"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60
+}
