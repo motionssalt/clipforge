@@ -120,3 +120,46 @@ test('parseFlowReply rejects everything that is not a reply to the bot\'s own pr
   const bad = botMessageWithPayload('cf:BAD OP', 9);
   assert.equal(parseFlowReply({ message_id: 5, reply_to_message: bad }), null);
 });
+
+// --- production.json upload payloads (kv-minimization phase 5 step 5.3) --- //
+
+test('upl payload carries just the task label and round-trips through parseFlowReply', () => {
+  const label = 'AB';
+  const payload = makePayload('upl', label);
+  assert.equal(payload, 'cf:upl:AB');
+  const prompt = botMessageWithPayload(payload, 501);
+  const reply = { message_id: 502, text: '{"parts":[]}', reply_to_message: prompt };
+  assert.deepEqual(parseFlowReply(reply), { op: 'upl', args: [label], messageId: 501 });
+});
+
+test('uplb payload carries label + base64url buffer token; buffer round-trips', () => {
+  const label = 'C';
+  const buffer = { f: ['{"foo":', '"bar', '"}'], b: [10, 11, 12] };
+  const token = encodeToken(buffer);
+  assert.ok(!token.includes(':'), 'buffer token must never break the payload grammar');
+  const payload = makePayload('uplb', label, token);
+  assert.match(payload, /^cf:uplb:C:[A-Za-z0-9._~-]+$/);
+  const prompt = botMessageWithPayload(payload, 601);
+  const reply = { message_id: 602, text: 'next fragment', reply_to_message: prompt };
+  const parsed = parseFlowReply(reply);
+  assert.equal(parsed.op, 'uplb');
+  assert.equal(parsed.args[0], label);
+  assert.deepEqual(decodeToken(parsed.args[1]), buffer);
+  assert.equal(parsed.messageId, 601, 'indicator message id survives so it can be edited/deleted');
+});
+
+test('uplb rejects garbage buffer tokens without corrupting the flow', () => {
+  const payload = makePayload('uplb', 'AB', 'not-a-real-token');
+  assert.deepEqual(parsePayload(payload), { op: 'uplb', args: ['AB', 'not-a-real-token'] });
+  assert.equal(decodeToken('not-a-real-token'), null); // handler defaults to an empty buffer
+});
+
+test('every ARG_RE-legal task label survives makePayload without escaping', () => {
+  // ensureTaskLabel emits A..Z, AA.., AB.., etc. (nextLabel base-26).
+  // Every character is ARG_RE-safe: no marker escaping ever needed.
+  for (const label of ['A', 'B', 'Z', 'AA', 'AZ', 'BA', 'ZZ', 'AAA']) {
+    assert.doesNotThrow(() => makePayload('upl', label));
+    assert.doesNotThrow(() => makePayload('uplb', label, encodeToken({ f: [], b: [] })));
+    assert.doesNotThrow(() => makePayload('upldone', label, encodeToken({ f: ['{}'], b: [1] })));
+  }
+});
