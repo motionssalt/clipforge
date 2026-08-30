@@ -98,17 +98,15 @@ export async function getRelayJob(env, chatId, jobId) {
   }
 }
 
-export async function getTasks(env, chatId) {
-  const raw = await env.CLIPFORGE_BOT_KV.get(key(chatId, 'tasks'));
-  if (!raw) return { version: 1, next: 0, labels: {}, options: {} };
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== 1 || !parsed.labels || typeof parsed.labels !== 'object') throw new Error('bad tasks');
-    return { version: 1, next: Number(parsed.next) || 0, labels: parsed.labels, options: parsed.options && typeof parsed.options === 'object' ? parsed.options : {} };
-  } catch {
-    return { version: 1, next: 0, labels: {}, options: {} };
-  }
-}
+// ------------------------------------------------------------------------ //
+// Task labels + options (kv-minimization phase 1: D1, was user:<id>:tasks KV) //
+// ------------------------------------------------------------------------ //
+//
+// The legacy monolithic tasks document (labels + options + the `next`
+// high-water hint in one KV blob) is replaced by two D1 tables:
+//   task_labels(chat_id, label, job_id)      PRIMARY KEY (chat_id, label)
+//   task_options(chat_id, job_id, options_json) PRIMARY KEY (chat_id, job_id)
+// Caller-visible behavior is preserved exactly; only the backend changes.
 
 function nextLabel(index) {
   let n = index;
@@ -123,76 +121,96 @@ function nextLabel(index) {
 // Bug 2 fix: labels are no longer allocated from a monotonically increasing
 // counter that never shrinks. The lowest currently-unused label is chosen, so
 // a letter freed by a manual delete (or reclamation) is reused by the next new
-// task instead of labels only ever growing forward. tasks.next is kept as a
-// high-water hint, but correctness no longer depends on it.
-function lowestFreeLabelIndex(labels) {
-  const used = new Set(Object.keys(labels || {}));
+// task instead of labels only ever growing forward. The legacy `next`
+// high-water hint is gone with the KV blob — correctness never depended on
+// it, and D1 makes the used-set query cheap and exact.
+function lowestFreeLabelIndex(usedLabels) {
+  const used = usedLabels instanceof Set ? usedLabels : new Set(usedLabels || []);
   let index = 0;
   while (used.has(nextLabel(index))) index += 1;
   return index;
 }
 
 export async function ensureTaskLabel(env, chatId, jobId) {
-  const tasks = await getTasks(env, chatId);
-  for (const [label, knownJobId] of Object.entries(tasks.labels)) {
-    if (knownJobId === jobId) return label;
-  }
-  const index = lowestFreeLabelIndex(tasks.labels);
-  const label = nextLabel(index);
-  tasks.next = Math.max(Number(tasks.next) || 0, index + 1);
-  tasks.labels[label] = jobId;
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
+  const existing = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT label FROM task_labels WHERE chat_id = ? AND job_id = ?'
+  ).bind(Number(chatId), String(jobId)).first();
+  if (existing) return existing.label;
+  const { results: rows } = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT label FROM task_labels WHERE chat_id = ?'
+  ).bind(Number(chatId)).all();
+  const label = nextLabel(lowestFreeLabelIndex(new Set(rows.map((row) => row.label))));
+  await env.CLIPFORGE_BOT_D1.prepare(
+    'INSERT INTO task_labels (chat_id, label, job_id) VALUES (?, ?, ?)'
+  ).bind(Number(chatId), label, String(jobId)).run();
   return label;
 }
 
 export async function setTaskOptions(env, chatId, jobId, options) {
-  const tasks = await getTasks(env, chatId);
-  tasks.options[jobId] = { ...(tasks.options[jobId] || {}), ...options };
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
+  const current = await getTaskOptions(env, chatId, jobId);
+  const merged = { ...current, ...options };
+  await env.CLIPFORGE_BOT_D1.prepare(
+    `INSERT INTO task_options (chat_id, job_id, options_json) VALUES (?, ?, ?)
+     ON CONFLICT (chat_id, job_id) DO UPDATE SET options_json = excluded.options_json`
+  ).bind(Number(chatId), String(jobId), JSON.stringify(merged)).run();
 }
 
 export async function getTaskOptions(env, chatId, jobId) {
-  const tasks = await getTasks(env, chatId);
-  return tasks.options[jobId] || {};
+  const row = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT options_json FROM task_options WHERE chat_id = ? AND job_id = ?'
+  ).bind(Number(chatId), String(jobId)).first();
+  if (!row) return {};
+  try {
+    const parsed = JSON.parse(row.options_json);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 export async function getJobIdForLabel(env, chatId, label) {
-  const tasks = await getTasks(env, chatId);
-  return tasks.labels[String(label || '').toUpperCase()] || null;
+  const row = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT job_id FROM task_labels WHERE chat_id = ? AND label = ?'
+  ).bind(Number(chatId), String(label || '').toUpperCase()).first();
+  return row ? row.job_id : null;
 }
 
 export async function removeTask(env, chatId, label, jobId) {
-  const tasks = await getTasks(env, chatId);
   const normalizedLabel = String(label || '').toUpperCase();
-  if (!normalizedLabel || tasks.labels[normalizedLabel] !== jobId) return false;
-  delete tasks.labels[normalizedLabel];
-  delete tasks.options[jobId];
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
+  if (!normalizedLabel) return false;
+  const existing = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT job_id FROM task_labels WHERE chat_id = ? AND label = ?'
+  ).bind(Number(chatId), normalizedLabel).first();
+  if (!existing || existing.job_id !== jobId) return false;
+  await env.CLIPFORGE_BOT_D1.batch([
+    env.CLIPFORGE_BOT_D1.prepare('DELETE FROM task_labels WHERE chat_id = ? AND label = ?').bind(Number(chatId), normalizedLabel),
+    env.CLIPFORGE_BOT_D1.prepare('DELETE FROM task_options WHERE chat_id = ? AND job_id = ?').bind(Number(chatId), String(jobId)),
+  ]);
   return true;
 }
 
-// Feature 4 (unseen-task marker): the flag lives in tasks.options[jobId] —
-// keyed by JOB id, not by label — so a freed-and-reused letter never
-// inherits the previous occupant's seen state. New tasks default to unseen
-// (absence of seen:true); the marker clears on the operator's first open.
+// Feature 4 (unseen-task marker): the flag lives in task_options keyed by JOB
+// id, not by label — so a freed-and-reused letter never inherits the previous
+// occupant's seen state. New tasks default to unseen (absence of seen:true);
+// the marker clears on the operator's first open.
+// (kv-minimization phase 4 will remove this feature entirely; it is kept
+// intact here so phase 1 changes the storage backend and nothing else.)
 export async function markTaskSeen(env, chatId, jobId) {
-  const tasks = await getTasks(env, chatId);
-  const record = tasks.options[jobId];
-  if (record && record.seen === true) return false;
-  tasks.options[jobId] = { ...(record || {}), seen: true };
-  await env.CLIPFORGE_BOT_KV.put(key(chatId, 'tasks'), JSON.stringify(tasks));
+  if (await isTaskSeen(env, chatId, jobId)) return false;
+  await setTaskOptions(env, chatId, jobId, { seen: true });
   return true;
 }
 
 export async function isTaskSeen(env, chatId, jobId) {
-  const tasks = await getTasks(env, chatId);
-  const record = tasks.options[jobId];
+  const record = await getTaskOptions(env, chatId, jobId);
   return Boolean(record && record.seen === true);
 }
 
 export async function taskLabels(env, chatId) {
-  const tasks = await getTasks(env, chatId);
-  return Object.entries(tasks.labels).map(([label, jobId]) => ({ label, jobId }));
+  const { results: rows } = await env.CLIPFORGE_BOT_D1.prepare(
+    'SELECT label, job_id FROM task_labels WHERE chat_id = ?'
+  ).bind(Number(chatId)).all();
+  return rows.map((row) => ({ label: row.label, jobId: row.job_id }));
 }
 
 // bug-31: the last announced clone-update marker (docs/update_notice.json's

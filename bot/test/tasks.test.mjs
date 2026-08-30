@@ -5,14 +5,17 @@
 // active list as a plain "queued" task.
 //
 // Uses node's built-in test runner with a Map-backed CLIPFORGE_BOT_KV stub
-// and a stubbed global fetch standing in for the GitHub + Telegram HTTP
-// calls (the same pattern as relay.test.mjs).
+// (credentials still live in KV), a node:sqlite-backed CLIPFORGE_BOT_D1
+// harness (task labels/options moved to D1 in the kv-minimization
+// migration), and a stubbed global fetch standing in for the GitHub +
+// Telegram HTTP calls (the same pattern as relay.test.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadTaskList, showTasks } from '../src/commands/tasks.js';
 import { describeTaskState } from '../src/constants.js';
 import { ensureTaskLabel, putCredentials } from '../src/storage.js';
+import { makeD1 } from './helpers/d1.mjs';
 
 const CHAT = 4242;
 const TEST_KEY = Buffer.alloc(32, 7).toString('base64');
@@ -76,9 +79,16 @@ function installFetch({ files = {}, sent = [] } = {}) {
 }
 
 async function makeEnv(kv) {
-  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 'test-token' };
+  const env = { CLIPFORGE_BOT_KV: kv, CLIPFORGE_BOT_D1: makeD1(), KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 'test-token' };
   await putCredentials(env, CHAT, { githubPat: 'pat-not-real', repo: 'owner/repo', geminiKeys: [] });
   return env;
+}
+
+// Minimal env for tests that only exercise label/options storage: KV is not
+// touched by the D1-backed functions, but keeping the stub makes accidental
+// KV access fail loudly instead of silently passing.
+function makeStorageEnv() {
+  return { CLIPFORGE_BOT_D1: makeD1(), KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
 }
 
 test('describeTaskState renders awaiting_torrent_selection in plain language', () => {
@@ -145,8 +155,7 @@ test('showTasks renders an unreadable status as "status unavailable", not "queue
 
 test('a freed label is reused by the next new task (lowest free letter wins)', async () => {
   const { ensureTaskLabel, removeTask } = await import('../src/storage.js');
-  const kv = makeKv();
-  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
+  const env = makeStorageEnv();
   assert.equal(await ensureTaskLabel(env, CHAT, 'job-1'), 'A');
   assert.equal(await ensureTaskLabel(env, CHAT, 'job-2'), 'B');
   assert.equal(await ensureTaskLabel(env, CHAT, 'job-3'), 'C');
@@ -158,8 +167,7 @@ test('a freed label is reused by the next new task (lowest free letter wins)', a
 
 test('deleting the earliest label frees A for reuse', async () => {
   const { ensureTaskLabel, removeTask } = await import('../src/storage.js');
-  const kv = makeKv();
-  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
+  const env = makeStorageEnv();
   await ensureTaskLabel(env, CHAT, 'job-1');
   await ensureTaskLabel(env, CHAT, 'job-2');
   await removeTask(env, CHAT, 'A', 'job-1');
@@ -327,8 +335,7 @@ test('Feature 4: opening a task clears its 🆕 marker on the next /tasks render
 
 test('Feature 4: a label reused by a new task starts unseen (flag is per-job)', async () => {
   const { ensureTaskLabel, removeTask, setTaskOptions, isTaskSeen } = await import('../src/storage.js');
-  const kv = makeKv();
-  const env = { CLIPFORGE_BOT_KV: kv, KV_ENCRYPTION_KEY: TEST_KEY, TELEGRAM_BOT_TOKEN: 't' };
+  const env = makeStorageEnv();
   await ensureTaskLabel(env, CHAT, 'job-old-occupant');
   await setTaskOptions(env, CHAT, 'job-old-occupant', { seen: true });
   await removeTask(env, CHAT, 'A', 'job-old-occupant');
