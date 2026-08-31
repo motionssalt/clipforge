@@ -595,10 +595,52 @@ class MusicGainForRatioTests(unittest.TestCase):
         # past MUSIC_GAIN_MAX_DB (so the bed can't blast).
         gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-90.0)
         self.assertEqual(gain_db, render.MUSIC_GAIN_MAX_DB)
-        # A pathologically loud upload should be cut heavily but never past
-        # MUSIC_GAIN_MIN_DB (so the bed can't be silenced entirely).
-        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=30.0)
+        # A pathologically loud reading (tens of dB above digital full scale
+        # — physically impossible for real audio) should be cut heavily but
+        # never past MUSIC_GAIN_MIN_DB (so a corrupt measurement can't mute
+        # the bed by a physically meaningless amount).
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=80.0)
         self.assertEqual(gain_db, render.MUSIC_GAIN_MIN_DB)
+
+    def test_loud_music_minus8_lufs_reaches_exact_ratio(self) -> None:
+        # Regression anchor for the operator-reported failure: a loud
+        # commercial-style upload (-8 LUFS, well inside the -6..-14 LUFS
+        # range such masters measure at) under -16 LUFS vocals must land
+        # EXACTLY on the ratio target — never floored by MUSIC_GAIN_MIN_DB.
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-8.0)
+        target_lufs = -16.0 + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
+        self.assertAlmostEqual(-8.0 + gain_db, target_lufs, places=6)
+        self.assertGreater(gain_db, render.MUSIC_GAIN_MIN_DB)
+
+    def test_cut_beyond_old_floor_still_reaches_exact_ratio(self) -> None:
+        # The old -40 dB floor would clamp any required cut deeper than
+        # -40 dB, leaving the bed audibly above the ratio. The recalibrated
+        # floor must let a -45 dB-class requirement through unclamped. This
+        # test FAILS against the old bound (which returned exactly -40.0
+        # here) and PASSES with the recalibrated floor.
+        voice_lufs, music_lufs = -23.0, 12.0
+        required_db = (
+            voice_lufs
+            + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
+            - music_lufs
+        )
+        self.assertLess(required_db, -40.0)  # old floor would have clamped this
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=voice_lufs, music_lufs=music_lufs)
+        self.assertAlmostEqual(gain_db, required_db, places=6)
+        # Applying the returned gain lands the music on the exact target.
+        target_lufs = voice_lufs + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
+        self.assertAlmostEqual(music_lufs + gain_db, target_lufs, places=6)
+
+    def test_pathological_measurement_still_clamped_at_new_floor(self) -> None:
+        # The protection must still exist at the recalibrated bound: a
+        # measurement tens of dB above digital full scale (impossible for
+        # real audio) demands a cut beyond MUSIC_GAIN_MIN_DB and must be
+        # clamped rather than producing an absurd gain.
+        gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=80.0)
+        self.assertEqual(gain_db, render.MUSIC_GAIN_MIN_DB)
+        # -60 dB of cut still leaves a nonzero (if tiny) bed — the clamp
+        # prevents a meaningless full mute from a corrupt reading.
+        self.assertGreater(10.0 ** (gain_db / 20.0), 0.0)
 
     def test_gain_is_constant_regardless_of_voiceover_dynamics(self) -> None:
         # bug-59: the whole point of this function is that it returns ONE

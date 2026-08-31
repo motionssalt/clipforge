@@ -100,11 +100,34 @@ VOICEOVER_VOLUME = 1.00
 MUSIC_VOLUME = 0.33
 # Target perceived background:vocals ratio (0.3:1).
 MUSIC_TO_VOICE_LOUDNESS_RATIO = 0.30
-# Sanity clamps for the computed music gain (dB). Wide enough that realistic
-# uploads (even a very quiet file at ~-50 LUFS under -16 LUFS vocals) still
-# reach the exact 0.3:1 ratio; only pathological measurements are clamped so
-# the bed can neither blast nor vanish entirely.
-MUSIC_GAIN_MIN_DB = -40.0
+# Sanity clamps for the computed music gain (dB). The two bounds are NOT
+# symmetric, because cutting an over-loud bed and boosting an over-quiet one
+# are different failure modes with different risk profiles.
+#
+# Cut side (floor): voiceovers arrive normalized to -16 LUFS (voiceover.py
+# VOICE_CLARITY_TARGET_I_LUFS) and the 0.3:1 ratio offset is
+# 10*log10(0.3) ~= -10.46 dB, so the required cut is
+#     voice_lufs - 10.46 - music_lufs.
+# Loud commercial masters measure about -6 to -14 LUFS integrated (worst
+# realistic case: -23 LUFS vocals vs -6 LUFS music needs -29.5 dB), and NO
+# real signal can measure far above +3 LUFS -- a full-scale square wave is
+# the physical ceiling for an integrated reading. The worst physically
+# possible cut is therefore
+#     -23 LUFS vocals - 10.46 dB - (+3 LUFS music) ~= -36.5 dB.
+# A -60 dB floor gives >23 dB of headroom beyond even that impossible edge,
+# so no real upload -- however loud -- is ever clamped away from the exact
+# ratio (the previous -40 dB floor sat only ~3.5 dB below that ceiling, one
+# unusual measurement away from under-correcting a loud bed and leaving it
+# audibly above the ratio). A genuinely absurd demand (e.g. a corrupt file
+# misparsed as tens of dB above digital full scale) is still clamped rather
+# than attenuating the bed by a physically meaningless amount.
+#
+# Boost side (ceiling): boosting a quiet file amplifies its noise floor and
+# mastering artifacts by the same amount, so this side stays deliberately
+# conservative. +24 dB covers music down to ~-50 LUFS under -16 LUFS vocals;
+# a bed arriving quieter than that is left slightly below the target ratio
+# rather than lifting 25+ dB of hiss along with it.
+MUSIC_GAIN_MIN_DB = -60.0
 MUSIC_GAIN_MAX_DB = 24.0
 MIX_LIMITER_CEILING = 0.99
 
