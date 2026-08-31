@@ -34,7 +34,7 @@ import assert from 'node:assert/strict';
 
 import worker from '../src/index.js';
 import { makePayload, withFlowMarker } from '../src/flow.js';
-import { ensureTaskLabel, putCredentials, putAwaitingInput, getAwaitingInput } from '../src/storage.js';
+import { ensureTaskLabel, putCredentials, putAwaitingInput, getAwaitingInput, getPlanUploadBuffer } from '../src/storage.js';
 import { parseAndValidateProductionPlan } from '../src/plan.js';
 import { makeD1 } from './helpers/d1.mjs';
 
@@ -346,11 +346,11 @@ test('A: a SECOND bare continuation fragment keeps the full buffer (re-anchor on
     await drive(env, bareText(401, 402, PLAN_TEXT.slice(c1, c2)));
     const row = await getAwaitingInput(env, CHAT);
     assert.ok(row && row.op === 'uplb', 'the row must still be uplb after the second bare fragment');
-    assert.ok(row.payload.includes(':'), 'row payload shape');
-    // The row must carry BOTH fragments so far, or bubble 3 loses data.
-    const token = row.payload.split(':').slice(3).join(':');
-    const decoded = JSON.parse(Buffer.from(token.replaceAll('-', '+').replaceAll('_', '/'), 'base64').toString('utf8'));
-    assert.equal(decoded.f.length, 2, 'the re-anchored row must carry both accumulated fragments');
+    // paste-fix session 3: the marker/row payload is a constant-size routing
+    // token (cf:uplb:<label>); the accumulated buffer lives in D1.
+    const buffer = await getPlanUploadBuffer(env, CHAT);
+    assert.ok(buffer, 'the D1 plan_upload_buffer row must exist after two fragments');
+    assert.equal(buffer.fragments.length, 2, 'the D1 buffer must carry both accumulated fragments');
     await drive(env, bareText(402, 403, PLAN_TEXT.slice(c2)));
     const allText = textOf(sent);
     assert.ok(!/not valid/i.test(allText), 'three bare bubbles must assemble. Bot said:\n' + allText);

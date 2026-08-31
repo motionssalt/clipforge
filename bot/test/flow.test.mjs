@@ -132,20 +132,22 @@ test('upl payload carries just the task label and round-trips through parseFlowR
   assert.deepEqual(parseFlowReply(reply), { op: 'upl', args: [label], messageId: 501 });
 });
 
-test('uplb payload carries label + base64url buffer token; buffer round-trips', () => {
-  const label = 'C';
-  const buffer = { f: ['{"foo":', '"bar', '"}'], b: [10, 11, 12] };
-  const token = encodeToken(buffer);
-  assert.ok(!token.includes(':'), 'buffer token must never break the payload grammar');
-  const payload = makePayload('uplb', label, token);
-  assert.match(payload, /^cf:uplb:C:[A-Za-z0-9._~-]+$/);
-  const prompt = botMessageWithPayload(payload, 601);
-  const reply = { message_id: 602, text: 'next fragment', reply_to_message: prompt };
-  const parsed = parseFlowReply(reply);
+test('uplb marker is a constant-size routing token; the buffer lives in D1', () => {
+  // paste-fix session 3 (fix-json-reassembly-definitively): the marker must
+  // NEVER carry the fragment buffer — it sits inside a Telegram message text
+  // capped at 4096 UTF-16 units, and base64(fragments) for a multi-KB plan
+  // blew straight past that cap (the defect this initiative fixed).
+  const payload = makePayload('uplb', 'C');
+  assert.equal(payload, 'cf:uplb:C');
+  const parsed = parsePayload(payload);
   assert.equal(parsed.op, 'uplb');
-  assert.equal(parsed.args[0], label);
-  assert.deepEqual(decodeToken(parsed.args[1]), buffer);
-  assert.equal(parsed.messageId, 601, 'indicator message id survives so it can be edited/deleted');
+  assert.deepEqual(parsed.args, ['C']);
+  // A stale pre-deploy marker (label + old b64 buffer token) must still
+  // parse; the handler ignores the extra arg and reads the buffer from D1.
+  const legacy = makePayload('uplb', 'C', encodeToken({ f: ['{"a":1'], b: [42] }));
+  const legacyParsed = parsePayload(legacy);
+  assert.equal(legacyParsed.op, 'uplb');
+  assert.equal(legacyParsed.args[0], 'C');
 });
 
 test('uplb rejects garbage buffer tokens without corrupting the flow', () => {
