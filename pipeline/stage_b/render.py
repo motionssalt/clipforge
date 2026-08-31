@@ -74,6 +74,15 @@ DURATION_TOLERANCE_S = 0.25
 # at the configured TTS pace; 75% leaves normal synthesis variation headroom
 # while refusing a dramatic duration collapse.
 MIN_RECONCILED_TO_PLANNED_RATIO = 0.75
+# Declared-vs-actual source-duration agreement (scene-accuracy fix). The plan's
+# ``video_duration_seconds`` is the planner's whole reference for choosing every
+# cut's start/end seconds. If it disagrees with the source file's REAL probed
+# duration, the plan was written against a different cut of the footage (stale
+# plan, wrong/older re-fetched source, or a hallucinated duration) and every
+# cut would silently land on the WRONG scene while still passing per-cut range
+# validation. ffprobe container duration is accurate to well under 1s and the
+# declared value is a rounded integer, so a 2s tolerance absorbs only rounding.
+SOURCE_DURATION_MISMATCH_TOLERANCE_S = 2.0
 
 # ---------- Audio level policy ----------
 # Each TTS WAV is loudness-normalized by voiceover.py to a dialogue target
@@ -192,6 +201,51 @@ def final_wav_timing(path: str | Path) -> tuple[float, int]:
     if output_frames <= 0:
         raise common.StageBError(f"Voiceover WAV has no renderable samples: {path}")
     return output_frames / output_rate, output_frames
+
+
+# --------------------------------------------------------------------------- #
+# Declared-vs-actual source-duration sanity check (scene-accuracy fix)          #
+# --------------------------------------------------------------------------- #
+
+def assert_declared_duration_matches_source(plan: dict[str, Any], actual_seconds: float) -> None:
+    """Fail closed when the plan's declared source duration disagrees with the
+    probed real duration of the video about to be rendered.
+
+    Every cut's ``start_seconds``/``end_seconds`` was chosen against the
+    timeline of the source the PLANNER saw, whose length is recorded in the
+    plan as ``video_duration_seconds``. Stage A scenes/transcript and Stage B
+    extraction all share the original source's zero-based timeline, so if the
+    declared duration does not match the probed duration of the file actually
+    present at render time, the plan was written against a DIFFERENT cut of
+    the footage — a stale plan, a wrong/older re-fetched source (bug-69), or a
+    hallucinated duration — and each cut would silently extract the WRONG
+    scene while still passing per-cut range validation against both the
+    declared and the actual length. Refuse loudly instead of producing a
+    video whose footage does not match its narration.
+    """
+    declared = plan.get("video_duration_seconds")
+    try:
+        declared_seconds = float(declared)
+    except (TypeError, ValueError):
+        declared_seconds = 0.0
+    if declared_seconds <= 0:
+        raise common.StageBError(
+            "production.json has no usable video_duration_seconds to reconcile "
+            "against the probed source duration; cannot confirm the plan's cut "
+            "timestamps reference this source file."
+        )
+    delta = abs(declared_seconds - actual_seconds)
+    if delta > SOURCE_DURATION_MISMATCH_TOLERANCE_S:
+        raise common.StageBError(
+            f"production.json declares video_duration_seconds={declared_seconds:.0f}s "
+            f"but the actual source video probes at {actual_seconds:.2f}s "
+            f"(difference {delta:.2f}s exceeds the {SOURCE_DURATION_MISMATCH_TOLERANCE_S:.0f}s "
+            "tolerance). The plan's cut timestamps were written against a source "
+            "of a different length than the one about to be rendered, so every "
+            "cut would land on the wrong scene. Re-run Stage A against this exact "
+            "source and regenerate the plan, or confirm the correct source file is "
+            "being used."
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -616,6 +670,11 @@ def render_merged(
 
     src_duration = common.probe_duration_seconds(original_video)
     print(f"Source video duration: {src_duration:.2f}s", flush=True)
+
+    # Scene-accuracy guard: refuse to render a plan whose declared source
+    # duration does not match this file's real duration — otherwise every cut
+    # would silently extract the wrong scene (see assert_declared_duration_matches_source).
+    assert_declared_duration_matches_source(plan, src_duration)
 
     print("\nReconciling per-cut timing against voiceover durations...", flush=True)
     reconciled = reconcile_cuts(cuts, vo_durations, src_duration)
