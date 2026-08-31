@@ -3,7 +3,8 @@
   "job_id": "manual-1788219106225",
   "source": {
     "kind": "torrent_file",
-    "value": "path:jobs/manual-1788219106225/source.torrent"
+    "value": "path:jobs/manual-1788219106225/source.torrent",
+    "torrent_file_index": "24"
   },
   "options": {
     "whisper_model": "base",
@@ -26,5 +27,5 @@
     "ref": "audio-library/SUA CAVALONA (Hardstyle Remix) (Ultra Slowed).m4a",
     "source": "default"
   },
-  "saved_at_epoch": 1788219142
+  "saved_at_epoch": 1788219274
 }
