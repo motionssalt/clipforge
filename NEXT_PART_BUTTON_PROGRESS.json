@@ -1,0 +1,21 @@
+{
+  "initiative": "hide-next-part-button-when-dispatched",
+  "current_step": "design",
+  "design": {
+    "check_location": "caller_async_then_pass_in",
+    "check_location_detail": "showTask in bot/src/runtime.js computes nextPartExists via the same manualSeriesContinuation + nextPartJobId derivation startNextSeriesPart uses, only when the completed-manual-series button would otherwise be shown, then passes nextPartExists as a 4th argument to the still-synchronous taskKeyboard.",
+    "nextId_derivation_reused_from_startNextSeriesPart": "manualSeriesContinuation(status, request, plan) + nextPartJobId(continuation) from bot/src/series.js — identical to lines 1462/1468 in bot/src/index.js",
+    "call_sites_updated": ["bot/src/runtime.js showTask (only taskKeyboard caller in the whole repo — verified via grep across bot/ and repo)"]
+  },
+  "delete_flow_investigation": {
+    "checked": true,
+    "delete_removes_github_files": true,
+    "delete_removes_github_files_detail": "bot/src/github.js deleteClipforgeJob (~line 1249) enumerates the recursive tree, filters entries whose path starts with 'jobs/<jobId>/', and deletes each blob via deleteRepositoryFile — both jobs/<nextId>/status.json and jobs/<nextId>/stage-a-request.json are removed from the default branch, and the release+tag are deleted. Since taskKeyboard's new check reads live from GitHub each render, the button naturally reappears on the previous part's card after the next part is deleted; no cached flag to invalidate.",
+    "gap_found_and_fixed": false
+  },
+  "fix": { "status": "not_started", "commits": [] },
+  "tests_added": [],
+  "full_suite_passing": false,
+  "human_review_items": [],
+  "resume_from": { "file": "bot/src/runtime.js", "component": "taskKeyboard + showTask", "next_operation": "implement" }
+}
