@@ -1,6 +1,6 @@
 {
   "initiative": "paste-round2-deploy-forensics-and-redo",
-  "current_step": "step-3-final-redeploy-and-live-confirmation",
+  "current_step": "complete",
   "deploy_forensics": {
     "checked": true,
     "actually_live_commit": "92d1bd6 (main HEAD at session start); live Worker version b1435462-98bd-4f5a-a5d5-02927d3a50af, created 2026-08-31T02:07:29Z, bundle downloaded via Cloudflare API and confirmed to CONTAIN getPlanUploadBuffer/plan_upload_buffer code (session-2 fix code IS live)",
@@ -17,12 +17,12 @@
     "investigated": true,
     "found": true,
     "root_cause": "Production D1 was missing the plan_upload_buffer table: migration 0003 was shipped in f8f616c but never applied remotely (no migration step existed in deploy-bots.yml). The uplb handler's fail-silent .catch(() => null) on getPlanUploadBuffer converted the missing-table error into an empty buffer, reproducing the exact pre-fix symptom.",
-    "byte_level_proof": "Cloudflare D1 API query 'SELECT COUNT(*) FROM plan_upload_buffer' against the bound database returned success:false, code 7500, 'no such table: plan_upload_buffer: SQLITE_ERROR'. wrangler d1 migrations list --remote listed 0003 under 'Migrations to be applied'. Live Worker bundle (version b1435462) simultaneously contained getPlanUploadBuffer references — code/schema mismatch proven, not inferred.",
-    "fix_commits": []
+    "byte_level_proof": "Cloudflare D1 API query 'SELECT COUNT(*) FROM plan_upload_buffer' against the bound database returned success:false, code 7500, 'no such table: plan_upload_buffer: SQLITE_ERROR'. wrangler d1 migrations list --remote listed 0003 under 'Migrations to be applied'. Live Worker bundle (version b1435462) simultaneously contained getPlanUploadBuffer references — code/schema mismatch proven, not inferred. After the fix: d1_migrations lists 0001/0002/0003, sqlite_master lists plan_upload_buffer, row count 0 (no leftovers).",
+    "fix_commits": ["bca980c"]
   },
   "final_verification": {
-    "deploy_confirmed_live": false,
-    "deployment_id": "pending push of workflow fix; migration 0003 already applied remotely (verified: d1_migrations now lists 0001/0002/0003, table exists, 0 rows)",
+    "deploy_confirmed_live": true,
+    "deployment_id": "Worker version 8abf9cda-3e71-457d-97c0-a656a4a6276e (created 2026-08-31T02:27:37Z, 100% traffic, confirmed via wrangler deployments list); produced by deploy-bots.yml run 33350712822 (bca980c, conclusion success; new 'Apply Bot A D1 migrations' step succeeded in CI before the Worker deploy)",
     "operator_scenario_test_passing": true,
     "full_suite_passing": true
   },
@@ -31,8 +31,8 @@
     "Session-2 note: operator must re-paste once for any paste that was in-flight across this migration (buffer rows orphaned by the pre-migration failure are gone, per uplb case comment)."
   ],
   "resume_from": {
-    "file": ".github/workflows/deploy-bots.yml",
-    "component": "deploy-pipeline-migration-step",
-    "next_operation": "commit + push workflow migration step and this progress file; watch deploy-bots run; confirm new deployment active via wrangler deployments list; set final_verification.deploy_confirmed_live with real deployment id"
+    "file": "PASTE_ROUND2_PROGRESS.json",
+    "component": "initiative",
+    "next_operation": "none — complete. Root cause (missing production D1 migration 0003) fixed and verified live end-to-end; deploy pipeline now applies migrations on every deploy so the code/schema decoupling cannot recur."
   }
 }
