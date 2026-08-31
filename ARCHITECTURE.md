@@ -490,6 +490,53 @@ The canonical schema lives at `schemas/production_plan.schema.json` and the
 single validator is `pipeline/plan/schema.py` (exposed to the bot as
 `bot/src/plan.js`). **There is exactly one source of truth for these rules.**
 
+#### 7.3.1 The single reference timeline (scene-accuracy invariant)
+
+Every timestamp that flows through the pipeline — shot boundaries in
+`scene_index.json`, segment start/end in `transcript.json`, the seconds
+encoded into screenshot-composite filenames (`frame_NNNNNN.jpg` covers source
+seconds `[N, N+6)`, `event_MMMMMMMMM.jpg` is centered at `M/1000`s), and every
+cut's `start_seconds`/`end_seconds` in `production.json` — is expressed on
+**one and only one timeline: the original ingested source video's own
+zero-based presentation-time timeline** (`work/original.<ext>`, the file
+recorded in `jobs/<job_id>/ingest.json` as `original_path`).
+
+Producers and consumers of that timeline, and why they agree:
+
+- **Scene detection** (`pipeline/stage_a/scenes.py`) runs ffmpeg's
+  `select='gt(scene,T)',showinfo` directly on the original and parses
+  `pts_time` — the container's own timestamps, no re-encode, no offset.
+- **Transcription** (`pipeline/stage_a/transcribe.py`) runs on
+  `work/audio.wav`, extracted from the SAME original with
+  `ffmpeg -i <original> -vn -ac 1 -ar 16000` (no `-ss`/`-t`), so the WAV is
+  1:1 time-locked to the source and Whisper's segment times are source times.
+- **Screenshot composites** are extracted from the same original; their
+  filenames encode source seconds and `pipeline/plan/automatic.py`'s
+  `composite_window_seconds()` decodes them back with no offset.
+- **Stage B extraction** (`pipeline/stage_b/render.py`) cuts with per-cut
+  input-side `-ss <start> -to <end> -i <original>` against the same original
+  re-obtained for the render. `setpts` retiming (speed reconciliation against
+  the voiceover) changes ONLY playback speed of the selected footage — it
+  never moves which source frames a cut selects.
+
+**The one value that can silently break this contract is the plan's declared
+`video_duration_seconds`.** It records the length of the source the planner
+saw; every cut's seconds are only meaningful if the file Stage B renders is
+that same source. The schema validator checks each cut's `end_seconds ≤
+video_duration_seconds`, and Stage B separately checks each cut against the
+REAL probed duration — but a plan written against a *different-length* source
+(stale plan, wrong/older re-fetched source via the bug-69 path, or a
+hallucinated duration) satisfies both checks while pointing every cut at the
+wrong scene.
+
+To make that impossible, Stage B
+(`render.assert_declared_duration_matches_source`) refuses to render when the
+declared `video_duration_seconds` and the source file's probed duration differ
+by more than **2 s** (a tolerance that absorbs only integer rounding of the
+ffprobe value), failing with an error that names both durations. A render that
+would produce footage mismatched to its narration is never produced silently.
+Regression coverage: `pipeline/tests/test_scene_accuracy.py`.
+
 ### 7.4 Stage B output
 
 Stage B appends to the same release:
