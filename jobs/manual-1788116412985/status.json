@@ -10,9 +10,9 @@
     "is_final": false
   },
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
   "created_at_epoch": 1788139276,
-  "updated_at_epoch": 1788143751,
+  "updated_at_epoch": 1788143891,
   "expires_at_epoch": 1788182476,
   "release_tag": "clipforge-manual-1788116412985",
   "release_url": "",
@@ -20,7 +20,7 @@
   "run": {
     "workflow_run_id": 33351163635,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33351163635",
-    "code_ref": "751cd62183831c66213cee57af68a25152b4381b"
+    "code_ref": "b3ac27436051516bafdf74b8ca748d31c11f9c3b"
   },
   "publishing": {
     "status": "not_requested",
