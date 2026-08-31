@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1788139276,
-  "updated_at_epoch": 1788145658,
+  "updated_at_epoch": 1788145690,
   "expires_at_epoch": 1788182476,
   "release_tag": "clipforge-manual-1788116412985",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788116412985",
@@ -26,8 +26,68 @@
     "code_ref": "496b177d7d1020e0b08e2c83f39d47ffd925ba39"
   },
   "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6a94f01596ef0516f56c951c",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-01T02:21:36.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-manual-1788116412985-ad35121d-8d9d-40ec-99ff-1f22a65f1649-youtube"
+      },
+      {
+        "post_id": "6a94f01a96ef0516f56c96fc",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-01T02:21:36.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "instagram",
+            "accountId": {
+              "_id": "6a91584577555aae01490c7a",
+              "platform": "instagram",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "ChimeraVFX",
+              "isActive": true,
+              "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMyIn0%3D&_nc_ohc=dioRn8hDIFwQ7kNvwFvz9ht&_nc_oc=Adp6dse0xsf3L6UZIEjxdyyHFIK7i0JvhZxIPZPPzxM58dAbVYINbw0dXHmJay1if9E&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=Ic0j9d2gXCuf_8PvNy5d_Q&_nc_tpa=Q5bMBQKK7ftHlELoK5K1dCYArPfzqqqQTDERmOmf4k4yB6G_F7v8ysa2rkJmfhTkjiFUbeeaWIu-05Ga6w&oh=00_AQLCDFhPld7nkSYWbILHl2r25ReZbC-tnIPyeDPbop9qQg&oe=6A99992F",
+              "username": "chimeravfx"
+            },
+            "status": "pending"
+          },
+          {
+            "platform": "instagram",
+            "accountId": {
+              "_id": "6a91584577555aae01490c7a",
+              "platform": "instagram",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "ChimeraVFX",
+              "isActive": true,
+              "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMyIn0%3D&_nc_ohc=dioRn8hDIFwQ7kNvwFvz9ht&_nc_oc=Adp6dse0xsf3L6UZIEjxdyyHFIK7i0JvhZxIPZPPzxM58dAbVYINbw0dXHmJay1if9E&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=Ic0j9d2gXCuf_8PvNy5d_Q&_nc_tpa=Q5bMBQKK7ftHlELoK5K1dCYArPfzqqqQTDERmOmf4k4yB6G_F7v8ysa2rkJmfhTkjiFUbeeaWIu-05Ga6w&oh=00_AQLCDFhPld7nkSYWbILHl2r25ReZbC-tnIPyeDPbop9qQg&oe=6A99992F",
+              "username": "chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "instagram",
+        "request_id": "clipforge-auto-manual-1788116412985-ad35121d-8d9d-40ec-99ff-1f22a65f1649-instagram"
+      }
+    ],
+    "idempotency_key": "clipforge-auto-manual-1788116412985-ad35121d-8d9d-40ec-99ff-1f22a65f1649"
   }
 }
