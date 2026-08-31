@@ -9,18 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33347224839",
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
   "created_at_epoch": 1788139276,
-  "updated_at_epoch": 1788139371,
+  "updated_at_epoch": 1788141806,
   "expires_at_epoch": 1788182476,
   "release_tag": "clipforge-manual-1788116412985",
   "release_url": "",
   "assets": {},
   "run": {
-    "workflow_run_id": 33347224839,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33347224839",
-    "code_ref": "3fef19e94a86f5dc488e25bf76cc38df31c62c1f"
+    "workflow_run_id": 33349459138,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33349459138",
+    "code_ref": "dc65311a15d689b83adad252fc87970d8f4c468a"
   },
   "publishing": {
     "status": "not_requested",
