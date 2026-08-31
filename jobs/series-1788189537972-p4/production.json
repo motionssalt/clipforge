@@ -1,0 +1,144 @@
+{
+  "video_duration_seconds": 1377,
+  "title": "Light Enters Solitary Confinement Part 4",
+  "hashtags": [
+    "#deathnote",
+    "#lightyagami",
+    "#llawliet",
+    "#anime",
+    "#kira",
+    "#deathnoteedit"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "kira",
+    "l lawliet",
+    "death note part 4",
+    "death note clip",
+    "death note anime",
+    "light in confinement",
+    "death note episode",
+    "ryuk",
+    "rem",
+    "misa amane",
+    "death note series",
+    "anime clips",
+    "psychological thriller"
+  ],
+  "series": {
+    "series_id": "series-1788189537972",
+    "part": 4,
+    "start_seconds": 1285,
+    "end_seconds": 1377,
+    "is_final": true,
+    "summary": "Light voluntarily enters solitary confinement under L's surveillance to execute his desperate master plan to clear his name and save Misa."
+  },
+  "cuts": [
+    {
+      "start_seconds": 1285,
+      "end_seconds": 1305,
+      "voiceover_text": "Light gazes across the dark city skyline with absolute resolve. He has reached the point of no return. Rem gave him an impossible ultimatum to save Misa or forfeit his own life. Instead of running away, Light chooses to turn L's suspicions into his greatest weapon. His plan requires stepping directly into the lion's den. He is determined, cold, and utterly fearless.",
+      "keywords": [
+        {
+          "word": "resolve",
+          "color": "#E53935"
+        },
+        {
+          "word": "ultimatum",
+          "color": "#FB8C00"
+        },
+        {
+          "word": "weapon",
+          "color": "#1E88E5"
+        },
+        {
+          "word": "fearless",
+          "color": "#43A047"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1305,
+      "end_seconds": 1329,
+      "voiceover_text": "Ryuk watches in eerie amusement as the net tightens around them all. Misa remains trapped in solitary confinement with her memories wiped clean by Rem. Across town, L sits crouched in total darkness, anticipating Kira's next psychological move. Light knows that surrendering into custody means putting his life on the line. If his calculated gamble fails, he will never walk free again. The stakes are absolute. Yet he presses forward without hesitation, ready to execute his counter-attack.",
+      "keywords": [
+        {
+          "word": "amusement",
+          "color": "#7E57C2"
+        },
+        {
+          "word": "confinement",
+          "color": "#D32F2F"
+        },
+        {
+          "word": "darkness",
+          "color": "#424242"
+        },
+        {
+          "word": "gamble",
+          "color": "#F4511E"
+        },
+        {
+          "word": "counter-attack",
+          "color": "#1976D2"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1329,
+      "end_seconds": 1351,
+      "voiceover_text": "Light takes his final deliberate steps toward the investigation headquarters. He is fully prepared to sacrifice his own memories of the Death Note to deceive L completely. Every single stage of his trap is already locked in place. The pressure is suffocating, but his composure never wavers. He embraces this terrifying risk with supreme confidence. He knows that ultimate victory demands total sacrifice. There is no turning back now.",
+      "keywords": [
+        {
+          "word": "headquarters",
+          "color": "#1976D2"
+        },
+        {
+          "word": "sacrifice",
+          "color": "#E53935"
+        },
+        {
+          "word": "pressure",
+          "color": "#F57C00"
+        },
+        {
+          "word": "confidence",
+          "color": "#388E3C"
+        },
+        {
+          "word": "victory",
+          "color": "#FB8C00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1351,
+      "end_seconds": 1377,
+      "voiceover_text": "The heavy reinforced doors slam shut with finality. Light Yagami is locked inside solitary confinement. High-definition security cameras monitor every slight twitch as L observes the monitor bank with unwavering intensity. His father watches the surveillance screens in agonizing despair, torn between duty and love. Inside the dim cell, Light glares straight into the lens with chilling defiance. Every move has been calculated down to the second. The ultimate battle of wits has officially begun.",
+      "keywords": [
+        {
+          "word": "confinement",
+          "color": "#C62828"
+        },
+        {
+          "word": "intensity",
+          "color": "#0288D1"
+        },
+        {
+          "word": "despair",
+          "color": "#5D4037"
+        },
+        {
+          "word": "defiance",
+          "color": "#2E7D32"
+        },
+        {
+          "word": "wits",
+          "color": "#FBC02D"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
