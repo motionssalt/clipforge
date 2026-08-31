@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "manual-1788219106225",
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788219142023",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "state": "queued",
+  "message": "Stage A dispatched — ingest will begin shortly.",
+  "created_at_epoch": 1788219143,
+  "updated_at_epoch": 1788219143,
+  "expires_at_epoch": 1788262343,
+  "release_tag": "clipforge-manual-1788219106225",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788219106225",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  }
+}
