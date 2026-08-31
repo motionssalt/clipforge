@@ -1,6 +1,6 @@
 {
   "initiative": "fix-json-reassembly-definitively",
-  "current_step": "final_verification_and_deploy",
+  "current_step": "complete",
   "deploy_verification": {
     "checked": true,
     "was_1bfb0eb_live_at_operator_test_time": true,
@@ -26,14 +26,16 @@
   "fix": {
     "status": "complete",
     "what_was_actually_wrong": "Buffer stored in the Telegram-message-carried uplb marker (base64 of all fragments) \u2014 exceeded the 4096-char message cap on multi-KB plans, breaking the awaiting_input re-anchor. FIX: new D1 table plan_upload_buffer (migration 0003) + storage helpers put/get/deletePlanUploadBuffer; keepPlanPasteAlive persists the buffer to D1 first and uses a constant-size marker cf:uplb:<label>:<fragCount>:<millis> (tiny but changing per fragment \u2014 a constant payload was eaten by deleteAwaitingInputIfUnconsumed, caught by ground-truth A2/B3); uplb case reads the buffer from D1 (legacy b64 arg tolerated/ignored); buffer deleted on success, validation failure, and size overflow. Byte-perfect suite (bot/test/json-reassembly-byteproof.test.mjs) kept as a permanent regression suite.",
-    "commits": []
+    "commits": [
+      "f8f616c"
+    ]
   },
   "verification": {
     "byte_perfect_suite_passing": true,
     "larger_plan_tested": true,
     "full_suite_passing": true,
-    "deployed_and_confirmed_live": false,
-    "evidence": "npm test: 210/210 pass (was 202; +8 byteproof tests). byteproof 8/8, plan-paste-ground-truth 9/9."
+    "deployed_and_confirmed_live": true,
+    "evidence": "npm test 210/210 pass (byteproof 8/8 byte-identical commits, plan-paste-ground-truth 9/9). CI: GitHub Actions deploy-bots.yml run 33347025302 for head_sha f8f616c completed conclusion=success. Cloudflare: new 100% deployment 4b7fa618-21a4-4d7b-b239-77adb45ebbd6, created 2026-08-31T01:15:38Z, source=wrangler \u2014 the fix IS live on clipforge-bot-a."
   },
   "human_review_items": [
     "A paste in-flight across THIS deploy loses its D1 buffer (table is new) \u2014 the operator simply re-pastes; one-time edge, documented in code."
@@ -41,6 +43,6 @@
   "resume_from": {
     "file": "",
     "component": "",
-    "next_operation": "confirm deploy live"
+    "next_operation": "none \u2014 initiative complete: root cause proven by byte-level diagnostic, fix deployed and confirmed live"
   }
 }
