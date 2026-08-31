@@ -92,6 +92,25 @@ jobs:
       - name: Run bot test suite
         run: npm test
 
+      - name: Apply Bot A D1 migrations
+        # paste-round2 (deploy-forensics): session 3's fix-json-reassembly
+        # deploy shipped code that reads D1 table plan_upload_buffer, but
+        # nothing in CI ever ran `wrangler d1 migrations apply` — 0003 sat
+        # unapplied in production, the read failed with 'no such table',
+        # the uplb case's .catch(() => null) swallowed it, and the operator
+        # got the SAME 'Unexpected token' error as pre-fix. Deploys and
+        # migrations now ship together: a new bot/migrations/*.sql file
+        # cannot reach prod code without its schema. Runs BEFORE the
+        # Worker deploy so the schema lands first; idempotent (applied
+        # migrations are skipped). bug-63 central-only, same rationale.
+        if: github.repository == 'motionssalt/clipforge'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: bot
+          command: d1 migrations apply clipforge-bot-state --remote --config wrangler.bot-a.jsonc
+
       - name: Deploy Bot A Worker
         # bug-63: central-only — Shadow Clones share the central Bot A/B
         # deployment (§10) and have no Cloudflare credentials. Skipped on

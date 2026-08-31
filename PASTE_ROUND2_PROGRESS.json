@@ -1,0 +1,38 @@
+{
+  "initiative": "paste-round2-deploy-forensics-and-redo",
+  "current_step": "step-3-final-redeploy-and-live-confirmation",
+  "deploy_forensics": {
+    "checked": true,
+    "actually_live_commit": "92d1bd6 (main HEAD at session start); live Worker version b1435462-98bd-4f5a-a5d5-02927d3a50af, created 2026-08-31T02:07:29Z, bundle downloaded via Cloudflare API and confirmed to CONTAIN getPlanUploadBuffer/plan_upload_buffer code (session-2 fix code IS live)",
+    "session2_fix_was_live_at_operator_test": true,
+    "deploy_failures_found_after_session2": [
+      "33347224839 Stage B failure d02e9275 (2026-08-31T01:19:14Z) — unrelated pipeline run, not a bot deploy",
+      "33349459138 Stage B failure dc65311a (2026-08-31T02:03:17Z) — unrelated pipeline run, not a bot deploy",
+      "NOTE: 9 unexplained 'Source: Unknown (deployment)' Worker deployments 01:19:42Z-02:07:29Z with no matching deploy-bots.yml run; bundle proven to contain session-2 code, so these did NOT cause staleness"
+    ],
+    "evidence": "ROOT CAUSE PROVEN WITH HARD EVIDENCE — hypothesis (Y). (1) Code: run 33347025302 (f8f616c) deployed successfully; 9 later deployments exist, latest version b1435462 at 02:07:29Z; downloaded live bundle contains the session-2 fix code. (2) Schema: production D1 clipforge-bot-state (720de60e-1a08-492a-9ce6-64cb9534098d) returned 'no such table: plan_upload_buffer: SQLITE_ERROR' (code 7500) on direct query; wrangler d1 migrations list --remote showed 0002_awaiting_input.sql and 0003_plan_upload_buffer.sql as 'Migrations to be applied' — migration 0003 was NEVER applied to production. (3) Mechanism: uplb case (bot/src/index.js:475) does getPlanUploadBuffer(env, chatId).catch(() => null) — the missing-table exception was swallowed, fragments=[] was passed to handlePlanUploadMessage, and the operator's trailing fragment was parsed ALONE -> byte-identical 'Unexpected token ]' error despite the code fix being live. RECURRING PATTERN BUG: deploy-bots.yml never ran 'wrangler d1 migrations apply' — code deploys and schema migrations were decoupled, so any schema-dependent fix could land without its table."
+  },
+  "outcome": "second_bug_found_and_fixed",
+  "second_bug": {
+    "investigated": true,
+    "found": true,
+    "root_cause": "Production D1 was missing the plan_upload_buffer table: migration 0003 was shipped in f8f616c but never applied remotely (no migration step existed in deploy-bots.yml). The uplb handler's fail-silent .catch(() => null) on getPlanUploadBuffer converted the missing-table error into an empty buffer, reproducing the exact pre-fix symptom.",
+    "byte_level_proof": "Cloudflare D1 API query 'SELECT COUNT(*) FROM plan_upload_buffer' against the bound database returned success:false, code 7500, 'no such table: plan_upload_buffer: SQLITE_ERROR'. wrangler d1 migrations list --remote listed 0003 under 'Migrations to be applied'. Live Worker bundle (version b1435462) simultaneously contained getPlanUploadBuffer references — code/schema mismatch proven, not inferred.",
+    "fix_commits": []
+  },
+  "final_verification": {
+    "deploy_confirmed_live": false,
+    "deployment_id": "pending push of workflow fix; migration 0003 already applied remotely (verified: d1_migrations now lists 0001/0002/0003, table exists, 0 rows)",
+    "operator_scenario_test_passing": true,
+    "full_suite_passing": true
+  },
+  "human_review_items": [
+    "9 'Source: Unknown' Worker deployments 2026-08-31T01:19:42Z-02:07:29Z have no matching Actions run — proven benign (bundle contains fix code) but their origin is unidentified; worth the operator identifying what tooling issued them.",
+    "Session-2 note: operator must re-paste once for any paste that was in-flight across this migration (buffer rows orphaned by the pre-migration failure are gone, per uplb case comment)."
+  ],
+  "resume_from": {
+    "file": ".github/workflows/deploy-bots.yml",
+    "component": "deploy-pipeline-migration-step",
+    "next_operation": "commit + push workflow migration step and this progress file; watch deploy-bots run; confirm new deployment active via wrangler deployments list; set final_verification.deploy_confirmed_live with real deployment id"
+  }
+}
