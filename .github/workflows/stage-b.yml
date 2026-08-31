@@ -316,6 +316,13 @@ jobs:
           # as "source-omitted: true"). Record whether it was found and let the
           # download step fall through to a deterministic re-fetch from the
           # original source reference saved in stage-a-request.json.
+          if [ -z "$orig_id" ] || [ -z "$orig_name" ]; then
+            # Human-readable diagnostic only — must go to the step's stdout,
+            # NOT into $GITHUB_OUTPUT: GitHub's output file format only
+            # accepts key=value lines, and a bare sentence in it corrupts the
+            # file ("Invalid format 'Attempt N: ...'"), failing the whole step.
+            echo "Attempt ${attempt}: no source asset in release — will re-fetch from the saved source reference (bug-69 omitted-source path)."
+          fi
           {
             echo "release_url=${release_url}"
             echo "orig_name=${orig_name}"
@@ -323,7 +330,6 @@ jobs:
             if [ -n "$orig_id" ] && [ -n "$orig_name" ]; then
               echo "source_found=true"
             else
-              echo "Attempt ${attempt}: no source asset in release — will re-fetch from the saved source reference (bug-69 omitted-source path)."
               echo "source_found=false"
             fi
           } >> "$GITHUB_OUTPUT"
