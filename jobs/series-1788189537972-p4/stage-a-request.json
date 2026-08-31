@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "series-1788189537972-p4",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1788189509845/source.torrent",
+    "torrent_file_index": "15"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 120,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788189537972",
+    "source_job_id": "manual-1788189509845",
+    "part": 4,
+    "start_seconds": 1285,
+    "context": "Prior events (Part 1): L sets an ironclad trap against Light before Misa identifies L's true name with Shinigami eyes, only for L to steal Misa's phone and arrest her as the Second Kira.\nPrior events (Part 2): L subjects Misa to brutal confinement to extract Kira's identity, driving Rem to wipe Misa's memories and threaten Light with death if he fails to save her.\nPrior events (Part 3): Light turns himself into L and demands solitary confinement to execute a daring counter-gamble after Rem threatens his life."
+  },
+  "music": {
+    "ref": "audio-library/SUA CAVALONA (Hardstyle Remix) (Ultra Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788214685
+}
