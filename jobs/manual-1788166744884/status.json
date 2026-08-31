@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1788176271,
-  "updated_at_epoch": 1788177407,
+  "updated_at_epoch": 1788183329,
   "expires_at_epoch": 1788219471,
   "release_tag": "clipforge-manual-1788166744884",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788166744884",
@@ -26,12 +26,12 @@
     "code_ref": "3eb3c03e424fb00ca2ced27591962e3e3a15cdde"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "publishing",
     "posts": [
       {
-        "post_id": "6a956bfcf1d81d8154573e1b",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-01T14:21:36.000Z",
+        "post_id": "6a9582dbc1bc2430dfa782e5",
+        "status": "published",
+        "scheduled_for": "2026-08-31T13:34:15.814Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -45,16 +45,18 @@
               "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
               "username": "chimera_vfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "dsMxKpE3uEA",
+            "platformPostUrl": "https://www.youtube.com/watch?v=dsMxKpE3uEA"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-manual-1788166744884-904812b4-4455-42e0-afc4-1f9bea9de495-youtube"
+        "request_id": "clipforge-manual-1788166744884-mtha4rsz-youtube"
       },
       {
-        "post_id": "6a956bfff1d81d8154573ead",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-01T14:21:36.000Z",
+        "post_id": "6a9582e4c1bc2430dfa78504",
+        "status": "publishing",
+        "scheduled_for": "2026-08-31T13:34:25.502Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -68,7 +70,7 @@
               "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=Hxi-udQYF_0Q7kNvwG1ucaz&_nc_oc=AdoS74BQF56edFu3Ui24DGwUevQMecPd_qtuJi97yKUhbMLddJOYRM-aYZVkE01PjGk&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=YP8-_yn3ReDi7kyqiWrlCA&_nc_tpa=Q5bMBQJb1PiKYKESqzmayGEBirgb4GaiCAuecQVbGiZ_-Z65DDSUs5ZP8C2H5lkzqIR0PYwxJJ5SPrEuqA&oh=00_AQIVnw6BO5wf29LWYjxLjZbv7DQgANSOCH5r-w6vNqqhDw&oe=6A9AEAAF",
               "username": "chimeravfx"
             },
-            "status": "pending"
+            "status": "processing"
           },
           {
             "platform": "instagram",
@@ -81,13 +83,13 @@
               "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=Hxi-udQYF_0Q7kNvwG1ucaz&_nc_oc=AdoS74BQF56edFu3Ui24DGwUevQMecPd_qtuJi97yKUhbMLddJOYRM-aYZVkE01PjGk&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=YP8-_yn3ReDi7kyqiWrlCA&_nc_tpa=Q5bMBQJb1PiKYKESqzmayGEBirgb4GaiCAuecQVbGiZ_-Z65DDSUs5ZP8C2H5lkzqIR0PYwxJJ5SPrEuqA&oh=00_AQIVnw6BO5wf29LWYjxLjZbv7DQgANSOCH5r-w6vNqqhDw&oe=6A9AEAAF",
               "username": "chimeravfx"
             },
-            "status": "pending"
+            "status": "processing"
           }
         ],
         "platform": "instagram",
-        "request_id": "clipforge-auto-manual-1788166744884-904812b4-4455-42e0-afc4-1f9bea9de495-instagram"
+        "request_id": "clipforge-manual-1788166744884-mtha4rsz-instagram"
       }
     ],
-    "idempotency_key": "clipforge-auto-manual-1788166744884-904812b4-4455-42e0-afc4-1f9bea9de495"
+    "idempotency_key": "clipforge-manual-1788166744884-mtha4rsz"
   }
 }
