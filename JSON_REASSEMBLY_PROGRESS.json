@@ -1,0 +1,32 @@
+{
+  "initiative": "fix-json-reassembly-definitively",
+  "current_step": "diagnostics",
+  "deploy_verification": {
+    "checked": true,
+    "was_1bfb0eb_live_at_operator_test_time": true,
+    "evidence": "GitHub Actions: run 33334971187 for head_sha 1bfb0eb (Deploy Bots) completed 2026-08-30T20:55:15Z with conclusion=success (both wrangler deploy steps gated to central repo run on success). Cloudflare API GET /accounts/<acct>/workers/scripts/clipforge-bot-a/deployments: current 100% deployment id ffeb3c5e-a8b9-4b0e-ba65-d4647accae29, version 8f4f6b5f-86b0-4eac-a086-b1e186934161, created_on 2026-08-30T21:00:07Z, source=wrangler; prior deployment fbd431e2 at 20:56:08Z (the 1bfb0eb run). So 1bfb0eb code WAS live from 20:56:08Z onward \u2014 the operator post-deploy failure was against the fixed code; the defect is real in the code, not a stale deploy. Fetching live worker source via /content was refused for this token type (error 10405, method not allowed for this authentication scheme) \u2014 deploy history + successful workflow run are the evidence instead."
+  },
+  "diagnostic_evidence": {
+    "byte_perfect_test_written": false,
+    "scenarios_tested": [],
+    "failing_scenarios": [],
+    "root_cause_confirmed": ""
+  },
+  "fix": {
+    "status": "not_started",
+    "what_was_actually_wrong": "",
+    "commits": []
+  },
+  "verification": {
+    "byte_perfect_suite_passing": false,
+    "larger_plan_tested": false,
+    "full_suite_passing": false,
+    "deployed_and_confirmed_live": false
+  },
+  "human_review_items": [],
+  "resume_from": {
+    "file": "bot/test/json-reassembly-byteproof.test.mjs",
+    "component": "diagnostic suite",
+    "next_operation": "write byte-perfect reassembly suite incl. operator-sized plan and marker-size probes"
+  }
+}
