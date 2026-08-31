@@ -162,16 +162,12 @@ def refetch_source(
 
         elif kind in ("magnet", "torrent_file"):
             selected_raw = source.get("torrent_file_index", "")
-            if selected_raw in ("", None):
-                raise _fail(
-                    "the saved torrent source has no torrent_file_index — the "
-                    "operator's file selection was not persisted, so an automated "
-                    "re-fetch cannot pick a file without re-prompting."
-                )
-            try:
-                selected_index = int(selected_raw)
-            except (TypeError, ValueError):
-                raise _fail(f"invalid saved torrent_file_index '{selected_raw}'.")
+            selected_index: int | None = None
+            if selected_raw not in ("", None):
+                try:
+                    selected_index = int(selected_raw)
+                except (TypeError, ValueError):
+                    raise _fail(f"invalid saved torrent_file_index '{selected_raw}'.")
 
             if kind == "magnet":
                 info = ingest.inspect_magnet(str(value))
@@ -182,7 +178,33 @@ def refetch_source(
             else:
                 torrent_path = _resolve_torrent_manifest(str(value), owner_job, root_path)
 
+            # Single inspection, reused both for the candidate-count check
+            # below and for the actual fetch — never inspect twice.
             metadata = ingest.inspect_torrent(torrent_path)
+
+            if selected_index is None:
+                # Mirror ingest.py's fallback: an empty torrent_file_index is
+                # EXPECTED when the torrent had exactly one video file — the
+                # original ingest auto-selected it without showing a picker,
+                # so there was nothing to persist. Only GENUINE multi-file
+                # ambiguity is fatal for an automated re-fetch.
+                candidates = metadata.get("video_candidates", [])
+                if not candidates:
+                    raise _fail(
+                        "the torrent contains no supported video candidates — "
+                        "there is nothing to re-fetch."
+                    )
+                if len(candidates) == 1:
+                    selected_index = candidates[0]["index"]
+                else:
+                    raise _fail(
+                        f"the saved torrent source has no torrent_file_index and "
+                        f"the torrent has {len(candidates)} video candidates — an "
+                        f"automated re-fetch cannot pick one file among several "
+                        f"without re-prompting. Re-ingest the source in Stage A "
+                        f"and select a file."
+                    )
+
             chosen = ingest.select_torrent_video(metadata, selected_index)
             torrent_dir = work / "torrent"
             ingest._download_torrent_payload(torrent_path, torrent_dir, chosen["index"])
