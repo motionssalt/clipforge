@@ -4,13 +4,13 @@
  * error mapping, the credentials gate, and the §8.5 task status screen.
  */
 
-import { GitHubError, readStatus, readProductionPlan } from './github.js';
+import { GitHubError, readStatus, readProductionPlan, readStageARequest } from './github.js';
 import { getCredentials, getJobIdForLabel } from './storage.js';
 import { isTerminal } from './jobs.js';
 import { buttons } from './telegram.js';
 import { escapeHtml, redact, describeTaskState } from './constants.js';
 import { ONBOARDING_TEXT, onboardingKeyboard, renderInteractiveView } from './views.js';
-import { extractPlanSeries } from './series.js';
+import { extractPlanSeries, manualSeriesContinuation, nextPartJobId } from './series.js';
 import { progressLine } from './progress.js';
 // bug-60: canonical per-state glyph for the task detail header.
 import { statusEmoji } from './anim.js';
@@ -40,8 +40,57 @@ export async function requireCredentials(env, chatId, messageId = null) {
   return credentials;
 }
 
+/**
+ * next-part-button-hide: shared derivation of the next-part job id that
+ * `startNextSeriesPart` (bot/src/index.js) uses when it fires a series
+ * continuation. Both the reactive dispatch guard there AND the proactive
+ * render-time guard here read the same nextId — if this ever diverges the
+ * button gate would silently disagree with the dispatch guard about which
+ * job counts as "the next part." Returns null when the current job is not
+ * a continuable manual series part.
+ */
+export function deriveNextPartId(status, request, plan) {
+  const continuation = manualSeriesContinuation(status, request, plan);
+  if (!continuation) return null;
+  try {
+    return nextPartJobId(continuation);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * next-part-button-hide: async existence probe called from render sites
+ * (currently only showTask). Runs ONLY when the completed-manual-series
+ * button would otherwise be shown, so tasks that never reach that branch
+ * pay no extra GitHub round-trips. Mirrors the reactive guard inside
+ * `startNextSeriesPart` (bot/src/index.js ~L1470-1472): if either the
+ * next part's stage-a-request or status exists in the repo, the next
+ * part has already been dispatched and the button must be hidden. The
+ * existence check is live per-render (not cached) so a subsequent
+ * `deleteClipforgeJob` — which removes every jobs/<nextId>/* blob from
+ * the default branch, see bot/src/github.js — naturally re-reveals the
+ * button on the previous part's card without any invalidation step.
+ */
+export async function nextPartAlreadyExists(credentials, status, request, plan) {
+  const state = status && status.state ? String(status.state) : '';
+  if (state !== 'complete') return false;
+  if (!status || status.mode !== 'manual') return false;
+  const series = status.series && typeof status.series === 'object' ? status.series : {};
+  if (series.enabled !== true) return false;
+  const planSeries = extractPlanSeries(plan);
+  if (planSeries.is_final === true || series.is_final === true) return false;
+  const nextId = deriveNextPartId(status, request, plan);
+  if (!nextId) return false;
+  const [existingRequest, existingStatus] = await Promise.all([
+    readStageARequest(credentials, credentials.repo, nextId).catch(() => null),
+    readStatus(credentials, credentials.repo, nextId).catch(() => null),
+  ]);
+  return Boolean(existingRequest || existingStatus);
+}
+
 /** §8.5 — contextual buttons: only actions valid in the job's current state. */
-export function taskKeyboard(status, label, plan = null) {
+export function taskKeyboard(status, label, plan = null, nextPartExists = false) {
   const state = status && status.state ? String(status.state) : 'queued';
   const series = status.series && typeof status.series === 'object' ? status.series : {};
   const rows = [];
@@ -95,7 +144,15 @@ export function taskKeyboard(status, label, plan = null) {
       // status flag is normalized to false, so the plan flag still governs
       // (preserving the bug-48 fix); status-level is_final:true only ever
       // further restricts, never wrongly reveals, the action.
-      if (planSeries.is_final !== true && series.is_final !== true) {
+      // next-part-button-hide: the button is additionally suppressed once
+      // the next part has already been dispatched (its stage-a-request.json
+      // or status.json exists in the repo). nextPartExists is computed by
+      // the caller — see nextPartAlreadyExists — so taskKeyboard itself
+      // remains synchronous and unit-testable. When nextPartExists is
+      // left at its default (false), the previous gate is unchanged, so
+      // callers that legitimately can't run the existence probe (e.g. the
+      // §8.5 state-validity unit test) keep their pre-fix behavior.
+      if (planSeries.is_final !== true && series.is_final !== true && nextPartExists !== true) {
         rows.push([{ text: '▶ Start next part', callback_data: `task:next:${label}` }]);
       }
       rows.push([{ text: '📚 Series parts', callback_data: `task:parts:${label}` }]);
@@ -130,9 +187,15 @@ export async function showTask(env, chatId, label, messageId = null) {
   }
   // bug-48: read the production plan alongside the status so the completed
   // series affordances can key off the plan's real is_final / summary.
-  const [status, plan] = await Promise.all([
+  // next-part-button-hide: the stage-a-request is fetched in the same batch
+  // so the render-time next-part existence probe can reuse the SAME
+  // (status, request, plan) triple that startNextSeriesPart consumes when
+  // it derives the continuation — the two code paths cannot disagree about
+  // which job id counts as "the next part."
+  const [status, plan, request] = await Promise.all([
     readStatus(credentials, credentials.repo, jobId),
-    readProductionPlan(credentials, credentials.repo, jobId).catch(() => null)
+    readProductionPlan(credentials, credentials.repo, jobId).catch(() => null),
+    readStageARequest(credentials, credentials.repo, jobId).catch(() => null)
   ]);
   if (!status) {
     return renderInteractiveView(env, chatId,
@@ -172,7 +235,12 @@ export async function showTask(env, chatId, label, messageId = null) {
   if (status.release_url) links.push({ text: 'Open release', url: status.release_url });
   if (status.run && status.run.workflow_run_url) links.push({ text: 'Workflow run', url: status.run.workflow_run_url });
   if (links.length) linkRows.push(links);
-  const keyboard = taskKeyboard(status, label, plan);
+  // next-part-button-hide: only probe next-part existence when the
+  // completed-manual-series button would otherwise render at all. The
+  // guard inside nextPartAlreadyExists short-circuits on every other
+  // state, so tasks that will never show this row pay no extra API call.
+  const nextPartExists = await nextPartAlreadyExists(credentials, status, request, plan);
+  const keyboard = taskKeyboard(status, label, plan, nextPartExists);
   keyboard.inline_keyboard = [...linkRows, ...keyboard.inline_keyboard];
   return renderInteractiveView(env, chatId, lines.filter(Boolean).join('\n'), { replyMarkup: keyboard }, messageId);
 }
