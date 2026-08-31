@@ -1,0 +1,134 @@
+{
+  "video_duration_seconds": 1378,
+  "title": "Part 1 The Death Note Fails to Kill",
+  "series": {
+    "series_id": "series-1788166763252",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 343,
+    "is_final": false,
+    "summary": "Light discovers that Shoko Maki knows the secret of the bus jacking and attempts to eliminate her with the Death Note, only to realize in horror that her name is a fake alias."
+  },
+  "hashtags": [
+    "#deathnote",
+    "#lightyagami",
+    "#anime",
+    "#naomimisora",
+    "#kira",
+    "#animemoments"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "naomi misora",
+    "shoko maki",
+    "kira death note",
+    "death note failed",
+    "death note fake name",
+    "ryuk laughing",
+    "light vs naomi",
+    "death note episode 7",
+    "anime suspense",
+    "death note part 1",
+    "kira identity exposed",
+    "light yagami panic"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 96,
+      "end_seconds": 134,
+      "voiceover_text": "Walking along the snow-covered street, Light is gripped by sudden panic as the woman beside him explains how Kira can control victims before killing them. She reveals she was a passenger on the hijacked bus, meaning she has firsthand evidence of Kira testing his powers. If she reaches the police task force with this testimony, detectives will quickly trace Kira directly back to him. Light realizes he must eliminate her on the spot before she can speak to anyone in authority. Concealing his dread behind a warm, cooperative smile, he pretends to fully support her theory and urges her to start investigating right away. He casually asks if she has told anyone else, and she confirms he is the first. Knowing the secret is contained, Light prepares his strike.",
+      "keywords": [
+        {
+          "word": "panic",
+          "color": "#FF4444"
+        },
+        {
+          "word": "eliminate",
+          "color": "#E53935"
+        },
+        {
+          "word": "contained",
+          "color": "#43A047"
+        }
+      ]
+    },
+    {
+      "start_seconds": 144,
+      "end_seconds": 166,
+      "voiceover_text": "Light keeps up his helpful facade and asks for the precise date and time of the bus jacking. She explains it occurred on December twentieth at eleven oh two on the bus bound for Spaceland. As she speaks, Light keeps his hands buried deep inside his coat pockets. Without drawing any suspicion, he silently writes the name Shoko Maki on a hidden scrap of the Death Note, scheduling her death for exactly one fifteen.",
+      "keywords": [
+        {
+          "word": "facade",
+          "color": "#FB8C00"
+        },
+        {
+          "word": "secretly",
+          "color": "#8E24AA"
+        },
+        {
+          "word": "death",
+          "color": "#E53935"
+        }
+      ]
+    },
+    {
+      "start_seconds": 252,
+      "end_seconds": 274,
+      "voiceover_text": "With just ten seconds left until one fifteen, Light suggests calling his father, but she insists on walking directly to headquarters to report it herself. Light pretends to agree and lets her step forward into the street. Standing behind her, a sinister, arrogant grin spreads across his face. Convinced that the power of the Death Note is absolute, he watches her walk away and silently commands her to hurry to her death.",
+      "keywords": [
+        {
+          "word": "sinister",
+          "color": "#D32F2F"
+        },
+        {
+          "word": "arrogant",
+          "color": "#F57C00"
+        },
+        {
+          "word": "commands",
+          "color": "#C2185B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 285,
+      "end_seconds": 306,
+      "voiceover_text": "The deadline passes, but the expected tragedy never happens. Instead of taking her own life, she abruptly stops on the pavement, turns around, and calmly declares that Kira will definitely be caught. Light freezes in place, his smug confidence shattering instantly. His eyes widen in disbelief and terror as he stares at her completely alive, unable to process why his lethal command failed to work.",
+      "keywords": [
+        {
+          "word": "tragedy",
+          "color": "#7B1FA2"
+        },
+        {
+          "word": "freezes",
+          "color": "#0288D1"
+        },
+        {
+          "word": "failed",
+          "color": "#E53935"
+        }
+      ]
+    },
+    {
+      "start_seconds": 306,
+      "end_seconds": 343,
+      "voiceover_text": "Light struggles in silent panic, desperately trying to figure out why the woman survived. In all his past experiments, every criminal he wrote down died at the exact minute and method he specified. Suicide had worked flawlessly every single time, meaning the Death Note should have easily controlled her final actions. If the rules of the notebook are absolute, then something went terribly wrong. Then, a bizarre memory flashes into his head: Ryuk had burst into uncontrollable laughter whenever Light asked for her name. The horrifying reality hits him. The name Shoko Maki was a fake alias all along, leaving Light completely trapped in public next to an investigator who can expose him at any second.",
+      "keywords": [
+        {
+          "word": "panic",
+          "color": "#FF4444"
+        },
+        {
+          "word": "laughter",
+          "color": "#F57C00"
+        },
+        {
+          "word": "trapped",
+          "color": "#D32F2F"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
