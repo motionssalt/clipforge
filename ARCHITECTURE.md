@@ -658,7 +658,9 @@ The old loop was conceptually fine but buried. The new presentation:
    release, read `00_READ_THIS_FIRST.txt`, inspect the evidence, and return
    exactly one `production.json`.
 3. The user runs their agent, gets `production.json`, and taps **"Upload
-   production.json"**, then pastes the JSON or sends the file.
+   production.json"**, then sends it as a file (`.json`, `.txt`, `.md`, or
+   any text file containing the plan — the pasted-text upload path was
+   deliberately removed; see the `upl` row below).
 4. The bot validates it against §7.3. If invalid, it replies with the specific
    errors and stays in the upload state. If valid, it commits the plan and
    dispatches Stage B.
@@ -708,9 +710,7 @@ text, so the callback handler reads its state back out of
 | op | args | flow |
 | --- | --- | --- |
 | `wzs` | wizard-token | wizard step (button steps: source/focus text, length, music, confirm) |
-| `upl` | label | production.json upload (paste or .json file) |
-| `uplb` | label, buffer-token | multi-bubble paste reassembly (rides the ⏳ indicator) |
-| `upldone` | label, buffer-token | assembled-paste confirmation (replaces the old blind auto-dispatch) |
+| `upl` | label | production.json upload — file upload only, any UTF-8-decodable text file (the `uplb` multi-bubble paste-reassembly opcode and its D1 fragment buffer were deliberately removed; migration 0004 drops `plan_upload_buffer`) |
 | `clname` | — | Shadow Clone repo-name entry |
 | `patnew` | b64url(`{ n: clone-name }`) | PAT entry for clone creation (`n: ''` = auto-name sentinel; `decodeToken` returns only objects, so the name rides a one-field record, not a bare string) |
 | `patc` | — | PAT entry for connecting an existing clone |

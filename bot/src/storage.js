@@ -403,61 +403,11 @@ export async function deleteAwaitingInputIfUnconsumed(env, chatId, expectedPaylo
   ).bind(Number(chatId), expectedPayload == null ? null : String(expectedPayload), expectedPayload == null ? null : String(expectedPayload)).run();
 }
 
-// --- plan upload fragment buffer (paste-fix session 3) ------------------- //
+// --- plan upload fragment buffer — REMOVED (remove-paste-feature) -------- //
 //
-// fix-json-reassembly-definitively: the multi-bubble production.json paste
-// buffer is TOO LARGE to ride inside a flow marker (the marker lives in a
-// Telegram message text, capped at 4096 UTF-16 units; base64(fragments) for
-// a multi-KB plan blows straight past it). It lives here instead, keyed by
-// chat (one in-flight paste per chat — the awaiting_input row already
-// enforces that). The uplb marker shrinks to cf:uplb:<label>, a pure routing
-// token. Lifecycle: written by keepPlanPasteAlive on every fragment
-// (INSERT OR REPLACE), read by handleFlowReply's uplb case, deleted by
-// handlePlanUploadMessage on completion/validation-failure/overflow. A
-// row orphaned by an abandoned paste is harmless: it is overwritten by the
-// next paste and never read outside an uplb dispatch.
-
-/** Overwrite the chat's in-flight plan-paste buffer (raw fragments). */
-export async function putPlanUploadBuffer(env, chatId, fragments, bubbleIds) {
-  await env.CLIPFORGE_BOT_D1.prepare(
-    'INSERT OR REPLACE INTO plan_upload_buffer (chat_id, fragments, bubble_ids, updated_at) VALUES (?, ?, ?, ?)'
-  ).bind(
-    Number(chatId),
-    JSON.stringify((Array.isArray(fragments) ? fragments : []).map((f) => String(f))),
-    JSON.stringify((Array.isArray(bubbleIds) ? bubbleIds : []).map((n) => Number(n))),
-    Math.floor(Date.now() / 1000)
-  ).run();
-}
-
-/**
- * Read the chat's in-flight plan-paste buffer, or null. Shape:
- * { fragments: string[], bubbleIds: number[] }. A corrupt row (unparseable
- * JSON) is treated as absent — the next bubble then starts a fresh buffer,
- * which the operator experiences as a re-paste, never as a crash.
- */
-export async function getPlanUploadBuffer(env, chatId) {
-  const row = await env.CLIPFORGE_BOT_D1.prepare(
-    'SELECT fragments, bubble_ids FROM plan_upload_buffer WHERE chat_id = ?'
-  ).bind(Number(chatId)).first();
-  if (!row) return null;
-  try {
-    const fragments = JSON.parse(String(row.fragments || '[]'));
-    const bubbleIds = JSON.parse(String(row.bubble_ids || '[]'));
-    if (!Array.isArray(fragments)) return null;
-    return {
-      fragments: fragments.map((f) => String(f)),
-      bubbleIds: Array.isArray(bubbleIds)
-        ? bubbleIds.map((n) => Number(n)).filter((n) => Number.isSafeInteger(n) && n > 0)
-        : [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-/** Drop the chat's in-flight plan-paste buffer (completed or abandoned). */
-export async function deletePlanUploadBuffer(env, chatId) {
-  await env.CLIPFORGE_BOT_D1.prepare(
-    'DELETE FROM plan_upload_buffer WHERE chat_id = ?'
-  ).bind(Number(chatId)).run();
-}
+// The multi-bubble production.json paste-reassembly mechanism (and its D1
+// fragment buffer, formerly migration 0003's plan_upload_buffer table) was
+// deliberately deleted: the operator abandoned pasted-JSON reassembly after
+// repeated fix rounds. The upload step is now file-upload-only (any
+// UTF-8-decodable text file), validated by the unchanged
+// parseAndValidateProductionPlan. Migration 0004 drops the table.

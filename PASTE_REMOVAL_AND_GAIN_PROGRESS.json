@@ -1,0 +1,47 @@
+{
+  "initiative": "remove-paste-feature-and-double-voice-ratio",
+  "current_step": "change1-commit",
+  "change_1_paste_removal": {
+    "status": "complete",
+    "opcodes_removed": [
+      "uplb"
+    ],
+    "d1_table_removed": "plan_upload_buffer (migration 0004_drop_plan_upload_buffer.sql drops it; storage.js accessors put/get/deletePlanUploadBuffer deleted)",
+    "new_upload_accepts": [
+      ".json",
+      ".txt",
+      ".md",
+      ".markdown",
+      "any UTF-8-decodable text file (mime/extension-agnostic; content gate)"
+    ],
+    "text_decode_gate_implemented": "handlePlanUploadMessage: downloadTelegramFileBytes + strict TextDecoder(utf-8, fatal:true); binary/non-UTF-8 rejected as not-a-text-file; typed text messages declined with file-only guidance",
+    "commits": []
+  },
+  "change_2_gain_ratio": {
+    "status": "not_started",
+    "arithmetic_reasoning": "",
+    "old_ratio": 0.3,
+    "new_ratio": null,
+    "old_target_offset_db_example": "",
+    "new_target_offset_db_example": "",
+    "gain_bounds_reverified": null,
+    "commits": []
+  },
+  "tests_updated": {
+    "paste_removal_tests": true,
+    "gain_ratio_tests": false
+  },
+  "full_suite_passing": false,
+  "human_review_items": [
+    "Pre-existing repo state: bot/src/index.js line 73 contains a literal NUL byte inside the SAFE_AUDIO_FILENAME_RE regex (committed before this session). Left untouched - unrelated to this initiative; Node loads it fine but grep treats the file as binary.",
+    "ARCHITECTURE.md line 713 documents an `upldone` opcode that no code references (stale doc drift predating this initiative). Will be removed alongside the `uplb` row.",
+    "D1 migration 0003 created plan_upload_buffer. Removal approach: new migration 0004 drops the table (SQLite/D1 allow DROP TABLE; D1ApplyMigrations is sequential and cannot delete applied migration files).",
+    "Baseline bot suite: 210/210 passing after npm install (tweetnacl deps were missing in fresh clone; 11 baseline failures were ERR_MODULE_NOT_FOUND, not logic).",
+    "Pipeline suite has 8 PRE-EXISTING failures (349 passed): 7 ReframeDetectionTierTests fail because the sandbox cv2 stub lacks CascadeClassifier, plus test_status.py::test_refuses_to_leave_terminal_state. Verified present before any pipeline edit; environment-related, not caused by this initiative."
+  ],
+  "resume_from": {
+    "file": "pipeline/stage_b/render.py",
+    "component": "MUSIC_TO_VOICE_LOUDNESS_RATIO",
+    "next_operation": "work the ratio arithmetic (both interpretations), update constant + docs + bounds, update tests"
+  }
+}

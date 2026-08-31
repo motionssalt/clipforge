@@ -132,30 +132,6 @@ test('upl payload carries just the task label and round-trips through parseFlowR
   assert.deepEqual(parseFlowReply(reply), { op: 'upl', args: [label], messageId: 501 });
 });
 
-test('uplb marker is a constant-size routing token; the buffer lives in D1', () => {
-  // paste-fix session 3 (fix-json-reassembly-definitively): the marker must
-  // NEVER carry the fragment buffer — it sits inside a Telegram message text
-  // capped at 4096 UTF-16 units, and base64(fragments) for a multi-KB plan
-  // blew straight past that cap (the defect this initiative fixed).
-  const payload = makePayload('uplb', 'C');
-  assert.equal(payload, 'cf:uplb:C');
-  const parsed = parsePayload(payload);
-  assert.equal(parsed.op, 'uplb');
-  assert.deepEqual(parsed.args, ['C']);
-  // A stale pre-deploy marker (label + old b64 buffer token) must still
-  // parse; the handler ignores the extra arg and reads the buffer from D1.
-  const legacy = makePayload('uplb', 'C', encodeToken({ f: ['{"a":1'], b: [42] }));
-  const legacyParsed = parsePayload(legacy);
-  assert.equal(legacyParsed.op, 'uplb');
-  assert.equal(legacyParsed.args[0], 'C');
-});
-
-test('uplb rejects garbage buffer tokens without corrupting the flow', () => {
-  const payload = makePayload('uplb', 'AB', 'not-a-real-token');
-  assert.deepEqual(parsePayload(payload), { op: 'uplb', args: ['AB', 'not-a-real-token'] });
-  assert.equal(decodeToken('not-a-real-token'), null); // handler defaults to an empty buffer
-});
-
 // --- onboarding payloads (kv-minimization phase 5 step 5.4) -------------- //
 
 test('clname / patc / repo payloads are arg-less and route by opcode alone', () => {
@@ -170,7 +146,7 @@ test('clname / patc / repo payloads are arg-less and route by opcode alone', () 
 
 test('patnew carries the clone name as a b64url { n } token; empty n = auto-name', () => {
   // decodeToken only returns plain OBJECTS (strings collapse to null by
-  // design), so the name rides as { n: name } — the uplb record pattern.
+  // design), so the name rides as { n: name } — the one-field record pattern.
   const named = makePayload('patnew', encodeToken({ n: 'my-clipforge.v2' }));
   const parsedNamed = parseFlowReply({ message_id: 801, text: 'ghp_x', reply_to_message: botMessageWithPayload(named, 800) });
   assert.equal(parsedNamed.op, 'patnew');
@@ -260,7 +236,5 @@ test('every ARG_RE-legal task label survives makePayload without escaping', () =
   // Every character is ARG_RE-safe: no marker escaping ever needed.
   for (const label of ['A', 'B', 'Z', 'AA', 'AZ', 'BA', 'ZZ', 'AAA']) {
     assert.doesNotThrow(() => makePayload('upl', label));
-    assert.doesNotThrow(() => makePayload('uplb', label, encodeToken({ f: [], b: [] })));
-    assert.doesNotThrow(() => makePayload('upldone', label, encodeToken({ f: ['{}'], b: [1] })));
   }
 });
