@@ -572,14 +572,33 @@ class MusicGainForRatioTests(unittest.TestCase):
     determines that constant level; they intentionally do not invoke ffmpeg.
     """
 
+    def test_ratio_constant_is_the_halved_target(self) -> None:
+        # remove-paste-feature-and-double-voice-ratio: the operator asked for
+        # the voice to count double relative to the bed. With the music
+        # target formula (voice_lufs + 10*log10(ratio)) unchanged, "voice 2x"
+        # is exactly ratio 0.30 / 2 = 0.15. Pin the constant so an accidental
+        # edit (e.g. the literal "2.0" misreading, which would put the music
+        # LOUDER than the vocals) fails loudly here.
+        self.assertEqual(render.MUSIC_TO_VOICE_LOUDNESS_RATIO, 0.15)
+        # 10*log10(0.15) = -8.2391 dB offset below the voiceover.
+        self.assertAlmostEqual(
+            10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO),
+            -8.2391,
+            places=4,
+        )
+
     def test_quiet_music_is_boosted_to_target_ratio(self) -> None:
         # A much quieter upload (-40 LUFS) under -16 LUFS vocals must be
         # boosted, not left at its own (much lower) natural level.
         gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-40.0)
         self.assertGreater(gain_db, 0.0)
+        # Hand-computed for ratio 0.15: target = -16 + 10*log10(0.15)
+        # = -24.2391 LUFS, so gain = -24.2391 - (-40) = +15.7609 dB.
+        self.assertAlmostEqual(gain_db, 15.7609, places=4)
         # Applying the gain should land the music at exactly
         # MUSIC_TO_VOICE_LOUDNESS_RATIO's perceived level relative to voice.
         target_lufs = -16.0 + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
+        self.assertAlmostEqual(target_lufs, -24.2391, places=4)
         self.assertAlmostEqual(-40.0 + gain_db, target_lufs, places=6)
 
     def test_loud_music_is_cut_down_to_target_ratio(self) -> None:
@@ -587,8 +606,32 @@ class MusicGainForRatioTests(unittest.TestCase):
         # be attenuated down to the same target ratio, not left blaring.
         gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-10.0)
         self.assertLess(gain_db, 0.0)
+        # Hand-computed for ratio 0.15: gain = -16 - 8.2391 - (-10)
+        # = -14.2391 dB.
+        self.assertAlmostEqual(gain_db, -14.2391, places=4)
         target_lufs = -16.0 + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
         self.assertAlmostEqual(-10.0 + gain_db, target_lufs, places=6)
+
+    def test_new_ratio_is_quieter_than_old_030_for_same_inputs(self) -> None:
+        # Direct regression test for the operator's goal: for the SAME
+        # voice/music LUFS pair, the new 0.15 ratio must attenuate the bed
+        # MORE (a lower, more negative gain) than the old 0.30 ratio would
+        # have. The exact delta is
+        #     10*log10(0.15) - 10*log10(0.30) = -3.0103 dB
+        # for every measurement pair, because the offset enters linearly.
+        for voice_lufs, music_lufs in ((-16.0, -10.0), (-20.0, -8.0), (-23.0, -6.0), (-16.0, -40.0)):
+            old_gain = (voice_lufs + 10.0 * math.log10(0.30)) - music_lufs
+            new_gain = render.music_gain_db_for_ratio(
+                voice_lufs=voice_lufs, music_lufs=music_lufs
+            )
+            self.assertLess(new_gain, old_gain)
+            self.assertAlmostEqual(new_gain - old_gain, -3.0103, places=4)
+            # The resulting bed loudness is also exactly 3.0103 dB lower.
+            self.assertAlmostEqual(
+                (music_lufs + new_gain) - (music_lufs + old_gain),
+                -3.0103,
+                places=4,
+            )
 
     def test_gain_clamped_to_sane_bounds(self) -> None:
         # A pathologically quiet upload should be boosted heavily but never
@@ -608,6 +651,8 @@ class MusicGainForRatioTests(unittest.TestCase):
         # range such masters measure at) under -16 LUFS vocals must land
         # EXACTLY on the ratio target — never floored by MUSIC_GAIN_MIN_DB.
         gain_db = render.music_gain_db_for_ratio(voice_lufs=-16.0, music_lufs=-8.0)
+        # Hand-computed for ratio 0.15: gain = -16 - 8.2391 - (-8) = -16.2391 dB.
+        self.assertAlmostEqual(gain_db, -16.2391, places=4)
         target_lufs = -16.0 + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
         self.assertAlmostEqual(-8.0 + gain_db, target_lufs, places=6)
         self.assertGreater(gain_db, render.MUSIC_GAIN_MIN_DB)
@@ -624,6 +669,8 @@ class MusicGainForRatioTests(unittest.TestCase):
             + 10.0 * math.log10(render.MUSIC_TO_VOICE_LOUDNESS_RATIO)
             - music_lufs
         )
+        # Hand-computed for ratio 0.15: -23 - 8.2391 - 12 = -43.2391 dB.
+        self.assertAlmostEqual(required_db, -43.2391, places=4)
         self.assertLess(required_db, -40.0)  # old floor would have clamped this
         gain_db = render.music_gain_db_for_ratio(voice_lufs=voice_lufs, music_lufs=music_lufs)
         self.assertAlmostEqual(gain_db, required_db, places=6)

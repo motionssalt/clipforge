@@ -98,33 +98,41 @@ VOICEOVER_VOLUME = 1.00
 # Fallback only: used when a loudness measurement cannot be obtained (e.g. a
 # silent/corrupt music file). Mirrors the legacy fixed one-third amplitude.
 MUSIC_VOLUME = 0.33
-# Target perceived background:vocals ratio (0.3:1).
-MUSIC_TO_VOICE_LOUDNESS_RATIO = 0.30
+# Target perceived background:vocals ratio (0.15:1). Halved from 0.30
+# (remove-paste-feature-and-double-voice-ratio initiative): the operator
+# asked for the vocals to count double relative to the bed ("0.3 to 1 ->
+# more like 0.3 to 2"), i.e. the SAME music loudness logic with the voice
+# weighted 2x, which is mathematically 0.30 / 2 = 0.15. The music target
+# offset moves from 10*log10(0.30) ~= -5.23 dB to 10*log10(0.15) ~= -8.24 dB
+# -- the bed sits exactly 3.01 dB further below the voiceover at every
+# measurement pair. (The literal reading "ratio = 2.0" would put music
+# +3.01 dB ABOVE the vocals, the opposite of the request, and was rejected.)
+MUSIC_TO_VOICE_LOUDNESS_RATIO = 0.15
 # Sanity clamps for the computed music gain (dB). The two bounds are NOT
 # symmetric, because cutting an over-loud bed and boosting an over-quiet one
 # are different failure modes with different risk profiles.
 #
 # Cut side (floor): voiceovers arrive normalized to -16 LUFS (voiceover.py
-# VOICE_CLARITY_TARGET_I_LUFS) and the 0.3:1 ratio offset is
-# 10*log10(0.3) ~= -10.46 dB, so the required cut is
-#     voice_lufs - 10.46 - music_lufs.
+# VOICE_CLARITY_TARGET_I_LUFS) and the 0.15:1 ratio offset is
+# 10*log10(0.15) ~= -8.24 dB, so the required cut is
+#     voice_lufs - 8.24 - music_lufs.
 # Loud commercial masters measure about -6 to -14 LUFS integrated (worst
-# realistic case: -23 LUFS vocals vs -6 LUFS music needs -29.5 dB), and NO
+# realistic case: -23 LUFS vocals vs -6 LUFS music needs -25.2 dB), and NO
 # real signal can measure far above +3 LUFS -- a full-scale square wave is
 # the physical ceiling for an integrated reading. The worst physically
 # possible cut is therefore
-#     -23 LUFS vocals - 10.46 dB - (+3 LUFS music) ~= -36.5 dB.
-# A -60 dB floor gives >23 dB of headroom beyond even that impossible edge,
+#     -23 LUFS vocals - 8.24 dB - (+3 LUFS music) ~= -34.2 dB.
+# A -60 dB floor gives ~26 dB of headroom beyond even that impossible edge,
 # so no real upload -- however loud -- is ever clamped away from the exact
-# ratio (the previous -40 dB floor sat only ~3.5 dB below that ceiling, one
-# unusual measurement away from under-correcting a loud bed and leaving it
-# audibly above the ratio). A genuinely absurd demand (e.g. a corrupt file
-# misparsed as tens of dB above digital full scale) is still clamped rather
-# than attenuating the bed by a physically meaningless amount.
+# ratio (re-verified for the 0.15 target: the smaller ratio demands MORE
+# attenuation than 0.30 did, and -60 still clears the new worst case with
+# room to spare). A genuinely absurd demand (e.g. a corrupt file misparsed
+# as tens of dB above digital full scale) is still clamped rather than
+# attenuating the bed by a physically meaningless amount.
 #
 # Boost side (ceiling): boosting a quiet file amplifies its noise floor and
 # mastering artifacts by the same amount, so this side stays deliberately
-# conservative. +24 dB covers music down to ~-50 LUFS under -16 LUFS vocals;
+# conservative. +24 dB covers music down to ~-48 LUFS under -16 LUFS vocals;
 # a bed arriving quieter than that is left slightly below the target ratio
 # rather than lifting 25+ dB of hiss along with it.
 MUSIC_GAIN_MIN_DB = -60.0
@@ -163,13 +171,15 @@ def music_gain_db_for_ratio(voice_lufs: float, music_lufs: float) -> float:
     """Gain (dB) that brings ``music_lufs`` to
     MUSIC_TO_VOICE_LOUDNESS_RATIO × the perceived level of ``voice_lufs``.
 
-    A linear amplitude ratio r maps to loudness as -10·log10(1/r) dB, so the
-    0.3:1 background:vocals target is voice_lufs - 10·log10(1/0.3) ≈ vocals
-    minus 10.46 dB. The result is clamped to [MUSIC_GAIN_MIN_DB,
-    MUSIC_GAIN_MAX_DB] so a pathological measurement can neither blast nor
-    fully mute the bed.
+    A loudness ratio r maps to a level offset of 10·log10(r) dB, so the
+    0.15:1 background:vocals target is voice_lufs + 10·log10(0.15) ≈ vocals
+    minus 8.24 dB. (Note this function's formula is 10·log10 — the level
+    ratio convention used for LUFS targets — not 20·log10; 20·log10(0.15)
+    would be ≈ -16.48 dB and is NOT what this code targets.) The result is
+    clamped to [MUSIC_GAIN_MIN_DB, MUSIC_GAIN_MAX_DB] so a pathological
+    measurement can neither blast nor fully mute the bed.
     """
-    target_db = 10.0 * math.log10(MUSIC_TO_VOICE_LOUDNESS_RATIO)  # ≈ -10.46 dB
+    target_db = 10.0 * math.log10(MUSIC_TO_VOICE_LOUDNESS_RATIO)  # ≈ -8.24 dB
     gain_db = (voice_lufs + target_db) - music_lufs
     return min(max(gain_db, MUSIC_GAIN_MIN_DB), MUSIC_GAIN_MAX_DB)
 
@@ -761,7 +771,7 @@ def render_merged(
 
     # bug-34: write the merged voiceover BEFORE the render so its real
     # integrated loudness can be measured against the music file. The gain
-    # applied to the bed is derived from that measurement (0.3:1 vs vocals),
+    # applied to the bed is derived from that measurement (0.15:1 vs vocals),
     # not a fixed percentage of whatever level the upload happens to be.
     write_merged_voiceover(vo_wavs, reconciled, sidecar_wav)
     expected_voiceover_seconds = sum(float(item["video_seconds"]) for item in reconciled)
