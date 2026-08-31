@@ -48,7 +48,16 @@ def plan_series_block(document: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(document, dict):
         return {"enabled": False, "series_id": "", "part": 0,
                 "start_seconds": 0, "is_final": False}
-    declares = isinstance(document.get("series"), dict) or any(
+    # bug-70: a present-but-EMPTY nested series dict must NOT count as
+    # "declares series data" — normalize_plan previously always emitted
+    # series={} for a non-series plan (now fixed to emit series=None), but
+    # this function must stay correct on its own regardless of what shape any
+    # caller hands it, since it's also called directly against a raw,
+    # pre-normalization document elsewhere in this file. An empty dict has no
+    # actual series content and must be treated the same as it being absent.
+    nested_series = document.get("series")
+    has_nested = isinstance(nested_series, dict) and bool(nested_series)
+    declares = has_nested or any(
         flat_key in document for flat_key in plan_schema._NESTED_TO_FLAT.values()
     )
     if not declares:
@@ -238,10 +247,6 @@ def normalize_plan(document: dict[str, Any]) -> dict[str, Any]:
     assumes the document is valid and only restructures it.
     """
     nested = document.get("series")
-    series: dict[str, Any] = {}
-    if isinstance(nested, dict):
-        series = dict(nested)
-    # Flat legacy siblings fill any field the nested object did not define.
     flat_map = {
         "series_id": "series_id",
         "series_part": "part",
@@ -250,6 +255,22 @@ def normalize_plan(document: dict[str, Any]) -> dict[str, Any]:
         "series_final": "is_final",
         "series_summary": "summary",
     }
+    # bug-70: a plan that declares NO series data at all (nested absent/null,
+    # no flat series_* siblings) must normalize to series=None, not series={}.
+    # An empty-but-present dict is indistinguishable from "this plan IS a
+    # series plan with everything defaulted" to any downstream reader that
+    # only checks isinstance(..., dict) (see plan_series_block below, and the
+    # historical schema._extract_series bug-49/bug-56 precedent) — that
+    # ambiguity caused a plain one-off task's status.json to be written with
+    # series.enabled=True (and the bot to render a bogus "Series: part 1"
+    # line on a task the operator explicitly created with series OFF).
+    is_series_plan = isinstance(nested, dict) or any(
+        flat_key in document for flat_key in flat_map
+    )
+    series: dict[str, Any] = {}
+    if isinstance(nested, dict):
+        series = dict(nested)
+    # Flat legacy siblings fill any field the nested object did not define.
     for flat_key, nested_key in flat_map.items():
         if nested_key not in series and flat_key in document:
             series[nested_key] = document[flat_key]
@@ -275,7 +296,7 @@ def normalize_plan(document: dict[str, Any]) -> dict[str, Any]:
         "cuts": cuts,
         "hashtags": list(document.get("hashtags") or []),
         "youtube_tags": list(document.get("youtube_tags") or []),
-        "series": series,
+        "series": series if is_series_plan else None,
         # Pass-through of any unknown top-level fields (forward compatibility).
         "_extra": {
             k: v
