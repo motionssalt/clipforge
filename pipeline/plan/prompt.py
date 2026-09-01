@@ -744,6 +744,12 @@ STEP 3 (assemble cuts).
           boundaries from the transcript, not mid-word.
         - Target the sum of (end - start) across all cuts at roughly
           {target_duration} seconds. It does NOT need to be exact.
+          Hit this overall target ONLY by choosing WHICH moments to
+          include or exclude as whole cuts — never by truncating an
+          included cut's actual visual length to shrink the total.
+          Every cut you include keeps the full `end_seconds` its
+          on-screen payoff requires, per the PICKING end_seconds
+          rules below, regardless of the total-duration target.
         - `start_seconds` and `end_seconds` are still expressed in
           SOURCE-VIDEO seconds (integers, second-precision). They do
           NOT need to align with window boundaries.
@@ -1162,17 +1168,32 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
 }}
 
 NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
-  Edge TTS is currently configured for about 188 words per minute (3.133
-  spoken words per second). Before returning JSON, calculate EACH cut's
-  voiceover word budget as `(end_seconds - start_seconds) * (188 / 60)`.
+  ORDER OF OPERATIONS — read this first, it overrides any other reading:
+  `end_seconds` is ALWAYS chosen FIRST, using ONLY the visual-payoff rules
+  in the "PICKING end_seconds" block in STEP 3 — i.e. where the narrated
+  moment actually concludes on screen (a real shot boundary, visible
+  payoff, or resolution). It is NEVER chosen based on how much narration
+  would "fit" at the target pace, and NEVER shortened to make the word
+  budget below easier to hit. The word budget is a CONSEQUENCE of the
+  duration you already committed to for visual reasons — never an input
+  to choosing that duration. If a scene's true visual length results in
+  more or fewer words than the rough word-budget formula suggests, the
+  WORD COUNT flexes — the scene's length never does.
+
+  With that order fixed: Edge TTS is currently configured for about 188
+  words per minute (3.133 spoken words per second). AFTER `end_seconds`
+  is decided, and before returning JSON, calculate EACH cut's voiceover
+  word budget as `(end_seconds - start_seconds) * (188 / 60)`.
   Write enough final spoken words to cover that full budget. A cut MUST NOT
   fall below 90% of this budget (2.82 words per second), so narration covers
   at least 90% of the planned cut duration at the real TTS pace. This is a
-  hard delivery requirement, not a suggestion: do not return a sparse summary
-  for a long cut. For example, a 75-second cut targets about 235 words and
-  requires at least 212 spoken words. Count the actual words in every
-  `voiceover_text` before returning the plan; add source-grounded chronological
-  beats, reactions, and connective detail until every cut meets its minimum.
+  hard delivery requirement on the WRITING, not a suggestion: do not return
+  a sparse summary for a long cut — and equally, do not shrink the cut to
+  shrink the requirement. For example, a 75-second cut targets about 235
+  words and requires at least 212 spoken words. Count the actual words in
+  every `voiceover_text` before returning the plan; add source-grounded
+  chronological beats, reactions, and connective detail until every cut
+  meets its minimum.
 
 CONSTRAINTS
   - `start_seconds` and `end_seconds` are integers, in seconds since the
@@ -1202,7 +1223,13 @@ CONSTRAINTS
     prose meant to be READ ALOUD, not a flat matter-of-fact summary.
     Its word count is REQUIRED to meet the NARRATION DURATION CONTRACT above:
     target `(end_seconds - start_seconds) * (188 / 60)` spoken words and never
-    return fewer than 90% of that target. Long cuts need correspondingly rich,
+    return fewer than 90% of that target. This formula sizes your WRITING to
+    the duration you already chose — it NEVER sizes the duration.
+    `end_seconds` is decided ENTIRELY by where the visual moment concludes
+    on screen, per the PICKING end_seconds rules in STEP 3; if the scene's
+    true visual length yields more or fewer words than the formula suggests,
+    the word count flexes — the scene's length never does. Long cuts need
+    correspondingly rich,
     source-grounded narration; do not compress a long cut into a one-sentence
     summary. No markdown, no timestamps inside it, no brackets, no
     parentheticals, no directions or commentary ABOUT the video —
