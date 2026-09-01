@@ -3,41 +3,24 @@
   "job_id": "series-1788219142023-p3",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "series-1788219142023",
-    "part": 3,
-    "start_seconds": 1170,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
+    "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "stage_b_queued",
-  "message": "Production plan uploaded — Stage B dispatched.",
-  "created_at_epoch": 1788228841,
-  "updated_at_epoch": 1788255918,
-=======
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1788228841,
-  "updated_at_epoch": 1788255930,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1788272041,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1788256082,
+  "updated_at_epoch": 1788256082,
+  "expires_at_epoch": 1788299282,
   "release_tag": "clipforge-series-1788219142023-p3",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788219142023-p3",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/00_READ_THIS_FIRST.txt",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p3/transcript.json",
-    "analysis_bundle_url": ""
-  },
+  "release_url": "",
+  "assets": {},
   "run": {
     "workflow_run_id": 33493867061,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33493867061",
-    "code_ref": "64698ab73736bde038c46fc43b912854759b92bb"
+    "code_ref": "b67abcf6f0a0d422ccb34821c5574024029ebb41"
   },
   "publishing": {
     "status": "not_requested",
