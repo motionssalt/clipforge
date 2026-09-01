@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "series-1788219142023-p4",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1788219106225/source.torrent",
+    "torrent_file_index": "24"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 120,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788219142023",
+    "source_job_id": "manual-1788219106225",
+    "part": 4,
+    "start_seconds": 1288,
+    "context": "Prior events (Part 1): Light Yagami touches the seized Death Note to regain his Kira memories and executes Higuchi to permanently retain ownership.\nPrior events (Part 2): The task force discovers the fake thirteen-day rule and clears Light and Misa of suspicion, allowing Light to have his handcuffs removed before sending Misa to unearth the hidden Death Note and trade half her lifespan to Ryuk for Shinigami eyes.\nPrior events (Part 3): Light discovers that Misa traded half her lifespan again to Ryuk for Shinigami eyes, setting a ruthless trap that forces Rem to sacrifice herself to eliminate L."
+  },
+  "music": {
+    "ref": "audio-library/SUA CAVALONA (Hardstyle Remix) (Ultra Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788257005
+}
