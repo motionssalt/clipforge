@@ -302,6 +302,166 @@ class SeriesCompleteness(unittest.TestCase):
             self.assertFalse((Path(td) / "jobs" / "series-fin-p2").exists())
 
 
+class SeriesTTLOperatorScenarios(unittest.TestCase):
+    """Series-TTL initiative regression coverage: every scenario traced during
+    the cascade investigation (see SERIES_TTL_PROGRESS.json) is pinned here.
+
+    Evidence recap: the operator-observed cascades (cleanup commits 1d6ad63 and
+    343446f, workflow runs 33268138682/33259122992, 2026-08-29) were produced
+    by the PRE-bug-66 code; the bug-66 fix (e81ac72, requiring an is_final
+    part) landed after them and every post-fix sweep reaped only legitimately
+    finished series. These tests lock the protective behavior so any future
+    regression of the guard fails the suite.
+    """
+
+    NOW = 1_800_000_000
+
+    def _write_part(self, td, job_id, *, series_id, part, is_final, state,
+                    expired=True, enabled=True):
+        job = Path(td) / "jobs" / job_id
+        job.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "state": state,
+            "created_at_epoch": self.NOW - 1000,
+            "expires_at_epoch": self.NOW - 1 if expired else self.NOW + 3600,
+            "series": {"enabled": enabled, "series_id": series_id, "part": part,
+                       "start_seconds": 0, "is_final": is_final},
+        }
+        (job / "status.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    def _run_main(self, td, releases, branches=None):
+        import time as time_mod
+
+        fake = _FakeGitHub(releases=releases, branches=branches or [])
+        real_time = time_mod.time
+        time_mod.time = lambda: self.NOW
+        try:
+            rc = main(env={
+                "GITHUB_TOKEN": "test-token",
+                "GITHUB_REPOSITORY": "owner/repo",
+                "CLIPFORGE_TTL_SECONDS": "43200",
+            }, root=td, opener=fake.opener, log=lambda *a, **k: None)
+        finally:
+            time_mod.time = real_time
+        self.assertEqual(rc, 0)
+        return fake
+
+    # --- Direct series_is_complete traces (investigation points 2/3/5). ---
+
+    def test_point2_three_part_series_p1_expired_is_protected(self):
+        """3-part series: p1 complete+expired (is_final=false), p2 complete
+        not expired, p3 still queued (non-terminal, plan not yet populated).
+        The expired part 1 must be protected."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "t3-p1", series_id="t3", part=1,
+                             is_final=False, state="complete", expired=True)
+            self._write_part(td, "t3-p2", series_id="t3", part=2,
+                             is_final=False, state="complete", expired=False)
+            self._write_part(td, "t3-p3", series_id="t3", part=3,
+                             is_final=False, state="queued", expired=False)
+            self.assertFalse(series_is_complete(td, "t3"))
+
+    def test_point3_single_part_pending_next_is_protected(self):
+        """Operator's most plausible real scenario: ONLY part 1 exists on disk
+        (complete, expired, is_final=false); part 2 was never dispatched
+        (operator has not clicked 'Start next part'). The lone part must be
+        protected even though it is the only part the sweep can see."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "t1-p1", series_id="t1", part=1,
+                             is_final=False, state="complete", expired=True)
+            self.assertFalse(series_is_complete(td, "t1"))
+
+    def test_point5_premature_is_final_running_sibling_protects(self):
+        """is_final=true written at Stage B plan-sync time while the final
+        part is still rendering (stage_b_running). The running sibling keeps
+        the series incomplete even though a final-marked part exists —
+        is_final alone must never reap an in-flight series."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "t5-p1", series_id="t5", part=1,
+                             is_final=False, state="complete", expired=True)
+            self._write_part(td, "t5-p2", series_id="t5", part=2,
+                             is_final=True, state="stage_b_running",
+                             expired=False)
+            self.assertFalse(series_is_complete(td, "t5"))
+
+    def test_point5b_corrupt_sibling_status_protects(self):
+        """Missing/unknown = protect: a sibling whose status.json is
+        unreadable counts as non-terminal, so the series is incomplete and
+        the expired part is protected."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "t6-p1", series_id="t6", part=1,
+                             is_final=False, state="complete", expired=True)
+            bad = Path(td) / "jobs" / "t6-p2"
+            bad.mkdir(parents=True)
+            (bad / "status.json").write_text("{not json", encoding="utf-8")
+            self.assertFalse(series_is_complete(td, "t6"))
+
+    def test_control_finished_series_is_reaped(self):
+        """Legitimate reap stays intact: every part terminal AND one marked
+        is_final -> series complete -> expired parts are reaped."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "t7-p1", series_id="t7", part=1,
+                             is_final=False, state="complete", expired=True)
+            self._write_part(td, "t7-p2", series_id="t7", part=2,
+                             is_final=True, state="complete", expired=True)
+            self.assertTrue(series_is_complete(td, "t7"))
+
+    # --- End-to-end main() traces (sections 1 and 2 both honor the guard). ---
+
+    def test_e2e_single_part_series_with_release_is_protected(self):
+        """Section-1 guard: the lone expired part of a pending-next series
+        keeps BOTH its release and its folder."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "e1-p1", series_id="e1", part=1,
+                             is_final=False, state="complete", expired=True)
+            fake = self._run_main(td, releases=[
+                {"id": 41, "tag_name": "clipforge-e1-p1",
+                 "created_at": "", "body": ""},
+            ])
+            self.assertNotIn("/releases/41", "\n".join(fake.deleted))
+            self.assertTrue((Path(td) / "jobs" / "e1-p1").exists())
+
+    def test_e2e_folder_only_section2_guard_matches_section1(self):
+        """Section-2 guard: an expired series part whose folder exists but
+        whose release is already gone (partial prior cleanup) must be
+        protected exactly as in section 1 — the two guards cannot disagree
+        for the same job."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "e2-p1", series_id="e2", part=1,
+                             is_final=False, state="complete", expired=True)
+            self._write_part(td, "e2-p2", series_id="e2", part=2,
+                             is_final=False, state="queued", expired=False)
+            fake = self._run_main(td, releases=[
+                {"id": 42, "tag_name": "clipforge-e2-p2",
+                 "created_at": "", "body": ""},
+            ])
+            # p2 not expired -> its release is kept; p1 (no release) folder kept.
+            self.assertNotIn("/releases/42", "\n".join(fake.deleted))
+            self.assertTrue((Path(td) / "jobs" / "e2-p1").exists())
+            self.assertTrue((Path(td) / "jobs" / "e2-p2").exists())
+
+    def test_e2e_finished_series_reaps_all_parts_together(self):
+        """When the series genuinely finished (terminal is_final sibling),
+        the sweep reaps every expired part in one run — matching the
+        post-bug-66 production sweeps (e.g. commit 0b956eb)."""
+        with TemporaryDirectory() as td:
+            self._write_part(td, "e3-p1", series_id="e3", part=1,
+                             is_final=False, state="complete", expired=True)
+            self._write_part(td, "e3-p2", series_id="e3", part=2,
+                             is_final=True, state="complete", expired=True)
+            fake = self._run_main(td, releases=[
+                {"id": 43, "tag_name": "clipforge-e3-p1",
+                 "created_at": "", "body": ""},
+                {"id": 44, "tag_name": "clipforge-e3-p2",
+                 "created_at": "", "body": ""},
+            ])
+            deleted = "\n".join(fake.deleted)
+            self.assertIn("/releases/43", deleted)
+            self.assertIn("/releases/44", deleted)
+            self.assertFalse((Path(td) / "jobs" / "e3-p1").exists())
+            self.assertFalse((Path(td) / "jobs" / "e3-p2").exists())
+
+
 class ParseIso(unittest.TestCase):
     def test_valid(self):
         self.assertEqual(parse_iso8601("1970-01-01T00:01:00Z"), 60)
