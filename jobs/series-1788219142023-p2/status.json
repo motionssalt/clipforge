@@ -9,10 +9,10 @@
     "start_seconds": 640,
     "is_final": false
   },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
+  "state": "stage_b_queued",
+  "message": "Production plan uploaded — Stage B dispatched.",
   "created_at_epoch": 1788225269,
-  "updated_at_epoch": 1788225450,
+  "updated_at_epoch": 1788226970,
   "expires_at_epoch": 1788268469,
   "release_tag": "clipforge-series-1788219142023-p2",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788219142023-p2",
