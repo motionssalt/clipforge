@@ -9,14 +9,24 @@
     "start_seconds": 1288,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (torrent_file)",
+  "state": "awaiting_plan",
+  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
   "created_at_epoch": 1788257006,
-  "updated_at_epoch": 1788257041,
+  "updated_at_epoch": 1788257076,
   "expires_at_epoch": 1788300206,
   "release_tag": "clipforge-series-1788219142023-p4",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788219142023-p4",
-  "assets": {},
+  "assets": {
+    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/00_READ_THIS_FIRST.txt",
+    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/event_composites.zip",
+    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/key_moments.json",
+    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/manifest.json",
+    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/scene_index.json",
+    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/screenshots.zip",
+    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/source_input.bin",
+    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788219142023-p4/transcript.json",
+    "analysis_bundle_url": ""
+  },
   "run": {
     "workflow_run_id": 33495434924,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33495434924",
