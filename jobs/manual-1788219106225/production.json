@@ -1,0 +1,160 @@
+{
+  "video_duration_seconds": 1380,
+  "title": "Light Reclaims Kira's Power in Part 1",
+  "series": {
+    "series_id": "series-1788219142023",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 640,
+    "is_final": false,
+    "summary": "Light Yagami touches the seized Death Note to regain his Kira memories and executes Higuchi to permanently retain ownership."
+  },
+  "hashtags": [
+    "#deathnote",
+    "#lightyagami",
+    "#kira",
+    "#anime",
+    "#shinigami",
+    "#animemoments"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "kira",
+    "death note part 1",
+    "light regains memories",
+    "higuchi death",
+    "ryuzaki",
+    "death note anime",
+    "death note watch scene",
+    "just as planned",
+    "rem shinigami",
+    "death note clip"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 205,
+      "end_seconds": 230,
+      "voiceover_text": "A seized black notebook suddenly exposes a terrifying paranormal secret. When Chief Yagami grabs the murder weapon, he freezes in sheer horror. Looming directly over the police squad is a towering, white Shinigami with bone-chilling eyes. The surrounding officers look around in total confusion. They cannot see a single thing. From the mobile surveillance van, L instantly pieces together the bizarre truth. Only someone physically touching the Death Note can perceive this terrifying monster.",
+      "keywords": [
+        {
+          "word": "secret",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "horror",
+          "color": "#FF8A00"
+        },
+        {
+          "word": "Shinigami",
+          "color": "#8B5CF6"
+        },
+        {
+          "word": "touching",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 268,
+      "end_seconds": 296,
+      "voiceover_text": "Moments later, L passes the mysterious notebook directly to Light Yagami. The exact instant Light's fingers brush the dark cover, a violent psychic shockwave tears through his mind. Every single buried memory of being the murderous Kira rushes back into his head in an explosive surge. His innocent persona instantly vanishes. Light is flooded with pure malice as a sinister smirk spreads across his face. Inside his thoughts, he screams in maniacal triumph. Everything has unfolded exactly according to his master plan.",
+      "keywords": [
+        {
+          "word": "Light",
+          "color": "#FFD600"
+        },
+        {
+          "word": "shockwave",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "Kira",
+          "color": "#EF4444"
+        },
+        {
+          "word": "malice",
+          "color": "#9333EA"
+        },
+        {
+          "word": "triumph",
+          "color": "#10B981"
+        }
+      ]
+    },
+    {
+      "start_seconds": 522,
+      "end_seconds": 546,
+      "voiceover_text": "But there is a deadly catch. If Light lets go of the notebook, all of his recovered memories will vanish again forever. The only way to keep them permanently is to kill Higuchi before releasing his grip. Light quickly activates his secret contingency plan. Masking his face behind a calm stare, he tugs the crown of his wristwatch four times in less than a second. The hidden compartment pops open, exposing a concealed slip of the Death Note.",
+      "keywords": [
+        {
+          "word": "catch",
+          "color": "#FF8A00"
+        },
+        {
+          "word": "permanently",
+          "color": "#00E5FF"
+        },
+        {
+          "word": "contingency",
+          "color": "#6366F1"
+        },
+        {
+          "word": "wristwatch",
+          "color": "#EAB308"
+        }
+      ]
+    },
+    {
+      "start_seconds": 566,
+      "end_seconds": 590,
+      "voiceover_text": "With the clock ticking, Light keeps one hand firmly planted on the Death Note. He casually distracts L with innocent questions about forensic testing. Hidden beneath his cuff, Light pricks his fingertip with a tiny concealed needle. Using his own fresh blood as ink, he swiftly writes Kyosuke Higuchi's name onto the miniature paper scrap inside his watch. The lethal forty-second countdown is now officially underway. Light calmly waits for the kill.",
+      "keywords": [
+        {
+          "word": "planted",
+          "color": "#3B82F6"
+        },
+        {
+          "word": "blood",
+          "color": "#DC2626"
+        },
+        {
+          "word": "countdown",
+          "color": "#F59E0B"
+        },
+        {
+          "word": "kill",
+          "color": "#EF4444"
+        }
+      ]
+    },
+    {
+      "start_seconds": 614,
+      "end_seconds": 640,
+      "voiceover_text": "Exactly forty seconds expire. Inside the back of the police cruiser, Higuchi suddenly gasps for air, violently clutches his chest in agonizing pain, and collapses dead from a massive heart attack. The surrounding officers scramble in frantic panic, while L stares in utter bewilderment at the impossible sudden death. By eliminating the current owner, Light permanently reclaims full ownership of the Death Note. His Kira identity is locked in forever. Staring darkly at L, he silently marks his next target.",
+      "keywords": [
+        {
+          "word": "expire",
+          "color": "#6B7280"
+        },
+        {
+          "word": "agonizing",
+          "color": "#EF4444"
+        },
+        {
+          "word": "panic",
+          "color": "#F97316"
+        },
+        {
+          "word": "ownership",
+          "color": "#10B981"
+        },
+        {
+          "word": "target",
+          "color": "#DC2626"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
