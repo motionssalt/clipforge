@@ -1,0 +1,124 @@
+{
+  "video_duration_seconds": 1356,
+  "target_total_duration_seconds": 120,
+  "title": "How Near Outsmarted Kira Part 2",
+  "series": {
+    "series_id": "series-1788373326501",
+    "part": 2,
+    "start_seconds": 266,
+    "end_seconds": 555,
+    "is_final": false,
+    "summary": "Near reveals that Gevanni forged the entire real Death Note overnight and exposes how Mello's kidnapping forced Mikami into a fatal blunder at the bank vault, leaving Light completely trapped."
+  },
+  "hashtags": [
+    "#DeathNote",
+    "#LightYagami",
+    "#Near",
+    "#AnimePlotTwist",
+    "#Mello",
+    "#AnimeCheckmate"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "near",
+    "kira exposed",
+    "death note ending",
+    "mello",
+    "gevanni",
+    "death note part 2",
+    "anime plot twist",
+    "anime climax",
+    "ryuk",
+    "death note finale",
+    "teru mikami",
+    "anime analysis",
+    "mind games"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 313,
+      "end_seconds": 349,
+      "voiceover_text": "Light was certain his master plan was completely foolproof. Then Near held up the black notebook. The trap was never about tampering with a fake diary. Near calmly reveals that his team replaced the genuine Death Note in its entirety. While Light believed he was playing five steps ahead, investigator Gevanni spent an entire night painstakingly duplicating every millimeter of the original book. Gevanni matched Mikami’s specific pen, copied every line of handwriting with surgical precision, and recreated every single page from cover to cover. The notebook in Near’s hands is the authentic weapon, while Mikami carried an identical duplicate. Light’s smug confidence instantly shatters into silent disbelief.",
+      "keywords": [
+        {
+          "word": "foolproof",
+          "color": "#FFD700"
+        },
+        {
+          "word": "Death Note",
+          "color": "#FF3B30"
+        },
+        {
+          "word": "genuine",
+          "color": "#30D158"
+        },
+        {
+          "word": "duplicate",
+          "color": "#0A84FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 391,
+      "end_seconds": 430,
+      "voiceover_text": "Near points his finger across the warehouse and names Light Yagami as Kira. Trapped before his own allies, Light feels his chest tighten as panic sets in. He frantically scrambles for an excuse, suspecting that Mikami must have betrayed him. But Near cuts through his paranoia with a name Light never expected to hear: Mello. Near steps forward and opens the notebook to a specific entry. Light’s eyes widen in absolute horror as he reads Kiyomi Takada’s name inked onto the paper. Light had already burned Takada to death using a concealed paper scrap, yet her name appears in the notebook just one minute later. In that sickening moment, Light understands the truth. Mikami had acted entirely on his own.",
+      "keywords": [
+        {
+          "word": "Kira",
+          "color": "#FF3B30"
+        },
+        {
+          "word": "Mello",
+          "color": "#FF9500"
+        },
+        {
+          "word": "horror",
+          "color": "#AF52DE"
+        },
+        {
+          "word": "Takada",
+          "color": "#5E5CE6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 466,
+      "end_seconds": 494,
+      "voiceover_text": "Gevanni reveals how Mello’s sudden kidnapping broke Kira’s disciple. When news of Takada’s capture broke, Gevanni tailed Mikami to a commercial bank vault. Visiting the bank twice in two days completely shattered Mikami’s rigid routine. Gevanni picked the lock on the private deposit box and discovered the genuine Death Note, with Takada’s name freshly inscribed. Because Light was watched constantly, Mikami assumed his god was helpless and broke orders to eliminate her. That single panic-driven blunder led investigators directly to the real notebook.",
+      "keywords": [
+        {
+          "word": "kidnapping",
+          "color": "#FF9500"
+        },
+        {
+          "word": "bank vault",
+          "color": "#FFD700"
+        },
+        {
+          "word": "blunder",
+          "color": "#FF453A"
+        }
+      ]
+    },
+    {
+      "start_seconds": 531,
+      "end_seconds": 555,
+      "voiceover_text": "Near delivers the final checkmate. He admits that neither he nor Mello could surpass their mentor L alone. But together, they outmaneuvered Kira with undeniable physical evidence. Near points straight at Light and dares him to talk his way out. The warehouse plunges into dead silence. Every detective stares at Light in horror. Light stands paralyzed, completely exposed and stripped of every excuse. But with his empire shattered, what will a cornered god do next?",
+      "keywords": [
+        {
+          "word": "checkmate",
+          "color": "#FFD700"
+        },
+        {
+          "word": "evidence",
+          "color": "#30D158"
+        },
+        {
+          "word": "paralyzed",
+          "color": "#FF3B30"
+        }
+      ]
+    }
+  ]
+}
