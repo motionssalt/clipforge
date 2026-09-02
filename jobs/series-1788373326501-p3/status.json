@@ -3,24 +3,27 @@
   "job_id": "series-1788373326501-p3",
   "mode": "manual",
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
-    "start_seconds": 0,
+    "enabled": true,
+    "series_id": "series-1788373326501",
+    "part": 3,
+    "start_seconds": 555,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1788389426,
-  "updated_at_epoch": 1788389426,
+  "updated_at_epoch": 1788390403,
   "expires_at_epoch": 1788432626,
   "release_tag": "clipforge-series-1788373326501-p3",
-  "release_url": "",
-  "assets": {},
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788373326501-p3",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788373326501-p3/clipforge-series-1788373326501-p3-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-series-1788373326501-p3/final.mp4"
+  },
   "run": {
     "workflow_run_id": 33692106143,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33692106143",
-    "code_ref": "4be3bec086d5adb0c72b71dee39166c9de09e170"
+    "code_ref": "81484d258fb6f4f2def39746204d93314c4b28c7"
   },
   "publishing": {
     "status": "not_requested",
