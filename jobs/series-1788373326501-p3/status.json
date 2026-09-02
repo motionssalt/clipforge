@@ -9,18 +9,18 @@
     "start_seconds": 555,
     "is_final": false
   },
-  "state": "queued",
-  "message": "Series part 3 queued — Stage A dispatched.",
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1788381483,
-  "updated_at_epoch": 1788381483,
+  "updated_at_epoch": 1788381494,
   "expires_at_epoch": 1788424683,
   "release_tag": "clipforge-series-1788373326501-p3",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788373326501-p3",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 33680455099,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33680455099",
+    "code_ref": "07b2c56971fdf761fee43632a0e829bd079307a0"
   },
   "publishing": {
     "status": "not_requested",
