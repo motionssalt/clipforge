@@ -1,0 +1,114 @@
+{
+  "video_duration_seconds": 1356,
+  "title": "Light Confesses He Is God in Part 3",
+  "hashtags": [
+    "#deathnote",
+    "#lightyagami",
+    "#kira",
+    "#near",
+    "#anime",
+    "#animemoments",
+    "#cliffhanger"
+  ],
+  "youtube_tags": [
+    "death note",
+    "light yagami",
+    "kira confession",
+    "light is kira",
+    "i am the god of the new world",
+    "near vs light",
+    "death note part 3",
+    "death note final episode",
+    "death note ending",
+    "light laugh",
+    "matsuda",
+    "death note cliffhanger",
+    "death note watch"
+  ],
+  "series": {
+    "series_id": "series-1788373326501",
+    "part": 3,
+    "start_seconds": 555,
+    "end_seconds": 817,
+    "is_final": false,
+    "summary": "Trapped without an alibi, Light bursts into manic laughter and openly confesses to being Kira, declaring himself God of the New World. Near dismantles his divine delusions as nothing more than an arrogant serial killer, driving a cornered Light to launch a desperate psychological bluff while secretly clicking open his watch to unleash a concealed scrap of the Death Note."
+  },
+  "cuts": [
+    {
+      "start_seconds": 568,
+      "end_seconds": 591,
+      "voiceover_text": "Backed into an inescapable corner, Light Yagami does the unthinkable. Instead of pleading his innocence, a faint smirk curls across his face. His shoulders tremble in the suffocating silence of the warehouse. Suddenly, a chilling chuckle escapes his throat. The chuckle explodes into deranged, hysterical laughter that bounces violently off the concrete walls. Matsuda and the task force freeze in sheer terror. Their model detective has completely lost his mind right in front of them.",
+      "keywords": [
+        {
+          "word": "unthinkable",
+          "color": "#FF3B30"
+        },
+        {
+          "word": "laughter",
+          "color": "#FFCC00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 611,
+      "end_seconds": 636,
+      "voiceover_text": "After his laughter abruptly dies, Light throws his head back and stops hiding behind his lies. He proudly confesses that he is Kira. He glares at his captors and dares them to strike him down on the spot. Light proclaims that he is not just an ordinary vigilante, but the absolute God of the New World. He declares that Kira has become the only true law and order left in human civilization. His delusion fills the entire room with dread.",
+      "keywords": [
+        {
+          "word": "Kira",
+          "color": "#FF3B30"
+        },
+        {
+          "word": "God",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 651,
+      "end_seconds": 676,
+      "voiceover_text": "Continuing his passionate defense, Light passionately demands that they acknowledge the results of his slaughter. He points out that six years under Kira ended global wars and slashed violent crime by over seventy percent. Yet he insists the world remains deeply rotten with corrupt people who deserve punishment. Light argues that somebody had to take on the moral burden of mass murder to cleanse humanity. He firmly believes that he was the only human righteous enough to carry out this divine mission.",
+      "keywords": [
+        {
+          "word": "seventy",
+          "color": "#34C759"
+        },
+        {
+          "word": "cleanse",
+          "color": "#FF9500"
+        }
+      ]
+    },
+    {
+      "start_seconds": 711,
+      "end_seconds": 738,
+      "voiceover_text": "As Light finishes boasting about his new world, Near cuts him off with merciless precision. Near stares at him with cold contempt and rejects every single word of his manifesto. He tells Light that he is nothing more than a murderer wielding the deadliest weapon of mass slaughter in human history. Near explains that Light simply succumbed to the power of the death god and fooled himself into believing he was divine. He brands Light an ordinary, deranged serial killer, shattering his godhood.",
+      "keywords": [
+        {
+          "word": "murderer",
+          "color": "#FF3B30"
+        },
+        {
+          "word": "serial",
+          "color": "#AF52DE"
+        }
+      ]
+    },
+    {
+      "start_seconds": 792,
+      "end_seconds": 817,
+      "voiceover_text": "Humiliated by Near's brutal verdict, Light launches into a desperate psychological gamble to distract the room. He smirks and claims only he knows where the real notebook is hidden, daring them to write his name to test it. While the investigators hesitate, Light's fingers secretly reach toward his wristwatch. He clicks the hidden spring. The tiny compartment pops open. Inside sits a concealed scrap of the Death Note and a needle. The detectives spot the weapon and scream in sheer panic.",
+      "keywords": [
+        {
+          "word": "wristwatch",
+          "color": "#5AC8FA"
+        },
+        {
+          "word": "panic",
+          "color": "#FF3B30"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
