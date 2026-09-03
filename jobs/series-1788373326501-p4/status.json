@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1788427906,
-  "updated_at_epoch": 1788428855,
+  "updated_at_epoch": 1788428879,
   "expires_at_epoch": 1788471106,
   "release_tag": "clipforge-series-1788373326501-p4",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1788373326501-p4",
@@ -26,8 +26,68 @@
     "code_ref": "f2f5d8476897b2f705c72b45f1d8952ad8982432"
   },
   "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6a99424bb1a6a3d2b164049a",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-05T08:21:36.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-series-1788373326501-p4-cba782c7-8bc4-4b93-b3bc-a698eb16f142-youtube"
+      },
+      {
+        "post_id": "6a99424e88c8daab08078d2b",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-05T08:21:36.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "instagram",
+            "accountId": {
+              "_id": "6a91584577555aae01490c7a",
+              "platform": "instagram",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "ChimeraVFX",
+              "isActive": true,
+              "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=1ABTEML5RJoQ7kNvwHVpHAW&_nc_oc=AdrjLwwelX5aVdlcWh67z8GK2rKYH3vYnVlHRiHFUFTyPO08rMhMjTLTzc5K6NnUUgw&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=g-cOnvQmg0HBrGQKDSHERA&_nc_tpa=Q5bMBQKjIP13pNInPH5yRlOuKI2pUNOU0f57fr7xY4Vi6yC3FPp5knKPz5_VAY_HcaNe9iJXsm3VNLtE_Q&oh=00_AQJJDtVHriNwbzH6myDNn9HBrdsYWcVRTTo59ebUqZNNWw&oe=6A9EDF2F",
+              "username": "chimeravfx"
+            },
+            "status": "pending"
+          },
+          {
+            "platform": "instagram",
+            "accountId": {
+              "_id": "6a91584577555aae01490c7a",
+              "platform": "instagram",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "ChimeraVFX",
+              "isActive": true,
+              "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=1ABTEML5RJoQ7kNvwHVpHAW&_nc_oc=AdrjLwwelX5aVdlcWh67z8GK2rKYH3vYnVlHRiHFUFTyPO08rMhMjTLTzc5K6NnUUgw&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=g-cOnvQmg0HBrGQKDSHERA&_nc_tpa=Q5bMBQKjIP13pNInPH5yRlOuKI2pUNOU0f57fr7xY4Vi6yC3FPp5knKPz5_VAY_HcaNe9iJXsm3VNLtE_Q&oh=00_AQJJDtVHriNwbzH6myDNn9HBrdsYWcVRTTo59ebUqZNNWw&oe=6A9EDF2F",
+              "username": "chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "instagram",
+        "request_id": "clipforge-auto-series-1788373326501-p4-cba782c7-8bc4-4b93-b3bc-a698eb16f142-instagram"
+      }
+    ],
+    "idempotency_key": "clipforge-auto-series-1788373326501-p4-cba782c7-8bc4-4b93-b3bc-a698eb16f142"
   }
 }
