@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "series-1788373326501-p4",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1788373299149/source.torrent",
+    "torrent_file_index": "37"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 120,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788373326501",
+    "source_job_id": "manual-1788373299149",
+    "part": 4,
+    "start_seconds": 817,
+    "context": "Prior events (Part 1): Light counts down the seconds expecting victory, but when the 40 seconds expire without a single death, Near reveals the tampered notebook with only Light's name missing, completely exposing him as Kira.\nPrior events (Part 2): Near reveals that Gevanni forged the entire real Death Note overnight and exposes how Mello's kidnapping forced Mikami into a fatal blunder at the bank vault, leaving Light completely trapped.\nPrior events (Part 3): Trapped without an alibi, Light bursts into manic laughter and openly confesses to being Kira, declaring himself God of the New World. Near dismantles his divine delusions as nothing more than an arrogant serial killer, driving a cornered Light to launch a desperate psychological bluff while secretly clicking open his watch to unleash a concealed scrap of the Death Note."
+  },
+  "music": {
+    "ref": "audio-library/SUA CAVALONA (Hardstyle Remix) (Ultra Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788402712
+}
