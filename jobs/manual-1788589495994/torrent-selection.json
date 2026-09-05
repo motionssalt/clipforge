@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "job_id": "manual-1788589495994",
+  "torrent_name": "[FrostyFl8kes] The Promised Neverland Season 1 (BD Remux 1080p x264 FLAC)",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Extras/[FrostyFl8kes] The Promised Neverland NCED (BD Remux 1080p x264 FLAC) [130447FD].mkv",
+      "length": 409647761
+    },
+    {
+      "index": 2,
+      "path": "Extras/[FrostyFl8kes] The Promised Neverland NCOP (BD Remux 1080p x264 FLAC) [E0DF74C5].mkv",
+      "length": 414845829
+    },
+    {
+      "index": 3,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E01 (BD Remux 1080p x264 FLAC) [49600CC6].mkv",
+      "length": 6327849439
+    },
+    {
+      "index": 4,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E02 (BD Remux 1080p x264 FLAC) [19FF940B].mkv",
+      "length": 6329142824
+    },
+    {
+      "index": 5,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E03 (BD Remux 1080p x264 FLAC) [54FD2640].mkv",
+      "length": 6316145481
+    },
+    {
+      "index": 6,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E04 (BD Remux 1080p x264 FLAC) [46709929].mkv",
+      "length": 6316906704
+    },
+    {
+      "index": 7,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E05 (BD Remux 1080p x264 FLAC) [38844F2A].mkv",
+      "length": 6313473769
+    },
+    {
+      "index": 8,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E06v2 (BD Remux 1080p x264 FLAC) [80E665DE].mkv",
+      "length": 6303342075
+    },
+    {
+      "index": 9,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E07 (BD Remux 1080p x264 FLAC) [6EE43A98].mkv",
+      "length": 6287859942
+    },
+    {
+      "index": 10,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E08 (BD Remux 1080p x264 FLAC) [46818C6F].mkv",
+      "length": 6317328933
+    },
+    {
+      "index": 11,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E09 (BD Remux 1080p x264 FLAC) [734ED08C].mkv",
+      "length": 6278277921
+    },
+    {
+      "index": 12,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E10 (BD Remux 1080p x264 FLAC) [0221CCD1].mkv",
+      "length": 6268659420
+    },
+    {
+      "index": 13,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E11 (BD Remux 1080p x264 FLAC) [D1900F5A].mkv",
+      "length": 6311116760
+    },
+    {
+      "index": 14,
+      "path": "[FrostyFl8kes] The Promised Neverland S01E12 (BD Remux 1080p x264 FLAC) [5AA66C8F].mkv",
+      "length": 6292583852
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "120",
+    "focus": ""
+  }
+}
