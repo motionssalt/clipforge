@@ -1195,6 +1195,49 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   chronological beats, reactions, and connective detail until every cut
   meets its minimum.
 
+  FOOTAGE MAY RUN LONGER THAN NARRATION — THIS IS EXPECTED AND GOOD.
+  The Stage B renderer AUTOMATICALLY retimes each cut's actual footage to
+  match the length of its written `voiceover_text` EXACTLY, using the
+  cut's full, complete `start_seconds..end_seconds` range. The cut is
+  NEVER trimmed, shortened, or re-bounded by the pipeline to fit the
+  narration: if the footage is longer than the narration, playback simply
+  speeds up (a stretch < 1.0x); if it is shorter, playback slows down.
+  This happens automatically after you submit production.json — you do
+  not need to do anything to trigger it, and you MUST NOT try to
+  hand-match narration length to footage length by pulling `end_seconds`
+  earlier than visual completeness requires.
+
+  Therefore, when a genuinely complete visual moment (per the PICKING
+  end_seconds rules in STEP 3) naturally exceeds the amount of narration
+  needed to accurately describe it: KEEP THE FULL CUT. Do not shorten
+  it, do not pull `end_seconds` back to the last-narrated beat, and do
+  not pad the narration with filler to close the gap. Write narration of
+  whatever length genuinely and accurately describes what is happening
+  on screen (subject to the 90% / 2.82-words-per-second floor above,
+  which still applies and is not being relaxed), and let the resulting
+  footage-to-narration ratio be whatever it is. The renderer will speed
+  the footage up to fit — a sped-up moment is a completely normal, often
+  more engaging outcome, NOT a defect or a mismatch to avoid.
+
+  This is the correct resolution to a scenario you may otherwise feel
+  compelled to fix yourself: shortening the cut to bring the word
+  budget down is the actual mistake. The pipeline exists specifically
+  to resolve footage-longer-than-narration by retiming, automatically,
+  after production.json is submitted. Trust it. Choose `end_seconds`
+  entirely on visual completeness (unchanged from the PICKING
+  end_seconds rules), let the narration flex to accurately cover that
+  full moment (unchanged from the ORDER OF OPERATIONS above, and still
+  bound below by the 90% floor), and accept a stretch < 1.0x as a
+  normal, good outcome — not a compromise.
+
+  This guidance works WITH, not against, the existing rules: visual
+  completeness decides `end_seconds` FIRST (unchanged); narration word
+  count flexes to accurately describe that full moment (unchanged, and
+  still clears the 90% minimum-word-budget floor); the only thing added
+  here is the explicit signal that ending up with footage longer than
+  the narration needs is fine, expected, and often desirable — and that
+  trimming the cut to avoid it is the actual mistake to stop making.
+
 CONSTRAINTS
   - `start_seconds` and `end_seconds` are integers, in seconds since the
     start of the video. `end_seconds > start_seconds`. Both must lie
