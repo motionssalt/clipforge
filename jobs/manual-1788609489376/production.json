@@ -1,0 +1,152 @@
+{
+  "video_duration_seconds": 1501,
+  "title": "He Thinks His Dead Wolf Returned Part 1",
+  "series": {
+    "series_id": "series-1788609521896",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 398,
+    "is_final": false,
+    "summary": "An immortal entity lands on Earth and takes the form of a dying wolf. Arriving at an abandoned arctic village, it meets a lonely boy who believes his beloved pet Joan has returned. As the boy shelters the creature and reveals why he was left behind by his tribe, a heartbreaking truth emerges about his endless wait."
+  },
+  "hashtags": [
+    "#toyoureternity",
+    "#fumetsunoanatae",
+    "#anime",
+    "#animestory",
+    "#heartbreaking",
+    "#series"
+  ],
+  "youtube_tags": [
+    "to your eternity",
+    "fumetsu no anatae",
+    "to your eternity episode 1",
+    "immortal orb",
+    "lonely boy and wolf",
+    "joan wolf",
+    "anime story",
+    "emotional anime",
+    "anime recap",
+    "fushi",
+    "arctic survival",
+    "anime mystery",
+    "to your eternity part 1"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 0,
+      "end_seconds": 18,
+      "voiceover_text": "An immortal entity is cast down to Earth with no form, no mind, and no purpose. It can copy anything it encounters, but it begins as a silent, motionless sphere. The orb drops through the cold sky and strikes the snow. It settles into the icy ground, slowly transforming into a simple stone. It lies completely still, waiting for life.",
+      "keywords": [
+        {
+          "word": "immortal",
+          "color": "#70A5FF"
+        },
+        {
+          "word": "motionless",
+          "color": "#A0B2C6"
+        },
+        {
+          "word": "stone",
+          "color": "#94A3B8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 83,
+      "end_seconds": 105,
+      "voiceover_text": "Centuries pass in silence until a mortally wounded white wolf stumbles through the howling blizzard. The creature collapses against the rock and takes its final, shuddering breath. It is dead. Suddenly, the strange entity reacts to the corpse. It absorbs the dead body and rapidly reshapes itself, copying every single strand of fur. The creature opens its glowing eyes. For the first time, it is alive and conscious.",
+      "keywords": [
+        {
+          "word": "shuddering",
+          "color": "#E06C75"
+        },
+        {
+          "word": "dead",
+          "color": "#E5534B"
+        },
+        {
+          "word": "conscious",
+          "color": "#50E3C2"
+        }
+      ]
+    },
+    {
+      "start_seconds": 153,
+      "end_seconds": 174,
+      "voiceover_text": "After wandering blindly across the vast tundra, the wolf reaches a lonely wooden settlement. A boy suddenly emerges into the cold. He freezes in utter shock, but then his face breaks into tears of relief. He sprints through the snow and throws his arms around the beast's neck. He is overjoyed. He believes his missing pet wolf Joan has miraculously returned home. Yet the creature stands completely silent, unable to recognize him.",
+      "keywords": [
+        {
+          "word": "shock",
+          "color": "#F5A623"
+        },
+        {
+          "word": "relief",
+          "color": "#4BD99B"
+        },
+        {
+          "word": "overjoyed",
+          "color": "#FFD166"
+        }
+      ]
+    },
+    {
+      "start_seconds": 222,
+      "end_seconds": 243,
+      "voiceover_text": "Once inside the cabin, the boy pulls the wolf back from the roaring hearth. He lovingly places a bowl of fresh fish before his silent companion. For the strange entity, this small room is overwhelming. It feels intense physical warmth, delicious aromas, and gentle human affection for the first time. The sensation is deeply comforting. If the beast could speak, it would admit that it wants to stay in this warm shelter forever.",
+      "keywords": [
+        {
+          "word": "warmth",
+          "color": "#FF7A59"
+        },
+        {
+          "word": "comforting",
+          "color": "#FFA07A"
+        },
+        {
+          "word": "shelter",
+          "color": "#4A90E2"
+        }
+      ]
+    },
+    {
+      "start_seconds": 299,
+      "end_seconds": 318,
+      "voiceover_text": "The next morning, the grim reality of his situation sets in. The boy trudges through the storm, carrying salvaged wooden planks torn from his neighbors' empty houses. He feels guilty for taking their belongings. Looking out over the frozen ghost town, he quietly whispers an apology to the empty air. Stealing their firewood is his only way to survive.",
+      "keywords": [
+        {
+          "word": "salvaged",
+          "color": "#A8B2C1"
+        },
+        {
+          "word": "apology",
+          "color": "#8E9AAF"
+        },
+        {
+          "word": "survive",
+          "color": "#FF5252"
+        }
+      ]
+    },
+    {
+      "start_seconds": 377,
+      "end_seconds": 398,
+      "voiceover_text": "Huddled beside the fading fire, the boy reveals the heartbreaking truth. Five years ago, his entire tribe marched south in search of paradise, leaving him behind to care for the elderly. Every single elder has since died. With trembling hands, the boy forces a smile through his tears. He insists that his people will return with gifts just as they promised. But deep down, he is terrified of the silence.",
+      "keywords": [
+        {
+          "word": "heartbreaking",
+          "color": "#FF4757"
+        },
+        {
+          "word": "tears",
+          "color": "#54A0FF"
+        },
+        {
+          "word": "silence",
+          "color": "#747D8C"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
