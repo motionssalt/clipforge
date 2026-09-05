@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "series-1788618217388-p2",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1788618150427/source.torrent",
+    "torrent_file_index": "14"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 120,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788618217388",
+    "source_job_id": "manual-1788618150427",
+    "part": 2,
+    "start_seconds": 345,
+    "context": "Prior events (Part 1): At the Daily Days newspaper in Manhattan, Vice President Gustav and assistant Carol investigate the violent gang war of 1930, only to discover records proving the mobsters were aboard the alchemist ship Advena Avis in 1711."
+  },
+  "music": {
+    "ref": "audio-library/180DB_ [130] (Intro Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788634245
+}
