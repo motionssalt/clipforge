@@ -44,6 +44,14 @@ FLOOR_RATE = "2.82 words per second"
 CONTRACT_HEADER = "NARRATION DURATION CONTRACT"
 CONSTRAINTS_HEADER = "CONSTRAINTS"
 
+
+# Anchors from the Part B reinforcement block (extreme-ratio worked example).
+EXTREME_HEADER = 'NO STRETCH RATIO IS "TOO EXTREME"'
+EXTREME_EXAMPLE = "requires 60 seconds of raw"
+EXTREME_BOUND = "up to a full order of magnitude"
+EXTREME_HESITATION = "this stretch ratio seems too extreme"
+EXTREME_DISCONNECT = "does not make the final video shorter"
+
 # The new block must sit inside the NARRATION DURATION CONTRACT area, before
 # the CONSTRAINTS section, so it lives alongside the existing (correct)
 # guidance rather than as an orphaned appendix.
@@ -136,6 +144,30 @@ class TestFootageLongerThanNarration(unittest.TestCase):
         addition = self.text[header_idx:constraints_idx]
         self.assertIn("PICKING", addition)
         self.assertIn("end_seconds", addition)
+
+    def test_extreme_ratio_header_present(self) -> None:
+        self.assertIn(EXTREME_HEADER, self.text)
+
+    def test_extreme_ratio_worked_example_present(self) -> None:
+        self.assertIn(EXTREME_EXAMPLE, self.text)
+        self.assertIn(EXTREME_BOUND, self.text)
+
+    def test_extreme_ratio_hesitation_named(self) -> None:
+        self.assertIn(EXTREME_HESITATION, self.text)
+
+    def test_extreme_ratio_causal_disconnect_stated(self) -> None:
+        self.assertIn(EXTREME_DISCONNECT, self.text)
+
+    def test_extreme_ratio_adjacent_to_footage_section(self) -> None:
+        # The Part B reinforcement must sit immediately after the existing
+        # FOOTAGE MAY RUN LONGER THAN NARRATION block and before CONSTRAINTS,
+        # so a linear reader meets it while the footage-vs-narration guidance
+        # is still in view.
+        footage_idx = self.text.index(HEADER)
+        extreme_idx = self.text.index(EXTREME_HEADER)
+        constraints_idx = self.text.index("\n" + CONSTRAINTS_HEADER)
+        self.assertLess(footage_idx, extreme_idx)
+        self.assertLess(extreme_idx, constraints_idx)
 
 
 if __name__ == "__main__":

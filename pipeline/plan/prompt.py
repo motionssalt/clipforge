@@ -1238,6 +1238,34 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   the narration needs is fine, expected, and often desirable — and that
   trimming the cut to avoid it is the actual mistake to stop making.
 
+
+  NO STRETCH RATIO IS "TOO EXTREME" — A WORKED EXAMPLE.
+  Suppose a complete visual moment genuinely requires 60 seconds of raw
+  footage for its full payoff, and accurate narration for it only takes
+  15-20 seconds to speak. Your `end_seconds` must STILL cover the full
+  60 seconds. The same holds up to a full order of magnitude, if that's
+  genuinely what the visual payoff requires — an hour of raw footage
+  retimed to a few seconds of narration is handled exactly the same way
+  as a two-second mismatch: automatically, by the renderer, after you
+  submit.
+
+  If you notice yourself thinking "this stretch ratio seems too extreme,
+  I should trim the clip to make it more proportionate" — that thought
+  itself is the mistake this section exists to prevent. There is no such
+  thing as "too extreme" for this pipeline. The renderer does not care
+  whether the ratio is 1.1x or 10x; it applies the same setpts operation
+  either way. Your only job is picking `end_seconds` correctly per the
+  PICKING end_seconds rules — never adjusting it because the resulting
+  ratio "feels" extreme.
+
+  Shortening `end_seconds` does not make the final video shorter — the
+  final on-screen duration is always exactly the length of your
+  `voiceover_text`, regardless of how much or how little raw footage you
+  selected. The ONLY effect of shortening `end_seconds` is cutting off
+  visual content before the payoff — it has zero effect on pacing or
+  runtime. There is no mechanism by which trimming footage "helps" the
+  video in any way.
+
 CONSTRAINTS
   - `start_seconds` and `end_seconds` are integers, in seconds since the
     start of the video. `end_seconds > start_seconds`. Both must lie

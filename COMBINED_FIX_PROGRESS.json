@@ -1,6 +1,6 @@
 {
   "initiative": "remove-automatic-mode-then-strengthen-clip-length-prose",
-  "current_step": "part_a.committed_pending_push",
+  "current_step": "part_b.committed_pending_push",
   "part_a_removal": {
     "status": "complete",
     "files_deleted": [
@@ -44,13 +44,13 @@
     "commits": []
   },
   "part_b_fix": {
-    "status": "not_started",
-    "blocked_until_part_a_complete": true,
-    "added_text": "",
-    "positioned_adjacent_to_footage_section": null,
-    "existing_sections_confirmed_unchanged": null,
-    "test_updated": false,
-    "full_suite_passing": false,
+    "status": "complete",
+    "blocked_until_part_a_complete": false,
+    "added_text": "\n  NO STRETCH RATIO IS \"TOO EXTREME\" \u2014 A WORKED EXAMPLE.\n  Suppose a complete visual moment genuinely requires 60 seconds of raw\n  footage for its full payoff, and accurate narration for it only takes\n  15-20 seconds to speak. Your `end_seconds` must STILL cover the full\n  60 seconds. The same holds up to a full order of magnitude, if that's\n  genuinely what the visual payoff requires \u2014 an hour of raw footage\n  retimed to a few seconds of narration is handled exactly the same way\n  as a two-second mismatch: automatically, by the renderer, after you\n  submit.\n\n  If you notice yourself thinking \"this stretch ratio seems too extreme,\n  I should trim the clip to make it more proportionate\" \u2014 that thought\n  itself is the mistake this section exists to prevent. There is no such\n  thing as \"too extreme\" for this pipeline. The renderer does not care\n  whether the ratio is 1.1x or 10x; it applies the same setpts operation\n  either way. Your only job is picking `end_seconds` correctly per the\n  PICKING end_seconds rules \u2014 never adjusting it because the resulting\n  ratio \"feels\" extreme.\n\n  Shortening `end_seconds` does not make the final video shorter \u2014 the\n  final on-screen duration is always exactly the length of your\n  `voiceover_text`, regardless of how much or how little raw footage you\n  selected. The ONLY effect of shortening `end_seconds` is cutting off\n  visual content before the payoff \u2014 it has zero effect on pacing or\n  runtime. There is no mechanism by which trimming footage \"helps\" the\n  video in any way.\n\n",
+    "positioned_adjacent_to_footage_section": true,
+    "existing_sections_confirmed_unchanged": true,
+    "test_updated": true,
+    "full_suite_passing": true,
     "commits": []
   },
   "human_review_items": [
@@ -61,7 +61,7 @@
   ],
   "resume_from": {
     "file": "pipeline/plan/prompt.py",
-    "component": "part_b",
-    "next_operation": "add clip-length prose section adjacent to FOOTAGE MAY RUN LONGER THAN NARRATION"
+    "component": "part_c",
+    "next_operation": "add series-mode footage-conservation clause to SERIES_DIRECTIVE after rule 9"
   }
 }
