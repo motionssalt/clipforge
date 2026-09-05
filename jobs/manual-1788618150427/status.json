@@ -3,24 +3,24 @@
   "job_id": "manual-1788618150427",
   "mode": "manual",
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
+    "enabled": true,
+    "series_id": "series-1788618217388",
+    "part": 1,
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/33973266912",
   "created_at_epoch": 1788620299,
-  "updated_at_epoch": 1788620299,
+  "updated_at_epoch": 1788620353,
   "expires_at_epoch": 1788663499,
   "release_tag": "clipforge-manual-1788618150427",
-  "release_url": "",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788618150427",
   "assets": {},
   "run": {
     "workflow_run_id": 33973266912,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/33973266912",
-    "code_ref": "29854651deabbb871156c89c9817bbeeb0d1685e"
+    "code_ref": "2f70afeaa6406ff239b3907807dc106ae5c30fa6"
   },
   "publishing": {
     "status": "not_requested",
