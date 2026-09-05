@@ -28,7 +28,7 @@ def _request(
     source_job_id: str = "series-123-p1",
     part: int = 1,
     start_seconds: int = 0,
-    mode: str = "automatic",
+    mode: str = "manual",
     music: dict | None = None,
     source: dict | None = None,
     options: dict | None = None,
@@ -220,7 +220,7 @@ class DeriveNextPartTests(unittest.TestCase):
         self.assertTrue(payload["continue"])
         self.assertEqual(payload["job_id"], "series-123-p2")
         request = payload["request"]
-        self.assertEqual(request["mode"], "automatic")
+        self.assertEqual(request["mode"], "manual")
         self.assertEqual(request["source"]["kind"], "url")
         self.assertEqual(request["source"]["value"], "https://example.com/v")
         series = request["series"]

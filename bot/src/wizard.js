@@ -4,9 +4,8 @@
  * That keeps every transition unit-testable offline.
  *
  * Step order is fixed: source → focus → length → music → confirm.
- * bug-33: there is no mode step anymore — bug-30 removed the automatic
- * (Gemini) mode, so manual is the only path and /new goes straight to the
- * source step with mode pre-set to 'manual'.
+ * bug-33: there is no mode step anymore — manual is the only path and /new
+ * goes straight to the source step with mode pre-set to 'manual'.
  * The focus step is skipped when the series toggle is on (§8.4 step 3:
  * "series has no editorial focus").
  */
@@ -33,8 +32,8 @@ const MAGNET_RE = /^magnet:\?/i;
 export const MAX_TORRENT_BYTES = 1024 * 1024; // §5: .torrent uploads ≤ 1 MB
 
 export function newWizard() {
-  // bug-33: no mode choice — manual is the only mode (bug-30 removed the
-  // automatic/Gemini path). Start directly at the source step.
+  // bug-33: no mode choice — manual is the only mode. Start directly at the
+  // source step.
   return {
     step: 'source',
     jobId: `manual-${Date.now()}`, // assigned up-front (needed for torrent upload paths)
@@ -115,7 +114,7 @@ export function describeMusic(music) {
 }
 
 export function describeMode(wizard) {
-  // bug-30/33: manual is the only mode — it is no longer shown as a choice.
+  // bug-30/33: manual is the only mode — it is not shown as a choice.
   const base = 'Manual (your external AI writes the plan)';
   return wizard.series ? `${base} · Series on` : base;
 }
@@ -162,7 +161,7 @@ export function wizardToRequest(wizard, seriesId) {
       target_duration_seconds: wizard.duration,
       focus: series ? '' : String(wizard.focus || '')
     },
-    mode: 'manual', // bug-30: manual is the only mode
+    mode: 'manual', // manual is the only mode
     series: {
       enabled: series,
       series_id: series ? String(seriesId || '') : '',

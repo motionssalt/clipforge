@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Resolve the Automatic Mode background-music choice for Stage B dispatch.
+"""Resolve a job's background-music choice for Stage B dispatch.
 
-Adapted port of ``_legacy/scripts/read_automatic_music.py``. The legacy tool
-read a separate ``automatic_music.json`` written by the browser before Stage A
+Adapted port of the legacy music reader. The legacy tool
+read a separate music-selection JSON written by the browser before Stage A
 dispatch; in the new architecture the bot writes the music choice directly
 into ``jobs/<job_id>/stage-a-request.json`` (``music.ref`` / ``music.source``,
 ARCHITECTURE.md §7.1), so this module validates THAT record instead and falls
@@ -13,7 +13,7 @@ Deliberately narrow: it permits only an empty music reference, a permanent
 audio-library path, or that same job's one-off ``music.mp3`` path. It prints
 GitHub Actions output only; it never logs file content or secrets.
 
-Usage (stage-a.yml automatic branch)::
+Usage (workflow dispatch)::
 
     python -m pipeline.plan.music <job_id> jobs/<job_id>/stage-a-request.json
 
@@ -106,16 +106,16 @@ def valid_music_ref(value: object, job_id: str) -> str:
     if value in (None, ""):
         return ""
     if not isinstance(value, str):
-        raise ValueError("automatic music_ref must be a string")
+        raise ValueError("music_ref must be a string")
     if is_safe_library_ref(value):
         return value
     if value == f"path:jobs/{job_id}/music.mp3":
         return value
-    raise ValueError("automatic music_ref is not an allowed library or same-job one-off path")
+    raise ValueError("music_ref is not an allowed library or same-job one-off path")
 
 
 def resolve_from_request(request: dict[str, object], job_id: str, *, default_music_path: Path = DEFAULT_MUSIC_PATH) -> tuple[str, str]:
-    """Return ``(music_ref, music_source)`` for an automatic job.
+    """Return ``(music_ref, music_source)`` for a job.
 
     ``request`` is the parsed stage-a-request.json. A present ``music`` block
     is deliberate, including an explicit empty choice — it is never silently
@@ -134,7 +134,7 @@ def resolve_from_request(request: dict[str, object], job_id: str, *, default_mus
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Resolve an automatic job's music choice for Stage B dispatch.")
+    parser = argparse.ArgumentParser(description="Resolve a job's music choice for Stage B dispatch.")
     parser.add_argument("job_id")
     parser.add_argument("request_path", type=Path, help="jobs/<job_id>/stage-a-request.json")
     parser.add_argument("--default-music-path", type=Path, default=DEFAULT_MUSIC_PATH)

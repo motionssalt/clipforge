@@ -1,18 +1,9 @@
-name: Diagnostics — Gemini capability + Telegram intake
+name: Diagnostics — Telegram intake
 
-# ARCHITECTURE.md §12 (preserved behavior): manual diagnostics workflow that
-# merges the two legacy checks —
-#   _legacy/.github/workflows/gemini-api-diagnostic.yml
-#   _legacy/.github/workflows/telegram-intake-check.yml
-# into one workflow_dispatch entry point:
-#
-#   Job 1 (gemini-capability): probes the configured Gemini keys with a native
-#     function-calling + inline-image request and uploads a REDACTED report
-#     (key fingerprints only; never raw keys, request bodies, or project ids).
-#     Driven by pipeline/diagnostics/gemini.py, ported from
-#     _legacy/scripts/gemini_api_capability_diagnostic.py.
-#
-#   Job 2 (telegram-intake): verifies §9.1 public Telegram channel intake
+# ARCHITECTURE.md §12 (preserved behavior): manual diagnostics workflow.
+# The Gemini-capability job was removed together with the Gemini-based
+# planning mode it existed to validate; the remaining job verifies §9.1
+# public Telegram channel intake
 #     end-to-end. POSITIVE: a known public channel post downloads and has a
 #     positive duration. NEGATIVE: a public *group* link is rejected before
 #     media processing. Both go through the real ingest path
@@ -35,44 +26,6 @@ permissions:
   contents: read
 
 jobs:
-  gemini-capability:
-    name: Verify direct Gemini capabilities
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install official Google Gen AI SDK
-        run: python -m pip install --disable-pip-version-check 'google-genai>=1.66,<2'
-
-      - name: Run redacted direct Gemini capability diagnostic
-        env:
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-        run: |
-          set -euo pipefail
-          if [ -z "${GEMINI_API_KEYS:-}" ]; then
-            echo 'FATAL: GEMINI_API_KEYS is not configured.' >&2
-            exit 2
-          fi
-          export PYTHONPATH="$GITHUB_WORKSPACE"
-          python -m pipeline.diagnostics.gemini \
-            --output gemini-api-capability-diagnostic.json
-
-      - name: Upload redacted diagnostic report
-        if: ${{ always() && hashFiles('gemini-api-capability-diagnostic.json') != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: gemini-api-capability-diagnostic
-          path: gemini-api-capability-diagnostic.json
-          if-no-files-found: error
-          retention-days: 7
-
   telegram-intake:
     name: Validate public Telegram intake
     runs-on: ubuntu-latest

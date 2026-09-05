@@ -1,0 +1,67 @@
+{
+  "initiative": "remove-automatic-mode-then-strengthen-clip-length-prose",
+  "current_step": "part_a.committed_pending_push",
+  "part_a_removal": {
+    "status": "complete",
+    "files_deleted": [
+      "pipeline/plan/automatic.py",
+      "pipeline/tests/test_automatic.py",
+      "pipeline/diagnostics/gemini.py",
+      "pipeline/tests/test_diagnostics.py"
+    ],
+    "references_cleaned": [
+      ".github/workflows/stage-a.yml (mode sanitizer + stale bug-30 header comments)",
+      ".github/workflows/diagnostics.yml (Gemini-capability job removed; Telegram-intake job kept)",
+      ".github/workflows/stage-b.yml (dead in-pipeline series continuation block removed)",
+      "pipeline/status.py (VALID_MODES manual-only; drop automatic_analysis_running state)",
+      "pipeline/plan/series.py (dead mode carry-forward simplified; stale comments)",
+      "pipeline/plan/music.py (orphaned module; automatic-mode wording in docstrings/errors)",
+      "bot/src/jobs.js (VALID_MODES manual-only; drop automatic_analysis_running state)",
+      "bot/src/series.js (mode check + doc comments)",
+      "bot/src/views.js (help text)",
+      "bot/src/wizard.js (doc comments only; mode:'manual' literals kept)",
+      "bot/src/index.js (Gemini-keys UI branch + doc comments; manual literals kept)",
+      "bot/src/github.js (doc comment)",
+      "bot/src/progress.js / anim.js (automatic_analysis_running rendering)",
+      "bot/src/constants.js (doc comment)",
+      "bot/test/series.test.mjs, bot/test/jobs.test.mjs",
+      "schemas/stage_a_request.schema.json, schemas/job_status.schema.json, schemas/production_plan.schema.json",
+      "README.md, ARCHITECTURE.md, NEXT_SESSION_PROMPT.md"
+    ],
+    "zernio_confirmed_untouched": true,
+    "final_grep_triage": [
+      "bot/src/zernio.js + pipeline/publish/zernio.py + tests: Zernio automatic publishing (automatic_mode publish_now/smart_schedule) \u2014 UNRELATED feature, kept untouched",
+      "bot/src/commands/start.js, clone-sync.js, runtime.js, README:50, scripts/reclaim-stale-task-labels.mjs: generic adverb uses (apply/reclaim/connected automatically) \u2014 unrelated, kept",
+      "pipeline/plan/prompt.py:1199/1205/1225 + tests/test_prompt_footage_longer_than_narration.py: AUTOMATICALLY retimes = renderer setpts behavior prose (Part B subject matter) \u2014 kept deliberately",
+      "stage-a.yml:525/646, stage-b.yml:666: release automatically deleted ~12h expiry comments \u2014 unrelated, kept",
+      "stage-b.yml:735-772: Zernio automatic publish dispatch \u2014 unrelated, kept",
+      "test_cleanup.py:97-98 + branding/zernio_queue.json: historical automatic-<ts> job ids \u2014 data, kept",
+      "pipeline/plan/prompt.py:1041, transcribe.py:25: generic adverbs \u2014 unrelated, kept",
+      "_legacy/ + all *_PROGRESS.json/FIX_STATE.json checkpoints: historical references \u2014 intentionally untouched",
+      "bot/test/series.test.mjs:115: legacy mode:automatic fixture now asserting continuation STILL works (backward-compat pin) \u2014 kept deliberately"
+    ],
+    "full_suite_passing": true,
+    "commits": []
+  },
+  "part_b_fix": {
+    "status": "not_started",
+    "blocked_until_part_a_complete": true,
+    "added_text": "",
+    "positioned_adjacent_to_footage_section": null,
+    "existing_sections_confirmed_unchanged": null,
+    "test_updated": false,
+    "full_suite_passing": false,
+    "commits": []
+  },
+  "human_review_items": [
+    "pipeline/diagnostics/gemini.py + its diagnostics.yml job and test_diagnostics.py were removed: their ONLY purpose was probing Gemini models for the deleted Automatic Mode (gemini.py imports the now-deleted pipeline/plan/automatic for its model list). No other code references GEMINI_API_KEYS after Part A.",
+    "pipeline/plan/music.py was orphaned by the bug-30 workflow removal (no live importer/caller; stage-b.yml takes music_ref directly). Retained with automatic-mode wording scrubbed. Consider deleting in a future cleanup.",
+    "Historical jobs/ records (e.g. branding/zernio_queue.json's automatic-<ts> job id) intentionally untouched per plan.",
+    "pipeline/tests/test_status.py includes a pre-existing failure (test_refuses_to_leave_terminal_state) documented in FIX_STATE.json as failing on unmodified main."
+  ],
+  "resume_from": {
+    "file": "pipeline/plan/prompt.py",
+    "component": "part_b",
+    "next_operation": "add clip-length prose section adjacent to FOOTAGE MAY RUN LONGER THAN NARRATION"
+  }
+}

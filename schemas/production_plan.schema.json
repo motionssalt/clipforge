@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://clipforge.dev/schemas/production_plan.schema.json",
   "title": "ClipForge production.json",
-  "description": "The single hand-off contract from the analysis phase (manual agent or automatic Gemini) to Stage B render. Validated identically in bot/src/plan.js and pipeline/plan/schema.py. This JSON Schema is documentation and a coarse structural check; the fine-grained rules (sorted non-overlapping cuts, unique tags, series cut-window enforcement, etc.) live in the validator implementations and are the authoritative rules — see ARCHITECTURE.md §7.3.",
+  "description": "The single hand-off contract from the analysis phase (manual agent) to Stage B render. Validated identically in bot/src/plan.js and pipeline/plan/schema.py. This JSON Schema is documentation and a coarse structural check; the fine-grained rules (sorted non-overlapping cuts, unique tags, series cut-window enforcement, etc.) live in the validator implementations and are the authoritative rules — see ARCHITECTURE.md §7.3.",
   "type": "object",
   "additionalProperties": true,
   "required": ["video_duration_seconds", "target_total_duration_seconds", "cuts"],

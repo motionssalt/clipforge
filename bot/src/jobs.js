@@ -19,7 +19,6 @@ export const VALID_STATES = Object.freeze([
   'queued',
   'stage_a_running',
   'awaiting_torrent_selection',
-  'automatic_analysis_running',
   'awaiting_plan',
   'stage_b_queued',
   'stage_b_running',
@@ -30,7 +29,7 @@ export const VALID_STATES = Object.freeze([
 
 export const TERMINAL_STATES = Object.freeze(new Set(['complete', 'error', 'cancelled']));
 
-export const VALID_MODES = Object.freeze(['manual', 'automatic']);
+export const VALID_MODES = Object.freeze(['manual']);
 
 export const VALID_PUBLISHING_STATUSES = Object.freeze([
   'not_requested',
@@ -54,13 +53,11 @@ const TRANSITIONS = Object.freeze({
   queued: ['stage_a_running', 'error', 'cancelled'],
   stage_a_running: [
     'awaiting_torrent_selection',
-    'automatic_analysis_running',
     'awaiting_plan',
     'error',
     'cancelled',
   ],
   awaiting_torrent_selection: ['stage_a_running', 'error', 'cancelled'],
-  automatic_analysis_running: ['stage_b_queued', 'error', 'cancelled'],
   awaiting_plan: ['stage_b_queued', 'error', 'cancelled'],
   stage_b_queued: ['stage_b_running', 'error', 'cancelled'],
   stage_b_running: ['complete', 'error', 'cancelled'],

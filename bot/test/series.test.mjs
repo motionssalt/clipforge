@@ -103,15 +103,16 @@ test('manualSeriesContinuation requires the complete state', () => {
   assert.equal(manualSeriesContinuation(completeStatus, makeRequest(), makePlanNested()) !== null, true);
 });
 
-test('manualSeriesContinuation requires a manual series request', () => {
+test('manualSeriesContinuation requires a series request', () => {
   assert.equal(manualSeriesContinuation(completeStatus, null, makePlanNested()), null);
   // not a series request
   assert.equal(
     manualSeriesContinuation(completeStatus, makeRequest({ series: { enabled: false, series_id: '', source_job_id: '', part: 0, start_seconds: 0, context: '' } }), makePlanNested()),
     null,
   );
-  // automatic parts chain via stage-b.yml, not the bot
-  assert.equal(manualSeriesContinuation(completeStatus, makeRequest({ mode: 'automatic' }), makePlanNested()), null);
+  // mode no longer gates continuation — every job is manual now, and a
+  // historical request persisted with a legacy mode value continues the same
+  assert.notEqual(manualSeriesContinuation(completeStatus, makeRequest({ mode: 'automatic' }), makePlanNested()), null);
   // missing series id
   assert.equal(
     manualSeriesContinuation(completeStatus, makeRequest({ series: { enabled: true, series_id: '', source_job_id: 'x', part: 1, start_seconds: 0, context: '' } }), makePlanNested()),
@@ -151,7 +152,7 @@ test('buildSeriesContext orders, skips empty summaries, and caps at 8000 chars',
   assert.ok(long.length <= 8000);
 });
 
-test('nextPartRequestBody mirrors the automatic continuation with mode manual', () => {
+test('nextPartRequestBody mirrors the pipeline continuation with mode manual', () => {
   const request = makeRequest({
     source: { kind: 'torrent_file', value: 'path:jobs/series-1-p1/source.torrent', torrent_file_index: '3' },
     music: { ref: 'audio-library/theme.mp3', source: 'explicit_library' },

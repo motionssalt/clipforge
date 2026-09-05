@@ -108,7 +108,7 @@ By the end of this session, you must have:
    - The new Telegram bot's command/settings/flow structure, designed
      for actual usability — assume the person using it is capable but has
      found the current bot's flow confusing, and design accordingly.
-   - How Series Mode, Automatic Mode, and Manual Mode fit into the new
+   - How Series Mode and Manual Mode fit into the new
      structure (these capabilities must still exist; how they're
      organized is yours to redesign).
    - Where and how the two preserved subsystems above plug into the new

@@ -3,7 +3,7 @@
 ClipForge is a **Telegram bot that turns a source video into a short, narrated,
 captioned vertical clip.** You talk to one shared bot; the bot drives a private
 GitHub repository (your "Shadow Clone") that actually runs the video pipeline
-in GitHub Actions. Manual mode, Automatic mode, and Series mode are all
+in GitHub Actions. Manual mode and Series mode are
 supported — see [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
 This repository is the **central ClipForge source of truth**. It is also a
@@ -75,7 +75,6 @@ secret**.
 
 | Secret | Feature it enables | Used by |
 |---|---|---|
-| `GEMINI_API_KEYS` | Automatic-mode analysis (Gemini). Without it, use Manual mode. | `diagnostics.yml`, Stage A |
 | `ZERNIO_API_KEY` | Social publishing via Zernio. Absent → publish steps skip/fail only when you actually trigger them. | `stage-b.yml`, `publish.yml` |
 
 **Not needed on a clone (central-only):** `BOTB_MTPROTO_*`,
@@ -101,10 +100,10 @@ ARCHITECTURE.md §9.1. Direct video forwarding is available to everyone.)
 |---|---|
 | `/start` | Home menu for the connected clone |
 | `/help` | In-app command reference |
-| `/new` | Start the new-video wizard — manual, automatic, or series mode |
+| `/new` | Start the new-video wizard — manual or series mode |
 | `/tasks` | Active task list; finished and errored tasks remain visible with their terminal status |
 | `/done` | Completed tasks |
-| `/settings` | Clone settings: Gemini API keys, narrator voice, watermark, music library, Zernio |
+| `/settings` | Clone settings: narrator voice, watermark, music library, Zernio |
 | `/cancel` | Cancel the current setup or input flow |
 
 Inside `/new`, accepted sources: a directly forwarded/uploaded video, a direct
@@ -112,8 +111,7 @@ Inside `/new`, accepted sources: a directly forwarded/uploaded video, a direct
 file (≤ 1 MB), or — on the original repo only — a public `t.me` channel-post
 link.
 
-Legacy commands removed in the rebuild: `/manual` and `/automatic` are folded
-into `/new`; `/status` is folded into `/tasks`.
+Legacy commands removed in the rebuild: `/status` is folded into `/tasks`.
 
 ---
 

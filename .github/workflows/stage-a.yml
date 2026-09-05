@@ -12,9 +12,9 @@ name: Stage A — Ingest, Transcribe, Analyze (new pipeline)
 # security boundary's second layer). telegram_relay §9.2 fetches its temporary
 # prerelease asset through the same GH_TOKEN the release-URL steps already use.
 #
-# bug-30: the Gemini-based Automatic Mode (production.json generation) is
-# removed. Stage A always ends in awaiting_plan; the only path into Stage B is
-# a user-supplied production.json (file upload, paste, or the agent prompt).
+# bug-30: the Gemini-based planning mode is removed. Stage A always ends in
+# awaiting_plan; the only path into Stage B is a user-supplied production.json
+# (file upload, paste, or the agent prompt).
 run-name: Stage A — ${{ inputs.job_id }}
 
 on:
@@ -152,8 +152,7 @@ jobs:
           import json, re, sys
           data = json.load(open(sys.argv[1], encoding="utf-8"))
           def put(k, v): print(f"{k}={v}")
-          mode = data.get("mode", "manual")
-          put("mode", mode if mode in ("manual", "automatic") else "manual")
+          put("mode", "manual")
           src = data.get("source", {})
           kind = src.get("kind", "")
           put("source_kind", kind if re.fullmatch(r"[a-z_]{1,32}", kind) else "unknown")
@@ -712,9 +711,8 @@ jobs:
               f.write("assets_json=" + json.dumps(out) + "\n")
           '
 
-      # bug-30: every successful Stage A now lands in awaiting_plan (the Gemini
-      # automatic-analysis branch below is removed). The mode guard is gone so
-      # the state no longer depends on a 'manual' vs 'automatic' split.
+      # bug-30: every successful Stage A now lands in awaiting_plan; the state
+      # no longer depends on any mode split.
       - name: Write awaiting_plan status
         if: ${{ (steps.ingest.outputs.result == 'ok' || steps.series_reuse.outputs.reused == 'true') }}
         shell: bash
@@ -760,9 +758,8 @@ jobs:
           echo "FATAL: could not persist the awaiting_plan status to origin after 3 attempts." >&2
           exit 1
 
-      # bug-30: the automatic-mode Gemini branch and its fallback were removed
-      # — Stage A only ever ends in awaiting_plan now, so the only failure
-      # handler needed is the generic error one below.
+      # bug-30: Stage A only ever ends in awaiting_plan now, so the only
+      # failure handler needed is the generic error one below.
       - name: On failure, write error status
         if: failure()
         shell: bash

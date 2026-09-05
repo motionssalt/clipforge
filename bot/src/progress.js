@@ -92,7 +92,6 @@ export function progressLine(status) {
     queued: { frac: 0.05, label: 'Queued — Stage A dispatching' },
     stage_a_running: { frac: 0.25, label: 'Stage A — ingesting source' },
     awaiting_torrent_selection: { frac: 0.4, label: 'Awaiting torrent selection' },
-    automatic_analysis_running: { frac: 0.45, label: 'Analysing source' },
     awaiting_plan: { frac: 0.5, label: 'Awaiting production.json' },
     stage_b_queued: { frac: 0.6, label: 'Stage B queued' },
     stage_b_running: { frac: 0.8, label: 'Stage B — rendering final video' },

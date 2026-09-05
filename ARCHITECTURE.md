@@ -13,15 +13,12 @@ keep building against it as written; do not silently redesign.
 
 ClipForge turns a **source video** into a **short, edited, narrated, captioned
 vertical clip** and optionally **publishes** it. A user drives the whole thing
-from a Telegram bot. The system supports three operating modes:
+from a Telegram bot. The system supports two operating modes:
 
 - **Manual mode** — the pipeline produces an analysis bundle and a *prompt*;
   a human pastes that prompt into an external AI agent (any agent, any tool);
   the agent returns a `production.json`; the pipeline renders from it.
-- **Automatic mode** — the same analysis bundle is handed to an in-pipeline
-  LLM call (Gemini, multi-key, bounded tool use) which writes
-  `production.json` with no human in the loop.
-- **Series mode** — orthogonal to Manual/Automatic. When enabled, one source
+- **Series mode** — orthogonal to Manual. When enabled, one source
   video is consumed sequentially in parts; each part ends on a cliffhanger
   and the next part continues from the prior part's end timestamp, reusing
   the original Stage A evidence.
@@ -46,9 +43,9 @@ free to restructure everything *except* the two preserved subsystems listed in
    `jobs/<job_id>/`.** This is retained — it works and it is the only cheap,
    durable, per-repo storage the architecture has.
 4. **The contract between "analyze" and "render" is a single JSON file with a
-   versioned schema** (`production.json`, §7.3). Manual, Automatic, and Series
-   all produce and consume the exact same file. This is what makes the
-   human-in-the-loop and machine-in-the-loop modes interchangeable.
+   versioned schema** (`production.json`, §7.3). Manual and Series
+   jobs all produce and consume the exact same file — one identical contract
+   for every job.
 5. **Security boundaries are structural, not conventional.** Cloned
    repositories must be *incapable* of reaching the two original-repo-only
    subsystems, not merely *asked not to*. See §9.
@@ -75,8 +72,8 @@ free to restructure everything *except* the two preserved subsystems listed in
               │  GitHub Actions     (all heavy compute)            │
               │                                                    │
               │   ┌──────────┐   ┌──────────────┐   ┌───────────┐ │
-              │   │ STAGE A  │──►│ PLAN (manual │──►│  STAGE B  │ │
-              │   │ ingest + │   │ or automatic)│   │  render + │ │
+              │   │ STAGE A  │──►│ PLAN (manual)│──►│  STAGE B  │ │
+              │   │ ingest + │   │              │   │  render + │ │
               │   │ analyze  │   │ production.  │   │  publish  │ │
               │   │          │   │ json         │   │           │ │
               │   └──────────┘   └──────────────┘   └───────────┘ │
@@ -95,7 +92,7 @@ free to restructure everything *except* the two preserved subsystems listed in
 |---|---|---|
 | **Bot A** ("main bot") | Cloudflare Worker, the only Telegram bot the user talks to. Multi-tenant: one deployment serves every user. | Holds per-user encrypted credentials and Bot A→Bot B relay staging records in KV (the only KV keys left after the kv-minimization migration). Holds the relay *encryption* key (shared secret with the central repo). |
 | **Bot B** ("relay bot") | Separate Cloudflare Worker. Exists solely to sit in the private internal relay group and route ready-markers to the central repo's `telegram-relay.yml`. | Holds the central repo's PAT. No user ever interacts with it. |
-| **User's clone repo** | A private GitHub repo the user owns. Hosts Actions, job state, releases, branding. | Holds user-scoped secrets only (`GEMINI_API_KEYS`, `ZERNIO_API_KEY`). Never holds MTProto or Bot-B credentials. |
+| **User's clone repo** | A private GitHub repo the user owns. Hosts Actions, job state, releases, branding. | Holds user-scoped secrets only (`ZERNIO_API_KEY`). Never holds MTProto or Bot-B credentials. |
 | **Original repo** (`motionssalt/clipforge`) | The central, trusted repo. | The *only* place MTProto session secrets and the relay workflow run. |
 | **External analysis agent** (Manual mode) | Any AI the human pastes a prompt into. | Untrusted. Its only output is a `production.json` that must pass validation. |
 
@@ -140,7 +137,6 @@ in the same place.
 │   │   └── bundle.py                ← build analysis bundle + 00_READ_THIS_FIRST.txt
 │   ├── plan/
 │   │   ├── schema.py                ← production.json contract (shared, §7.3)
-│   │   ├── automatic.py             ← Gemini automatic analysis
 │   │   └── series.py                ← series continuation derivation
 │   ├── stage_b/
 │   │   ├── voiceover.py             ← Edge TTS synthesis
@@ -248,16 +244,14 @@ machine. Every stage reads and writes a single `jobs/<job_id>/status.json`.
                  │   │ selection                │
                  │   └──────────────────────────┘
                  ▼
-        plan produced how?
-        ┌────────┴─────────┐
-        ▼                  ▼
-┌───────────────────┐  ┌────────────────────────┐
-│ automatic_analysis│  │ awaiting_plan          │  (manual: waiting for human
-│ _running          │  │                        │   to return production.json)
-└───────┬───────────┘  └──────────┬─────────────┘
-        │ plan valid              │ plan uploaded & valid
-        ▼                         ▼
+        ┌────────────────────────┐
+        │ awaiting_plan          │  (waiting for the human
+        │                        │   to return production.json)
+        └──────────┬─────────────┘
+                   │ plan uploaded & valid
+                   ▼
         ┌────────────────┐
+        │ stage_b_queued │──► stage_b_running ──► complete
         │ stage_b_queued │──► stage_b_running ──► complete
         └────────────────┘            │
                                       ▼
@@ -269,8 +263,7 @@ machine. Every stage reads and writes a single `jobs/<job_id>/status.json`.
 | `queued` | Record exists; Stage A not yet observed running | no |
 | `stage_a_running` | Ingest/transcription/analysis in progress | no |
 | `awaiting_torrent_selection` | Multi-file source; waiting on user's file pick | no |
-| `automatic_analysis_running` | (Automatic mode) Gemini analysis in progress | no |
-| `awaiting_plan` | (Manual mode) bundle ready; waiting for `production.json` | no |
+| `awaiting_plan` | Bundle ready; waiting for `production.json` | no |
 | `stage_b_queued` | Valid plan present; Stage B dispatched | no |
 | `stage_b_running` | Render in progress | no |
 | `complete` | Final asset(s) published to the release | **yes** |
@@ -287,7 +280,7 @@ out of `complete`. This is a deliberate simplification over the old flow.
 {
   "version": 2,
   "job_id": "manual-1787692652625",
-  "mode": "manual | automatic",
+  "mode": "manual",
   "series": {
     "enabled": false,
     "series_id": "",
@@ -371,7 +364,7 @@ restart. This is the durable record of "what the user asked for."
     "focus": "",
     "enable_vision_assist": true
   },
-  "mode": "manual | automatic",
+  "mode": "manual",
   "series": {
     "enabled": false,
     "series_id": "",
@@ -432,15 +425,14 @@ re-fetch from Part 1's saved source reference.
 **`00_READ_THIS_FIRST.txt`** is the *prompt* for Manual mode. It fully
 describes the task, the available evidence, the duration target, any focus
 directive, and — most importantly — the exact `production.json` shape to
-return (§7.3). In Automatic mode the same content seeds the Gemini system
-context. **This file is generated by `pipeline/plan/prompt.py` logic and its
+return (§7.3). **This file is generated by `pipeline/plan/prompt.py` logic and its
 wording is part of the contract** — change it deliberately, not incidentally.
 
 ### 7.3 The production plan — `production.json` (the core contract)
 
 This is the single most important artifact in the system. It is what the
-external agent (Manual) or Gemini (Automatic) produces, and what Stage B
-consumes. It is the same file in all modes and all series parts.
+external agent produces, and what Stage B
+consumes. It is the same file for every job and every series part.
 
 ```json
 {
@@ -511,8 +503,8 @@ Producers and consumers of that timeline, and why they agree:
   `ffmpeg -i <original> -vn -ac 1 -ar 16000` (no `-ss`/`-t`), so the WAV is
   1:1 time-locked to the source and Whisper's segment times are source times.
 - **Screenshot composites** are extracted from the same original; their
-  filenames encode source seconds and `pipeline/plan/automatic.py`'s
-  `composite_window_seconds()` decodes them back with no offset.
+  filenames encode source seconds; the window size used to
+  build them is recorded in the bundle and the prompt, with no offset.
 - **Stage B extraction** (`pipeline/stage_b/render.py`) cuts with per-cut
   input-side `-ss <start> -to <end> -i <original>` against the same original
   re-obtained for the render. `setpts` retiming (speed reconciliation against
@@ -568,8 +560,8 @@ wizard, and settings behind a single screen.**
    kv-minimization made it stateless — the edit target is now implicit in
    the update itself: button presses edit `callback.message.message_id`,
    and renders answering a user-sent message always send fresh, §8.9).
-2. **Exactly one way to make a video:** the "New video" wizard. Manual vs
-   Automatic is a *choice inside the wizard*, not separate commands.
+2. **Exactly one way to make a video:** the "New video" wizard. There are
+   no separate per-mode commands.
 3. **Settings never interrupt a task.** All settings live behind "Settings".
 4. Every multi-step flow has explicit **Back** and **Cancel** on every screen.
 5. Secrets typed into chat (PATs, API keys) are deleted immediately after
@@ -586,14 +578,14 @@ wizard, and settings behind a single screen.**
 | `/settings` | Open settings. |
 | `/cancel` | Abort the current wizard/input flow. |
 
-No other commands. (The old `/manual` and `/automatic` are folded into `/new`.)
+No other commands.
 
 ### 8.3 Home screen
 
 ```
 ClipForge
 Connected to: owner/repo   ·   Narrator: Andrew   ·   Series: off
-Gemini: 2 keys configured  ·   Zernio: smart schedule on
+Zernio: smart schedule on
 
 [ 🎬 New video ]
 [ 📋 Tasks ]        [ ✅ Completed ]
@@ -604,11 +596,9 @@ Gemini: 2 keys configured  ·   Zernio: smart schedule on
 
 Step order is fixed. Each step is one screen with Back/Cancel.
 
-1. **Mode** — `[Manual] [Automatic] [Series ▢→☑ toggle]`
-   - Manual: you run the analysis yourself with an external AI.
-   - Automatic: Gemini writes the plan (needs a Gemini key — if none, say so
-     and offer a shortcut to Settings).
-   - Series toggle: chain this video into sequential cliffhanger parts.
+1. **Series toggle** — `[Series ▢→☑ toggle]`: chain this video into
+   sequential cliffhanger parts. (Every job uses the same manual
+   external-agent flow — there is no mode choice in the wizard.)
 2. **Source** — "Send the video, or paste a link / magnet / upload a
    `.torrent`." Accepted kinds per §5. Invalid input → specific error, stay on
    this step.
@@ -852,17 +842,14 @@ such fix in your session summary and in `BUILD_PROGRESS.json`.
 
 - **Manual mode:** Stage A → `awaiting_plan` → human/agent loop (§8.7) →
   Stage B → (optional) Publish.
-- **Automatic mode:** Stage A → `automatic_analysis_running` (Gemini, bounded
-  tool use, multi-key rotation, validated against §7.3) → Stage B →
-  (optional auto-)Publish.
 - **Series mode (orthogonal):** when on, Part 1 starts at source second 0. On
   completion of a non-final part, the *next* part is derived from persisted
   series state (`pipeline/plan/series.py`): new job id `<series_id>-p<N+1>`,
   `series_start_seconds` = prior part's `series_end_seconds`, and a context
-  string of prior part summaries. Automatic mode chains via Stage B's
-  continuation step; Manual mode exposes a **Start next part** button on the
-  completed part. Reuse of Part 1's Stage A evidence is preserved. The final
-  part sets `series.is_final = true`, which stops the chain.
+  string of prior part summaries. The bot exposes a **Start next part**
+  button on the completed part. Reuse of Part 1's Stage A evidence is
+  preserved. The final part sets `series.is_final = true`, which stops the
+  chain.
 
 ---
 
@@ -872,7 +859,7 @@ such fix in your session summary and in `BUILD_PROGRESS.json`.
   `expires_at_epoch` has passed. Default TTL 12 h. Preserved behavior.
 - **deploy-bots.yml** (on `bot/**` changes): runs bot tests, deploys Bot A and
   Bot B Workers.
-- **diagnostics.yml** (manual): Gemini capability check and the public
+- **diagnostics.yml** (manual): the public
   Telegram intake check (positive: a known public channel post downloads;
   negative: a public *group* link fails). Preserved behavior.
 
@@ -920,16 +907,15 @@ such fix in your session summary and in `BUILD_PROGRESS.json`.
    `production.json`. (No bot needed to test.)
 3. **Stage A ingest + analyze** — all source kinds *except* the two preserved
    subsystems, producing the bundle + `00_READ_THIS_FIRST.txt`.
-4. **Automatic mode** — Gemini analysis producing a validated plan.
-5. **Bot A core** — webhook, KV, crypto, home/tasks/settings, New-video
+4. **Bot A core** — webhook, KV, crypto, home/tasks/settings, New-video
    wizard, manual handoff, status actions.
-6. **Preserved subsystem #2 (relay)** — Bot B + `telegram-relay.yml` +
+5. **Preserved subsystem #2 (relay)** — Bot B + `telegram-relay.yml` +
    `relay/telegram_relay.py`, wired into Bot A's direct-video source.
-7. **Preserved subsystem #1 (channel MTProto)** — `telegram_channel.py` gated
+6. **Preserved subsystem #1 (channel MTProto)** — `telegram_channel.py` gated
    to the original repo.
-8. **Series mode** — continuation derivation + manual "next part" button.
-9. **Publish (Zernio)** — workflow + settings + per-post management.
-10. **Background workflows** — cleanup, deploy-bots, diagnostics.
+7. **Series mode** — continuation derivation + manual "next part" button.
+8. **Publish (Zernio)** — workflow + settings + per-post management.
+9. **Background workflows** — cleanup, deploy-bots, diagnostics.
 
 Each step is independently testable and independently committable. Build them
 in this order unless `BUILD_PROGRESS.json` says otherwise.

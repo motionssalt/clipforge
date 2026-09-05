@@ -80,7 +80,6 @@ export function statusEmoji(state, { unreadable = false } = {}) {
     case 'awaiting_torrent_selection': return '📂';
     case 'awaiting_plan': return '📝';
     case 'stage_a_running': return '⚙️';
-    case 'automatic_analysis_running': return '🔍';
     case 'stage_b_queued': return '🕓';
     case 'stage_b_running': return '🎬';
     default: return '⏳';
@@ -90,7 +89,7 @@ export function statusEmoji(state, { unreadable = false } = {}) {
 /** True when the job state represents active (non-terminal) work. */
 export function isActiveState(state) {
   return ['queued', 'stage_a_running', 'awaiting_torrent_selection',
-    'automatic_analysis_running', 'awaiting_plan', 'stage_b_queued',
+    'awaiting_plan', 'stage_b_queued',
     'stage_b_running'].includes(String(state || ''));
 }
 

@@ -44,7 +44,7 @@
         "enable_vision_assist":    { "type": "boolean" }
       }
     },
-    "mode": { "type": "string", "enum": ["manual", "automatic"] },
+    "mode": { "type": "string", "enum": ["manual"] },
     "series": {
       "type": "object",
       "additionalProperties": false,

@@ -46,8 +46,7 @@ export const VOICES = {
 
 export const DEFAULT_VOICE = 'en-US-AndrewNeural';
 
-// §8.2: the entire command surface. The old /manual and /automatic are folded
-// into /new; /status is folded into /tasks.
+// §8.2: the entire command surface. /status is folded into /tasks.
 export const COMMANDS = new Set(['/start', '/help', '/new', '/tasks', '/done', '/settings', '/cancel']);
 
 /**

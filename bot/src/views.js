@@ -100,7 +100,7 @@ export function helpKeyboard() {
 export const HELP_TEXT = [
   '<b>ClipForge commands</b>',
   '',
-  '/new — start the new-video wizard (manual, automatic, or series mode)',
+  '/new — start the new-video wizard (manual or series mode)',
   '/tasks — list active tasks; finished and errored tasks stay visible here',
   '/done — list completed tasks',
   '/settings — clone settings (GitHub clone, narrator voice, watermark, music, Zernio)',
@@ -111,8 +111,7 @@ export const HELP_TEXT = [
   'a magnet URI, a .torrent file (≤ 1 MB), a public t.me channel-post link,',
   'or forward/upload the video itself.',
   '',
-  'Removed legacy commands: /manual and /automatic are folded into /new;',
-  '/status is folded into /tasks.'
+  'Removed legacy commands: /status is folded into /tasks.'
 ].join('\n');
 
 export function settingsKeyboard() {

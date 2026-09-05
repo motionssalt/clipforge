@@ -117,12 +117,11 @@ test('serializeStatus / statusPath produce stable output', () => {
   assert.throws(() => statusPath('bad space'));
 });
 
-test('VALID_STATES covers the ten states from ARCHITECTURE.md §6.1', () => {
+test('VALID_STATES covers the nine states from ARCHITECTURE.md §6.1', () => {
   const expected = [
     'queued',
     'stage_a_running',
     'awaiting_torrent_selection',
-    'automatic_analysis_running',
     'awaiting_plan',
     'stage_b_queued',
     'stage_b_running',

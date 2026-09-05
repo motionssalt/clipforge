@@ -5,13 +5,13 @@
  * logic from ``_legacy/telegram-bot/src/index.js`` onto the new contracts:
  *
  * - Requests are the nested §7.1 shape (``series.enabled`` / ``series_id`` /
- *   ``part`` / ``source_job_id`` …, ``mode: 'manual' | 'automatic'``).
+ *   ``part`` / ``source_job_id`` …, ``mode: 'manual'``).
  * - Plans may carry EITHER the nested §7.3 ``series`` object or the legacy
  *   flat ``series_*`` siblings — extracted with the exact per-field
  *   precedence rule shared by ``bot/src/plan.js`` and
  *   ``pipeline/plan/schema.py`` (nested wins per-field).
  * - The continuation payload mirrors what ``pipeline/plan/series.py``
- *   derives for automatic mode, with the mode forced to ``manual``.
+ *   derives for a series continuation, with the mode forced to ``manual``.
  *
  * Only the pure derivation lives here so it is testable offline; all
  * GitHub/Telegram side effects stay in bot/src/index.js.
@@ -69,7 +69,7 @@ export function extractPlanSeries(document) {
  * Ported semantics (legacy manualSeriesContinuation):
  * - job must be in the 'complete' state;
  * - the persisted request must be a series request (``series.enabled``) in
- *   MANUAL mode (automatic parts chain via stage-b.yml instead);
+ *   MANUAL mode;
  * - the request must carry a valid ``series_id`` and part ≥ 1;
  * - the plan must exist, must not be the final part, and must carry a valid
  *   ``end_seconds``.
@@ -83,7 +83,7 @@ export function manualSeriesContinuation(status, request, plan) {
   if (!status || String(status.state) !== 'complete') return null;
   if (!isPlainObject(request)) return null;
   const reqSeries = isPlainObject(request.series) ? request.series : {};
-  if (reqSeries.enabled !== true || request.mode === 'automatic') return null;
+  if (reqSeries.enabled !== true) return null;
   const seriesId = String(reqSeries.series_id || '').trim();
   const part = Number(reqSeries.part || 0);
   if (!seriesId || !Number.isInteger(part) || part < 1) return null;
@@ -97,8 +97,8 @@ export function manualSeriesContinuation(status, request, plan) {
 
 /**
  * Build the ``Prior events (Part N): <summary>`` context string for a series
- * (the same derivation pipeline/plan/series.py performs for the automatic
- * path), capped at 8000 chars. ``entries`` is an array of {part, summary};
+ * (the same derivation pipeline/plan/series.py performs), capped at 8000
+ * chars. ``entries`` is an array of {part, summary};
  * unsummarized parts are skipped.
  *
  * bug-56: the leading token is intentionally ``Prior events (Part N):`` rather

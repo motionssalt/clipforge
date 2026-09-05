@@ -28,7 +28,6 @@ VALID_STATES: tuple[str, ...] = (
     "queued",
     "stage_a_running",
     "awaiting_torrent_selection",
-    "automatic_analysis_running",
     "awaiting_plan",
     "stage_b_queued",
     "stage_b_running",
@@ -39,7 +38,7 @@ VALID_STATES: tuple[str, ...] = (
 
 TERMINAL_STATES: frozenset[str] = frozenset({"complete", "error", "cancelled"})
 
-VALID_MODES: tuple[str, ...] = ("manual", "automatic")
+VALID_MODES: tuple[str, ...] = ("manual",)
 
 VALID_PUBLISHING_STATUSES: tuple[str, ...] = (
     "not_requested",

@@ -130,7 +130,6 @@ def derive_next_part(root: Path, job_id: str) -> dict[str, Any]:
     req_options = request.get("options") if isinstance(request.get("options"), dict) else {}
     req_source = request.get("source") if isinstance(request.get("source"), dict) else {}
     req_music = request.get("music") if isinstance(request.get("music"), dict) else {}
-    mode = "automatic" if request.get("mode") == "automatic" else "manual"
 
     if req_series.get("enabled") is not True:
         return {"continue": False}
@@ -203,8 +202,7 @@ def derive_next_part(root: Path, job_id: str) -> dict[str, Any]:
     # (source 'default' with an empty ref), and a permanent audio-library ref
     # is valid for every job. A one-off job upload (path:jobs/<part>/…) can
     # never be reused by another job, so it falls back to the shared default —
-    # the same policy the legacy stage-b.yml continuation step enforced via
-    # automatic_music.json.
+    # the same policy the legacy stage-b.yml continuation step enforced.
     music_source = str(req_music.get("source") or "none")
     music_ref = str(req_music.get("ref") or "")
     if music_source not in {"none", "default", "explicit_library", "job_upload"}:
@@ -254,7 +252,7 @@ def derive_next_part(root: Path, job_id: str) -> dict[str, Any]:
                 "focus": "",
                 "enable_vision_assist": req_options.get("enable_vision_assist") is not False,
             },
-            "mode": mode,
+            "mode": "manual",
             "series": {
                 "enabled": True,
                 "series_id": series_id,
