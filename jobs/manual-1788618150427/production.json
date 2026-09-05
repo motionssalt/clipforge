@@ -1,113 +1,97 @@
 {
-  "series": {
-    "series_id": "series-1788618217388",
-    "part": 1,
-    "start_seconds": 0,
-    "end_seconds": 362,
-    "is_final": false,
-    "summary": "Vice President Gustav St. Germain and his assistant Carol investigate the chaotic 1930s mob violence, discovering that the bloodshed is secretly tied to an immortality elixir dating back to 1711."
-  },
-  "video_duration_seconds": 1361,
-  "title": "Baccano Part 1: The 1711 Immortal Secret",
+  "video_duration_seconds": 1481,
+  "title": "Part 1: The Impossible Immortals of Manhattan",
   "hashtags": [
-    "#baccano",
-    "#anime",
-    "#mystery",
-    "#supernatural",
-    "#immortality",
-    "#animerecap",
-    "#mafia"
+    "#Baccano",
+    "#AnimeMystery",
+    "#DailyDays",
+    "#Immortality",
+    "#GangsterAnime",
+    "#AnimePlotTwist",
+    "#MobWar"
   ],
   "youtube_tags": [
     "baccano",
     "baccano episode 1",
-    "baccano recap",
+    "daily days newspaper",
     "gustav st germain",
-    "carol",
-    "anime recap",
-    "immortality elixir",
-    "1930s mafia",
-    "flying pussyfoot",
-    "anime mystery",
-    "advena avis",
-    "martillo family",
-    "gandor family",
-    "anime thriller"
+    "carol baccano",
+    "firo prochainezo",
+    "advena avis 1711",
+    "immortal anime",
+    "manhattan 1930",
+    "mafia anime mystery",
+    "baccano part 1",
+    "anime plot breakdown",
+    "alchemist immortality",
+    "baccano explained"
   ],
+  "series": {
+    "series_id": "series-1788618217388",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 345,
+    "is_final": false,
+    "summary": "At the Daily Days newspaper in Manhattan, Vice President Gustav and assistant Carol investigate the violent gang war of 1930, only to discover records proving the mobsters were aboard the alchemist ship Advena Avis in 1711."
+  },
   "cuts": [
     {
-      "start_seconds": 225,
-      "end_seconds": 254,
-      "voiceover_text": "Aboard a speeding passenger train across America, two investigators search for the spark behind a wave of impossible violence. Carol gasps at the window, captivated by a vivid double rainbow splitting the sky. Across the table, Vice President Gustav St. Germain sets his newspaper aside with a cold and calculating stare. He challenges his young assistant to pinpoint where this chaotic drama actually begins. Carol leans forward in eager excitement, confident she can name the true main character. But Gustav remains completely unmoved by her optimism. He knows every story has a hidden origin that defies simple explanations.",
+      "start_seconds": 120,
+      "end_seconds": 153,
+      "voiceover_text": "Every murder investigation needs a starting point, but in 1930 Manhattan, the timeline makes no sense. Inside the Daily Days newspaper headquarters, Vice President Gustav St. Germain stands beside the high window, watching the rain clear over the gray skyline. His assistant Carol waits by his desk, clutching her notebook. She wants to publish a story on the gang war that erupted that November. But Gustav stops her cold. He demands to know why people accept easy answers without question. Carol hesitates, caught off guard. She believes the facts speak for themselves. Gustav warns her that raw information is worthless until someone understands the hidden connections beneath it.",
       "keywords": [
         {
-          "word": "violence",
-          "color": "#FF4D4D"
+          "word": "murder",
+          "color": "#E53E3E"
         },
         {
-          "word": "rainbow",
-          "color": "#60A5FA"
+          "word": "worthless",
+          "color": "#DD6B20"
+        }
+      ]
+    },
+    {
+      "start_seconds": 153,
+      "end_seconds": 188,
+      "voiceover_text": "Carol tries to salvage her theory by naming a clear hero. She points to young mobster Firo Prochainezo, insisting the entire conflict began with his sudden rise inside the Martillo family. Gustav immediately dismantles the idea. If Firo is the protagonist, then what about the butchered bodies discovered in the garden? What about the rival syndicates pulling the strings from the shadows? Carol falters as the contradiction hits her. Her neat explanation is falling apart. Gustav reminds her that an investigator cannot simply pick a favorite face and ignore the collateral damage left in their wake. The real mastermind behind the bloodshed is someone far more dangerous.",
+      "keywords": [
+        {
+          "word": "protagonist",
+          "color": "#3182CE"
         },
         {
-          "word": "optimism",
-          "color": "#FBBF24"
+          "word": "butchered",
+          "color": "#E53E3E"
         }
       ]
     },
     {
       "start_seconds": 260,
-      "end_seconds": 300,
-      "voiceover_text": "Pressing deeper into their investigation, Gustav dismantles her theories one by one. Carol suggests the eccentric thieves who charmed Manhattan, but Gustav shakes his head in quiet disapproval. He points toward the blood-soaked streets of New York, where rival mafia factions are slaughtering each other in broad daylight. The Gandor family, the Martillo Camorra, and ruthless hitmen are colliding in a brutal turf war. Yet Gustav insists none of these gangsters started the conflict. He leans across the wooden table and drops a chilling historical date: the year seventeen eleven. Carol freezes as the true scope of the mystery expands beyond their century. A forgotten tragedy on an ancient ship set this bloodshed into motion hundreds of years ago.",
+      "end_seconds": 297,
+      "voiceover_text": "Determined to prove her point, Carol heads deep into the massive archive vaults of the Daily Days. She climbs past towering wooden shelves and pulls down heavy dossiers from late 1930. Yellowed news clippings detail a brutal turf war tearing New York apart. Crime bosses are vanishing overnight, rival hitmen are ambushed in back alleys, and innocent bystanders are getting gunned down in broad daylight. Carol spreads the police reports across the reading table, convinced the chaos originated right here in the city. Her confidence returns as she highlights the bloody dates. Gustav watches her quietly from the aisle. He knows she is searching the wrong century entirely.",
       "keywords": [
         {
-          "word": "investigation",
-          "color": "#38BDF8"
+          "word": "vanishing",
+          "color": "#805AD5"
         },
         {
-          "word": "slaughtering",
-          "color": "#EF4444"
-        },
-        {
-          "word": "tragedy",
-          "color": "#F59E0B"
+          "word": "wrong",
+          "color": "#DD6B20"
         }
       ]
     },
     {
       "start_seconds": 308,
-      "end_seconds": 328,
-      "voiceover_text": "As the train rattles westward, Carol struggles to grasp the impossible connection. She reviews the reports of massacres, bewildered by how two distant eras could intertwine. Gustav watches her growing unease with patient intensity. He warns her that ordinary logic will not explain what is happening across the United States. The real players in this war are not ordinary mortals fighting for territory.",
+      "end_seconds": 345,
+      "voiceover_text": "Gustav steps forward and unlocks a restricted archive drawer from two centuries earlier. He pulls out an ancient maritime ledger detailing the voyage of the alchemist ship Advena Avis in 1711. Carol assumes it is an eccentric joke, but her confidence evaporates instantly. The exact same mobsters shooting up Manhattan in 1930 are listed on the passenger manifest from over two hundred years ago. They have not aged a single day. Gustav confirms the horrifying reality: the killers roaming New York cannot die. Carol stares in frozen terror at the impossible records before her. Who created these immortals, and what brought their centuries-old curse to the streets of Manhattan?",
       "keywords": [
         {
-          "word": "massacres",
-          "color": "#DC2626"
+          "word": "1711",
+          "color": "#D69E2E"
         },
         {
-          "word": "intertwine",
-          "color": "#818CF8"
-        },
-        {
-          "word": "mortals",
-          "color": "#FB923C"
-        }
-      ]
-    },
-    {
-      "start_seconds": 328,
-      "end_seconds": 362,
-      "voiceover_text": "Then Gustav delivers the most terrifying revelation of all. In the midst of the gunfire and betrayals, certain men and women are taking fatal wounds and getting back up unharmed. Severed limbs reattach in seconds, and bullet holes vanish without a trace of blood. Carol stares in stunned disbelief as the grim reality sets in. An immortality elixir forged in seventeen eleven is circulating through the American underworld. Now, every dangerous faction is converging on the transcontinental express to seize it. Gustav turns his gaze back to the window, leaving Carol with one haunting question. Who among the passengers speeding toward New York is secretly immortal?",
-      "keywords": [
-        {
-          "word": "revelation",
-          "color": "#F59E0B"
-        },
-        {
-          "word": "immortality",
-          "color": "#E11D48"
-        },
-        {
-          "word": "immortal",
-          "color": "#EF4444"
+          "word": "immortals",
+          "color": "#9B2C2C"
         }
       ]
     }
