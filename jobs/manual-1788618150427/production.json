@@ -1,0 +1,116 @@
+{
+  "series": {
+    "series_id": "series-1788618217388",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 362,
+    "is_final": false,
+    "summary": "Vice President Gustav St. Germain and his assistant Carol investigate the chaotic 1930s mob violence, discovering that the bloodshed is secretly tied to an immortality elixir dating back to 1711."
+  },
+  "video_duration_seconds": 1361,
+  "title": "Baccano Part 1: The 1711 Immortal Secret",
+  "hashtags": [
+    "#baccano",
+    "#anime",
+    "#mystery",
+    "#supernatural",
+    "#immortality",
+    "#animerecap",
+    "#mafia"
+  ],
+  "youtube_tags": [
+    "baccano",
+    "baccano episode 1",
+    "baccano recap",
+    "gustav st germain",
+    "carol",
+    "anime recap",
+    "immortality elixir",
+    "1930s mafia",
+    "flying pussyfoot",
+    "anime mystery",
+    "advena avis",
+    "martillo family",
+    "gandor family",
+    "anime thriller"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 225,
+      "end_seconds": 254,
+      "voiceover_text": "Aboard a speeding passenger train across America, two investigators search for the spark behind a wave of impossible violence. Carol gasps at the window, captivated by a vivid double rainbow splitting the sky. Across the table, Vice President Gustav St. Germain sets his newspaper aside with a cold and calculating stare. He challenges his young assistant to pinpoint where this chaotic drama actually begins. Carol leans forward in eager excitement, confident she can name the true main character. But Gustav remains completely unmoved by her optimism. He knows every story has a hidden origin that defies simple explanations.",
+      "keywords": [
+        {
+          "word": "violence",
+          "color": "#FF4D4D"
+        },
+        {
+          "word": "rainbow",
+          "color": "#60A5FA"
+        },
+        {
+          "word": "optimism",
+          "color": "#FBBF24"
+        }
+      ]
+    },
+    {
+      "start_seconds": 260,
+      "end_seconds": 300,
+      "voiceover_text": "Pressing deeper into their investigation, Gustav dismantles her theories one by one. Carol suggests the eccentric thieves who charmed Manhattan, but Gustav shakes his head in quiet disapproval. He points toward the blood-soaked streets of New York, where rival mafia factions are slaughtering each other in broad daylight. The Gandor family, the Martillo Camorra, and ruthless hitmen are colliding in a brutal turf war. Yet Gustav insists none of these gangsters started the conflict. He leans across the wooden table and drops a chilling historical date: the year seventeen eleven. Carol freezes as the true scope of the mystery expands beyond their century. A forgotten tragedy on an ancient ship set this bloodshed into motion hundreds of years ago.",
+      "keywords": [
+        {
+          "word": "investigation",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "slaughtering",
+          "color": "#EF4444"
+        },
+        {
+          "word": "tragedy",
+          "color": "#F59E0B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 308,
+      "end_seconds": 328,
+      "voiceover_text": "As the train rattles westward, Carol struggles to grasp the impossible connection. She reviews the reports of massacres, bewildered by how two distant eras could intertwine. Gustav watches her growing unease with patient intensity. He warns her that ordinary logic will not explain what is happening across the United States. The real players in this war are not ordinary mortals fighting for territory.",
+      "keywords": [
+        {
+          "word": "massacres",
+          "color": "#DC2626"
+        },
+        {
+          "word": "intertwine",
+          "color": "#818CF8"
+        },
+        {
+          "word": "mortals",
+          "color": "#FB923C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 328,
+      "end_seconds": 362,
+      "voiceover_text": "Then Gustav delivers the most terrifying revelation of all. In the midst of the gunfire and betrayals, certain men and women are taking fatal wounds and getting back up unharmed. Severed limbs reattach in seconds, and bullet holes vanish without a trace of blood. Carol stares in stunned disbelief as the grim reality sets in. An immortality elixir forged in seventeen eleven is circulating through the American underworld. Now, every dangerous faction is converging on the transcontinental express to seize it. Gustav turns his gaze back to the window, leaving Carol with one haunting question. Who among the passengers speeding toward New York is secretly immortal?",
+      "keywords": [
+        {
+          "word": "revelation",
+          "color": "#F59E0B"
+        },
+        {
+          "word": "immortality",
+          "color": "#E11D48"
+        },
+        {
+          "word": "immortal",
+          "color": "#EF4444"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
