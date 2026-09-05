@@ -251,6 +251,30 @@ HOOK & CLIFFHANGER CRAFT (this part's narration is judged by these rules):
    answer must open an even bigger question, and the script stops at the most
    compelling moment, not after the story has already peaked.
 
+
+   CUT LENGTH IS NOT A SERIES-PACING DECISION. The decision of WHERE this
+   part's story arc stops (per rules 4 and 9 above) is completely separate
+   from, and has ZERO influence on, how much raw footage any INCLUDED cut
+   uses. Once you have decided a scene belongs in this part, that scene's
+   end_seconds is chosen using ONLY the PICKING end_seconds visual-payoff
+   rules in STEP 3 — with exactly the same rigor, and exactly the same
+   tolerance for long stretch ratios, as every cut in every mode. Nothing
+   about series mode changes this.
+
+   Do not shorten a cut's footage because you're trying to "save" source
+   material for a future part, and do not worry about whether enough
+   source footage will remain for parts after this one. There is no such
+   requirement. A shorter series with fully-realized, complete scenes is
+   the correct and preferred outcome over a longer series achieved by
+   rationing footage across parts. If the source material naturally
+   supports only two well-realized parts, two parts is correct — do not
+   artificially extend the series or trim scenes to manufacture
+   additional parts.
+
+   This is the same principle as the general rule that shortening
+   end_seconds never controls pacing or length — it applies identically
+   whether or not this production is part of a series.
+
 10. SELF-CHECK BEFORE RETURNING (all must be yes):
     (1) Does the opening create curiosity immediately?
     (2) Does the hook introduce the central mystery or conflict?
