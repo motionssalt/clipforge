@@ -1,0 +1,117 @@
+{
+  "video_duration_seconds": 1481,
+  "title": "Part 2: The Runorata Hit List",
+  "hashtags": [
+    "#baccano",
+    "#anime",
+    "#mafia",
+    "#runorata",
+    "#gangwar",
+    "#mystery"
+  ],
+  "youtube_tags": [
+    "baccano",
+    "baccano part 2",
+    "gustavo bagetta",
+    "bartolo runorata",
+    "dallas genoard",
+    "runorata family",
+    "gang war 1930",
+    "anime commentary",
+    "mafia anime",
+    "baccano episode 1",
+    "underworld manhunt",
+    "daily days mystery"
+  ],
+  "series": {
+    "series_id": "series-1788618217388",
+    "part": 2,
+    "start_seconds": 345,
+    "end_seconds": 829,
+    "is_final": false,
+    "summary": "Inside the Runorata estate, enforcer Gustavo Bagetta reports the killings of Raymond and Jeffrey Genoard to Don Bartolo, unleashing a violent manhunt that ends with the brutal capture of Dallas Genoard."
+  },
+  "cuts": [
+    {
+      "start_seconds": 710,
+      "end_seconds": 751,
+      "voiceover_text": "A secret hit order just wiped out the Genoard family patriarch in cold blood. Inside the dimly lit study of the Runorata estate, syndicate enforcer Gustavo Bagetta steps before Don Bartolo to deliver the grim news. Raymond Genoard and his elder son Jeffrey are dead, framed as tragic accidents to bury the syndicate's tracks. Gustavo looms in his dark suit with a heavy, unyielding stare. Across the polished mahogany desk, Don Bartolo bows his head in deep concentration, resting his weary hand against his brow. The room is dead quiet under the amber glow of the chandelier. Taking down the Genoards clears a massive path for the family's empire. But Bartolo feels no relief. A chilling doubt begins to settle over the boss. Someone survived the purge.",
+      "keywords": [
+        {
+          "word": "patriarch",
+          "color": "#FFD700"
+        },
+        {
+          "word": "dead",
+          "color": "#FF4D4D"
+        },
+        {
+          "word": "survived",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 751,
+      "end_seconds": 782,
+      "voiceover_text": "Gustavo extends a small white card across the wood paneling, confirming the worst possible outcome. Raymond's reckless second son, Dallas Genoard, managed to slip away into the Manhattan shadows. That missing name turns a quiet hit into an active disaster. Don Bartolo stares down at the note in rising frustration. Dallas knows far too much about the syndicate's dealings to remain at large. The boss drops his stoic composure and leans forward against the lamps, shouting his furious command into the study. This loose thread must be severed immediately. Gustavo turns toward the door with stone-cold resolve.",
+      "keywords": [
+        {
+          "word": "disaster",
+          "color": "#FF4D4D"
+        },
+        {
+          "word": "furious",
+          "color": "#FF9100"
+        },
+        {
+          "word": "severed",
+          "color": "#E040FB"
+        }
+      ]
+    },
+    {
+      "start_seconds": 782,
+      "end_seconds": 821,
+      "voiceover_text": "The hunt erupts across the city without mercy. Gustavo mobilizes a squad of Runorata mobsters in dark fedoras, drawing handguns and submachine guns as the order rings out to bring Dallas in dead or alive. Bartolo watches the operation unfold with unsparing detachment. Within hours, the enforcers track the runaway delinquent down to a grimy backroom hideout. Dallas Genoard is completely overwhelmed. Ropes pin his wrists behind his back while Gustavo corners him over the hardwood floor. A vicious strike sends crimson blood splattering against the wall. Dallas curls beside a stained sofa in agonizing shock, gasping through a battered jaw. His arrogance has completely vanished. The ruthless underworld he tried to exploit is tearing him apart. He is helpless before them.",
+      "keywords": [
+        {
+          "word": "hunt",
+          "color": "#FF9100"
+        },
+        {
+          "word": "overwhelmed",
+          "color": "#FFD700"
+        },
+        {
+          "word": "blood",
+          "color": "#FF4D4D"
+        },
+        {
+          "word": "helpless",
+          "color": "#7C4DFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 821,
+      "end_seconds": 829,
+      "voiceover_text": "Don Bartolo offers a cold, sinister smirk as suited enforcers loom over Dallas's battered, motionless body. The runaway delinquent is broken... but who betrayed his hideout?",
+      "keywords": [
+        {
+          "word": "smirk",
+          "color": "#FF9100"
+        },
+        {
+          "word": "broken",
+          "color": "#FF4D4D"
+        },
+        {
+          "word": "betrayed",
+          "color": "#00E5FF"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
