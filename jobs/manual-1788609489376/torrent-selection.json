@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "job_id": "manual-1788609489376",
+  "torrent_name": "[Anime Time] Fumetsu No Anata E (Season 01+Season 02) [BD] [Dual Audio][1080p][HEVC 10bit x265][AAC][Eng Sub]",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 15.mkv",
+      "length": 1257720831
+    },
+    {
+      "index": 2,
+      "path": "Season 01/[Anime Time] To Your Eternity 02.mkv",
+      "length": 389504767
+    },
+    {
+      "index": 3,
+      "path": "Season 01/[Anime Time] To Your Eternity 03.mkv",
+      "length": 419150366
+    },
+    {
+      "index": 4,
+      "path": "Season 01/[Anime Time] To Your Eternity 04.mkv",
+      "length": 288663541
+    },
+    {
+      "index": 5,
+      "path": "Season 01/[Anime Time] To Your Eternity 05.mkv",
+      "length": 296564813
+    },
+    {
+      "index": 6,
+      "path": "Season 01/[Anime Time] To Your Eternity 06.mkv",
+      "length": 308231858
+    },
+    {
+      "index": 7,
+      "path": "Season 01/[Anime Time] To Your Eternity 07.mkv",
+      "length": 267757954
+    },
+    {
+      "index": 8,
+      "path": "Season 01/[Anime Time] To Your Eternity 08.mkv",
+      "length": 274847220
+    },
+    {
+      "index": 9,
+      "path": "Season 01/[Anime Time] To Your Eternity 09.mkv",
+      "length": 237109408
+    },
+    {
+      "index": 10,
+      "path": "Season 01/[Anime Time] To Your Eternity 10.mkv",
+      "length": 296984735
+    },
+    {
+      "index": 11,
+      "path": "Season 01/[Anime Time] To Your Eternity 11.mkv",
+      "length": 309944392
+    },
+    {
+      "index": 12,
+      "path": "Season 01/[Anime Time] To Your Eternity 12.mkv",
+      "length": 345401810
+    },
+    {
+      "index": 13,
+      "path": "Season 01/[Anime Time] To Your Eternity 13.mkv",
+      "length": 286601379
+    },
+    {
+      "index": 14,
+      "path": "Season 01/[Anime Time] To Your Eternity 14.mkv",
+      "length": 333685509
+    },
+    {
+      "index": 15,
+      "path": "Season 01/[Anime Time] To Your Eternity 15.mkv",
+      "length": 338495397
+    },
+    {
+      "index": 16,
+      "path": "Season 01/[Anime Time] To Your Eternity 16.mkv",
+      "length": 312891428
+    },
+    {
+      "index": 17,
+      "path": "Season 01/[Anime Time] To Your Eternity 17.mkv",
+      "length": 303080709
+    },
+    {
+      "index": 18,
+      "path": "Season 01/[Anime Time] To Your Eternity 18.mkv",
+      "length": 315320667
+    },
+    {
+      "index": 19,
+      "path": "Season 01/[Anime Time] To Your Eternity 19.mkv",
+      "length": 348062077
+    },
+    {
+      "index": 20,
+      "path": "Season 01/[Anime Time] To Your Eternity 20.mkv",
+      "length": 344134587
+    },
+    {
+      "index": 21,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 01.mkv",
+      "length": 973686688
+    },
+    {
+      "index": 22,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 02.mkv",
+      "length": 967082778
+    },
+    {
+      "index": 23,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 03.mkv",
+      "length": 939925249
+    },
+    {
+      "index": 24,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 04.mkv",
+      "length": 1006805638
+    },
+    {
+      "index": 25,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 05.mkv",
+      "length": 904124423
+    },
+    {
+      "index": 26,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 06.mkv",
+      "length": 890825399
+    },
+    {
+      "index": 27,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 07.mkv",
+      "length": 924261947
+    },
+    {
+      "index": 28,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 08.mkv",
+      "length": 902617760
+    },
+    {
+      "index": 29,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 09.mkv",
+      "length": 1066685507
+    },
+    {
+      "index": 30,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 10.mkv",
+      "length": 1094438328
+    },
+    {
+      "index": 31,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 11.mkv",
+      "length": 928508777
+    },
+    {
+      "index": 32,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 12.mkv",
+      "length": 998545818
+    },
+    {
+      "index": 33,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 13.mkv",
+      "length": 1061506079
+    },
+    {
+      "index": 34,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 14.mkv",
+      "length": 1045399647
+    },
+    {
+      "index": 35,
+      "path": "Season 01/[Anime Time] To Your Eternity 01.mkv",
+      "length": 274534850
+    },
+    {
+      "index": 36,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 16.mkv",
+      "length": 1192784338
+    },
+    {
+      "index": 37,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 17.mkv",
+      "length": 869721859
+    },
+    {
+      "index": 38,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 18.mkv",
+      "length": 793010959
+    },
+    {
+      "index": 39,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 19.mkv",
+      "length": 1009562019
+    },
+    {
+      "index": 40,
+      "path": "Season 02/[Anime Time] To Your Eternity Season 02 - 20.mkv",
+      "length": 1023613444
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "120",
+    "focus": ""
+  }
+}
