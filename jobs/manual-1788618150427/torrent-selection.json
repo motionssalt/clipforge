@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "job_id": "manual-1788618150427",
+  "torrent_name": "Baccano!",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Baccano! - 14.mkv",
+      "length": 433527966
+    },
+    {
+      "index": 2,
+      "path": "Baccano! - 02.mkv",
+      "length": 293745215
+    },
+    {
+      "index": 3,
+      "path": "Baccano! - 03.mkv",
+      "length": 304674458
+    },
+    {
+      "index": 4,
+      "path": "Baccano! - 04.mkv",
+      "length": 330388594
+    },
+    {
+      "index": 5,
+      "path": "Baccano! - 05.mkv",
+      "length": 277058422
+    },
+    {
+      "index": 6,
+      "path": "Baccano! - 06.mkv",
+      "length": 255897329
+    },
+    {
+      "index": 7,
+      "path": "Baccano! - 07.mkv",
+      "length": 222244951
+    },
+    {
+      "index": 8,
+      "path": "Baccano! - 08.mkv",
+      "length": 312284626
+    },
+    {
+      "index": 9,
+      "path": "Baccano! - 09.mkv",
+      "length": 295307123
+    },
+    {
+      "index": 10,
+      "path": "Baccano! - 10.mkv",
+      "length": 283660346
+    },
+    {
+      "index": 11,
+      "path": "Baccano! - 11.mkv",
+      "length": 311727480
+    },
+    {
+      "index": 12,
+      "path": "Baccano! - 12.mkv",
+      "length": 366869827
+    },
+    {
+      "index": 13,
+      "path": "Baccano! - 13.mkv",
+      "length": 364104566
+    },
+    {
+      "index": 14,
+      "path": "Baccano! - 01.mkv",
+      "length": 296798635
+    },
+    {
+      "index": 15,
+      "path": "Baccano! - 15.mkv",
+      "length": 310063585
+    },
+    {
+      "index": 16,
+      "path": "Baccano! - 16.mkv",
+      "length": 395030945
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "120",
+    "focus": ""
+  }
+}
