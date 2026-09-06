@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "job_id": "manual-1788734816239",
+  "torrent_name": "[FAV] Baccano! + Specials [BD 540p x264 AAC]",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "[FAV] Baccano! - 01 [BD 540p x264 AAC] [C18E3B8B].mkv",
+      "length": 108350093
+    },
+    {
+      "index": 2,
+      "path": "[FAV] Baccano! - 02 [BD 540p x264 AAC] [83B79CDB].mkv",
+      "length": 107020617
+    },
+    {
+      "index": 3,
+      "path": "[FAV] Baccano! - 03 [BD 540p x264 AAC] [893EE3C3].mkv",
+      "length": 114278266
+    },
+    {
+      "index": 4,
+      "path": "[FAV] Baccano! - 04 [BD 540p x264 AAC] [DCF4BB40].mkv",
+      "length": 123771047
+    },
+    {
+      "index": 5,
+      "path": "[FAV] Baccano! - 05 [BD 540p x264 AAC] [0893D5CF].mkv",
+      "length": 108213032
+    },
+    {
+      "index": 6,
+      "path": "[FAV] Baccano! - 06 [BD 540p x264 AAC] [EF34CD2F].mkv",
+      "length": 98991299
+    },
+    {
+      "index": 7,
+      "path": "[FAV] Baccano! - 07 [BD 540p x264 AAC] [FBACB388].mkv",
+      "length": 88410188
+    },
+    {
+      "index": 8,
+      "path": "[FAV] Baccano! - 08 [BD 540p x264 AAC] [41916370].mkv",
+      "length": 102319019
+    },
+    {
+      "index": 9,
+      "path": "[FAV] Baccano! - 09 [BD 540p x264 AAC] [D236AA21].mkv",
+      "length": 112081129
+    },
+    {
+      "index": 10,
+      "path": "[FAV] Baccano! - 10 [BD 540p x264 AAC] [FC5D073C].mkv",
+      "length": 107003809
+    },
+    {
+      "index": 11,
+      "path": "[FAV] Baccano! - 11 [BD 540p x264 AAC] [B65CC1B3].mkv",
+      "length": 121012037
+    },
+    {
+      "index": 12,
+      "path": "[FAV] Baccano! - 12 [BD 540p x264 AAC] [84D6D8A2].mkv",
+      "length": 140137825
+    },
+    {
+      "index": 13,
+      "path": "[FAV] Baccano! - 13 [BD 540p x264 AAC] [57B074FB].mkv",
+      "length": 142392931
+    },
+    {
+      "index": 14,
+      "path": "[FAV] Baccano! - Special 1 [BD 540p x264 AAC] [93C5FC93].mkv",
+      "length": 121464797
+    },
+    {
+      "index": 15,
+      "path": "[FAV] Baccano! - Special 2 [BD 540p x264 AAC] [E4DFEC7F].mkv",
+      "length": 109535199
+    },
+    {
+      "index": 16,
+      "path": "[FAV] Baccano! - Special 3 [BD 540p x264 AAC] [3AA47CAE].mkv",
+      "length": 137401346
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "120",
+    "focus": ""
+  }
+}
