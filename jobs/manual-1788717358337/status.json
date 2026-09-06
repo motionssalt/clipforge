@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1788732488,
-  "updated_at_epoch": 1788733914,
+  "updated_at_epoch": 1788734447,
   "expires_at_epoch": 1788775688,
   "release_tag": "clipforge-manual-1788717358337",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788717358337",
@@ -26,12 +26,12 @@
     "code_ref": "10706f706236768b05489fa1c2147317c3306a74"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "publishing",
     "posts": [
       {
-        "post_id": "6a9de9d8055f34d9e6cbe926",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-07T02:21:36.000Z",
+        "post_id": "6a9debab26c39a5514cc2f87",
+        "status": "published",
+        "scheduled_for": "2026-09-06T22:39:37.783Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -45,16 +45,18 @@
               "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
               "username": "chimera_vfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "k7Acj7Sl_Wk",
+            "platformPostUrl": "https://www.youtube.com/watch?v=k7Acj7Sl_Wk"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-manual-1788717358337-d6309292-2182-49e0-937a-0234fd790034-youtube"
+        "request_id": "clipforge-manual-1788717358337-mtqe96sg-youtube"
       },
       {
-        "post_id": "6a9de9daa612e860130d38f2",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-07T02:21:36.000Z",
+        "post_id": "6a9debb1efb4bac649490ed0",
+        "status": "publishing",
+        "scheduled_for": "2026-09-06T22:39:43.924Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -68,7 +70,9 @@
               "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=a4rJ1QFPPlkQ7kNvwHn-loY&_nc_oc=Adr8WQCz4vr8CJM2Hs_Hb9KBVFXoTLf9uuO7ZRo8CjMWrEVe_0SwhczvvjRuR-S2TOU&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=_u6WZIrYFTwLYl3BaOJmcw&_nc_tpa=Q5bMBQI9ynF7AahZSYMPfH2G9sU6i-c_aUxNP9mG8AHDZqitwNnH5O1JH3-YzvLHEzyyoPXptCzGm0KP9A&oh=00_AQIzj0j-JY0ZRtFPoDwDiPvHc4pb0qUIZClPvMe-ditXhw&oe=6AA2D3AF",
               "username": "chimeravfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "18119566852904840",
+            "platformPostUrl": "https://www.instagram.com/reel/Dc9oVbyCDj2/"
           },
           {
             "platform": "instagram",
@@ -81,13 +85,13 @@
               "profilePicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/784506836_17915734578433350_666704562179050282_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=100&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=a4rJ1QFPPlkQ7kNvwHn-loY&_nc_oc=Adr8WQCz4vr8CJM2Hs_Hb9KBVFXoTLf9uuO7ZRo8CjMWrEVe_0SwhczvvjRuR-S2TOU&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=AP4hL3IEAAAA&_nc_gid=_u6WZIrYFTwLYl3BaOJmcw&_nc_tpa=Q5bMBQI9ynF7AahZSYMPfH2G9sU6i-c_aUxNP9mG8AHDZqitwNnH5O1JH3-YzvLHEzyyoPXptCzGm0KP9A&oh=00_AQIzj0j-JY0ZRtFPoDwDiPvHc4pb0qUIZClPvMe-ditXhw&oe=6AA2D3AF",
               "username": "chimeravfx"
             },
-            "status": "pending"
+            "status": "processing"
           }
         ],
         "platform": "instagram",
-        "request_id": "clipforge-auto-manual-1788717358337-d6309292-2182-49e0-937a-0234fd790034-instagram"
+        "request_id": "clipforge-manual-1788717358337-mtqe96sg-instagram"
       }
     ],
-    "idempotency_key": "clipforge-auto-manual-1788717358337-d6309292-2182-49e0-937a-0234fd790034"
+    "idempotency_key": "clipforge-manual-1788717358337-mtqe96sg"
   }
 }
