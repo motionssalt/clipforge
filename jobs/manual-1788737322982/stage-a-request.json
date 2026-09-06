@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "manual-1788737322982",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:395F20D15365F5681008E75FEAF5BE6664917626&dn=Генератор Рекс / Generator Rex / Сезон: 1 / Серии: 1-21 из (21) (Крис Грэм, Кендзи Оно / Chris Graham, Kenji Ono) [2010, США, мультфильм, фантастика, WEB-DL 1080p] Dub, ENG + Eng Sub&tr=http://bt2.t-ru.org/ann?magnet&tr=http://bt1.t-ru.org/ann&tr=http://bt2.t-ru.org/ann&tr=http://bt4.t-ru.org/ann&tr=udp://tracker.opentrackr.org:1337&tr=udp://open.stealth.si:80/announce&tr=udp://tracker.torrent.eu.org:451/announce&tr=udp://exodus.desync.com:6969&tr=udp://open.demonii.com:1337/announce&tr=udp://tracker.coppersurfer.tk:6969&tr=udp://p4p.arenabg.com:1337&tr=udp://tracker.internetwarriors.net:1337"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 120,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1788737363336",
+    "source_job_id": "manual-1788737322982",
+    "part": 1,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/180DB_ [130] (Intro Slowed).m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1788737363
+}
