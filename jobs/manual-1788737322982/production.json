@@ -1,0 +1,154 @@
+{
+  "video_duration_seconds": 1396,
+  "title": "The Boy Who Cures Monsters Part 1",
+  "hashtags": [
+    "#generatorrex",
+    "#cartoonnetwork",
+    "#evomutants",
+    "#secretweapon",
+    "#actioncartoon",
+    "#animation",
+    "#nostalgia"
+  ],
+  "youtube_tags": [
+    "generator rex",
+    "generator rex part 1",
+    "generator rex evo",
+    "rex cures evo",
+    "providence secret weapon",
+    "agent six",
+    "cartoon network action",
+    "nanite disaster",
+    "biomechanical powers",
+    "curing monsters",
+    "action animation",
+    "generator rex pilot",
+    "nostalgic cartoons",
+    "generator rex smack hands"
+  ],
+  "series": {
+    "series_id": "series-1788737363336",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 372,
+    "is_final": false,
+    "summary": "When a colossal mutant EVO destroys the city, Providence deploys their secret weapon: Rex, an amnesiac teenager who can transform his body into machinery and miraculously cure monsters."
+  },
+  "cuts": [
+    {
+      "start_seconds": 10,
+      "end_seconds": 28,
+      "voiceover_text": "A sudden catastrophic explosion infected every living creature on Earth with microscopic machines. Five years later, those dormant nanites randomly mutate normal people into terrifying, rampaging beasts known as EVOs. The public is completely helpless. Today, the most destructive monster attack in five years is tearing through the city, smashing skyscrapers and crushing military barricades. Civilians flee in terror as the military loses control.",
+      "keywords": [
+        {
+          "word": "catastrophic",
+          "color": "#FF4444"
+        },
+        {
+          "word": "nanites",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "EVOs",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 43,
+      "end_seconds": 62,
+      "voiceover_text": "With ordinary weapons failing, the secretive global defense agency Providence deploys their absolute last resort. They drop a fifteen-year-old kid straight out of the sky into the burning combat zone. His name is Rex. The government keeps him under strict lock and key because he is their ultimate classified weapon. He hits the pavement ready for a fight.",
+      "keywords": [
+        {
+          "word": "Providence",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "Rex",
+          "color": "#FFCC00"
+        },
+        {
+          "word": "weapon",
+          "color": "#FF4444"
+        }
+      ]
+    },
+    {
+      "start_seconds": 80,
+      "end_seconds": 93,
+      "voiceover_text": "Rex is an EVO too, but the nanites never mutated him into a mindless beast. He can mentally command the microscopic machines inside his bloodstream. That unique control lets him construct colossal mechanical weapons straight out of his own limbs, turning him into a walking biomechanical army.",
+      "keywords": [
+        {
+          "word": "command",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "mechanical",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "army",
+          "color": "#FF4444"
+        }
+      ]
+    },
+    {
+      "start_seconds": 258,
+      "end_seconds": 282,
+      "voiceover_text": "The rampaging monster corners trapped residents, forcing Rex into a lethal clash on the ruined streets. Providence command orders Rex to eliminate the beast immediately. Instead, Rex deactivates his weapons and charges directly into the raging monster's chest. Dr. Holiday screams in panic over the comms, warning him that the impact will kill him. Rex ignores the order, sinks his bare hands deep into the creature's core, and risks his life to force a neural connection.",
+      "keywords": [
+        {
+          "word": "eliminate",
+          "color": "#FF4444"
+        },
+        {
+          "word": "core",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "risks",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 283,
+      "end_seconds": 316,
+      "voiceover_text": "Blinding blue electrical energy erupts as Rex's nanites interface directly with the corrupted beast. The monster roars in agony, shaking the entire city block as dark energy courses through its armor. Rex grunts under the violent physical strain, refusing to let go. He does not destroy the creature; he absorbs its lethal excess nanites straight into his own body. The massive biological carapace fractures into glowing fragments and dissolves into thin air. When the blinding flash fades and the smoke clears, the monster is completely gone. Rex drops to his knees on the cracked asphalt, gently holding a frightened, sobbing human child. Against every known law of biology, Rex did the impossible: he cured an EVO.",
+      "keywords": [
+        {
+          "word": "absorbs",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "dissolves",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "cured",
+          "color": "#00FF88"
+        }
+      ]
+    },
+    {
+      "start_seconds": 357,
+      "end_seconds": 372,
+      "voiceover_text": "Inside Providence headquarters, the top brass watches the impossible footage in disbelief. Rex is humanity's sole hope to end this mutant war. But Rex has complete amnesia and cannot remember his own past. If the millions of nanites inside his body ever destabilize, their greatest savior will become Earth's deadliest monster.",
+      "keywords": [
+        {
+          "word": "hope",
+          "color": "#00FF88"
+        },
+        {
+          "word": "amnesia",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "deadliest",
+          "color": "#FF4444"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 120
+}
