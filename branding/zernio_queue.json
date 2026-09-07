@@ -496,15 +496,15 @@
     },
     {
       "job_id": "series-1788737363336-p2",
-      "status": "scheduled",
-      "mode": "smart_schedule",
-      "scheduled_for": "2026-09-07T11:00:00",
+      "status": "partial",
+      "mode": "publish_now",
+      "scheduled_for": "2026-09-07T08:49:57.419Z",
       "timezone": "UTC",
       "post_ids": [
-        "6a9e595039124429ca433719",
-        "6a9e595339865e7b5c50a26d"
+        "6a9e7ab7d778fb39f23920a2",
+        "6a9e7abc3835088dfb122044"
       ],
-      "updated_at_epoch": 1788762452
+      "updated_at_epoch": 1788771009
     }
   ]
 }
