@@ -1,0 +1,108 @@
+{
+  "video_duration_seconds": 1396,
+  "title": "Part 2: Rex Uncovers His Forgotten Origin",
+  "hashtags": [
+    "#generatorrex",
+    "#vankleiss",
+    "#cartoonnetwork",
+    "#scifi",
+    "#actionanimation",
+    "#seriespart2"
+  ],
+  "youtube_tags": [
+    "generator rex",
+    "generator rex part 2",
+    "rex salazar",
+    "van kleiss",
+    "abysus",
+    "nanite explosion",
+    "cartoon network",
+    "evo mutants",
+    "providence agent six",
+    "white knight",
+    "bobo haha",
+    "noah nixon",
+    "sci fi animation",
+    "action cartoon",
+    "rex powers"
+  ],
+  "target_total_duration_seconds": 120,
+  "series": {
+    "series_id": "series-1788737363336",
+    "part": 2,
+    "start_seconds": 372,
+    "end_seconds": 888,
+    "is_final": false,
+    "summary": "Rex escapes Providence confinement to experience normal teenage life with his new friend Noah, but after a terrifying ambush, he is dragged to Abysus where the sinister mutant Van Kleiss reveals shocking knowledge about Rex's forgotten past."
+  },
+  "cuts": [
+    {
+      "start_seconds": 372,
+      "end_seconds": 395,
+      "voiceover_text": "Deep inside Providence headquarters, White Knight delivers a cold order over the main monitor: their top secret weapon must be kept under tight containment. Inside the medical bay, Dr. Holiday monitors Rex Salazar as his bio-energy levels spike. To hide his growing isolation, Rex cracks jokes about earning a dinner date for saving the city, but the sterile walls and armed guards only prove what he fears most: to his handlers, he is not a teenager, but a volatile weapon.",
+      "keywords": [
+        {
+          "word": "containment",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "weapon",
+          "color": "#FFA500"
+        }
+      ]
+    },
+    {
+      "start_seconds": 535,
+      "end_seconds": 548,
+      "voiceover_text": "Desperate for a taste of freedom, Rex breaks protocol and launches into open rebellion. He fires up his orange hoverbike and charges past the perimeter security alongside his partner, the chimpanzee Bobo Haha. Leaving the fortress behind, they speed toward the city streets to experience a normal world.",
+      "keywords": [
+        {
+          "word": "rebellion",
+          "color": "#FFD700"
+        },
+        {
+          "word": "hoverbike",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 682,
+      "end_seconds": 695,
+      "voiceover_text": "After escaping into the city, Rex meets Noah Nixon, the first person to treat him like an ordinary kid. Sitting on a quiet rooftop, Rex looks at his hands as the weight of his forgotten past catches up with him. He confides his deepest ache: he has total amnesia, with no memory of his family, his childhood, or how he became a living machine.",
+      "keywords": [
+        {
+          "word": "amnesia",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "machine",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 801,
+      "end_seconds": 888,
+      "voiceover_text": "After a terrifying ambush tears them from the city, Rex and Noah are dragged through a dimensional rift straight into the eerie, mist-choked forests of Abysus. Bobo kneels on the damp earth in mounting panic, tugging frantically at his collar while gasping for breath as an enormous golden mechanical gauntlet casts a sinister shadow over him. Towering above the chimpanzee, the aristocratic mutant Van Kleiss glares down with a cold, calculating red eye, completely indifferent to the creature's distress. Van Kleiss steps forward into the clearing, flanked by his terrifying pack of mutant followers, Biowulf and Breach, who watch from the darkened tree line. With chilling composure, the villain introduces himself as the undisputed master of Abysus, revealing that his scouts have been tracking Rex across the globe. Rex steps forward to shield his friends, meeting the monster with cautious defiance and demanding to know why they were abducted. Van Kleiss examines Rex like a rare prize, calmly explaining that while ordinary mutants destroy humanity, Rex possesses a unique, staggering potential that he has only begun to understand. When Rex bitterly snaps back that he cannot even remember his own past, Van Kleiss offers a chilling, knowing smile. He promises to walk the young hero through the lost chapters of his history, ordering his followers to escort Noah and Bobo toward the keep. Then, Van Kleiss delivers the monumental revelation that shatters Rex's entire world: five years ago, humanity attempted to create a technological miracle, triggering the cataclysmic Nanite explosion that mutated the planet, and both Rex and Van Kleiss were standing together at ground zero. As the shot pulls back over the dark village and the towering castle looming atop the jagged cliffs, Rex is left frozen in disbelief, realizing his greatest adversary holds the only key to his stolen identity.",
+      "keywords": [
+        {
+          "word": "Abysus",
+          "color": "#B388FF"
+        },
+        {
+          "word": "Van Kleiss",
+          "color": "#FF5252"
+        },
+        {
+          "word": "Nanite explosion",
+          "color": "#FFD700"
+        },
+        {
+          "word": "ground zero",
+          "color": "#FF1744"
+        }
+      ]
+    }
+  ]
+}
