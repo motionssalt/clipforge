@@ -1,0 +1,133 @@
+{
+  "video_duration_seconds": 1399,
+  "title": "Summoning Bill Cipher Into Stan's Mind Part 1",
+  "series": {
+    "series_id": "series-1788818491776",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 558,
+    "is_final": false,
+    "summary": "Gideon summons the dream demon Bill Cipher to steal Stan's safe combination, prompting Dipper and Mabel to dive into their uncle's subconscious to stop him."
+  },
+  "hashtags": [
+    "#gravityfalls",
+    "#billcipher",
+    "#dipperpines",
+    "#mysteryshack",
+    "#cartoons",
+    "#animation"
+  ],
+  "youtube_tags": [
+    "gravity falls",
+    "bill cipher",
+    "gideon summons bill cipher",
+    "dreamscaperers",
+    "dipper and mabel",
+    "stan pines mind",
+    "mystery shack",
+    "bill cipher first appearance",
+    "journal 3 bill cipher",
+    "gravity falls season 1",
+    "animated mystery",
+    "disney animation",
+    "cartoon analysis"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 99,
+      "end_seconds": 120,
+      "voiceover_text": "Locking a secret safe combination inside your own brain sounds completely foolproof. Stan Pines taps his forehead and laughs, convinced nobody can ever touch it. He is completely wrong. Outside in the shadows, Gideon seethes with humiliation. He refuses to walk away empty-handed. Clutching Journal Number Two, Gideon vows that Stan's mind is not safe. He storms straight into the dark forest to unleash the journal's ultimate secret.",
+      "keywords": [
+        {
+          "word": "foolproof",
+          "color": "#4AA8FF"
+        },
+        {
+          "word": "Gideon",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "secret",
+          "color": "#FFD043"
+        }
+      ]
+    },
+    {
+      "start_seconds": 274,
+      "end_seconds": 291,
+      "voiceover_text": "Deep in the forest, Gideon sets his twisted plan into motion. Surrounded by flickering candles, he opens the journal and chants an ancient incantation. Instantly, reality distorts and the trees freeze in eerie monochrome. A blazing blue rift tears across the air. Out of the flames emerges a one-eyed triangular demon wearing a black top hat. He floats in midair and tips his hat with a chilling grin. Bill Cipher has officially arrived.",
+      "keywords": [
+        {
+          "word": "incantation",
+          "color": "#A855F7"
+        },
+        {
+          "word": "demon",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "Bill",
+          "color": "#EAB308"
+        }
+      ]
+    },
+    {
+      "start_seconds": 422,
+      "end_seconds": 433,
+      "voiceover_text": "Back at the Mystery Shack, Dipper discovers the horrifying truth about this creature. Flipping through Journal Number Three, he halts on a page covered in blood-red ink. The author describes Bill as the most dangerous entity ever encountered. His final warning is clear: whatever you do, never let this demon into your mind. Dipper is terrified.",
+      "keywords": [
+        {
+          "word": "truth",
+          "color": "#4AA8FF"
+        },
+        {
+          "word": "dangerous",
+          "color": "#EF4444"
+        },
+        {
+          "word": "terrified",
+          "color": "#F97316"
+        }
+      ]
+    },
+    {
+      "start_seconds": 500,
+      "end_seconds": 515,
+      "voiceover_text": "With Stan asleep and defenseless, Dipper and Mabel have no choice but to stage an impossible rescue. Gathering around their uncle with Soos, they place their hands on his forehead. Together, they chant the journal's Latin counter-spell. A blinding burst of mystical blue energy erupts across the room. Their astral forms tear free and plunge directly into Stan's subconscious mind.",
+      "keywords": [
+        {
+          "word": "rescue",
+          "color": "#22C55E"
+        },
+        {
+          "word": "counter-spell",
+          "color": "#A855F7"
+        },
+        {
+          "word": "subconscious",
+          "color": "#3B82F6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 536,
+      "end_seconds": 558,
+      "voiceover_text": "They land inside Stan's surreal mindscape, surrounded by an infinite maze of floating memory doors. Suddenly, Mabel gasps and points into the open air. Their worst nightmare is already here. Bill Cipher hovers in the sky, watching them arrive. The yellow demon slowly spins around and tips his hat. His giant eye locks directly onto the terrified children. He knows their names. He knows why they came. Dipper and Mabel are now trapped inside the demon's playground with no clear way out.",
+      "keywords": [
+        {
+          "word": "mindscape",
+          "color": "#8B5CF6"
+        },
+        {
+          "word": "nightmare",
+          "color": "#EF4444"
+        },
+        {
+          "word": "trapped",
+          "color": "#DC2626"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60
+}
