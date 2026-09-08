@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1788837357,
-  "updated_at_epoch": 1788838296,
+  "updated_at_epoch": 1788863662,
   "expires_at_epoch": 1788880557,
   "release_tag": "clipforge-manual-1788818277664",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788818277664",
@@ -26,12 +26,12 @@
     "code_ref": "4ab273d6f5645a38f933a066a0e3730516604e24"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "partial",
     "posts": [
       {
-        "post_id": "6a9f819654036b5f989ff76e",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-08T05:00:00.000Z",
+        "post_id": "6a9fe4a35da30c1e1964720c",
+        "status": "failed",
+        "scheduled_for": "2026-09-08T10:34:05.869Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -42,19 +42,19 @@
               "profileId": "6a23f22dba1bebcaf7982ef3",
               "displayName": "CHIMERAVFX",
               "isActive": true,
-              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=be299635&x-expires=1788930000&x-signature=PnUWLiCbpTwDqJkYUvLTrEqmlmA%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=f8404694&x-expires=1789016400&x-signature=X2737Y7OuBAe6WyxmAN%2Br5bbeFw%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my",
               "username": ".chimeravfx"
             },
-            "status": "pending"
+            "status": "failed"
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-auto-manual-1788818277664-837bdb0f-5b49-446d-8ede-61513499449d-tiktok"
+        "request_id": "clipforge-manual-1788818277664-mtsj7q4b-tiktok"
       },
       {
-        "post_id": "6a9f8198722e2274f8a5f19c",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-08T05:00:00.000Z",
+        "post_id": "6a9fe4a8e9c2abf522f18de9",
+        "status": "published",
+        "scheduled_for": "2026-09-08T10:34:13.059Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -68,13 +68,15 @@
               "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
               "username": "chimera_vfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "KN0Hv8HJQgM",
+            "platformPostUrl": "https://www.youtube.com/watch?v=KN0Hv8HJQgM"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-manual-1788818277664-837bdb0f-5b49-446d-8ede-61513499449d-youtube"
+        "request_id": "clipforge-manual-1788818277664-mtsj7q4b-youtube"
       }
     ],
-    "idempotency_key": "clipforge-auto-manual-1788818277664-837bdb0f-5b49-446d-8ede-61513499449d"
+    "idempotency_key": "clipforge-manual-1788818277664-mtsj7q4b"
   }
 }
