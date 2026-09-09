@@ -9,35 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "stage_b_queued",
-  "message": "Production plan uploaded — Stage B dispatched.",
-  "created_at_epoch": 1788993579,
-  "updated_at_epoch": 1788995311,
-=======
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1788993579,
-  "updated_at_epoch": 1788995321,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1789036779,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1788995472,
+  "updated_at_epoch": 1788995472,
+  "expires_at_epoch": 1789038672,
   "release_tag": "clipforge-manual-1788993051296",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788993051296",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/00_READ_THIS_FIRST.txt",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1788993051296/transcript.json",
-    "analysis_bundle_url": ""
-  },
+  "release_url": "",
+  "assets": {},
   "run": {
     "workflow_run_id": 34415570101,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34415570101",
-    "code_ref": "d2e5422a6d330fc565eb9d2ec032bcd49e2d6dd7"
+    "code_ref": "c919a2c8d40207afa49588c10f50217a3f5aecdf"
   },
   "publishing": {
     "status": "not_requested",
