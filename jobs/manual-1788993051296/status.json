@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "awaiting_torrent_selection",
-  "message": "Source has 146 video files — pick one to continue.",
+  "state": "stage_a_running",
+  "message": "Video file #45 selected — resuming ingest.",
   "created_at_epoch": 1788993145,
-  "updated_at_epoch": 1788993198,
+  "updated_at_epoch": 1788993548,
   "expires_at_epoch": 1789036345,
   "release_tag": "clipforge-manual-1788993051296",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1788993051296",
