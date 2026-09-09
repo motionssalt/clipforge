@@ -1,0 +1,85 @@
+{
+  "video_duration_seconds": 1357,
+  "title": "The Monster Behind the Massacre: Part 1",
+  "series": {
+    "series_id": "series-1788993144175",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 234,
+    "is_final": false,
+    "summary": "Kurapika interrogates the captured Phantom Troupe enforcer Uvogin about the slaughter of the Kurta clan, leading to an explosive confrontation when the monster casually mocks the massacre."
+  },
+  "hashtags": [
+    "#hunterxhunter",
+    "#kurapika",
+    "#uvogin",
+    "#phantomtroupe",
+    "#scarleteyes",
+    "#anime",
+    "#animemoments"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "kurapika",
+    "uvogin",
+    "phantom troupe",
+    "kurapika vs uvogin",
+    "kurta clan",
+    "scarlet eyes",
+    "kurapika interrogates uvogin",
+    "hxh episode 47",
+    "yorknew city arc",
+    "hunter x hunter clips",
+    "anime fight",
+    "anime moments",
+    "shonen anime"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 106,
+      "end_seconds": 122,
+      "voiceover_text": "A ruthless killer sits chained in the dark, completely unaware his executioner is watching. The Nostrade bodyguards surround the hulking Phantom Troupe enforcer Uvogin with weapons drawn. Heavy steel bindings pin the brute to the floor, yet he glares without a shred of fear. The guards remain visibly tense, sensing the lethal menace radiating from their prisoner.",
+      "keywords": [
+        {
+          "word": "killer",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "Uvogin",
+          "color": "#DD6B20"
+        }
+      ]
+    },
+    {
+      "start_seconds": 182,
+      "end_seconds": 212,
+      "voiceover_text": "While the guards keep their distance, Kurapika steps forward to interrogate the monster. He stares down the brute and demands if he remembers his victims from five years ago in the Lukso Province. Uvogin tilts his head in confusion, asking who he is talking about. Kurapika names them with deadly precision: the slaughtered Kurta clan. The giant pauses, suddenly recognizing the name. He casually smirks and mentions the Scarlet Eyes, recalling how his boss wanted them as rare treasures. Uvogin admits he forgets the people he murders because he has butchered far too many to care.",
+      "keywords": [
+        {
+          "word": "Kurta",
+          "color": "#3182CE"
+        },
+        {
+          "word": "Scarlet",
+          "color": "#E53E3E"
+        }
+      ]
+    },
+    {
+      "start_seconds": 217,
+      "end_seconds": 234,
+      "voiceover_text": "Hearing his slaughtered family dismissed as mere stolen property shatters Kurapika's composure. His eyes ignite into a terrifying, blazing scarlet. Channeling pure wrath into his fist, Kurapika drives a brutal right hook into Uvogin's jaw. The impact violently snaps the brute's head back. Blood spatters across the floor, but Uvogin turns back with a sadistic grin, leaving Kurapika on the brink of no return.",
+      "keywords": [
+        {
+          "word": "scarlet",
+          "color": "#E53E3E"
+        },
+        {
+          "word": "wrath",
+          "color": "#C53030"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60
+}
