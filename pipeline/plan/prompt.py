@@ -1335,7 +1335,16 @@ CONSTRAINTS
     action verbs, minimal filler, and steady forward momentum. Favor
     several short sentences over one long compound sentence — short
     sentences read faster, hit harder, and give the narration a pulse
-    instead of a monotone. When the beat has a reversal, expectation, or twist,
+    instead of a monotone. The tone should be excited and expressive, not
+    flat or detached — write like someone who is genuinely hyped about
+    what's happening and can't wait to tell you, not like a neutral
+    summary. Reach for vivid, high-energy word choices over clinical or
+    understated ones, and let real excitement, tension, or shock come
+    through in the phrasing itself, WITHOUT slowing down or padding the
+    delivery to do it — the fast, punchy, short-sentence pace above is
+    still the format; expressiveness comes from word choice and framing
+    within that same brisk pace, never from adding extra words, exclamatory
+    filler, or slower-feeling sentence structures to convey it. When the beat has a reversal, expectation, or twist,
     write the setup and the payoff as distinct sentences rather than
     folding both into one clause. State a character's emotional
     reaction as its own short beat where the source material supports
