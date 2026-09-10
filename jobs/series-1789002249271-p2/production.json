@@ -1,0 +1,56 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Part 2: The Indoor Fish Appears",
+  "hashtags": [
+    "#hunterxhunter",
+    "#indoorfish",
+    "#anime",
+    "#animeclips",
+    "#phantomtroupe",
+    "#chrollo"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "indoor fish",
+    "hunter x hunter clip",
+    "anime clip",
+    "chrollo",
+    "phantom troupe",
+    "supernatural fish",
+    "anime mystery",
+    "black haired anime man",
+    "anime ability reveal",
+    "hunter x hunter yorknew",
+    "vertical anime short"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 1142,
+      "end_seconds": 1203,
+      "voiceover_text": "Why is the trapped man still alive after that attack? A bloodshot eye opens in the darkness. He is thrown through the tower, but instead of panic, he asks the only question that matters: why is he still alive? Nearby, a black-haired man watches with unsettling calm. Then the answer moves through the room. A pale, skeletal fish glides between the columns. Its body stretches across the space, circling the survivor while the black-haired man stands behind it. The creature turns. Its jaws drift closer. The man does not flinch. He calmly opens a book, like this nightmare is one entry in a larger plan. The Indoor Fish lunges. White light erupts around its body, swallowing the room in a violent flash. For a moment, the fish and the survivor vanish inside the glare. Then the danger clears. The black-haired man is still standing, holding the book as the glowing remains fade away. The name is Indoor Fish, and its rules are clearly not ordinary. The survivor gets no explanation except the man’s calm smile. And that book is still open. If Indoor Fish was only one ability, what is the black-haired man about to release next?",
+      "keywords": [
+        {
+          "word": "alive",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "Indoor Fish",
+          "color": "#65D9FF"
+        },
+        {
+          "word": "release",
+          "color": "#FFD166"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 60,
+  "series": {
+    "series_id": "series-1789002249271",
+    "part": 2,
+    "start_seconds": 1142,
+    "end_seconds": 1203,
+    "is_final": false,
+    "summary": "A trapped man survives the Indoor Fish attack while the black-haired man reveals a larger ability mystery."
+  }
+}
