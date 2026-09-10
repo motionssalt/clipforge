@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "series-1789040069424-p5",
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789040069424",
+    "part": 5,
+    "start_seconds": 827,
+    "is_final": false
+  },
+  "state": "queued",
+  "message": "Series part 5 queued — Stage A dispatched.",
+  "created_at_epoch": 1789071885,
+  "updated_at_epoch": 1789071885,
+  "expires_at_epoch": 1789244685,
+  "release_tag": "clipforge-series-1789040069424-p5",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1789040069424-p5",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  }
+}
