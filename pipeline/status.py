@@ -54,8 +54,35 @@ VALID_PUBLISHING_STATUSES: tuple[str, ...] = (
 _JOB_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 _JOB_ID_MAX_LEN = 120
 
-# Default TTL for a job's small state. §12 keeps this at 12 h.
+# Default TTL for a job's small state — the FALLBACK only, used when the
+# operator has not configured one. The operator-facing TTL lives in ONE place:
+# the repo Actions variable CLIPFORGE_TTL_SECONDS (currently 172800 = 48h),
+# which .github/workflows/stage-a.yml and .github/workflows/cleanup.yml both
+# pass into the code as the CLIPFORGE_TTL_SECONDS environment variable, and
+# bot/wrangler.*.jsonc mirrors into the Telegram bot as env var
+# CLIPFORGE_JOB_TTL_SECONDS (bot/src/jobs.js). ALL of these must agree — this
+# constant is only the last-resort default when none of them is set (e.g.
+# local runs, unit tests). See ARCHITECTURE.md §12 and TTL_FIX_PROGRESS.json.
 DEFAULT_TTL_SECONDS = 12 * 3600
+
+TTL_ENV_VAR = "CLIPFORGE_TTL_SECONDS"
+
+
+def configured_ttl_seconds(env: dict[str, str] | None = None) -> int:
+    """The TTL for NEWLY created job status records, in seconds.
+
+    Reads ``CLIPFORGE_TTL_SECONDS`` from the environment (set by
+    stage-a.yml / cleanup.yml from the single repo Actions variable of the
+    same name); falls back to ``DEFAULT_TTL_SECONDS`` when unset, and to the
+    default on unparsable/non-positive values (a bad override must never
+    crash a job's very first status write).
+    """
+    source = os.environ if env is None else env
+    try:
+        value = int(str(source.get(TTL_ENV_VAR, "")).strip())
+    except (TypeError, ValueError):
+        return DEFAULT_TTL_SECONDS
+    return value if value > 0 else DEFAULT_TTL_SECONDS
 
 
 # --------------------------------------------------------------------------- #
@@ -77,10 +104,17 @@ def new_status(
     state: str = "queued",
     message: str = "",
     now_epoch: int | None = None,
-    ttl_seconds: int = DEFAULT_TTL_SECONDS,
+    ttl_seconds: int | None = None,
     series: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return a fresh, schema-conformant status record."""
+    """Return a fresh, schema-conformant status record.
+
+    ``ttl_seconds`` None (the default) resolves through
+    ``configured_ttl_seconds()`` — i.e. the CLIPFORGE_TTL_SECONDS environment
+    variable set from the single repo Actions variable, falling back to
+    ``DEFAULT_TTL_SECONDS``. Callers should NOT hardcode a TTL.
+    """
+    ttl = configured_ttl_seconds() if ttl_seconds is None else int(ttl_seconds)
     if not is_valid_job_id(job_id):
         raise ValueError(f"invalid job_id: {job_id!r}")
     if mode not in VALID_MODES:
@@ -98,7 +132,7 @@ def new_status(
         "message": message,
         "created_at_epoch": now,
         "updated_at_epoch": now,
-        "expires_at_epoch": now + int(ttl_seconds),
+        "expires_at_epoch": now + ttl,
         "release_tag": "",
         "release_url": "",
         "assets": {},
@@ -168,6 +202,7 @@ def write_status(
     publishing: dict[str, Any] | None = None,
     series: dict[str, Any] | None = None,
     expires_at_epoch: int | None = None,
+    ttl_seconds: int | None = None,
     now_epoch: int | None = None,
     root: os.PathLike[str] | str = "jobs",
 ) -> dict[str, Any]:
@@ -191,6 +226,7 @@ def write_status(
             state=(state or "queued"),
             message=(message or ""),
             now_epoch=now,
+            ttl_seconds=ttl_seconds,
             series=series,
         )
     else:
@@ -273,7 +309,9 @@ def write_status(
     if expires_at_epoch is not None:
         record["expires_at_epoch"] = int(expires_at_epoch)
     elif "expires_at_epoch" not in record:
-        record["expires_at_epoch"] = int(record.get("created_at_epoch", now)) + DEFAULT_TTL_SECONDS
+        # Same resolution order as new_status(): the configured env TTL wins;
+        # DEFAULT_TTL_SECONDS is only the no-config fallback.
+        record["expires_at_epoch"] = int(record.get("created_at_epoch", now)) + configured_ttl_seconds()
 
     record["updated_at_epoch"] = now
 
@@ -317,6 +355,11 @@ def _main(argv: list[str] | None = None) -> int:
                     help="bug-57: sync the status series block from this JSON object "
                          "(e.g. the request's series block); any subset of "
                          "enabled/series_id/part/start_seconds/is_final")
+    ap.add_argument("--ttl-seconds", type=int, default=None,
+                    help="TTL for a NEWLY created job's expires_at_epoch. "
+                         "stage-a.yml passes $CLIPFORGE_TTL_SECONDS (sourced from "
+                         "the single repo Actions variable CLIPFORGE_TTL_SECONDS); "
+                         "omit to resolve from the env var, then DEFAULT_TTL_SECONDS.")
     ap.add_argument("--out-dir", default="jobs")
     args = ap.parse_args(argv)
 
@@ -349,6 +392,7 @@ def _main(argv: list[str] | None = None) -> int:
         assets=assets or None,
         run=run_updates or None,
         series=series_updates,
+        ttl_seconds=args.ttl_seconds,
         root=args.out_dir,
     )
     print(f"wrote {status_path(args.job_id, root=args.out_dir)} state={record['state']}")
@@ -366,6 +410,8 @@ __all__ = [
     "VALID_MODES",
     "VALID_PUBLISHING_STATUSES",
     "DEFAULT_TTL_SECONDS",
+    "TTL_ENV_VAR",
+    "configured_ttl_seconds",
     "is_valid_job_id",
     "new_status",
     "status_path",

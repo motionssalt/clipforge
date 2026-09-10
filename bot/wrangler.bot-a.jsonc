@@ -7,7 +7,17 @@
   "vars": {
     "ORIGINAL_CLIPFORGE_REPOSITORY": "motionssalt/clipforge",
     "INTERNAL_RELAY_GROUP_CHAT_ID": "-5405387856",
-    "BOT_B_TELEGRAM_USERNAME": "Clipforgedl_bot"
+    "BOT_B_TELEGRAM_USERNAME": "Clipforgedl_bot",
+    // Job TTL for NEWLY created jobs (the bot writes every job's initial
+    // jobs/<id>/status.json, including expires_at_epoch). This MIRRORS the
+    // single canonical repo Actions variable CLIPFORGE_TTL_SECONDS
+    // (currently 172800 = 48h), which stage-a.yml and cleanup.yml consume.
+    // MUST AGREE with those two workflow files and with pipeline/status.py's
+    // DEFAULT_TTL_SECONDS comment — drift between this creation-time TTL and
+    // the cleanup sweep TTL is exactly the disconnect behind the operator's
+    // "48h not taking effect" report (TTL_FIX_PROGRESS.json, fix #1). If the
+    // repo variable changes, update this var to match and redeploy.
+    "CLIPFORGE_JOB_TTL_SECONDS": "172800"
   },
   "kv_namespaces": [
     {

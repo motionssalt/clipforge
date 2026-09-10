@@ -317,8 +317,12 @@ Rules:
 
 - A stage writes status **before** starting its risky work and **after**
   finishing it. A crashed run therefore always leaves a resumable state.
-- `expires_at_epoch` drives cleanup (§12). Default TTL is 12 hours from
-  creation unless the operator overrode it.
+- `expires_at_epoch` drives cleanup (§12). It is computed at job-creation
+  time as `created_at_epoch + TTL`, where the TTL comes from ONE configured
+  source — the repo Actions variable `CLIPFORGE_TTL_SECONDS` (currently
+  172800 = 48h) — threaded into every writer (see §12). The hardcoded
+  `DEFAULT_TTL_SECONDS = 12 * 3600` in pipeline/status.py and bot/src/jobs.js
+  is only the no-config fallback (local runs / tests).
 - All writes are small, atomic single-file commits. Workflows must
   `git pull --rebase --autostash` before pushing to survive concurrent jobs.
 
@@ -856,7 +860,31 @@ such fix in your session summary and in `BUILD_PROGRESS.json`.
 ## 12. Background workflows
 
 - **cleanup.yml** (hourly): deletes jobs (and their releases/tags/ref) whose
-  `expires_at_epoch` has passed. Default TTL 12 h. Preserved behavior.
+  `expires_at_epoch` has passed. A job's explicit `expires_at_epoch` is
+  authoritative; `CLIPFORGE_TTL_SECONDS` (env, sourced from the repo Actions
+  variable of the same name, currently 172800 = 48h) only governs jobs with
+  NO readable `expires_at_epoch` (legacy "older than N seconds" rule).
+- **TTL single source of truth** (fix-ttl-config-disconnect, see
+  TTL_FIX_PROGRESS.json): the job lifetime is configured ONCE as the repo
+  Actions variable `CLIPFORGE_TTL_SECONDS` (Settings → Secrets and variables
+  → Actions → Variables), currently 172800 = 48h. That ONE value is consumed
+  by every place a TTL is needed:
+  1. `cleanup.yml` env `CLIPFORGE_TTL_SECONDS: ${{ github.event.inputs.ttl_seconds
+     || vars.CLIPFORGE_TTL_SECONDS || '172800' }}` (dispatch input override,
+     then the variable, then a matching fallback);
+  2. `stage-a.yml` env `CLIPFORGE_TTL_SECONDS: ${{ vars.CLIPFORGE_TTL_SECONDS
+     || '172800' }}`, passed to `python -m pipeline.status --ttl-seconds` on
+     the job-creation writes;
+  3. the Telegram bot mirrors it as `CLIPFORGE_JOB_TTL_SECONDS` in
+     `bot/wrangler.*.jsonc` (the bot writes every new job's initial
+     status.json via `bot/src/jobs.js::newStatus`).
+  ALL of these must agree. `pipeline/status.py::DEFAULT_TTL_SECONDS` (12h)
+  is only the no-config fallback. Drift between the creation-time TTL and
+  the sweep TTL was the root cause of the operator's "48h not taking effect"
+  report; the cross-referencing comments at each site must be kept in sync.
+  Note the fallback literals ('172800') are in-repo mirrors of the variable —
+  if the variable changes, update them too (they exist so the intended TTL
+  holds even before the variable exists / for forks).
 - **deploy-bots.yml** (on `bot/**` changes): runs bot tests, deploys Bot A and
   Bot B Workers.
 - **diagnostics.yml** (manual): the public

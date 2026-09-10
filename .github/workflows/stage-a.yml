@@ -44,6 +44,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
 
+    env:
+      # THE ONE TTL KNOB for the whole pipeline (TTL_FIX_PROGRESS.json, fix #1).
+      # Sourced from the single repo Actions variable CLIPFORGE_TTL_SECONDS
+      # (Settings -> Secrets and variables -> Actions -> Variables), currently
+      # 172800 = 48h — the operator's intended job lifetime. The suffix fallback
+      # 172800 keeps the intended TTL even before the repo variable exists;
+      # pipeline/status.py's DEFAULT_TTL_SECONDS (12h) is only the no-config
+      # fallback (local runs / tests).
+      # MUST AGREE WITH: cleanup.yml's CLIPFORGE_TTL_SECONDS env (same source
+      # variable), pipeline/status.py's DEFAULT_TTL_SECONDS comment, and
+      # bot/wrangler.*.jsonc's CLIPFORGE_JOB_TTL_SECONDS var — if the repo
+      # variable changes, update the two workflow suffix fallbacks and BOTH
+      # wrangler vars to match. Never let these drift apart: a job-creation
+      # TTL that differs from the cleanup sweep TTL is exactly the 48h
+      # disconnect this comment block exists to prevent.
+      CLIPFORGE_TTL_SECONDS: ${{ vars.CLIPFORGE_TTL_SECONDS || '172800' }}
+
     steps:
       # RESTART CORRECTNESS — a restart pins the CURRENT default-branch tip,
       # never the original run's commit (mirrors stage-b.yml).
@@ -78,6 +95,12 @@ jobs:
         id: notify_start
         continue-on-error: true
         shell: bash
+        env:
+          # Inherits the job-level CLIPFORGE_TTL_SECONDS above; re-declared so
+          # this first-write step is self-documenting. If this write creates a
+          # brand-new status record (bot-created record missing), the TTL comes
+          # from here — it must match cleanup.yml's sweep TTL.
+          CLIPFORGE_TTL_SECONDS: ${{ vars.CLIPFORGE_TTL_SECONDS || '172800' }}
         run: |
           set -uo pipefail
           job_id="${{ inputs.job_id }}"
@@ -110,6 +133,7 @@ jobs:
             --message "Stage A run started on GitHub Actions — setting up." \
             --release-tag "clipforge-$job_id" \
             "${series_args[@]}" \
+            --ttl-seconds "$CLIPFORGE_TTL_SECONDS" \
             --workflow-run-id "${{ github.run_id }}" \
             --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --code-ref "$(git rev-parse HEAD)" || { echo "WARN: status write failed" >&2; exit 0; }
@@ -224,12 +248,18 @@ jobs:
 
       - name: Write initial status (stage_a_running)
         shell: bash
+        env:
+          # Same single-source TTL as the job-level env above (see that
+          # comment): passed explicitly so a NEW job's expires_at_epoch is
+          # created_at + the configured 48h, never the old hardcoded 12h.
+          CLIPFORGE_TTL_SECONDS: ${{ vars.CLIPFORGE_TTL_SECONDS || '172800' }}
         run: |
           set -euo pipefail
           python -m pipeline.status "${{ steps.req.outputs.job_id }}" \
             --state stage_a_running --mode "${{ steps.req.outputs.mode }}" \
             --message "Stage A starting — ingesting source (${{ steps.req.outputs.source_kind }})" \
             --release-tag "${{ steps.req.outputs.release_tag }}" \
+            --ttl-seconds "$CLIPFORGE_TTL_SECONDS" \
             --workflow-run-id "${{ github.run_id }}" \
             --workflow-run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --code-ref "$(git rev-parse HEAD)"

@@ -41,7 +41,30 @@ export const VALID_PUBLISHING_STATUSES = Object.freeze([
   'cancelled',
 ]);
 
+// FALLBACK ONLY (12h), mirroring pipeline/status.py's DEFAULT_TTL_SECONDS.
+// The operator-facing job TTL is configured in ONE place — the repo Actions
+// variable CLIPFORGE_TTL_SECONDS (currently 172800 = 48h) — and mirrored into
+// this worker via the CLIPFORGE_JOB_TTL_SECONDS var in bot/wrangler.*.jsonc
+// (see configuredJobTtlSeconds below). ALL of these must agree with
+// .github/workflows/stage-a.yml's and .github/workflows/cleanup.yml's
+// CLIPFORGE_TTL_SECONDS env — drift between the job-creation TTL (here) and
+// the cleanup sweep TTL was the root cause of the operator's "48h not taking
+// effect" report (TTL_FIX_PROGRESS.json, fix #1). This constant is only the
+// last-resort default when the var is unset (e.g. unit tests).
 export const DEFAULT_TTL_SECONDS = 12 * 3600;
+
+/**
+ * The TTL for a NEWLY created job's status record, in seconds. Reads the
+ * worker env var CLIPFORGE_JOB_TTL_SECONDS (set in bot/wrangler.*.jsonc,
+ * mirroring the repo Actions variable CLIPFORGE_TTL_SECONDS); falls back to
+ * DEFAULT_TTL_SECONDS when unset/unparsable/non-positive — a bad value must
+ * never crash job creation.
+ */
+export function configuredJobTtlSeconds(env) {
+  const raw = env && env.CLIPFORGE_JOB_TTL_SECONDS;
+  const value = Number.parseInt(String(raw === undefined || raw === null ? '' : raw).trim(), 10);
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_TTL_SECONDS;
+}
 
 const JOB_ID_RE = /^[A-Za-z0-9._-]+$/;
 const JOB_ID_MAX_LEN = 120;
@@ -123,7 +146,10 @@ export function newStatus(args) {
     throw new Error('invalid state: ' + String(state));
   }
   const now = Number.isFinite(args.nowEpoch) ? Math.floor(args.nowEpoch) : Math.floor(Date.now() / 1000);
-  const ttl = Number.isFinite(args.ttlSeconds) ? Math.floor(args.ttlSeconds) : DEFAULT_TTL_SECONDS;
+  // ttlSeconds: explicit per-call value wins; otherwise the configured env
+  // TTL (CLIPFORGE_JOB_TTL_SECONDS from wrangler vars, mirroring the repo
+  // Actions variable CLIPFORGE_TTL_SECONDS); otherwise DEFAULT_TTL_SECONDS.
+  const ttl = Number.isFinite(args.ttlSeconds) ? Math.floor(args.ttlSeconds) : configuredJobTtlSeconds(args.env);
 
   return {
     version: STATUS_VERSION,
@@ -264,6 +290,7 @@ export default {
   VALID_MODES,
   VALID_PUBLISHING_STATUSES,
   DEFAULT_TTL_SECONDS,
+  configuredJobTtlSeconds,
   isValidJobId,
   isTerminal,
   canTransition,

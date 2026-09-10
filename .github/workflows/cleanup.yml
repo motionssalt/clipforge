@@ -16,10 +16,10 @@ on:
   workflow_dispatch:
     inputs:
       ttl_seconds:
-        description: "Override TTL in seconds (default 43200 = 12h)"
+        description: "Override TTL in seconds (default: repo variable CLIPFORGE_TTL_SECONDS, else 172800 = 48h)"
         required: false
         type: string
-        default: "43200"
+        default: ""
 
 permissions:
   contents: write
@@ -50,7 +50,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          CLIPFORGE_TTL_SECONDS: ${{ github.event.inputs.ttl_seconds || '43200' }}
+          # THE ONE TTL KNOB (TTL_FIX_PROGRESS.json, fix #1). Priority: manual
+          # dispatch input > single repo Actions variable CLIPFORGE_TTL_SECONDS
+          # (currently 172800 = 48h) > 172800 fallback. Note: an explicit
+          # expires_at_epoch in a job's status.json is authoritative for that
+          # job (pipeline/cleanup/expired.py::job_is_expired); this value
+          # governs only jobs with no readable expires_at_epoch — which is why
+          # it MUST agree with the job-creation TTL in stage-a.yml (same
+          # source variable + same fallback) and with bot/wrangler.*.jsonc's
+          # CLIPFORGE_JOB_TTL_SECONDS (the bot writes every new job's initial
+          # status.json). Drift between these was the root cause of the
+          # operator's '48h not taking effect' report. See also
+          # pipeline/status.py's DEFAULT_TTL_SECONDS comment.
+          CLIPFORGE_TTL_SECONDS: ${{ github.event.inputs.ttl_seconds || vars.CLIPFORGE_TTL_SECONDS || '172800' }}
         run: |
           set -euo pipefail
           export PYTHONPATH="$GITHUB_WORKSPACE"

@@ -132,3 +132,31 @@ test('VALID_STATES covers the nine states from ARCHITECTURE.md §6.1', () => {
   assert.deepEqual([...VALID_STATES], expected);
   assert.deepEqual([...TERMINAL_STATES].sort(), ['cancelled', 'complete', 'error']);
 });
+
+// fix-ttl-config-disconnect (TTL_FIX_PROGRESS.json, fix #1): a newly created
+// job's expires_at_epoch must reflect the CONFIGURED TTL (the worker env var
+// CLIPFORGE_JOB_TTL_SECONDS from wrangler vars, mirroring the single repo
+// Actions variable CLIPFORGE_TTL_SECONDS), never a hardcoded 12h constant.
+import { configuredJobTtlSeconds, DEFAULT_TTL_SECONDS } from '../src/jobs.js';
+
+test('configuredJobTtlSeconds: env var wins, safe fallback otherwise', () => {
+  assert.equal(configuredJobTtlSeconds({ CLIPFORGE_JOB_TTL_SECONDS: '172800' }), 172800);
+  assert.equal(configuredJobTtlSeconds({}), DEFAULT_TTL_SECONDS);
+  assert.equal(configuredJobTtlSeconds(undefined), DEFAULT_TTL_SECONDS);
+  for (const bad of ['', 'abc', '0', '-3600', '  ']) {
+    assert.equal(configuredJobTtlSeconds({ CLIPFORGE_JOB_TTL_SECONDS: bad }), DEFAULT_TTL_SECONDS, bad);
+  }
+});
+
+test('newStatus uses the configured job TTL (48h), not the hardcoded 12h', () => {
+  const env = { CLIPFORGE_JOB_TTL_SECONDS: '172800' };
+  const rec = newStatus({ job_id: 'manual-1', mode: 'manual', nowEpoch: 1000, env });
+  assert.equal(rec.expires_at_epoch, 1000 + 172800);
+});
+
+test('newStatus: explicit ttlSeconds beats env; no env falls back to 12h default', () => {
+  const rec = newStatus({ job_id: 'manual-1', mode: 'manual', nowEpoch: 1000, ttlSeconds: 600 });
+  assert.equal(rec.expires_at_epoch, 1600);
+  const noEnv = newStatus({ job_id: 'manual-1', mode: 'manual', nowEpoch: 1000 });
+  assert.equal(noEnv.expires_at_epoch, 1000 + DEFAULT_TTL_SECONDS);
+});

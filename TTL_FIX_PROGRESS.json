@@ -1,0 +1,37 @@
+{
+  "initiative": "fix-ttl-config-disconnect-and-stuck-jobs",
+  "current_step": "investigation_stuck_jobs",
+  "fix_1_ttl_config": {
+    "status": "complete",
+    "chosen_env_var_design": "Single canonical source: repo Actions variable CLIPFORGE_TTL_SECONDS (created this session, value 172800 = 48h). Both workflows consume it via ${{ vars.CLIPFORGE_TTL_SECONDS || '172800' }} (cleanup.yml additionally allows a workflow_dispatch input override for ad-hoc sweeps). pipeline/status.py now resolves new-job TTL through configured_ttl_seconds(): explicit --ttl-seconds arg (passed by stage-a.yml from the same env var) > CLIPFORGE_TTL_SECONDS env var > DEFAULT_TTL_SECONDS (12*3600, kept as documented no-config fallback for local runs/tests). The TELEGRAM BOT (bot/src/jobs.js::newStatus) was discovered during this fix to be the ACTUAL writer of every job's initial status.json — it had its own independent hardcoded DEFAULT_TTL_SECONDS = 12*3600 and was the true source of the 12h expires_at_epoch baked into all existing jobs (verified: bot 'create job' commit 82bca3e wrote expires=created+43200 before stage A ever ran). Bot now resolves TTL via configuredJobTtlSeconds(env) reading worker var CLIPFORGE_JOB_TTL_SECONDS, set to '172800' in bot/wrangler.bot-a.jsonc, and all three newStatus call sites in bot/src/index.js (startJob, startRelayJob, startNextSeriesPart) pass ttlSeconds: configuredJobTtlSeconds(env). (bot-b relay worker writes no job status; its wrangler config needs no var.)",
+    "stage_a_yml_updated": true,
+    "status_py_updated": true,
+    "cross_reference_comments_added": true,
+    "commits": []
+  },
+  "investigation": {
+    "jobs_examined": [],
+    "confirmed_root_cause": ""
+  },
+  "fix_2_stuck_jobs": {
+    "status": "not_started",
+    "approach": "",
+    "existing_job_data_corrected": null,
+    "commits": []
+  },
+  "tests_added": [
+    "pipeline/tests/test_status.py::TtlConfigurationTests (7 tests: env-wins, fallback, bad-env-safe, explicit-arg-wins, first-write-uses-config, late-backfill-uses-config, merge-never-rewrites-expiry)",
+    "pipeline/tests/test_status.py::WorkflowTtlAgreementTests (5 tests parsing real stage-a.yml/cleanup.yml/wrangler.bot-a.jsonc to assert one shared TTL source + no 12h drift regression)",
+    "bot/test/jobs.test.mjs (3 tests: configuredJobTtlSeconds resolution, newStatus uses configured 48h, explicit ttlSeconds beats env / no-env falls back)"
+  ],
+  "full_suite_passing": false,
+  "human_review_items": [
+    "OPERATOR ACTION REQUIRED OUTSIDE THE REPO: bot/wrangler.bot-a.jsonc now sets CLIPFORGE_JOB_TTL_SECONDS=172800, but the Cloudflare Worker only picks it up on the next bot deploy (deploy-bots.yml runs on bot/** changes, so pushing this commit may auto-deploy; verify the deploy ran and the var is live). Until then the bot still creates jobs with the old 12h TTL baked in.",
+    "Single canonical TTL value now lives as the repo Actions variable CLIPFORGE_TTL_SECONDS=172800 (created via gh this session). The '172800' fallback literals in stage-a.yml/cleanup.yml/wrangler.bot-a.jsonc are deliberate in-repo mirrors, pinned by WorkflowTtlAgreementTests so they cannot drift without failing the suite."
+  ],
+  "resume_from": {
+    "file": "TTL_FIX_PROGRESS.json",
+    "component": "investigation",
+    "next_operation": "Record per-job findings (already gathered: all 19 on-disk jobs examined against run 34469909937 log) into investigation.jobs_examined, confirm root cause, decide fix_2."
+  }
+}
