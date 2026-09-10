@@ -577,6 +577,18 @@
         "6aa20453970ecd489c6a9b54"
       ],
       "updated_at_epoch": 1789002836
+    },
+    {
+      "job_id": "manual-1789002135775",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-11T11:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6aa2529ecb383d7f43b3d27b",
+        "6aa252a0a0bd6a6a982bfe05"
+      ],
+      "updated_at_epoch": 1789022881
     }
   ]
 }
