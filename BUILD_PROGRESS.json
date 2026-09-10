@@ -15,20 +15,26 @@
    "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
   ]
  },
- "current_phase": "duration_target_decouple",
+ "current_phase": "agent_prompt_delivery_fix",
  "current_task": {
-  "stage": "duration_target_decouple",
-  "task": "Duration-target decouple — narration-pacing reframing in prompt.py + sendAgentPrompt",
+  "stage": "agent_prompt_delivery_fix",
+  "task": "Copy-agent prompt: force valid-JSON-only delivery from the external agent",
   "status": "complete",
-  "session": "duration-target-decouple-session-2",
+  "session": "agent-prompt-delivery-session-1",
   "completed": [
-   "Location 1 (pipeline/plan/prompt.py): FOCUS_DIRECTIVE p8, NO_FOCUS_DIRECTIVE (x2), runtime-context table, STEP 3 paragraph, output-contract comment — all reframed to narration pacing only",
-   "Location 2 (bot/src/index.js sendAgentPrompt): prompt array + all three copyPrompt fallbacks reframed, self-sufficient standalone wording, Telegram 250-char cap preserved",
-   "In-scope hardening: ARCHITECTURE.md x2, wizard.js step-3 label",
-   "Test updated: test_prompt_word_budget_ordering.py (old-phrasing assertion -> new phrasing); verification grep clean repo-wide"
+   "bot/src/index.js sendAgentPrompt: full prompt Delivery line now requires the ENTIRE reply to be ONLY production.json (file attachment preferred, else ONE ```json code block, valid JSON: double quotes / no comments / no trailing commas / no truncation, zero commentary) — bug-15",
+   "bot/src/index.js sendAgentPrompt: all three copyPrompt fallback tiers rebuilt so every length-capped variant ends with \"Send back ONLY the JSON\" alongside the narration-pacing and full-visual-payoff clauses; longest tier simulated at 227 chars even with a long release URL, safely under Telegrams 250-char copy_text cap",
+   "bot/src/index.js sendAgentPrompt: operator guidance line added — if the agent still replies with prose or broken JSON, tell it: Resend ONLY the complete valid production.json, as a file or one code block.",
+   "pipeline/plan/prompt.py: final OUTPUT SCHEMA return line strengthened — ONLY the production.json as the entire reply, strictly valid JSON, Stage B rejects anything that is not one valid JSON document (no code fences retained: output is uploaded verbatim)"
   ],
   "remaining": [],
-  "resume_from": null
+  "resume_from": null,
+  "verification": {
+   "prompt_lines_changed": "bot/src/index.js: sendAgentPrompt Delivery line (~1072), copyPrompt chain (~1078-1092), operator tail (~1099); pipeline/plan/prompt.py: return-ONLY-JSON line (~1407)",
+   "tests": "bot: 11 failures present on pristine baseline AND after edit — identical, pre-existing, unrelated to this change. python pipeline tests run after prompt.py edit.",
+   "plan_schema_sync": "target_total_duration_seconds semantics untouched; bot/src/plan.js and pipeline/plan/schema.py unchanged this phase",
+   "note": "Operator-reported symptom: external agent replied with prose/invalid JSON because neither the full prompt nor the copy button pinned the delivery format."
+  }
  },
  "phases": [
   {
@@ -620,8 +626,9 @@
   "note_after_relay_fix": "relay-ordering-fix-session-1: 210 Python (unittest discover pipeline/tests) + 78 JS (npm test) all green after the staging-time relay record fix."
  },
  "last_session": {
-  "id": "feature-4-unseen-task-marker",
-  "note": "All four scoped items pushed; both suites green (216 Python / 92 JS) at HEAD."
+  "id": "agent-prompt-delivery-session-1",
+  "utc": "2026-09-10T18:46:23.199Z",
+  "summary": "Agent prompt now forces JSON-only delivery in both the full prompt and all copy-button fallbacks; prompt.py output contract hardened."
  },
  "architecture_concerns_closed": [
   {

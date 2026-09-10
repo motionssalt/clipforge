@@ -1404,8 +1404,11 @@ CONSTRAINTS
     time skip, unexplained new state, setup→payoff), open the later
     cut's `voiceover_text` with a short connective lead-in that carries
     the viewer across the gap. Never invent events to fill a gap.{constraints_focus_note}
-  - Return ONLY the JSON, no surrounding prose, no code fences. It will
-    be uploaded verbatim to ClipForge Stage B.
+  - Return ONLY the production.json as your entire reply: no surrounding
+    prose, no headings, no commentary, no code fences. The JSON must be
+    complete and strictly valid — double quotes, no comments, no trailing
+    commas, nothing truncated. It will be uploaded verbatim to ClipForge
+    Stage B, which rejects anything that is not one valid JSON document.
 
 ================================================================================
 """
