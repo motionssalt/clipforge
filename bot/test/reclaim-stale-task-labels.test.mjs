@@ -22,7 +22,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classify, makeSeriesIncomplete } from '../../scripts/reclaim-stale-task-labels-lib.mjs';
+import { classify, makeSeriesIncomplete, DEFAULT_SERIES_GRACE_SECONDS } from '../../scripts/reclaim-stale-task-labels-lib.mjs';
 
 const NOW = 1788024000; // shortly after the incident; before expires 1788070049
 
@@ -35,7 +35,10 @@ const INCIDENT_DOC = {
 };
 
 function classifyWithJobs(result, jobs) {
-  return classify(result, { now: NOW, seriesIncomplete: makeSeriesIncomplete(async () => jobs) });
+  // now: NOW pins the helper to the incident era, so these fixtures (expiry
+  // ~hours away from NOW) sit INSIDE the 24h stuck-series grace window and
+  // keep testing exactly the bug-49/66/67 rules they were written for.
+  return classify(result, { now: NOW, seriesIncomplete: makeSeriesIncomplete(async () => jobs, { now: NOW }) });
 }
 
 test('bug-67: exact incident — terminal non-final part of incomplete series keeps its label', async () => {
@@ -148,11 +151,46 @@ test('seriesIncomplete caches per series id', async () => {
   const seriesIncomplete = makeSeriesIncomplete(async () => {
     calls += 1;
     return [{ jobId: 'p1', doc: INCIDENT_DOC }];
-  });
+  }, { now: NOW });
+  // (incident-era pin: within the 24h grace the zero-final series is incomplete)
   assert.equal(await seriesIncomplete('series-1788023208180'), true);
   assert.equal(await seriesIncomplete('series-1788023208180'), true);
   assert.equal(calls, 1, 'second lookup must hit the cache');
   assert.equal(await seriesIncomplete(''), false, 'empty series id is never incomplete');
+});
+
+test('stuck-series grace: all-terminal zero-final series quiet > 24h frees its labels', async () => {
+  // The operator's 'tasks never expire' report, JS side: the same expiry
+  // rule as the reaper must free these labels, or the reaper would delete
+  // the jobs while /tasks kept the labels forever (desync).
+  const oldDoc = {
+    state: 'complete',
+    created_at_epoch: NOW - 3 * 24 * 3600,
+    expires_at_epoch: NOW - 3 * 24 * 3600 + 12 * 3600,
+    series: { enabled: true, series_id: 'series-stuck', part: 2, is_final: false },
+  };
+  const verdict = await classify({ doc: oldDoc }, {
+    now: NOW,
+    seriesIncomplete: makeSeriesIncomplete(async () => [{ jobId: 'series-stuck-p2', doc: oldDoc }], { now: NOW }),
+  });
+  assert.equal(verdict, 'stale:terminal-complete', 'stuck series label must be freed once quiet past the grace window');
+});
+
+test('stuck-series grace: zero-final series still active/recent keeps its labels (bug-66 intact)', async () => {
+  // Same shape but the newest part expired only an hour ago (< 24h grace):
+  // the series may still be publishing/queueing, so the label stays.
+  const recentDoc = {
+    state: 'complete',
+    created_at_epoch: NOW - 13 * 3600,
+    expires_at_epoch: NOW - 3600,
+    series: { enabled: true, series_id: 'series-recent', part: 2, is_final: false },
+  };
+  const verdict = await classify({ doc: recentDoc }, {
+    now: NOW,
+    seriesIncomplete: makeSeriesIncomplete(async () => [{ jobId: 'series-recent-p2', doc: recentDoc }], { now: NOW }),
+  });
+  assert.equal(verdict, 'active', 'recently-active zero-final series must stay protected');
+  assert.ok(DEFAULT_SERIES_GRACE_SECONDS > 13 * 3600, 'grace must exceed the recent-activity window used here');
 });
 
 test('seriesIncomplete: lister failure conservatively reports complete=false path', async () => {

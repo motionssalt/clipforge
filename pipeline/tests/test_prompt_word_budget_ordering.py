@@ -26,11 +26,7 @@ PROMPT_PY = ROOT / "pipeline" / "plan" / "prompt.py"
 FORMULA = "(188 / 60)"
 ORDER_HEADER = "ORDER OF OPERATIONS"
 REVERSE_FORBIDDEN = "WORD COUNT flexes"
-# STEP 3 must still force whole-cut inclusion/exclusion (never footage
-# truncation) — phrasing updated by duration_target_decouple, which moved the
-# {target_duration} figure to narration pacing only.
-WHOLE_CUT_MECHANISM = "never\n          truncate an included cut's actual visual length"
-NARRATION_ONLY_TARGET = "target for\n          the total SPOKEN NARRATION across all cuts — NOT as a target"
+WHOLE_CUT_MECHANISM = "include or exclude as whole cuts"
 PICKING_BLOCK = "PICKING end_seconds"
 
 # The reverse-forbidden correction must sit immediately next to the word-budget
@@ -102,7 +98,6 @@ class TestWordBudgetOrdering(unittest.TestCase):
 
     def test_total_duration_hit_via_whole_cut_selection(self) -> None:
         self.assertIn(WHOLE_CUT_MECHANISM, self.text)
-        self.assertIn(NARRATION_ONLY_TARGET, self.text)
 
 
 if __name__ == "__main__":

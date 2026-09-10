@@ -102,16 +102,11 @@ What this means, concretely:
      from earliest setup to final payoff — not as a highlight reel of
      the whole video with the focus mixed in.
 
-  8. The narration-length target still applies (~{target_duration}s of
-     SPOKEN NARRATION across all cuts), but it is subordinate to the
-     focus and to each cut's visual completeness. It paces how much you
-     write per cut; it is NOT a video length and sets no bound on any
-     cut's footage or on `end_seconds`, which is governed solely by the
-     PICKING end_seconds rules in STEP 3. If the focus genuinely has
-     less material than the narration target can cover, prefer tighter
-     narration over padding with unrelated moments; if it has more,
-     keep every essential beat and let the narration run a little long
-     rather than dropping or truncating footage.
+  8. Duration target still applies (~{target_duration}s total), but
+     it is subordinate to the focus. If the focus genuinely has less
+     material than the target, prefer a slightly shorter, tighter cut
+     over padding with unrelated moments. If it has more, prefer a
+     slightly longer cut over dropping essential beats of the focus.
 
   9. If — after honestly reading the transcript and indexes — you
      cannot locate the focus in this source video at all, say so
@@ -172,19 +167,14 @@ operator focus:
     act or evenly sampling the source from beginning to end. That produces a
     diluted highlight reel and is a failure for this run.
   - When the source has several independently strong subplots, choose only the
-    best-supported one; do not balance them or pad the narration to the
-    target length with unrelated material. A tighter coherent story is
-    better than a wider one.
+    best-supported one; do not balance them or pad to the target duration with
+    unrelated material. A shorter coherent cut is better than a wider one.
   - Continue to use only grounded transcript/index evidence. Do not invent
     connective events, motives, dialogue, or visual details.
 
-The narration-length target remains about {target_duration}s of SPOKEN
-NARRATION in total, and it is subordinate to the one self-selected story
-thread. It paces narration only — it is not a video length, bounds no
-cut's footage, and has no bearing on `end_seconds`, which is governed
-solely by the PICKING end_seconds rules in STEP 3. Everything below this
-box is general ClipForge guidance; read it through that thread, not
-through the whole video.
+The target duration remains about {target_duration}s, but it is subordinate to
+the one self-selected story thread. Everything below this box is general
+ClipForge guidance; read it through that thread, not through the whole video.
 
 ################################################################################
 
@@ -559,14 +549,10 @@ VIDEO METADATA (substituted by Stage A)
                            scene_index.json.
   Local key-moments list:  {key_moment_count} moment(s) in
                            key_moments.json.
-  Narration length target: ~{target_duration} seconds of SPOKEN
-                           NARRATION in total (user-selected in the Stage
-                           A form; approximate — favor engagement over
-                           hitting the number exactly). This is NOT the
-                           output video's length: it bounds no cut's
-                           footage and has no bearing on `end_seconds`,
-                           which is governed solely by the PICKING
-                           end_seconds rules in STEP 3.
+  Target output length:    ~{target_duration} seconds of cuts combined
+                           (user-selected in the Stage A form; approximate
+                           — favor engagement over hitting the number
+                           exactly).
 
 --------------------------------------------------------------------------------
 USING THE INDEXES
@@ -794,17 +780,14 @@ STEP 3 (assemble cuts).
         - Each cut should be self-contained enough that a viewer landing
           on it makes sense — favor cutting at natural sentence / beat
           boundaries from the transcript, not mid-word.
-        - Treat ~{target_duration} seconds as the approximate target for
-          the total SPOKEN NARRATION across all cuts — NOT as a target
-          for the sum of (end - start). It does NOT need to be exact,
-          and it is met through the NARRATION DURATION CONTRACT's
-          per-cut word budget, never by sizing footage. Choose WHICH
-          moments to include as whole cuts for narrative strength; never
-          truncate an included cut's actual visual length for any
-          duration reason. Every cut you include keeps the full
-          `end_seconds` its on-screen payoff requires, per the PICKING
-          end_seconds rules below; those rules are the sole authority
-          for `end_seconds`, and no duration figure overrides them.
+        - Target the sum of (end - start) across all cuts at roughly
+          {target_duration} seconds. It does NOT need to be exact.
+          Hit this overall target ONLY by choosing WHICH moments to
+          include or exclude as whole cuts — never by truncating an
+          included cut's actual visual length to shrink the total.
+          Every cut you include keeps the full `end_seconds` its
+          on-screen payoff requires, per the PICKING end_seconds
+          rules below, regardless of the total-duration target.
         - `start_seconds` and `end_seconds` are still expressed in
           SOURCE-VIDEO seconds (integers, second-precision). They do
           NOT need to align with window boundaries.
@@ -1220,10 +1203,6 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
     // ... more cuts, ordered chronologically ...
   ],
   "target_total_duration_seconds": {target_duration}
-  // NARRATION pacing only: approximate total SPOKEN-NARRATION seconds
-  // across all cuts. NOT the output video's length; it sets no bound on
-  // any cut's footage or on `end_seconds` (the PICKING end_seconds rules
-  // and the NARRATION DURATION CONTRACT are the sole authorities there).
 }}
 
 NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT

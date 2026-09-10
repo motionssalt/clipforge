@@ -260,7 +260,7 @@ export function stepPrompt(wizard, options = {}) {
         keyboard: nav([])
       };
     case 'length':
-      return { text: '<b>New video — step 3/5: length</b>\n\nPick the target spoken-narration length (pacing only — footage runs as long as each scene needs).', keyboard: lengthKeyboard() };
+      return { text: '<b>New video — step 3/5: length</b>\n\nPick the target duration.', keyboard: lengthKeyboard() };
     case 'music':
       return { text: '<b>New video — step 4/5: music</b>\n\nBackground music for the final render.', keyboard: musicKeyboard() };
     case 'confirm':

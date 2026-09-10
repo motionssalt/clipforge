@@ -52,6 +52,13 @@ RELAY_TAG_PREFIX = "clipforge-relay-input-"
 JOB_BRANCH_PREFIX = "clipforge-job/"
 JOBS_DIR = "jobs"
 MAX_RESPONSE_BYTES = 16 * 1024 * 1024
+# Inactivity grace (seconds) for the series-protection rule below. A series
+# whose parts are ALL terminal but NONE is is_final-marked stays protected
+# (bug-66) only while its newest part's own expiry is less than this far in
+# the past. 24h is far longer than any realistic publish/queue lag, so a
+# genuinely active series is never reaped — but an abandoned one no longer
+# pins its expired parts (and the operator's task list) forever.
+DEFAULT_SERIES_GRACE_SECONDS = 24 * 3600
 
 
 # --------------------------------------------------------------------------- #
@@ -281,7 +288,29 @@ def _part_is_terminal(root: str | Path, job_id: str) -> bool:
         return False
 
 
-def series_is_complete(root: str | Path, series_id: str) -> bool:
+def _series_last_activity_epoch(root: str | Path, series_id: str) -> int | None:
+    """Newest timing signal across a series' on-disk parts.
+
+    Parts are created over the series' lifetime, so the newest part's
+    created/expires timestamps are the best available proxy for 'this series
+    was still producing work recently' (status.json persists no updated_at
+    field, so expires_at_epoch = creation + TTL is the freshest per-part
+    signal).
+    """
+    last: int | None = None
+    for jid in list_job_ids_from_disk(root):
+        info = read_job_timing(root, jid)
+        if info.get("series_id") != series_id:
+            continue
+        for key in ("created_at_epoch", "expires_at_epoch"):
+            value = info.get(key)
+            if value is not None:
+                last = value if last is None else max(last, value)
+    return last
+
+
+def series_is_complete(root: str | Path, series_id: str, *, now: int | None = None,
+                       grace: int = DEFAULT_SERIES_GRACE_SECONDS) -> bool:
     """bug-49 + bug-66: a series is complete only when EVERY known part is
     terminal AND at least one on-disk part is marked series_final/is_final.
 
@@ -294,7 +323,16 @@ def series_is_complete(root: str | Path, series_id: str) -> bool:
     it is INCOMPLETE regardless of how many existing parts are terminal.
 
     A missing/unreadable sibling status counts as INCOMPLETE, so a protected
-    part is never reaped while any sibling is still alive or unknown."""
+    part is never reaped while any sibling is still alive or unknown.
+
+    Stuck-series escape hatch (operator report: series tasks from 3+ days ago
+    never expired — every stuck series on disk had all-terminal parts but NO
+    is_final part, so the bug-66 guard above protected them forever): when no
+    part is marked is_final but EVERY part is terminal AND the newest part's
+    own expiry is at least `grace` seconds (default 24h) in the past, the
+    series is treated as complete anyway. A live series always has a part
+    whose expiry is at most TTL old — far inside the grace window — so the
+    bug-66 protection is fully intact for anything genuinely active."""
     if not series_id:
         return True
     saw_final = False
@@ -306,7 +344,14 @@ def series_is_complete(root: str | Path, series_id: str) -> bool:
             return False
         if info.get("series_final"):
             saw_final = True
-    return saw_final
+    if saw_final:
+        return True
+    # No is_final-marked part: reap only once the whole series has been
+    # terminal AND quiet for the full grace window.
+    if now is None:
+        now = int(time.time())
+    last_activity = _series_last_activity_epoch(root, series_id)
+    return last_activity is not None and last_activity + grace <= now
 
 
 # --------------------------------------------------------------------------- #

@@ -189,14 +189,20 @@ class ExpiryDecision(unittest.TestCase):
 
 class SeriesCompleteness(unittest.TestCase):
     """bug-66 regression coverage: series_is_complete must require BOTH every
-    existing part terminal AND at least one part actually marked is_final.
+    existing part terminal AND at least one part actually marked is_final —
+    OR (stuck-series grace, revert-and-cleanup-fix-session-1) every part
+    terminal with the newest part's expiry at least 24h in the past.
 
     Incident replay (cleanup commit 1d6ad63): series-1787970477573 had parts 1
     and 2 both terminal but NEITHER marked is_final (part 3 never rendered).
     The pre-fix code treated the series as complete and reaped both parts
     while publishing was still scheduled. The sibling series-1787978275321 had
     a p2 genuinely marked is_final: true, so reaping its finished p1 was
-    correct and must keep working.
+    correct and must keep working. Those incident fixtures expire only
+    ~seconds-to-an-hour before self.NOW — far inside the 24h grace window —
+    so they stay protected exactly as bug-66 intended; the grace (whose own
+    tests live in test_cleanup_series_grace.py) applies only to series that
+    have been fully terminal AND quiet for more than a day.
     """
 
     NOW = 1_800_000_000
