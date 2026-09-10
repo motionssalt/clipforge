@@ -15,7 +15,7 @@
       "the two preserved subsystems' underlying logic except narrowly-scoped bug fixes (see ARCHITECTURE.md §9)"
     ]
   },
-  "current_phase": "complete",
+  "current_phase": "duration_target_decouple",
   "current_task": {
     "stage": "background_workflows",
     "task": "Background workflows — cleanup, deploy-bots, diagnostics",
@@ -179,6 +179,45 @@
       ],
       "notes": "All three deliverables built and verified. cleanup.yml (hourly TTL sweep, §6.2 expires_at_epoch, stdlib-only pipeline/cleanup/expired.py + 21 tests), deploy-bots.yml (bot/** trigger, Node 22 npm ci + 75-test gate, wrangler deploy of Bot A + Bot B), diagnostics.yml (manual: Gemini capability check via pipeline/diagnostics/gemini.py — model candidates shared with pipeline.plan.automatic — + §9.1 Telegram intake positive/negative checks through the real ingest path; 12 new offline tests). This was the final phase of the §15 build order — all 10 phases are now complete.",
       "completed_in_session": "background-workflows-session-2"
+    },
+    {
+      "id": "duration_target_decouple",
+      "title": "Duration-target decouple — reframe {target_duration} as narration-pacing only, in BOTH pipeline/plan/prompt.py (Location 1) and bot/src/index.js sendAgentPrompt (Location 2)",
+      "status": "in_progress",
+      "session": "duration-target-decouple-session-1",
+      "diagnosed_defect": "A numeric target attached to \"cuts\", \"video\", \"clip\", or \"output length\" anchors the planning model (Location 1) and the external hand-copy agent (Location 2) to shorten end_seconds to hit that number, truncating scenes before visual payoff. Fix is a narrow reframing: target_duration is now narration-pacing only; end_seconds selection is governed solely by the untouched PICKING end_seconds / NARRATION DURATION CONTRACT sections.",
+      "grep_patterns_used": [
+        "target_duration",
+        "target_total_duration_seconds",
+        "Target output length",
+        "Duration target",
+        "seconds of cuts combined",
+        "video_duration_seconds (as source-length disambiguation)",
+        "-second vertical clip",
+        "s vertical clip",
+        "second clip",
+        "sendAgentPrompt",
+        "Produce exactly one production.json",
+        "Write production.json"
+      ],
+      "files_to_fix": [
+        "pipeline/plan/prompt.py — FOCUS_DIRECTIVE line 105, NO_FOCUS_DIRECTIVE line 175, runtime-context table line 552, STEP 3 total-duration paragraph line ~783, production.json output contract line 1205",
+        "bot/src/index.js — sendAgentPrompt() prompt array line 1070, three copyPrompt fallbacks lines 1080/1082/1085",
+        "ARCHITECTURE.md line 430 — prose \"the duration target\" (ambiguous; reread-under-pressure treats as defect)"
+      ],
+      "files_touched_prose_check": [
+        "pipeline/plan/schema.py — field name only, legitimate (untouched)",
+        "bot/src/plan.js — field name only, legitimate (untouched)",
+        "schemas/production_plan.schema.json — field name only, legitimate (untouched)",
+        "pipeline/stage_b/common.py — field name only (untouched)",
+        "pipeline/stage_b/series_reconcile.py — field name only in DELIBERATE NON-GOALS list (untouched)",
+        "pipeline/plan/series.py — target_duration is a plumbing variable name for the stage-A-request field, not user-facing prose (untouched)",
+        "ARCHITECTURE.md line 471 — schema-field description \"required positive integers\" (untouched)",
+        "ARCHITECTURE.md line 612 — wizard-UI copy \"pick target duration: 30s · 60s · 120s …\" — this is the UI label the operator sees; it does not tell the planning model or the external agent that the number is a video length. Left untouched.",
+        "docs/HELP_GUIDE.md — outline only, no defect language (verified)",
+        "jobs/**/*.json, ARCHITECTURE.md schema example — persisted data with the field name, unchanged"
+      ],
+      "resume_from": "begin at pipeline/plan/prompt.py (Location 1) — FOCUS_DIRECTIVE point 8 (line 105)"
     }
   ],
   "required_secrets": [
