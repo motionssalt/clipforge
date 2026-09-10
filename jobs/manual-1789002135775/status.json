@@ -9,10 +9,17 @@
     "start_seconds": 0,
     "is_final": false
   },
+<<<<<<< Updated upstream
   "state": "stage_b_queued",
   "message": "Production plan uploaded — Stage B dispatched.",
   "created_at_epoch": 1789002429,
   "updated_at_epoch": 1789022093,
+=======
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "created_at_epoch": 1789002429,
+  "updated_at_epoch": 1789022105,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1789045629,
   "release_tag": "clipforge-manual-1789002135775",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789002135775",
@@ -28,9 +35,9 @@
     "analysis_bundle_url": ""
   },
   "run": {
-    "workflow_run_id": 34424121380,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34424121380",
-    "code_ref": "b0878c8586fbffc6b408fedd3683907d290b57f4"
+    "workflow_run_id": 34445842272,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34445842272",
+    "code_ref": "9fdba5a2505d7c5211f61e0564b79a03b10b27fd"
   },
   "publishing": {
     "status": "not_requested",
