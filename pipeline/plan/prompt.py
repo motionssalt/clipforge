@@ -568,9 +568,23 @@ tokens for the coverage they provide.
       start_seconds, end_seconds, keyframe_seconds, cause}}`.
     - When you write voiceover_text for a cut that spans multiple
       shot_ids, you already know exactly where the camera cut inside
-      it — describe those transitions accurately ("the shot cuts to a
-      wide of the arena", "we cut back to the boy") instead of
-      guessing.
+      it — use that to accurately track WHAT the viewer sees across the
+      transition (a new character appears, the location changes, a
+      reaction is revealed, the action moves somewhere else), described
+      purely in terms of the STORY. NEVER describe the transition as a
+      transition: do not write "the camera cuts to...", "the shot cuts
+      to...", "we cut back to...", "the scene shifts to...", "the frame
+      shows...", "the screen displays...", or any other phrase that
+      names the camera, the shot, the cut, the frame, or the screen as
+      the subject of a sentence. The camera and editing are invisible to
+      a viewer absorbed in the story — narrate what is happening, not how
+      it was filmed or edited. Compare: WRONG — "The camera leaves the
+      wreckage and climbs past the city lights. A familiar figure waits
+      above the streets." RIGHT — "High above the streets, a familiar
+      figure waits." Same visual information, zero meta-commentary about
+      the shot itself. If a cut spans a location change, just narrate the
+      new location and what's happening there — the viewer sees the cut
+      happen on screen; you never need to name it in words.
     - `keyframe_seconds` is the midpoint of a shot — the single most
       representative timestamp. If you want a single frame from a
       shot, that's the one to look at.
