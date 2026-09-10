@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "manual-1789040051954",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:27cf2c9ca13de0b4cebdf07df1369fab2e68e238&dn=Rick and Morty S09E10 Field of Dreams 1080p AMZN WEB-DL DDP5 1 H 264-FLUX[eztvx.to]&tr=udp://tracker.opentrackr.org:1337/announce&tr=udp://open.stealth.si:80/announce&tr=udp://tracker.torrent.eu.org:451/announce&tr=udp://tracker.dler.org:6969/announce&tr=https://tracker.moeblog.cn:443/announce&tr=https://tracker.zhuqiy.com:443/announce&tr=udp://open.dstud.io:6969/announce"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789040069424",
+    "source_job_id": "manual-1789040051954",
+    "part": 1,
+    "start_seconds": 0,
+    "context": ""
+  },
+  "music": {
+    "ref": "audio-library/Cinematic_Documentary_Chill_by_Infraction_Copyright_Free_Music_Silver.m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1789040069
+}
