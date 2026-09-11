@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "manual-1789135960757",
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789136004251",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "state": "stage_a_running",
+  "message": "Stage A starting — ingesting source (magnet)",
+  "created_at_epoch": 1789136005,
+  "updated_at_epoch": 1789136231,
+  "expires_at_epoch": 1789308805,
+  "release_tag": "clipforge-manual-1789135960757",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789135960757",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 34608849429,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34608849429",
+    "code_ref": "0aa6174940941a355a13f901e0b83c6526c7f72c"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  }
+}
