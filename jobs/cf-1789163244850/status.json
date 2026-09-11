@@ -1,13 +1,29 @@
 {
   "job_id": "cf-1789163244850",
-  "state": "queued",
-  "message": "Task queued",
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1789163244851,
-  "updated_at_epoch": 1789163244851,
+  "updated_at_epoch": 1789163275,
   "series": {
     "enabled": true,
     "series_id": "Parasites",
     "part": 1,
-    "start_seconds": 0
-  }
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "version": 2,
+  "assets": {},
+  "run": {
+    "workflow_run_id": 34651077152,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34651077152",
+    "code_ref": "f7b1d962b408737cf14e6afc1b076ea345c68412"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "release_tag": "clipforge-cf-1789163244850",
+  "release_url": "",
+  "expires_at_epoch": 1789163417651
 }
