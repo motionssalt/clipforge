@@ -1,0 +1,18 @@
+{
+  "job_id": "cf-1789164057175",
+  "source": {
+    "kind": "drive",
+    "url": "https:\/\/drive.google.com\/file\/d\/1EqGGAtBjsOTGvwXfBICcd0EcEmM83iVY\/view?usp=drivesdk"
+  },
+  "options": {
+    "target_duration_seconds": 60,
+    "focus": ""
+  },
+  "created_at_epoch": 1789164057175,
+  "series": {
+    "enabled": true,
+    "series_id": "hxh 1",
+    "part": 1,
+    "start_seconds": 0
+  }
+}
