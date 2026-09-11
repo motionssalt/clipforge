@@ -1,0 +1,18 @@
+{
+  "job_id": "cf-1789158159852",
+  "source": {
+    "kind": "torrent_file",
+    "path": "jobs\/cf-1789158159852\/source.torrent"
+  },
+  "options": {
+    "target_duration_seconds": 120,
+    "focus": ""
+  },
+  "created_at_epoch": 1789158182156,
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789158182",
+    "part": 1,
+    "start_seconds": 0
+  }
+}
