@@ -1,9 +1,9 @@
 {
   "job_id": "cf-1789163244850",
   "state": "stage_a_running",
-  "message": "Stage A run started on GitHub Actions — setting up.",
+  "message": "Stage A starting — ingesting source (magnet)",
   "created_at_epoch": 1789163244851,
-  "updated_at_epoch": 1789163275,
+  "updated_at_epoch": 1789163320,
   "series": {
     "enabled": true,
     "series_id": "Parasites",
@@ -16,7 +16,7 @@
   "run": {
     "workflow_run_id": 34651077152,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34651077152",
-    "code_ref": "f7b1d962b408737cf14e6afc1b076ea345c68412"
+    "code_ref": "439ff0317e21f4f01386fd9c9c8062a7fa5c0d6e"
   },
   "publishing": {
     "status": "not_requested",
@@ -25,5 +25,6 @@
   },
   "release_tag": "clipforge-cf-1789163244850",
   "release_url": "",
-  "expires_at_epoch": 1789163417651
+  "expires_at_epoch": 1789163417651,
+  "mode": "manual"
 }
