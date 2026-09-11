@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "series-1789120975452-p2",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:ba270306e8dddf66f5a5ce4bafbd333902552035&dn=Rick and Morty - S02 - 2160p HDR Ai Upscale -Mesc&xl=19805339127&tr=https://seedpool.org/announce/9b684f045f3361654d93e5f1bd3514e7&tr=udp://open.stealth.si:80/announce&tr=udp://tracker.opentrackr.org:1337/announce&tr=udp://tracker.torrent.eu.org:451/announce&tr=udp://explodie.org:6969/announce&tr=udp://ttk2.nbaonlineservice.com:6969/announce&tr=udp://ec2-18-191-163-220.us-east-2.compute.amazonaws.com:6969/announce",
+    "torrent_file_index": "6"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789120975452",
+    "source_job_id": "manual-1789120960923",
+    "part": 2,
+    "start_seconds": 102,
+    "context": "Prior events (Part 1): Rick discovers that beloved family member Uncle Steve is actually an alien parasite that survives by embedding false memories into their minds, but a new wacky character slips into the house before anyone notices."
+  },
+  "music": {
+    "ref": "audio-library/Cinematic_Documentary_Chill_by_Infraction_Copyright_Free_Music_Silver.m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1789132795
+}
