@@ -10,28 +10,17 @@
     "is_final": false
   },
   "state": "stage_b_running",
-<<<<<<< Updated upstream
   "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "created_at_epoch": 1789123859,
-  "updated_at_epoch": 1789123859,
-  "expires_at_epoch": 1789167059,
-=======
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1789121192,
-  "updated_at_epoch": 1789125760,
-  "expires_at_epoch": 1789293992,
->>>>>>> Stashed changes
+  "created_at_epoch": 1789125907,
+  "updated_at_epoch": 1789125907,
+  "expires_at_epoch": 1789169107,
   "release_tag": "clipforge-manual-1789120960923",
   "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 34590988470,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34590988470",
-<<<<<<< Updated upstream
-    "code_ref": "bab5b03462d7ac9a92ad17224b99f97665ed6653"
-=======
-    "code_ref": "b26cde32bc37855320561e41104270c2732d0e12"
->>>>>>> Stashed changes
+    "code_ref": "3521d7b01e641463b6cd2ac5968993018dc07215"
   },
   "publishing": {
     "status": "not_requested",
