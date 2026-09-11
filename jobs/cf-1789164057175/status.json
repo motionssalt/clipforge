@@ -1,9 +1,9 @@
 {
   "job_id": "cf-1789164057175",
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (drive)",
+  "state": "error",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34652083579",
   "created_at_epoch": 1789164057175,
-  "updated_at_epoch": 1789164105,
+  "updated_at_epoch": 1789164107,
   "series": {
     "enabled": true,
     "series_id": "hxh 1",
