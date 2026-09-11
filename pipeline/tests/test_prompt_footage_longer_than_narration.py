@@ -15,7 +15,7 @@ They follow the same pattern as ``test_prompt_word_budget_ordering.py``
 (subprocess-render the prompt with the module CLI, then assert on the generated
 text). They also confirm the new guidance sits adjacent to the existing
 NARRATION DURATION CONTRACT so a linear-reading model encounters it in the
-right place, and that the existing 90% / 2.82-wps floor is NOT weakened.
+right place, and that the total narration-budget band is NOT weakened.
 """
 
 from __future__ import annotations
@@ -39,8 +39,8 @@ SPED_UP_GOOD = "sped-up moment is a completely normal"
 TRIM_IS_THE_MISTAKE = "trimming the cut to avoid it is the actual mistake"
 
 # Anchors from the existing (must-not-be-weakened) NARRATION DURATION CONTRACT.
-FLOOR_PERCENT = "90% of this budget"
-FLOOR_RATE = "2.82 words per second"
+FLOOR_PERCENT = "90%-115% of this budget"
+FLOOR_RATE = "3.133"
 CONTRACT_HEADER = "NARRATION DURATION CONTRACT"
 CONSTRAINTS_HEADER = "CONSTRAINTS"
 
@@ -102,10 +102,10 @@ class TestFootageLongerThanNarration(unittest.TestCase):
         self.assertIn(TRIM_IS_THE_MISTAKE, self.text)
 
     def test_word_budget_floor_not_weakened(self) -> None:
-        # The 90% / 2.82-wps floor must remain fully in force. bug-72's fix
-        # explicitly does not relax it, and any future edit that removes it
-        # would silently reintroduce a different failure mode (sparse
-        # narration under-describing a long scene).
+        # The total-budget band must remain fully in force: TOTAL words across
+        # all cuts land at 90%-115% of `target * (188/60)`. That band is what
+        # converges final runtime to the operator's target, since Stage B
+        # retimes footage to narration length exactly.
         self.assertIn(FLOOR_PERCENT, self.text)
         self.assertIn(FLOOR_RATE, self.text)
 

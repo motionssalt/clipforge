@@ -86,8 +86,9 @@ class TestWordBudgetOrdering(unittest.TestCase):
         # The CONSTRAINTS voiceover_text bullet restates the formula; its own
         # inline directionality correction must sit right next to it.
         m = re.search(
-            r"target `\(end_seconds - start_seconds\) \* \(188 / 60\)` spoken words and never\s*"
-            r"\n\s*return fewer than 90% of that target\. This formula sizes your WRITING",
+            r"SUM of words across all cuts must\s*"
+            r"\n\s*land at 90%-115% of `\d+ \* \(188 / 60\)`\. This budget sizes\s*"
+            r"\n\s*your WRITING",
             self.text,
         )
         self.assertIsNotNone(

@@ -1239,20 +1239,31 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   more or fewer words than the rough word-budget formula suggests, the
   WORD COUNT flexes — the scene's length never does.
 
-  With that order fixed: Edge TTS is currently configured for about 188
-  words per minute (3.133 spoken words per second). AFTER `end_seconds`
-  is decided, and before returning JSON, calculate EACH cut's voiceover
-  word budget as `(end_seconds - start_seconds) * (188 / 60)`.
-  Write enough final spoken words to cover that full budget. A cut MUST NOT
-  fall below 90% of this budget (2.82 words per second), so narration covers
-  at least 90% of the planned cut duration at the real TTS pace. This is a
-  hard delivery requirement on the WRITING, not a suggestion: do not return
-  a sparse summary for a long cut — and equally, do not shrink the cut to
-  shrink the requirement. For example, a 75-second cut targets about 235
-  words and requires at least 212 spoken words. Count the actual words in
-  every `voiceover_text` before returning the plan; add source-grounded
-  chronological beats, reactions, and connective detail until every cut
-  meets its minimum.
+  With that order fixed: your narration budget is the TOTAL, not per-cut.
+  Edge TTS is currently configured for about 188 words per minute (3.133
+  spoken words per second). The narration-length target for this job is
+  ~{target_duration} seconds of SPOKEN NARRATION, so the TOTAL word budget
+  across the ENTIRE voiceover is `{target_duration} * (188 / 60)` words.
+  Sum the words across every cut's `voiceover_text`; that TOTAL must land
+  at 90%-115% of this budget — no lower, and no higher. The FINAL VIDEO IS
+  EXACTLY AS LONG AS THE TOTAL SPOKEN NARRATION, because the renderer
+  retimes footage to match it, so this total budget is the ONLY thing that
+  sizes the runtime. It does NOT size any cut's footage: `end_seconds` is
+  still chosen FIRST, per the PICKING end_seconds rules, purely on visual
+  completeness, and is never shortened or lengthened for any word-count
+  reason.
+
+  Distribute the total budget across your cuts in PROPORTION to each cut's
+  share of the total selected footage: a cut whose (end_seconds -
+  start_seconds) spans fraction F of the summed footage gets roughly
+  F x the total budget. This keeps narration densest where the footage is,
+  WITHOUT letting the number of cuts or any cut's length inflate the total.
+  A long cut gets more words than a short one, but the SUM stays bounded by
+  the target — more cuts NEVER means more total narration. Count the actual
+  words in every `voiceover_text` before returning the plan; if the running
+  TOTAL is under 90% of the budget, add source-grounded beats and detail to
+  the cuts that carry the story; if it is over 115%, trim filler phrasing —
+  never footage.
 
   FOOTAGE MAY RUN LONGER THAN NARRATION — THIS IS EXPECTED AND GOOD.
   The Stage B renderer AUTOMATICALLY retimes each cut's actual footage to
@@ -1272,7 +1283,7 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   it, do not pull `end_seconds` back to the last-narrated beat, and do
   not pad the narration with filler to close the gap. Write narration of
   whatever length genuinely and accurately describes what is happening
-  on screen (subject to the 90% / 2.82-words-per-second floor above,
+  on screen (subject to the 90%-115% TOTAL-budget band above,
   which still applies and is not being relaxed), and let the resulting
   footage-to-narration ratio be whatever it is. The renderer will speed
   the footage up to fit — a sped-up moment is a completely normal, often
@@ -1286,13 +1297,13 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   entirely on visual completeness (unchanged from the PICKING
   end_seconds rules), let the narration flex to accurately cover that
   full moment (unchanged from the ORDER OF OPERATIONS above, and still
-  bound below by the 90% floor), and accept a stretch < 1.0x as a
+  with the TOTAL still bounded by the 90%-115% band), and accept a stretch < 1.0x as a
   normal, good outcome — not a compromise.
 
   This guidance works WITH, not against, the existing rules: visual
   completeness decides `end_seconds` FIRST (unchanged); narration word
   count flexes to accurately describe that full moment (unchanged, and
-  still clears the 90% minimum-word-budget floor); the only thing added
+  with the TOTAL still held inside the 90%-115% band); the only thing added
   here is the explicit signal that ending up with footage longer than
   the narration needs is fine, expected, and often desirable — and that
   trimming the cut to avoid it is the actual mistake to stop making.
@@ -1302,7 +1313,8 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   Suppose a complete visual moment genuinely requires 60 seconds of raw
   footage for its full payoff, and accurate narration for it only takes
   15-20 seconds to speak. Your `end_seconds` must STILL cover the full
-  60 seconds. The same holds up to a full order of magnitude, if that's
+  60 seconds — the renderer speeds that footage up to fit the 15-20s of
+  narration, and those 15-20 seconds count toward your TOTAL budget. The same holds up to a full order of magnitude, if that's
   genuinely what the visual payoff requires — an hour of raw footage
   retimed to a few seconds of narration is handled exactly the same way
   as a two-second mismatch: automatically, by the renderer, after you
@@ -1351,10 +1363,11 @@ CONSTRAINTS
     500 characters. See the POSTING PACKAGE METADATA section above.
   - `voiceover_text` is the final spoken line for its cut: engaging
     prose meant to be READ ALOUD, not a flat matter-of-fact summary.
-    Its word count is REQUIRED to meet the NARRATION DURATION CONTRACT above:
-    target `(end_seconds - start_seconds) * (188 / 60)` spoken words and never
-    return fewer than 90% of that target. This formula sizes your WRITING to
-    the duration you already chose — it NEVER sizes the duration.
+    Its word count contributes to the TOTAL narration budget defined in the
+    NARRATION DURATION CONTRACT above: the SUM of words across all cuts must
+    land at 90%-115% of `{target_duration} * (188 / 60)`. This budget sizes
+    your WRITING to the narration-length target — it NEVER sizes any cut's
+    footage, and `end_seconds` is never adjusted to fit it.
     `end_seconds` is decided ENTIRELY by where the visual moment concludes
     on screen, per the PICKING end_seconds rules in STEP 3; if the scene's
     true visual length yields more or fewer words than the formula suggests,
