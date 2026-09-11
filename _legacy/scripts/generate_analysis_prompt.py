@@ -102,11 +102,16 @@ What this means, concretely:
      from earliest setup to final payoff — not as a highlight reel of
      the whole video with the focus mixed in.
 
-  8. Duration target still applies (~{target_duration}s total), but
-     it is subordinate to the focus. If the focus genuinely has less
-     material than the target, prefer a slightly shorter, tighter cut
-     over padding with unrelated moments. If it has more, prefer a
-     slightly longer cut over dropping essential beats of the focus.
+  8. The narration-length target still applies (~{target_duration}s of
+     SPOKEN NARRATION across all cuts), but it is subordinate to the
+     focus and to each cut's visual completeness. It paces how much you
+     write per cut; it is NOT a video length and sets no bound on any
+     cut's footage or on `end_seconds`, which is governed solely by the
+     PICKING end_seconds rules in STEP 3. If the focus genuinely has
+     less material than the narration target can cover, prefer tighter
+     narration over padding with unrelated moments; if it has more,
+     keep every essential beat and let the narration run a little long
+     rather than dropping or truncating footage.
 
   9. If — after honestly reading the transcript and indexes — you
      cannot locate the focus in this source video at all, say so
@@ -172,9 +177,13 @@ operator focus:
   - Continue to use only grounded transcript/index evidence. Do not invent
     connective events, motives, dialogue, or visual details.
 
-The target duration remains about {target_duration}s, but it is subordinate to
-the one self-selected story thread. Everything below this box is general
-ClipForge guidance; read it through that thread, not through the whole video.
+The narration-length target remains about {target_duration}s of SPOKEN
+NARRATION in total, and it is subordinate to the one self-selected story
+thread. It paces narration only — it is not a video length, bounds no
+cut's footage, and has no bearing on `end_seconds`, which is governed
+solely by the PICKING end_seconds rules in STEP 3. Everything below this
+box is general ClipForge guidance; read it through that thread, not
+through the whole video.
 
 ################################################################################
 
@@ -435,10 +444,14 @@ VIDEO METADATA (substituted by Stage A)
                            scene_index.json.
   Local key-moments list:  {key_moment_count} moment(s) in
                            key_moments.json.
-  Target output length:    ~{target_duration} seconds of cuts combined
-                           (user-selected in the Stage A form; approximate
-                           — favor engagement over hitting the number
-                           exactly).
+  Narration length target: ~{target_duration} seconds of SPOKEN
+                           NARRATION in total (user-selected in the Stage
+                           A form; approximate — favor engagement over
+                           hitting the number exactly). This is NOT the
+                           output video's length: it bounds no cut's
+                           footage and has no bearing on `end_seconds`,
+                           which is governed solely by the PICKING
+                           end_seconds rules in STEP 3.
 
 --------------------------------------------------------------------------------
 USING THE INDEXES
