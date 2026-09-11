@@ -1,0 +1,13 @@
+{
+  "job_id": "cf-1789163244850",
+  "state": "queued",
+  "message": "Task queued",
+  "created_at_epoch": 1789163244851,
+  "updated_at_epoch": 1789163244851,
+  "series": {
+    "enabled": true,
+    "series_id": "Parasites",
+    "part": 1,
+    "start_seconds": 0
+  }
+}
