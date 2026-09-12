@@ -1491,7 +1491,7 @@ const MUSIC_SOURCES = new Set(['none', 'default', 'explicit_library', 'job_uploa
  *     options: { whisper_model?, language?, task?, target_duration_seconds?, focus?,
  *                enable_vision_assist? },
  *     mode:    'manual' | 'automatic',
- *     series:  { enabled, series_id, source_job_id, part, start_seconds, context },
+ *     series:  { enabled, series_id, source_job_id, part, start_seconds, context, super_series? },
  *     music:   { ref, source }
  *   }
  */
@@ -1545,6 +1545,12 @@ export function buildStageARequest(jobId, request) {
     mode,
     series: {
       enabled: series.enabled === true,
+      // bug-73 (feature-01): super_series MUST survive to the persisted
+      // document. handlePlanUploadMessage routes on the PERSISTED request's
+      // series.super_series, and bundle.py branches on it. This builder is the
+      // ONLY writer of stage-a-request.json and previously stripped it, so a
+      // super-series job never actually activated even with the setting on.
+      ...(series.super_series === true ? { super_series: true } : {}),
       series_id: String(series.series_id || ''),
       source_job_id: String(series.source_job_id || ''),
       part: Math.max(0, Math.floor(Number(series.part) || 0)),

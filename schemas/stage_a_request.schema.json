@@ -51,6 +51,7 @@
       "required": ["enabled", "series_id", "source_job_id", "part", "start_seconds", "context"],
       "properties": {
         "enabled":       { "type": "boolean" },
+        "super_series":  { "type": "boolean", "description": "feature-01: when true (and enabled is true), the job is a whole-series Super Series anchor; bundle.py dispatches the Super Series prompt template and the bot routes the uploaded plan to the Super Series validator." },
         "series_id":     { "type": "string" },
         "source_job_id": { "type": "string" },
         "part":          { "type": "integer", "minimum": 0 },
