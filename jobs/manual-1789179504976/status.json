@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (magnet)",
+  "state": "awaiting_torrent_selection",
+  "message": "Source has 10 video files — pick one to continue.",
   "created_at_epoch": 1789179513,
-  "updated_at_epoch": 1789179561,
+  "updated_at_epoch": 1789179574,
   "expires_at_epoch": 1789352313,
   "release_tag": "clipforge-manual-1789179504976",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789179504976",
