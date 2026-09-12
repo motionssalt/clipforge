@@ -118,7 +118,16 @@ def generate_prompt(
         "--event-frame-count", str(int(event_frame_count)),
         "--focus-env", "CLIPFORGE_FOCUS",
     ]
-    if series.get("enabled"):
+    if series.get("super_series") is True and series.get("enabled"):
+        # feature-01 (Super Series): the anchor Stage A job's prompt plans the
+        # whole series at once. --series-part / --series-start-seconds are not
+        # meaningful for the whole-series plan, but --series-id is.
+        env["CLIPFORGE_SERIES_CONTEXT"] = ""
+        cmd += [
+            "--super-series",
+            "--series-id", str(series.get("series_id") or ""),
+        ]
+    elif series.get("enabled"):
         part = int(series.get("part", 0) or 0)
         start = int(series.get("start_seconds", 0) or 0)
         if part < 1 or start < 0:

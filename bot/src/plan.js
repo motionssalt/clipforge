@@ -77,7 +77,14 @@ function extractSeries(document) {
 // Public API                                                                   //
 // --------------------------------------------------------------------------- //
 
-export function validateProductionPlan(document) {
+export function validateProductionPlan(document, options = {}) {
+  // feature-01: options.partNumber overrides the series part a sliced
+  // super-plan part is expected to carry (positional); undefined keeps the
+  // historic behavior unchanged. Mirrors schema.py's part_number kwarg.
+  const partNumber = options && Number.isInteger(options.partNumber) ? options.partNumber : null;
+  if (partNumber !== null && isPlainObject(document) && isPlainObject(document.series)) {
+    document = { ...document, series: { ...document.series, part: partNumber } };
+  }
   const errors = [];
 
   if (!isPlainObject(document)) {

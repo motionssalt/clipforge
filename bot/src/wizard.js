@@ -39,6 +39,11 @@ export function newWizard() {
     jobId: `manual-${Date.now()}`, // assigned up-front (needed for torrent upload paths)
     mode: 'manual',
     series: false,
+    // feature-01: Super Series is a separate default owned by main Settings.
+    // It is only meaningful when Series Mode itself is on — the wizard reads
+    // both flags at commit time (bot/src/index.js startJob) and force-disables
+    // superSeries if Series Mode is off, so the two toggles cannot desync.
+    superSeries: false,
     source: null, // { kind, value } | { kind: 'torrent_file', value, fileName }
     focus: '',
     duration: null,
@@ -116,7 +121,8 @@ export function describeMusic(music) {
 export function describeMode(wizard) {
   // bug-30/33: manual is the only mode — it is not shown as a choice.
   const base = 'Manual (your external AI writes the plan)';
-  return wizard.series ? `${base} · Series on` : base;
+  if (!wizard.series) return base;
+  return wizard.superSeries === true ? `${base} · Series on · Super Series on` : `${base} · Series on`;
 }
 
 /** True when every wizard choice has been made and ▶ Start may run. */
@@ -149,6 +155,10 @@ export function wizardSummaryLines(wizard) {
  */
 export function wizardToRequest(wizard, seriesId) {
   const series = wizard.series === true;
+  // feature-01: Super Series is only meaningful when Series Mode is on; the
+  // commit-boundary in startJob already zeros it when Series Mode is off, but
+  // guard here defensively too so a stale wizard token can never desync.
+  const superSeries = series && wizard.superSeries === true;
   return {
     source: {
       kind: wizard.source.kind,
@@ -164,6 +174,9 @@ export function wizardToRequest(wizard, seriesId) {
     mode: 'manual', // manual is the only mode
     series: {
       enabled: series,
+      // feature-01: the super_series flag rides the series block — downstream
+      // steps (bundle.py, upload handler) branch on it.
+      super_series: superSeries,
       series_id: series ? String(seriesId || '') : '',
       // bug-64 (the real bug-61 follow-up): Part 1 is its own Stage A evidence
       // source, and its release is published under its JOB id — so
@@ -306,6 +319,7 @@ export function decodeWizardToken(token) {
   if (typeof source.jobId === 'string' && /^manual-\d{6,20}$/.test(source.jobId)) wizard.jobId = source.jobId;
   if (typeof source.step === 'string' && WIZARD_STEPS.has(source.step)) wizard.step = source.step;
   if (source.series === true) wizard.series = true;
+  if (source.superSeries === true) wizard.superSeries = true;
 
   if (source.source !== null && source.source !== undefined) {
     if (typeof source.source !== 'object') return null;

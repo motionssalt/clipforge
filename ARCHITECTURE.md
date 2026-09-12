@@ -536,6 +536,63 @@ ffprobe value), failing with an error that names both durations. A render that
 would produce footage mismatched to its narration is never produced silently.
 Regression coverage: `pipeline/tests/test_scene_accuracy.py`.
 
+### 7.5 Super-plan document (feature-01)
+
+When Super Series is on, the external AI returns one super-plan document
+instead of a per-part production.json. Its shape:
+
+```json
+{
+  "version": 2,
+  "series_id": "series-<epoch_ms>",
+  "video_duration_seconds": 1800,
+  "target_total_duration_seconds": 30,
+  "parts": [
+    { "title": "Part 1", "video_duration_seconds": 1800, "target_total_duration_seconds": 30,
+      "cuts": [ … ], "series": {
+        "series_id": "series-<epoch_ms>", "part": 1,
+        "start_seconds": 0, "end_seconds": 600,
+        "is_final": false, "summary": "…"
+      } },
+    { "title": "Part 2", …, "series": { …, "start_seconds": 600, "end_seconds": 1200, "is_final": false, … } },
+    { "title": "Part 3", …, "series": { …, "start_seconds": 1200, "end_seconds": 1800, "is_final": true, … } }
+  ]
+}
+```
+
+Validation rules (enforced identically by the bot on upload AND by the queue
+controller before slicing — same rigor as §7.3):
+
+- `series_id`, `video_duration_seconds`, `target_total_duration_seconds`:
+  required (non-empty string / positive integers). Every part's
+  `series.series_id` must equal the top-level `series_id`.
+- `parts`: required, 1 ≤ length ≤ `MAX_PARTS` (20). Each entry is itself a
+  §7.3 production plan and is validated through
+  `validate_production_plan(part, part_number=index+1)` — the positional part
+  number is the source of truth, and it re-stamps the plan's own
+  `series.part` when the two disagree.
+- The parts tile the source with no gaps or overlaps: `parts[0].series.
+  start_seconds` = 0, and each later part's `start_seconds` = the previous
+  part's `end_seconds`.
+- Exactly ONE part has `series.is_final = true`, and it must be the LAST
+  part. Any other configuration strands parts unqueued.
+- Titles, when present, are case-insensitively unique.
+
+Slicing (`slice_part(document, index)` / `sliceSuperPart(document, index,
+jobId)`) hands back an ordinary §7.3 single-part production.json whose
+`series.part` is re-stamped from its position and whose `job_id` is set to
+the real spawned job id — exactly what a normal series part's upload handler
+would write.
+
+Queue-controller decision (`superQueueAdvance(state, statusFor)`): walk the
+spawned parts in spawn order; the FIRST not-`complete` part decides.
+`error` or `cancelled` → HALT (message tells the operator to restart that
+specific part; the queue automatically resumes on the next sweep tick once
+that restart reaches `complete`). Anything else non-terminal → wait.
+Everything complete → slice/queue the next part, or `done` when every part
+has landed. This makes halt-and-resume a property of the durable repo state
+plus the ordinary status.json state machine — no separate cursor.
+
 ### 7.4 Stage B output
 
 Stage B appends to the same release:
@@ -858,6 +915,35 @@ such fix in your session summary and in `BUILD_PROGRESS.json`.
   button on the completed part. Reuse of Part 1's Stage A evidence is
   preserved. The final part sets `series.is_final = true`, which stops the
   chain.
+
+- **Super Series mode (orthogonal on top of Series Mode, feature-01):** when
+  BOTH Series Mode and Super Series are on, the anchor Stage A job's agent
+  prompt is the `SUPER_SERIES_DIRECTIVE` template (a separate prompt template,
+  never an overload of `SERIES_DIRECTIVE`) that asks the external AI to plan
+  the ENTIRE series in ONE JSON document (the "super-plan", §7.5 below). The
+  operator uploads that one document; the bot validates it up front
+  (`pipeline/plan/super_series.validate_super_plan` /
+  `bot/src/super_series.js validateSuperPlan` — same accept/reject decisions
+  and error strings on both sides) and then a queue controller slices out
+  parts SEQUENTIALLY, one at a time, synthesizing an ordinary single-part
+  `stage-a-request.json` + `production.json` for each via the EXISTING series
+  continuation helpers (`bot/src/series.js nextPartRequestBody /
+  nextPartJobId`) and dispatching the ordinary, completely unmodified Stage B
+  pipeline. From Stage B's perspective a Super Series part is
+  indistinguishable from a normal series part: `series_reconcile.py`,
+  `render.py`, and `common.plan_series_block` all see correct, matching data
+  and require zero changes. On a spawned part reaching state `error` (or
+  `cancelled`) the queue HALTS — the operator is notified via the same
+  conventions used for any failed job, uses the existing `task:restartb` flow
+  to fix that specific part, and once that restart reaches `complete` the
+  controller (a pure decision function called from the bot's per-minute cron
+  sweep) automatically resumes queuing the remaining parts. Every spawned
+  part's narration targets the SAME per-part `target_duration_seconds` the
+  operator picked for the anchor job — the Super Series prompt template
+  carries the exact same NARRATION DURATION CONTRACT and PICKING end_seconds
+  rules as the normal per-part prompt, applied per part. Publishing is
+  unchanged: each spawned part is an ordinary job, so its Zernio
+  discover/publish flow triggers identically.
 
 ---
 

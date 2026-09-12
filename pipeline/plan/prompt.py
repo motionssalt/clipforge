@@ -191,6 +191,88 @@ through the whole video.
 """
 
 
+# feature-01 (Super Series): a SEPARATE prompt template used when the operator
+# selected Super Series on top of Series Mode. Instead of asking the AI to plan
+# just Part N (SERIES_DIRECTIVE below), this one asks the AI to plan the ENTIRE
+# series in one JSON document — the queue controller then slices out parts one
+# at a time and feeds them to the completely unmodified Stage B pipeline as
+# ordinary series parts. Kept as its own template (not an overload of
+# SERIES_DIRECTIVE) so the two directives never entangle. It carries the exact
+# SAME NARRATION DURATION CONTRACT and PICKING end_seconds rules per part —
+# TEMPLATE.format renders both series and non-series prompts through the SAME
+# body, so those rules apply per part automatically; this block adds only the
+# structural super-plan directive and re-affirms per-part duration expectations.
+SUPER_SERIES_DIRECTIVE = """\
+################################################################################
+## SUPER SERIES MODE — YOU ARE PLANNING THE WHOLE SERIES IN ONE DOCUMENT
+################################################################################
+Instead of writing a single production.json for one part, you must return ONE
+JSON document that plans EVERY part of this series at once. The ClipForge tool
+will then slice out each part in turn and render it as an ordinary Stage B job.
+
+HARD REQUIREMENTS FOR THE SUPER-PLAN DOCUMENT:
+  * Top-level shape:
+      {{
+        "version": 2,
+        "series_id": "{series_id}",
+        "video_duration_seconds": <int, the source's total length>,
+        "target_total_duration_seconds": {target_duration},
+        "parts": [ <part 1 plan>, <part 2 plan>, … ]
+      }}
+  * Each element of `parts` is itself a COMPLETE, self-contained ordinary
+    single-part production.json (exactly the shape described later in this
+    file: cuts, hashtags, title, and a NESTED "series" object). Do NOT put a
+    top-level cuts array on the super-plan itself — the cuts live INSIDE each
+    part.
+  * Every part's series.series_id MUST equal "{series_id}" character-for-
+    character.
+  * The parts tile the source without gaps or overlaps: parts[0].series.
+    start_seconds is 0, and each later part's series.start_seconds equals the
+    previous part's series.end_seconds.
+  * EXACTLY ONE part is marked series.is_final = true, and it MUST be the LAST
+    part. Every other part has series.is_final = false and a cliffhanger.
+  * series.part is optional per-part — the tool re-stamps it from the part's
+    position in the array. If you include it, use the positional number.
+
+PER-PART NARRATION LENGTH (CRITICAL — THIS IS PER PART, NOT PER SERIES):
+  * Every part's spoken narration targets {target_duration}s (about
+    {narration_words} words per part), applying the SAME NARRATION DURATION
+    CONTRACT the rest of this file spells out — per part, not once for the
+    whole series total.
+  * end_seconds for every cut is still chosen FIRST on the PICKING end_seconds
+    visual-payoff rules; narration length is a CONSEQUENCE, never an input.
+    Footage running LONGER than the narration is expected and desirable —
+    Stage B retimes each cut's full range to the voiceover length.
+
+HOOK & CLIFFHANGER CRAFT (each non-final part is judged by this):
+  1. Open on curiosity, not summary. Establish this part's central mystery in
+     the first 1-2 sentences.
+  2. Every non-final part ends on ONE specific unanswered question that
+     THIS part earned — do not bolt on a random shock ending.
+  3. Reveal progressively: Hook → Setup → Escalation → Major Revelation →
+     New Unanswered Question → Cliffhanger. The final part resolves instead.
+  4. Banned filler: "you won't believe", "things were about to get crazy",
+     "wait until you see this", "find out in the next part".
+  5. Plan the WHOLE arc across parts before writing any narration: which
+     mystery each part introduces, escalates, or answers, and how each
+     cliffhanger opens the next part.
+
+GLOBAL DIRECTIVES:
+  * The super-plan covers the whole source from 0s to the source's total
+    length. If the source cannot honestly support this many parts, use fewer
+    parts — a shorter series with fully-realized parts is correct.
+  * Deliver ONLY the super-plan JSON. Prefer a .json file attachment; if you
+    cannot attach files, reply with ONE ```json code block and nothing else.
+
+BEFORE RETURNING, DOUBLE-CHECK: series_id equals "{series_id}", parts tile the
+source with no gaps/overlaps starting at 0s, exactly the LAST part has
+is_final = true, and every part's narration targets {target_duration}s of
+spoken words.
+################################################################################
+
+"""
+
+
 SERIES_DIRECTIVE = """\
 ################################################################################
 ## SERIES MODE — YOU ARE AUTHORING PART {series_part} (not any other part number)
@@ -1485,6 +1567,9 @@ def main() -> None:
     ap.add_argument("--series-id", default="")
     ap.add_argument("--series-start-seconds", type=int, default=None)
     ap.add_argument("--series-context-env", default=None)
+    # feature-01 (Super Series): when set, replaces SERIES_DIRECTIVE with
+    # SUPER_SERIES_DIRECTIVE for the whole-series planning prompt.
+    ap.add_argument("--super-series", action="store_true", default=False)
     args = ap.parse_args()
 
     window_seconds = max(int(args.window_seconds), 1)
@@ -1504,7 +1589,18 @@ def main() -> None:
     # bug-56: fallback string no longer leads with a bare "Part 1:" prefix so
     # an AI author cannot mistake it for the current-part number.
     series_context = (os.environ.get(args.series_context_env, "") if args.series_context_env else "").strip() or "(No prior parts — this is the first part of the series.)"
-    series_block = SERIES_DIRECTIVE.format(series_part=args.series_part, series_start_seconds=args.series_start_seconds, series_context=series_context, series_id=args.series_id or "", next_part=(args.series_part or 0) + 1) if series_enabled else ""
+    if args.super_series:
+        # feature-01: the anchor Stage A job's prompt asks the AI to plan the
+        # ENTIRE series at once. Approximate word budget mirrors the same
+        # rate used by the NARRATION DURATION CONTRACT below (~3.13 wps).
+        narration_words = int(round((args.target_duration or 0) * 3.133))
+        series_block = SUPER_SERIES_DIRECTIVE.format(
+            series_id=args.series_id or "",
+            target_duration=args.target_duration,
+            narration_words=narration_words,
+        )
+    else:
+        series_block = SERIES_DIRECTIVE.format(series_part=args.series_part, series_start_seconds=args.series_start_seconds, series_context=series_context, series_id=args.series_id or "", next_part=(args.series_part or 0) + 1) if series_enabled else ""
 
     # Compose the focus-conditional blocks. Supplied focus preserves its
     # operator-controlled directive. Empty focus gets a distinct directive that

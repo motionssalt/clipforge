@@ -105,10 +105,16 @@ def _extract_series(document: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
 # Public API                                                                   #
 # --------------------------------------------------------------------------- #
 
-def validate_production_plan(document: Any) -> list[str]:
+def validate_production_plan(document: Any, part_number: int | None = None) -> list[str]:
     """Return a list of validation error strings.
 
     An empty list means the document is valid.
+
+    ``part_number`` (feature-01 Super Series) overrides the series ``part``
+    value a sliced super-plan part is EXPECTED to carry: super-plan parts are
+    positional, so the validator re-stamps the expected part number instead of
+    trusting whatever the AI wrote. ``None`` (the default) keeps the historic
+    behavior unchanged — the plan's own series.part is validated as-is.
 
     Callers should treat any non-empty return as untrusted and refuse to render
     (see ARCHITECTURE.md §13 invariant #5).
@@ -152,6 +158,15 @@ def validate_production_plan(document: Any) -> list[str]:
     )
 
     # -- Series (optional) --------------------------------------------------- #
+    # feature-01: when part_number is supplied (super-plan slicing), the
+    # positional part number wins over the AI-written series.part value.
+    if part_number is not None and isinstance(document, dict):
+        nested = document.get("series")
+        if isinstance(nested, dict):
+            nested = dict(nested)
+            nested["part"] = part_number
+            document = dict(document)
+            document["series"] = nested
     is_series_plan, series_values = _extract_series(document)
     series_start: int | None = None
     series_end: int | None = None

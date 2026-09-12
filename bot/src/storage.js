@@ -120,6 +120,14 @@ export async function setTaskOptions(env, chatId, jobId, options) {
   ).bind(Number(chatId), String(jobId), JSON.stringify(merged)).run();
 }
 
+/** feature-01: distinct chat ids that own at least one task label — the
+ * Super Series sweep's scan set (task_labels is the only table with a
+ * complete per-chat job inventory). */
+export async function listTaskLabelChatIds(env) {
+  const result = await env.CLIPFORGE_BOT_D1.prepare('SELECT DISTINCT chat_id FROM task_labels').all();
+  return (result && result.results ? result.results : []).map((row) => Number(row.chat_id));
+}
+
 export async function getTaskOptions(env, chatId, jobId) {
   const row = await env.CLIPFORGE_BOT_D1.prepare(
     'SELECT options_json FROM task_options WHERE chat_id = ? AND job_id = ?'
