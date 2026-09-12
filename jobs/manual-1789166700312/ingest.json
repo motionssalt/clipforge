@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "job_id": "manual-1789166700312",
+  "source_kind": "magnet",
+  "original_path": "work/original.mkv",
+  "original_asset_name": "original.mkv",
+  "size_bytes": 1844770572,
+  "container": "mkv",
+  "ingested_at_epoch": 1789173525
+}
