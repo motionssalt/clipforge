@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "parasitic-p4",
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "parasitic",
+    "part": 4,
+    "start_seconds": 394,
+    "is_final": false
+  },
+  "state": "queued",
+  "message": "Series part 4 queued — Stage A dispatched.",
+  "created_at_epoch": 1789220213,
+  "updated_at_epoch": 1789220213,
+  "expires_at_epoch": 1789393013,
+  "release_tag": "clipforge-parasitic-p4",
+  "release_url": "https:\/\/github.com\/motionssalt\/clipforge\/releases\/tag\/clipforge-parasitic-p4",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  }
+}
