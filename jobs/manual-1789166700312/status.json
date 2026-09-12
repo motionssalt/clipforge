@@ -3,32 +3,24 @@
   "job_id": "manual-1789166700312",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "parasites",
-    "part": 1,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
     "start_seconds": 0,
     "is_final": false
   },
-<<<<<<< Updated upstream
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34665285230",
-  "created_at_epoch": 1789178220,
-  "updated_at_epoch": 1789178238,
-  "expires_at_epoch": 1789221420,
-=======
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1789173248,
-  "updated_at_epoch": 1789178324,
-  "expires_at_epoch": 1789346048,
->>>>>>> Stashed changes
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1789178498,
+  "updated_at_epoch": 1789178498,
+  "expires_at_epoch": 1789221698,
   "release_tag": "clipforge-manual-1789166700312",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789166700312",
+  "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 34665285230,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34665285230",
-    "code_ref": "e29a2e4fe742b6c56c96422206cd1ee92f53edbf"
+    "code_ref": "898e9eba2d08da91b8c64f97d5f53f1278e3399b"
   },
   "publishing": {
     "status": "not_requested",
