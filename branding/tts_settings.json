@@ -1,10 +1,10 @@
 {
   "version": 1,
   "engine": "edge-tts",
-  "voice": "en-US-GuyNeural",
-  "voice_label": "Guy",
+  "voice": "en-US-BrianNeural",
+  "voice_label": "Brian",
   "rate": "+20%",
   "volume": "+0%",
   "pitch": "+0Hz",
-  "updated_at_epoch": 1789228266
+  "updated_at_epoch": 1789244737
 }
