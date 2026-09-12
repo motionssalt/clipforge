@@ -1,0 +1,115 @@
+{
+"video_duration_seconds": 1317,
+"title": "The Parasite Memory Trap: Part 3",
+"series": {
+"series_id": "parasitic",
+"part": 3,
+"start_seconds": 255,
+"end_seconds": 394,
+"is_final": false,
+"summary": "A submarine flashback materializes Mr. Beauregard, unleashing a cascade of false memories that floods the house with alien parasites and corrupts Rick's own mind."
+},
+"hashtags": [
+"#RickAndMorty",
+"#TotalRickall",
+"#AdultSwim",
+"#SciFiAnimation",
+"#RickSanchez",
+"#Pencilvestyr"
+],
+"youtube_tags": [
+"rick and morty",
+"total rickall",
+"alien parasites",
+"rick sanchez",
+"mr beauregard",
+"pencilvestyr",
+"photography raptor",
+"fake memories",
+"adult swim",
+"mind parasites",
+"rick and morty season 2",
+"sci fi cartoon",
+"rick and morty part 3",
+"animation clips"
+],
+"cuts": [
+{
+"start_seconds": 255,
+"end_seconds": 290,
+"voiceover_text": "A wild submarine flashback pits the family against a mystical Nazi commander, until their loyal butler, Mr. Beauregard, heroically intervenes and swears never to retire.",
+"keywords": [
+{
+"word": "submarine",
+"color": "#44AAFF"
+},
+{
+"word": "mystical",
+"color": "#FFAA00"
+},
+{
+"word": "loyal",
+"color": "#00CC88"
+}
+]
+},
+{
+"start_seconds": 290,
+"end_seconds": 344,
+"voiceover_text": "The planted memory becomes reality as Beauregard appears in their living room. Jerry's instant nostalgia unleashes an avalanche of flashbacks, summoning Photography Raptor.",
+"keywords": [
+{
+"word": "reality",
+"color": "#00E5FF"
+},
+{
+"word": "nostalgia",
+"color": "#FFAA00"
+},
+{
+"word": "avalanche",
+"color": "#FF4444"
+}
+]
+},
+{
+"start_seconds": 344,
+"end_seconds": 374,
+"voiceover_text": "The room is suddenly swarming with bizarre parasites. Rick frantically points to his number six on the wall, but Beauregard claims Rick was confused from the start.",
+"keywords": [
+{
+"word": "swarming",
+"color": "#FF8800"
+},
+{
+"word": "bizarre",
+"color": "#FF2222"
+},
+{
+"word": "confused",
+"color": "#00CC88"
+}
+]
+},
+{
+"start_seconds": 374,
+"end_seconds": 394,
+"voiceover_text": "A flashback exposes Rick happily counting ten friends with Pencilvestyr. Rick is terrified to realize the parasites have rewritten his own mind. Can anyone survive?",
+"keywords": [
+{
+"word": "happily",
+"color": "#FFCC00"
+},
+{
+"word": "terrified",
+"color": "#FF5500"
+},
+{
+"word": "rewritten",
+"color": "#FF2222"
+}
+]
+}
+],
+"target_total_duration_seconds": 30
+}
