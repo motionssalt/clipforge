@@ -3,36 +3,24 @@
   "job_id": "manual-1789235080753",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "Rick and Morty",
-    "part": 1,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
     "start_seconds": 0,
     "is_final": false
   },
   "state": "stage_a_running",
-<<<<<<< Updated upstream
-  "message": "Video file #10 selected — resuming ingest.",
-  "created_at_epoch": 1789235080,
-  "updated_at_epoch": 1789235323,
-=======
-  "message": "Stage A run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1789235080,
-  "updated_at_epoch": 1789235334,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1789407880,
+  "message": "Stage A starting — ingesting source (magnet)",
+  "created_at_epoch": 1789235371,
+  "updated_at_epoch": 1789235371,
+  "expires_at_epoch": 1789408171,
   "release_tag": "clipforge-manual-1789235080753",
   "release_url": "",
   "assets": {},
   "run": {
-<<<<<<< Updated upstream
-    "workflow_run_id": 34709136577,
-    "workflow_run_url": "https:\/\/github.com\/motionssalt\/clipforge\/actions\/runs\/34709136577",
-    "code_ref": "01577b47509c7802c7befa43ccd97092b0d3d716"
-=======
     "workflow_run_id": 34709336878,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34709336878",
-    "code_ref": "7fcce7b9577e6d39f2b667822a8a33fe6007b2df"
->>>>>>> Stashed changes
+    "code_ref": "dd01f0cd5da1f300e985c7b7fd5517bbf0eefef2"
   },
   "publishing": {
     "status": "not_requested",
