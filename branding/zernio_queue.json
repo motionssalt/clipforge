@@ -733,6 +733,18 @@
         "6aa5a9b17aa5b90717f91538"
       ],
       "updated_at_epoch": 1789241778
+    },
+    {
+      "job_id": "parasitic-p5",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-14T17:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6aa5c3136eeee1e0ff6b5a52",
+        "6aa5c3158741f7d5311414fd"
+      ],
+      "updated_at_epoch": 1789248277
     }
   ]
 }
