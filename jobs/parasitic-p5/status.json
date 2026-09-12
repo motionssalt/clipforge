@@ -9,18 +9,18 @@
     "start_seconds": 593,
     "is_final": false
   },
-  "state": "queued",
-  "message": "Series part 5 queued — Stage A dispatched.",
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1789242733,
-  "updated_at_epoch": 1789242733,
+  "updated_at_epoch": 1789242866,
   "expires_at_epoch": 1789415533,
   "release_tag": "clipforge-parasitic-p5",
-  "release_url": "https:\/\/github.com\/motionssalt\/clipforge\/releases\/tag\/clipforge-parasitic-p5",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-parasitic-p5",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 34715506478,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34715506478",
+    "code_ref": "9ece8532afe060cdc4a945503e862daf84dceb33"
   },
   "publishing": {
     "status": "not_requested",
