@@ -9,18 +9,18 @@
     "start_seconds": 116,
     "is_final": false
   },
-  "state": "queued",
-  "message": "Series part 2 queued — Stage A dispatched.",
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1789214871,
-  "updated_at_epoch": 1789214871,
+  "updated_at_epoch": 1789214884,
   "expires_at_epoch": 1789387671,
   "release_tag": "clipforge-parasitic-p2",
-  "release_url": "https:\/\/github.com\/motionssalt\/clipforge\/releases\/tag\/clipforge-parasitic-p2",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-parasitic-p2",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 34692836714,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34692836714",
+    "code_ref": "e44742865d47954f466bcbbb7def506bb58d7dae"
   },
   "publishing": {
     "status": "not_requested",
