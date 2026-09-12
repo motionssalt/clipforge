@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (url)",
+  "state": "error",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34666886936",
   "created_at_epoch": 1789178981,
-  "updated_at_epoch": 1789179016,
+  "updated_at_epoch": 1789179018,
   "expires_at_epoch": 1789351781,
   "release_tag": "clipforge-manual-1789178981057",
   "release_url": "",
