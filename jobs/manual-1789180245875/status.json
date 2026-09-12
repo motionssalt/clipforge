@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
   "created_at_epoch": 1789180355,
-  "updated_at_epoch": 1789181813,
+  "updated_at_epoch": 1789207755,
   "expires_at_epoch": 1789353155,
   "release_tag": "clipforge-manual-1789180245875",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789180245875",
@@ -28,9 +28,9 @@
     "analysis_bundle_url": ""
   },
   "run": {
-    "workflow_run_id": 34667926166,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34667926166",
-    "code_ref": "40e6183fe90a3e089cfec9a727ead655812759d2"
+    "workflow_run_id": 34687683516,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34687683516",
+    "code_ref": "e3db872eff5f3844830c197b2d024f954606a0c4"
   },
   "publishing": {
     "status": "not_requested",
