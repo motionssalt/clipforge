@@ -10,9 +10,9 @@
     "is_final": false
   },
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
   "created_at_epoch": 1789217160,
-  "updated_at_epoch": 1789218128,
+  "updated_at_epoch": 1789218277,
   "expires_at_epoch": 1789389960,
   "release_tag": "clipforge-parasitic-p3",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-parasitic-p3",
@@ -30,7 +30,7 @@
   "run": {
     "workflow_run_id": 34695289343,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34695289343",
-    "code_ref": "33bd86e0a758b0737673b25d4f050d5e9b090414"
+    "code_ref": "9c114fffc63e825c9964f1198ebf5f779744d7d8"
   },
   "publishing": {
     "status": "not_requested",
