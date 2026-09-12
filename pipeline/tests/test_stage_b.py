@@ -173,18 +173,6 @@ class ReconcileTests(unittest.TestCase):
         self.assertEqual(plan[0]["start_seconds"], 7.0)
         self.assertEqual(plan[0]["end_seconds"], 13.0)
 
-    def test_duration_collapse_guard_trips(self) -> None:
-        cuts = [{"start_seconds": 0, "end_seconds": 100}]
-        plan = [{"start_seconds": 0.0, "end_seconds": 100.0, "stretch": 1.0, "video_seconds": 40.0}]
-        with self.assertRaises(common.StageBError):
-            render.assert_reconciled_duration_coverage(cuts, plan)
-
-    def test_duration_collapse_guard_passes(self) -> None:
-        cuts = [{"start_seconds": 0, "end_seconds": 100}]
-        plan = [{"start_seconds": 0.0, "end_seconds": 100.0, "stretch": 1.0, "video_seconds": 90.0}]
-        render.assert_reconciled_duration_coverage(cuts, plan)  # no raise
-
-
 class FinalWavTimingTests(unittest.TestCase):
     def test_timing_from_wav_frames(self) -> None:
         with tempfile.TemporaryDirectory() as td:

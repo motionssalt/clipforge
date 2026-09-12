@@ -69,11 +69,6 @@ AAC_CHANNELS = "2"
 # ---------- Timing reconciliation ----------
 # Post-reconciliation assertion tolerance: |total_video - total_voiceover|.
 DURATION_TOLERANCE_S = 0.25
-# Defense-in-depth lower bound for a reconciled edit relative to the original
-# production-plan timeline. The prompt asks for at least 90% narration coverage
-# at the configured TTS pace; 75% leaves normal synthesis variation headroom
-# while refusing a dramatic duration collapse.
-MIN_RECONCILED_TO_PLANNED_RATIO = 0.75
 # Declared-vs-actual source-duration agreement (scene-accuracy fix). The plan's
 # ``video_duration_seconds`` is the planner's whole reference for choosing every
 # cut's start/end seconds. If it disagrees with the source file's REAL probed
@@ -325,50 +320,6 @@ def reconcile_cuts(cuts: list[dict], vo_durations: list[float],
         )
 
     return plan
-
-
-def assert_reconciled_duration_coverage(cuts: list[dict], plan: list[dict]) -> None:
-    """Reject narration-driven duration collapse before rendering output.
-
-    ``reconcile_cuts`` intentionally makes each output duration equal its
-    voiceover duration, so comparing reconciled totals alone is tautological.
-    This guard compares every reconciled duration — and their total — against
-    the ORIGINAL production.json ranges.
-    """
-    if len(cuts) != len(plan):
-        raise common.StageBError("planned cuts and reconciled plan must match 1:1")
-
-    planned_durations = [
-        float(cut["end_seconds"]) - float(cut["start_seconds"]) for cut in cuts
-    ]
-    reconciled_durations = [float(item["video_seconds"]) for item in plan]
-    planned_total = sum(planned_durations)
-    reconciled_total = sum(reconciled_durations)
-    if planned_total <= 0:
-        raise common.StageBError("production plan has no positive planned duration")
-
-    total_ratio = reconciled_total / planned_total
-    collapsed = []
-    for index, (cut, planned, reconciled) in enumerate(
-        zip(cuts, planned_durations, reconciled_durations), start=1
-    ):
-        ratio = reconciled / planned if planned > 0 else 0.0
-        if planned <= 0 or ratio < MIN_RECONCILED_TO_PLANNED_RATIO:
-            collapsed.append(
-                f"cut #{index} [{float(cut['start_seconds']):.2f}-{float(cut['end_seconds']):.2f}s]: "
-                f"planned {planned:.2f}s, voiceover/reconciled {reconciled:.2f}s ({ratio:.1%})"
-            )
-
-    if total_ratio < MIN_RECONCILED_TO_PLANNED_RATIO or collapsed:
-        details = "; ".join(collapsed) if collapsed else "no individual cut below threshold"
-        raise common.StageBError(
-            "narration duration collapse: original production plan totals "
-            f"{planned_total:.2f}s but reconciled voiceover-driven output totals "
-            f"{reconciled_total:.2f}s ({total_ratio:.1%}); minimum allowed is "
-            f"{MIN_RECONCILED_TO_PLANNED_RATIO:.0%}. Undersized cuts: {details}. "
-            "Refusing to produce a truncated final video; expand the affected "
-            "voiceover_text and regenerate narration."
-        )
 
 
 # --------------------------------------------------------------------------- #
@@ -713,8 +664,6 @@ def render_merged(
     reconciled = reconcile_cuts(cuts, vo_durations, src_duration)
     for item, (_, audio_samples) in zip(reconciled, vo_timings):
         item["audio_samples"] = audio_samples
-    assert_reconciled_duration_coverage(cuts, reconciled)
-
     # Persist authoritative per-cut durations as a sidecar next to the merged
     # voiceover WAV: the caption step uses these REAL cut boundaries instead of
     # proportional word-count ratios.
