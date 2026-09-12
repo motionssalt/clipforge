@@ -9,11 +9,19 @@
     "start_seconds": 0,
     "is_final": false
   },
+<<<<<<< Updated upstream
   "state": "error",
   "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34665285230",
   "created_at_epoch": 1789178220,
   "updated_at_epoch": 1789178238,
   "expires_at_epoch": 1789221420,
+=======
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "created_at_epoch": 1789173248,
+  "updated_at_epoch": 1789178324,
+  "expires_at_epoch": 1789346048,
+>>>>>>> Stashed changes
   "release_tag": "clipforge-manual-1789166700312",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789166700312",
   "assets": {},
