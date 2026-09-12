@@ -1,0 +1,304 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789246469390",
+  "series_id": "scissors",
+  "total_parts": 4,
+  "video_duration_seconds": 1315,
+  "plan": {
+    "version": 2,
+    "series_id": "scissors",
+    "video_duration_seconds": 1315,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "Marco Falls For Demon Ex Traps",
+        "video_duration_seconds": 1315,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#starvstheforcesofevil",
+          "#svtfoe",
+          "#marcodiaz",
+          "#tomlucitor",
+          "#animation",
+          "#cartoon"
+        ],
+        "youtube_tags": [
+          "star vs the forces of evil",
+          "svtfoe",
+          "marco diaz",
+          "tom lucitor",
+          "mackie hand marathon",
+          "disney xd",
+          "star vs",
+          "animated series",
+          "cartoon moments",
+          "marco and tom",
+          "friend enemies",
+          "disney animation"
+        ],
+        "series": {
+          "series_id": "scissors",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 340,
+          "is_final": false,
+          "summary": "Desperate to attend the sold-out Mackie Hand movie marathon, Marco is surprised when Stars demon ex-boyfriend Tom pulls up in an extravagant carriage offering an extra ticket. Star insists it is a dangerous trap, but Tom claims he has changed his wicked ways and genuinely wants to be friends. Inside the dragon-drawn vehicle, Tom showers Marco with royal comforts and Swedish kung fu trivia, winning him over until Marco suspects a deeper motive behind Toms suspicious generosity."
+        },
+        "cuts": [
+          {
+            "start_seconds": 55,
+            "end_seconds": 83,
+            "voiceover_text": "Marco is having the worst day of his life. His martial arts idol Mackie Hand is dead, and the tribute marathon just sold out in seconds. He is completely devastated.",
+            "keywords": [
+              {
+                "word": "devastated",
+                "color": "#FF4444"
+              }
+            ]
+          },
+          {
+            "start_seconds": 117,
+            "end_seconds": 145,
+            "voiceover_text": "Right when all hope seems lost, Stars demonic ex-boyfriend Tom pulls up in a blazing carriage. He flaunts two front-row tickets, promising he has given up his wicked ways just to be Marcos friend.",
+            "keywords": [
+              {
+                "word": "demonic",
+                "color": "#FF7700"
+              }
+            ]
+          },
+          {
+            "start_seconds": 207,
+            "end_seconds": 251,
+            "voiceover_text": "Marco expects a brutal trap and grills Tom on obscure Swedish kung fu lore. Incredibly, Tom nails every single detail. Marco drops his guard, unaware that Tom is counting down the seconds to a much darker scheme.",
+            "keywords": [
+              {
+                "word": "trap",
+                "color": "#9B51E0"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "Tom Resurrects Martial Arts Legend Mackie",
+        "video_duration_seconds": 1315,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#starvstheforcesofevil",
+          "#svtfoe",
+          "#mackiehand",
+          "#marcodiaz",
+          "#tomlucitor",
+          "#disneyxd"
+        ],
+        "youtube_tags": [
+          "star vs the forces of evil",
+          "svtfoe",
+          "mackie hand",
+          "too little too late",
+          "love sentence",
+          "tom and marco",
+          "anger management",
+          "disney xd",
+          "cartoon clips",
+          "resurrection spell",
+          "brian the rabbit",
+          "friend enemies episode"
+        ],
+        "series": {
+          "series_id": "scissors",
+          "part": 2,
+          "start_seconds": 340,
+          "end_seconds": 675,
+          "is_final": false,
+          "summary": "When Marco realizes the movie marathon is starting, Tom refuses to let him leave the carriage and erupts in demonic fury. Brian the life coach reveals Tom failed his anger management graduation test, which required three hours alone with Marco without losing his temper. Heartbroken by the deceit, Marco storms off, but Tom makes amends by singing their favorite boy band anthem and raising the actual Mackie Hand from the grave."
+        },
+        "cuts": [
+          {
+            "start_seconds": 389,
+            "end_seconds": 423,
+            "voiceover_text": "With ten minutes until showtime, Marco frantically tries to leave, but Tom blocks the exit. As the panic boils over, Tom loses control, erupting in demonic fire and instantly failing his anger management test.",
+            "keywords": [
+              {
+                "word": "erupting",
+                "color": "#FF2A2A"
+              }
+            ]
+          },
+          {
+            "start_seconds": 437,
+            "end_seconds": 480,
+            "voiceover_text": "The truth cuts deep. Tom only spent time with Marco to earn a graduation badge by enduring three hours with his most hated enemy. Betrayed and humiliated, Marco storms off into the night.",
+            "keywords": [
+              {
+                "word": "Betrayed",
+                "color": "#D63031"
+              }
+            ]
+          },
+          {
+            "start_seconds": 593,
+            "end_seconds": 626,
+            "voiceover_text": "Determined to prove his remorse, Tom unleashes forbidden underworld magic and raises the real Mackie Hand straight out of the grave. Marco is speechless as his childhood hero autographs his arm, forging an unforgettable bond.",
+            "keywords": [
+              {
+                "word": "remorse",
+                "color": "#00B894"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "Buff Frog Infiltrates Secret Monster Mill",
+        "video_duration_seconds": 1315,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#starvstheforcesofevil",
+          "#svtfoe",
+          "#bufffrog",
+          "#mewni",
+          "#disneyanimation",
+          "#cartoonmystery"
+        ],
+        "youtube_tags": [
+          "star vs the forces of evil",
+          "svtfoe",
+          "buff frog",
+          "mewni force field",
+          "corn factory",
+          "secret operation",
+          "monster rebellion",
+          "disney cartoon",
+          "underground labor",
+          "disney xd",
+          "mystery clip",
+          "star vs monsters"
+        ],
+        "series": {
+          "series_id": "scissors",
+          "part": 3,
+          "start_seconds": 675,
+          "end_seconds": 995,
+          "is_final": false,
+          "summary": "Investigating a mysterious breach in the Mewman force field to find hope for his starving tadpoles, Buff Frog follows the trail into a hidden cavern. There he discovers a massive slave-labor facility where captured creatures grind infinite corn under threat of execution down a bottomless hole. Framed for stealing grain, Buff Frog is arrested by giant rodent guards and dragged toward the throne of an unknown tyrant."
+        },
+        "cuts": [
+          {
+            "start_seconds": 687,
+            "end_seconds": 712,
+            "voiceover_text": "Buff Frog investigates the perimeter and discovers a massive breach in the royal force field. Someone cracked Mewnis ancient magic. If monsters can exploit this vulnerability, he can finally secure a future for his tadpoles.",
+            "keywords": [
+              {
+                "word": "breach",
+                "color": "#0984E3"
+              }
+            ]
+          },
+          {
+            "start_seconds": 808,
+            "end_seconds": 835,
+            "voiceover_text": "Following the trail underground, Buff Frog is forced into a brutal slave camp. Captured monsters grind endless grain under one terrifying rule: work without stopping, or be thrown down the bottomless pit.",
+            "keywords": [
+              {
+                "word": "terrifying",
+                "color": "#E17055"
+              }
+            ]
+          },
+          {
+            "start_seconds": 862,
+            "end_seconds": 897,
+            "voiceover_text": "When stray kernels are planted in his coat, guards frame him for theft. Buff Frog is dragged kicking and screaming toward the inner sanctum, terrified of what creature rules this shadow empire.",
+            "keywords": [
+              {
+                "word": "theft",
+                "color": "#FD79A8"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "Ludo Returns With The Corrupted Wand",
+        "video_duration_seconds": 1315,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#starvstheforcesofevil",
+          "#svtfoe",
+          "#ludo",
+          "#bufffrog",
+          "#darkmagic",
+          "#disneyxd"
+        ],
+        "youtube_tags": [
+          "star vs the forces of evil",
+          "svtfoe",
+          "ludo wand",
+          "corrupted wand",
+          "buff frog tadpoles",
+          "ludo return",
+          "star vs season 2",
+          "dark magic",
+          "disney animation",
+          "villain return",
+          "corn empire",
+          "svtfoe series finale"
+        ],
+        "series": {
+          "series_id": "scissors",
+          "part": 4,
+          "start_seconds": 995,
+          "end_seconds": 1315,
+          "is_final": true,
+          "summary": "Brought before the mysterious mastermind behind the corn empire, Buff Frog is stunned to come face-to-face with Ludo, who now wields a severed skeletal arm holding the shattered fragment of Stars wand. Half-mad from dark magic, Ludo offers Buff Frog a tempting partnership to conquer Mewni. Escaping back to his family with food, Buff Frog must decide if allying with the unpredictable dictator is worth the terrible risk to his tadpoles."
+        },
+        "cuts": [
+          {
+            "start_seconds": 998,
+            "end_seconds": 1034,
+            "voiceover_text": "Dragged past towering iron barricades, Buff Frog gasps in disbelief. Hidden behind the slave mill lies an immense private cornfield, guarded by ferocious predatory beasts and an ominous wooden throne.",
+            "keywords": [
+              {
+                "word": "disbelief",
+                "color": "#6C5CE7"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1136,
+            "end_seconds": 1168,
+            "voiceover_text": "From the shadows steps the mastermind behind the operation. It is Ludo, completely transformed, clutching a severed skeletal hand fused to the fractured royal wand. The fallen tyrant is armed with terrifying dark magic.",
+            "keywords": [
+              {
+                "word": "transformed",
+                "color": "#00CEC9"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1213,
+            "end_seconds": 1255,
+            "voiceover_text": "Drunk on forbidden power and losing his grip on sanity, Ludo offers his former henchman a shocking partnership to conquer Mewni. Clutching his innocent tadpoles, Buff Frog must decide if taking the tyrants deal will save or doom his family.",
+            "keywords": [
+              {
+                "word": "conquer",
+                "color": "#E84393"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
