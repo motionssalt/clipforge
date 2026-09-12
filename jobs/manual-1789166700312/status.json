@@ -3,24 +3,24 @@
   "job_id": "manual-1789166700312",
   "mode": "manual",
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
+    "enabled": true,
+    "series_id": "parasites",
+    "part": 1,
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34665285230",
   "created_at_epoch": 1789178498,
-  "updated_at_epoch": 1789178498,
+  "updated_at_epoch": 1789178541,
   "expires_at_epoch": 1789221698,
   "release_tag": "clipforge-manual-1789166700312",
-  "release_url": "",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789166700312",
   "assets": {},
   "run": {
     "workflow_run_id": 34665285230,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34665285230",
-    "code_ref": "898e9eba2d08da91b8c64f97d5f53f1278e3399b"
+    "code_ref": "e29a2e4fe742b6c56c96422206cd1ee92f53edbf"
   },
   "publishing": {
     "status": "not_requested",
