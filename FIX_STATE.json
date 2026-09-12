@@ -1,41 +1,20 @@
 {
-  "sweep_complete": true,
+  "sweep_complete": false,
   "sweep_started": "2026-09-12T00:00:00Z",
   "previous_sweep": {
-    "note": "Prior sweep (bug-72, prompt guidance: footage longer than narration is expected and auto-retimed) completed 2026-09-05; preserved in git history (commit da766bf). New sweep seeded per session contract from feature-01 spec.",
-    "completed_at": "2026-09-05T00:00:00Z"
+    "note": "Prior sweep (feature-01 Super Series implementation) reported done with passing tests, but the operator demonstrated with screenshots that Super Series never activates in production. Per session contract, a new sweep is seeded with bug-73. Prior state preserved in git history.",
+    "completed_at": "2026-09-12T00:00:00Z"
   },
   "bugs": [
     {
-      "id": "feature-01",
-      "title": "Super Series - one AI response plans an ENTIRE series at once; tool renders each part sequentially as a queue of ordinary Stage B jobs",
-      "status": "done",
-      "notes": "FEATURE-01 IMPLEMENTED. Design decisions recorded per contract: (1) super_series flag persisted INSIDE the existing series block of stage-a-request.json (series.super_series) \u2014 fits \u00a77.1 conventions, needs no schema migration. (2) Toggle UX decision: Super Series is a SEPARATE Settings default (set:superseries screen, branding/super_series_settings.json, mirroring the Series Mode default); it is FORCE-DISABLED at the startJob commit boundary whenever Series Mode is off, so the flags can never desync (chosen over disabling the toggle, so a mid-wizard Series-Mode flip is still safe). (3) Super-plan schema = top-level {version, series_id, video_duration_seconds, target_total_duration_seconds, parts[]} where each part is an ordinary \u00a77.3 production plan; validator enforces shared series_id, contiguous tiling from 0, exactly one is_final and it must be last, unique titles, MAX_PARTS=20, and full per-part \u00a77.3 validation via the existing validator with a positional part_number override. (4) Verified before trusting: pipeline/plan/series.py derive_next_part has ZERO live callers (only its own tests) \u2014 confirmed dead code; the queue controller synthesizes requests via bot-side nextPartRequestBody/nextPartJobId/manualSeriesContinuation-adjacent helpers exactly as the spec required. (5) Completion detection reuses the bot's EXISTING per-minute cron sweep (scheduled() \u2192 runSuperQueueSweep, same mechanism as bug-51 clone sweep); durable state at jobs/<anchor>/super-plan.json; spawned part marked spawned BEFORE dispatch so a crashed tick never double-dispatches. (6) Halt-and-resume: first non-complete spawned part decides; error/cancelled \u2192 operator notified ONCE per part via ordinary bot message pointing at the existing task:restartb flow; complete \u2192 next part auto-queued; no separate resume trigger. (7) Restart path reused verbatim: restartStageB (existing). Publishing untouched \u2014 spawned jobs are ordinary jobs, so the stage-b.yml automatic Zernio dispatch fires identically. (8) Each spawned part passes the UNMODIFIED series cross-check: synthesized request carries the part's own correct series_id/part/start_seconds and the sliced plan's series block is re-stamped positionally, so reconcile_series_metadata sees matching data (zero changes, zero reconciliation needed) \u2014 pinned by slice tests asserting validate_production_plan(part, part_number=n) == []. Bot test note: wizard.test.mjs initially failed with ERR_MODULE_NOT_FOUND (tweetnacl) because the sandbox had no node_modules \u2014 an environment issue, not a code issue; npm install was run and the suite re-executed (result in the commit message of this checkpoint).",
-      "commit": "this commit (see git log)",
-      "files_modified": [
-        "pipeline/plan/super_series.py (NEW: validate_super_plan/slice_part/parse_and_validate_super_plan)",
-        "bot/src/super_series.js (NEW: JS validator parity + sliceSuperPart + buildSuperState + superQueueAdvance + superPartRequestBody reusing series.js nextPartRequestBody/nextPartJobId)",
-        "bot/src/settings_super.js (NEW: branding/super_series_settings.json read/write)",
-        "pipeline/plan/schema.py (validate_production_plan gains optional part_number override; default behavior unchanged)",
-        "bot/src/plan.js (validateProductionPlan gains options.partNumber override; parity with schema.py)",
-        "pipeline/plan/prompt.py (NEW separate SUPER_SERIES_DIRECTIVE template + --super-series CLI flag; SERIES_DIRECTIVE untouched; same NARRATION DURATION CONTRACT/PICKING end_seconds body shared per part)",
-        "pipeline/stage_a/bundle.py (generate_prompt dispatches --super-series + --series-id when series.super_series is true)",
-        "bot/src/wizard.js (wizard.superSeries field + token round-trip + describeMode + wizardToRequest emits series.super_series, forced off when series off)",
-        "bot/src/index.js (imports; cron scheduled() also runs runSuperQueueSweep; startJob reads Series+Super Series defaults with force-off rule; startRelayJob zeroes superSeries when series off; handlePlanUploadMessage branches to handleSuperPlanUploadMessage when request.series.super_series===true; super-plan accept writes jobs/<anchor>/super-plan.json then queues part 1; superQueueTick performs durable-state-driven queue/halt/resume with existing conventions; Settings gains set:superseries toggle + superseries entry button on Series Mode screen)",
-        "bot/src/storage.js (NEW listTaskLabelChatIds - sweep scan set)",
-        "pipeline/tests/test_super_series.py (NEW, 15 tests)",
-        "bot/test/super-series.test.mjs (NEW, 14 tests)",
-        "ARCHITECTURE.md (Series Mode section gains Super Series paragraph + new \u00a77.5 super-plan contract; existing sections untouched)"
-      ],
-      "tests_run": [
-        "pipeline.tests.test_super_series: 15 pass",
-        "pipeline.tests.test_plan_cross_validation + test_series + test_stage_b_series_reconcile + prompt suites: OK (no regressions; schema.py/plan.js parity preserved)",
-        "full pipeline suite: 331 run, only the 8 documented pre-existing failures (7 OpenCV cascade env + 1 test_status) \u2014 identical to unmodified main",
-        "bot suite: see notes"
-      ],
+      "id": "bug-73",
+      "title": "Super Series never actually activates in production - the Settings toggle has NO WIRED HANDLER (set:superseries / set:superseries:on / set:superseries:off unmatched by any callback dispatch), so branding/super_series_settings.json is never written and every downstream Super Series path (prompt template, super-plan validator, queue controller) gates on a flag that can never become true",
+      "status": "pending",
+      "notes": "Seeded per session contract. Confirmed root cause to verify against current code: bot/src/index.js emits three Super Series settings buttons (set:superseries, set:superseries:on, set:superseries:off) but no handler matches them. Fix: wire the three handlers (render screen with live state; on -> saveSuperSeriesSettings(...,true) + re-render; off -> saveSuperSeriesSettings(...,false) + re-render), trace the full tap chain from main Settings menu, then verify END TO END against the operator's two reported symptoms (prompt template dispatch; super-plan upload routing) with real persisted files, run all existing suites, and add tests covering the three callback_data values.",
+      "commit": null,
+      "files_modified": [],
+      "tests_run": [],
       "concerns": []
     }
-  ],
-  "sweep_completed_at": "2026-09-12T00:00:00Z",
-  "sweep_summary": "feature-01 (Super Series) implemented, tested, and pushed: new super-plan validator pair (pipeline/plan/super_series.py + bot/src/super_series.js), separate SUPER_SERIES_DIRECTIVE prompt template + --super-series flag, bot-side sequential queue controller on the existing cron sweep with halt-and-resume, Settings toggle, 29 new tests, zero regressions (pipeline suite failures limited to the 8 pre-existing documented ones)."
+  ]
 }
