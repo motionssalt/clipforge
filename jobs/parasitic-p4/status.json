@@ -10,9 +10,9 @@
     "is_final": false
   },
   "state": "stage_a_running",
-  "message": "Stage A run started on GitHub Actions — setting up.",
+  "message": "Stage A starting — ingesting source (magnet)",
   "created_at_epoch": 1789220213,
-  "updated_at_epoch": 1789220227,
+  "updated_at_epoch": 1789220293,
   "expires_at_epoch": 1789393013,
   "release_tag": "clipforge-parasitic-p4",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-parasitic-p4",
@@ -20,7 +20,7 @@
   "run": {
     "workflow_run_id": 34696918771,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34696918771",
-    "code_ref": "63f7ba641eba0b6566311cb3bb9d9db01c593aab"
+    "code_ref": "f0613d76a7c2525333eec4e71f0cb4313713d0f3"
   },
   "publishing": {
     "status": "not_requested",
