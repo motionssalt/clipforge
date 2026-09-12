@@ -3,30 +3,24 @@
   "job_id": "manual-1789249757677",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "series-1789249800632",
-    "part": 1,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
     "start_seconds": 0,
     "is_final": false
   },
   "state": "stage_a_running",
-<<<<<<< Updated upstream
-  "message": "Video file #10 selected — resuming ingest.",
-  "created_at_epoch": 1789249801,
-  "updated_at_epoch": 1789249906,
-=======
-  "message": "Stage A run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1789249801,
-  "updated_at_epoch": 1789249923,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1789422601,
+  "message": "Stage A starting — ingesting source (magnet)",
+  "created_at_epoch": 1789249989,
+  "updated_at_epoch": 1789249989,
+  "expires_at_epoch": 1789422789,
   "release_tag": "clipforge-manual-1789249757677",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789249757677",
+  "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 34721145161,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34721145161",
-    "code_ref": "648e6fdcfc8274286eddfba853a78c78fd5beb22"
+    "code_ref": "a811ceb15d2e034525d1812934697bcbeaa8682e"
   },
   "publishing": {
     "status": "not_requested",
