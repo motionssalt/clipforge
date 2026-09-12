@@ -9,10 +9,10 @@
     "start_seconds": 255,
     "is_final": false
   },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
   "created_at_epoch": 1789217160,
-  "updated_at_epoch": 1789217281,
+  "updated_at_epoch": 1789218128,
   "expires_at_epoch": 1789389960,
   "release_tag": "clipforge-parasitic-p3",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-parasitic-p3",
@@ -28,9 +28,9 @@
     "analysis_bundle_url": ""
   },
   "run": {
-    "workflow_run_id": 34694574081,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34694574081",
-    "code_ref": "6f0a2f4bca12381d263fd2828e2253de17fcef91"
+    "workflow_run_id": 34695289343,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34695289343",
+    "code_ref": "33bd86e0a758b0737673b25d4f050d5e9b090414"
   },
   "publishing": {
     "status": "not_requested",
