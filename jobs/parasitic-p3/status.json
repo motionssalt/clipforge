@@ -9,10 +9,10 @@
     "start_seconds": 255,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1789217160,
-  "updated_at_epoch": 1789218277,
+  "updated_at_epoch": 1789218974,
   "expires_at_epoch": 1789389960,
   "release_tag": "clipforge-parasitic-p3",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-parasitic-p3",
@@ -25,12 +25,14 @@
     "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-parasitic-p3/screenshots.zip",
     "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-parasitic-p3/source_input.bin",
     "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-parasitic-p3/transcript.json",
-    "analysis_bundle_url": ""
+    "analysis_bundle_url": "",
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-parasitic-p3/clipforge-parasitic-p3-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-parasitic-p3/final.mp4"
   },
   "run": {
     "workflow_run_id": 34695289343,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34695289343",
-    "code_ref": "9c114fffc63e825c9964f1198ebf5f779744d7d8"
+    "code_ref": "66dbc7d3005f6ddb7148b6bc1fbb259a5648a13e"
   },
   "publishing": {
     "status": "not_requested",
