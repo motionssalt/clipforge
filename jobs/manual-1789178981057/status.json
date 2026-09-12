@@ -9,10 +9,17 @@
     "start_seconds": 0,
     "is_final": false
   },
+<<<<<<< Updated upstream
   "state": "error",
   "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34666886936",
   "created_at_epoch": 1789178981,
   "updated_at_epoch": 1789179018,
+=======
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
+  "created_at_epoch": 1789178981,
+  "updated_at_epoch": 1789179371,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1789351781,
   "release_tag": "clipforge-manual-1789178981057",
   "release_url": "",
@@ -20,7 +27,11 @@
   "run": {
     "workflow_run_id": 34666886936,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34666886936",
+<<<<<<< Updated upstream
     "code_ref": "3a284a9c3be4f7ccf5aef105430287436b0bda58"
+=======
+    "code_ref": "9ebabf5a0204ff3df0ee2b70b796f4fe712f5dd9"
+>>>>>>> Stashed changes
   },
   "publishing": {
     "status": "not_requested",
