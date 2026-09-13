@@ -13,7 +13,9 @@ keep building against it as written; do not silently redesign.
 
 ClipForge turns a **source video** into a **short, edited, narrated, captioned
 vertical clip** and optionally **publishes** it. A user drives the whole thing
-from a Telegram bot. The system supports two operating modes:
+from the ClipForge Dashboard (web) or the ClipForge Android app — both are pure
+GitHub clients (no Telegram bot, no Cloudflare Worker; the legacy bot was
+removed in the 2026-09 GitHub-only migration and is archived under `_archive/`). The system supports two operating modes:
 
 - **Manual mode** — the pipeline produces an analysis bundle and a *prompt*;
   a human pastes that prompt into an external AI agent (any agent, any tool);

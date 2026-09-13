@@ -1,10 +1,12 @@
 # ClipForge
 
-ClipForge is a **Telegram bot that turns a source video into a short, narrated,
-captioned vertical clip.** You talk to one shared bot; the bot drives a private
-GitHub repository (your "Shadow Clone") that actually runs the video pipeline
-in GitHub Actions. Manual mode and Series mode are
-supported — see [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
+ClipForge is a **GitHub-only video pipeline that turns a source video into a short, narrated,
+captioned vertical clip.** You drive it from the ClipForge Dashboard (web) or the ClipForge
+Android app; both talk directly to a private GitHub repository (your "Shadow Clone") that runs
+the video pipeline in GitHub Actions. Manual mode, Series mode, and Super Series mode are
+supported — see [ARCHITECTURE.md](ARCHITECTURE.md) for the full design. There is NO Telegram
+bot and NO Cloudflare Worker: the legacy bot implementation was removed in the 2026-09
+GitHub-only migration (its last state is archived under [`_archive/`](_archive/)).
 
 This repository is the **central ClipForge source of truth**. It is also a
 multi-session rebuild coordinated through committed files:
@@ -17,7 +19,7 @@ multi-session rebuild coordinated through committed files:
 - **[NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md)** — the reusable prompt
   handed to every future building session. Never commit filled-in credentials.
 
-The previous implementation is preserved under **[`_legacy/`](_legacy/)** in its
+The previous implementation is preserved under **[`_archive/`](_archive/)** in its
 original layout for reference and comparison.
 
 ---
