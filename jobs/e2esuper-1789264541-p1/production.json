@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "job_id": "e2esuper-1789264541-p1",
+  "title": "E2E Alpha — Part 1",
+  "video_duration_seconds": 600,
+  "target_total_duration_seconds": 30,
+  "cuts": [
+    {
+      "start_seconds": 0,
+      "end_seconds": 300,
+      "voiceover_text": "Hi."
+    }
+  ],
+  "series": {
+    "series_id": "e2esuper-1789264541",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 300,
+    "is_final": false,
+    "summary": "Recap for part 1."
+  }
+}
