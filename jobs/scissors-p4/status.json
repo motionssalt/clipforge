@@ -10,9 +10,9 @@
     "is_final": true
   },
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
   "created_at_epoch": 1789266723,
-  "updated_at_epoch": 1789266737,
+  "updated_at_epoch": 1789266870,
   "expires_at_epoch": 1789439523,
   "release_tag": "clipforge-scissors-p4",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-scissors-p4",
@@ -20,7 +20,7 @@
   "run": {
     "workflow_run_id": 34733286793,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34733286793",
-    "code_ref": "ff86304b15f1f23221a228fb60cb1fc426c9d91a"
+    "code_ref": "1a9d4bd9395e8d079963c3fdb46a92467444e62d"
   },
   "publishing": {
     "status": "not_requested",
