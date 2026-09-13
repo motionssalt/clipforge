@@ -10,17 +10,29 @@
     "is_final": false
   },
   "state": "stage_a_running",
+<<<<<<< Updated upstream
   "message": "Video file #76 selected — resuming ingest.",
   "created_at_epoch": 1789293925,
   "updated_at_epoch": 1789294309,
+=======
+  "message": "Stage A run started on GitHub Actions — setting up.",
+  "created_at_epoch": 1789293925,
+  "updated_at_epoch": 1789294323,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1789466725,
   "release_tag": "clipforge-manual-1789293925543",
   "release_url": "",
   "assets": {},
   "run": {
+<<<<<<< Updated upstream
     "workflow_run_id": 34750954023,
     "workflow_run_url": "https:\/\/github.com\/motionssalt\/clipforge\/actions\/runs\/34750954023",
     "code_ref": "3b2b57ddb6786fe6d9a0caf6448f30e5463a1237"
+=======
+    "workflow_run_id": 34751216000,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34751216000",
+    "code_ref": "daa3bafba59b3011fecc9304d8ae1891d3cd1561"
+>>>>>>> Stashed changes
   },
   "publishing": {
     "status": "not_requested",
