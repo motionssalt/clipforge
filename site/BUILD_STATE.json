@@ -3,7 +3,7 @@
   "purpose": "GitHub-only migration: remove Telegram Bot A/B; Cloudflare Pages Dashboard (site/) with full bot feature parity; GitHub is the ONLY backend.",
   "build_complete": false,
   "updated_by": "session-14",
-  "current_task": "task-02",
+  "current_task": "task-03",
   "constraints": {
     "no_worker_dependency": true,
     "auth": "one-time GitHub PAT prompt, localStorage, explicit disconnect only",
@@ -112,8 +112,8 @@
     {
       "id": "task-02",
       "title": "Dashboard GitHub-only auth (one-time PAT, localStorage, disconnect) + clone creation/auto-login (beginShadowCloneCreation/pollShadowCloneJob/finalizeShadowClone equivalent)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (session-14): js/clone.js ports beginShadowCloneCreation/pollShadowCloneJob/finalizeShadowClone/cancelShadowCloneRun 1:1 (same guards: START 120s / STALL 360s / DEADLINE 600s, same bootstrap Contents-API + one-time clone-copy.yml dispatch + branch normalization + tree verification + workflow-file copy via user PAT). js/features/clone.js = UI: name/auto-name + PAT prompt, live progress bar, 5s polling from the browser tab (replaces bot cron — no Worker wall-clock limit here), localStorage cf.cloneJob resumes across tab closes, failure path = cancelShadowCloneRun + best-effort deleteRepository + loud error. Auto-login on completion (setCredentials -> localStorage cf.credentials). Onboarding (features/onboarding.js): one-time PAT prompt -> validateConnection -> localStorage, explicit Disconnect button in topbar clears it. VALIDATED: Node 22 ESM syntax OK on both modules; clone.js exports verified (6/6)."
     },
     {
       "id": "task-03",
