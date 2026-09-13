@@ -1,39 +1,14 @@
 {
-  "version": 2,
+  "version": 1,
   "job_id": "manual-1789333712217",
   "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 1\/3 dispatched.",
+  "updated_at_epoch": 1789343170,
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
-    "start_seconds": 0,
-    "is_final": false
-  },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
-  "created_at_epoch": 1789334166,
-  "updated_at_epoch": 1789336386,
-  "expires_at_epoch": 1789506966,
-  "release_tag": "clipforge-manual-1789333712217",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789333712217",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/00_READ_THIS_FIRST.txt",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/screenshots.zip",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789333712217/transcript.json",
-    "analysis_bundle_url": ""
-  },
-  "run": {
-    "workflow_run_id": 34783277244,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34783277244",
-    "code_ref": "da26e8f18f735bf1db528039b640e08ac2fb218a"
-  },
-  "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "enabled": true,
+    "series_id": "series-1789333712217",
+    "part": 1,
+    "start_seconds": 0
   }
 }
