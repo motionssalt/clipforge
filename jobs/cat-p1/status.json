@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "cat-p1",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 1 of 3 — Stage B dispatched (Part-1 spawn repaired).",
+  "updated_at_epoch": 1789321105,
+  "series": {
+    "enabled": true,
+    "series_id": "cat",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "release_tag": "clipforge-cat-p1",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-cat-p1"
+}
