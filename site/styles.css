@@ -184,3 +184,22 @@ label.field .hint { display: block; font-weight: 400; color: var(--text-dim); fo
 
 audio, video { max-width: 100%; border-radius: 8px; }
 video { background: #000; }
+
+/* Wizard / lists (task-03+) */
+.btn-row.wrap { flex-wrap: wrap; }
+.stack { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.list-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-overlay);
+}
+.list-row .grow { flex: 1; min-width: 0; }
+pre.summary {
+  font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-word;
+  background: var(--bg-overlay); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+}
+.error-text { color: var(--err); }
+.ok-text { color: var(--ok); }
+input[type=file].hidden { display: none; }
