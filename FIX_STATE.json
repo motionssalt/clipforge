@@ -1,57 +1,29 @@
 {
-  "sweep_complete": true,
-  "sweep_started": "2026-09-12T00:00:00Z",
-  "previous_sweep": {
-    "note": "Prior sweep (feature-01 Super Series implementation) reported done with passing tests, but the operator demonstrated with screenshots that Super Series never activates in production. Per session contract, a new sweep was seeded with bug-73. Prior state preserved in git history.",
-    "completed_at": "2026-09-12T00:00:00Z"
-  },
+  "sweep_complete": false,
+  "sweep_started": "2026-09-13T00:00:00Z",
+  "seed_reason": "Prior sweep marked sweep_complete:true (2026-09-12T23:45Z), but operator re-reported on 2026-09-13: 'The issue seems to be fixed but the AI agent prompt in the bot is still showing series part 1.' Per session contract, FIX_STATE.json re-seeded with the BUG LIST; prior completed work preserved under history.previous_sweeps and NOT redone unless live evidence shows a real remaining gap.",
+  "active_bug": "bug-73",
   "bugs": [
     {
       "id": "bug-73",
-      "title": "Super Series never actually activates in production - buildStageARequest (bot/src/github.js) silently STRIPPED series.super_series when persisting stage-a-request.json",
-      "status": "done",
-      "notes": "OPERATOR RE-REPORT (screenshots, 2026-09-12 ~23:02 +0100): a task created AFTER the prior sweep's 'done' still generated the ordinary single-part Series Mode prompt and rejected a whole-series plan with legacy flat-field errors (series_part/series_summary etc.). The prior sweep's conclusion 'handlers exist, it is a deployment lag' was WRONG in the decisive respect and this session corrected it with repo evidence. EVIDENCE: (1) git history shows the operator's toggle DID work in production - commit 4c8851d wrote branding/super_series_settings.json enabled:true at epoch 1789252763 (22:39:23 UTC), proving set:superseries:on was live on the deployed worker; (2) 4s later job manual-1789252767695 was created (22:39:27) and its FIRST persisted stage-a-request.json (commit 78cfd1d, 22:39:45) ALREADY lacked series.super_series entirely - at a moment the deployed code demonstrably had the toggle handler. ROOT CAUSE (verified against live code, not re-derived from the seeded hypothesis): wizardToRequest() (wizard.js:179) correctly emits series.super_series, and startJob (index.js:695) correctly sets wizard.superSeries from the setting - but buildStageARequest() in bot/src/github.js, the ONLY writer of jobs/<id>/stage-a-request.json, rebuilds the series object from an explicit allowlist {enabled, series_id, source_job_id, part, start_seconds, context} and DROPPED super_series. Every downstream consumer (handlePlanUploadMessage router at index.js:1341, bundle.py:121 prompt dispatch) reads the PERSISTED file, so the flag never reached any of them: the router always fell through to the ordinary single-part validator (producing exactly the legacy flat-field errors the operator saw) and bundle.py never fired the Super Series template (producing exactly the ordinary prompt the operator saw). Why the prior sweep missed it: its new tests asserted wizardToRequest's IN-MEMORY output and mocked/inspected handlers, but nothing asserted the flag survived the single disk boundary - the same class of gap as the original handler bug, one layer deeper. FIX (surgical, 3 files): (a) bot/src/github.js buildStageARequest now emits super_series:true into the persisted series block iff series.super_series===true (omitted otherwise so the router's ===true check and old readers are unaffected); (b) schemas/stage_a_request.schema.json gains optional series.super_series (additionalProperties:false made this mandatory); (c) NEW bot/test/super-series-persist.test.mjs (6 tests) pins the end-to-end chain wizard->wizardToRequest ->buildStageARequest->persisted doc: flag present and true for super jobs, key ABSENT for ordinary series jobs, force-dropped when series is off even with a stale superSeries:true token, and absent for series-less requests. CONTINUATIONS: spawned parts intentionally do NOT inherit super_series (they are per-part executors; series.js nextPartRequestBody correctly leaves it unset) - verified against super_series.js superPartRequestBody design. VERIFICATION: full bot suite 248/248 pass (242 prior + 6 new); pipeline super-series suite 15/15 pass; updated schema validated - the existing on-disk request for manual-1789252767695 still validates (key optional). Prior bug-73 handler tests (7) and feature-01 suites (14+15) all still green. OPERATOR NOTE: the fix is in the repo; the deployed bot worker must be redeployed from current main to write super_series:true for NEW tasks (existing in-flight jobs' requests on disk were already written without the flag and cannot be retro-routed).",
-      "commit": "see git log (this checkpoint commit)",
-      "files_modified": [
-        "bot/src/github.js (buildStageARequest persists series.super_series; doc comment updated)",
-        "schemas/stage_a_request.schema.json (optional series.super_series property)",
-        "bot/test/super-series-persist.test.mjs (NEW: 6 end-to-end persistence regression tests)",
-        "FIX_STATE.json (this checkpoint)"
-      ],
-      "tests_run": [
-        "bot/test/super-series-handlers.test.mjs: 7 pass",
-        "bot/test/super-series.test.mjs: 14 pass (prior feature-01 suite, still green)",
-        "full bot suite (node --test 'test/*.test.mjs'): 242 pass, 0 fail",
-        "pipeline/tests/test_super_series.py: 15 pass",
-        "pipeline plan suites (test_plan_cross_validation + test_series + test_super_series): 40 pass, 52 subtests pass",
-        "full pipeline suite: 386 passed, 8 failed - only the documented pre-existing failures (7 OpenCV cascade env + 1 test_status), identical to unmodified main",
-        "E2E prompt dispatch: prompt.py --super-series emits SUPER_SERIES_DIRECTIVE (grep 'SUPER SERIES MODE' = 1); control without flag emits ordinary SERIES_DIRECTIVE Part 1 (grep = 0)",
-        "bug-73 round 2: full bot suite (node --test test/*.test.mjs): 248 pass, 0 fail (6 new persistence tests)",
-        "bug-73 round 2: pipeline/tests/test_super_series.py: 15 pass",
-        "bug-73 round 2: schema validation of existing jobs/manual-1789252767695/stage-a-request.json against updated schema: pass"
-      ],
-      "concerns": [
-        "Deployed bot worker must be redeployed from current main for NEW tasks to persist series.super_series:true; already-queued jobs (e.g. manual-1789252767695) have on-disk requests without the flag and will continue to be treated as ordinary single-part series."
-      ]
+      "title": "Super Series prompt/routing gap - operator re-report 2026-09-13: agent prompt in bot still shows ordinary 'series part 1' template after prior fix rounds",
+      "status": "in_progress",
+      "round": 4,
+      "notes": "SEED + ROUND 4 OPEN. Prior rounds established and fixed: (r1) missing set:superseries* handlers; (r2) buildStageARequest stripping series.super_series on persist; (r3) verified live that post-fix job manual-1789255279964's release prompt contained SUPER SERIES MODE directive and declared the code path green, attributing residual symptoms to pre-fix jobs. NEW OPERATOR REPORT (2026-09-13): a fresh flow was run AFTER all fixes - anchor job manual-1789258181075 (epoch 1789258181, newer than r3's verified job) spawned super parts series-1789258211391-p1/p2/p3 which are actively rendering - yet the operator says the agent prompt shown in the bot still reads as ordinary series part 1. ROUND 4 PLAN: (1) inspect on-disk state of the NEWEST jobs (manual-1789258181075, series-1789258211391-p1..p3) and branding/super_series_settings.json on origin/main; (2) download the LIVE release prompt asset for the newest anchor job and check whether it carries SUPER_SERIES_DIRECTIVE or the ordinary SERIES_DIRECTIVE 'part 1' text; (3) trace exactly which prompt the BOT sends to the operator at each step (anchor Stage A prompt vs per-part prompts vs next-part flow) and identify which specific message the operator is seeing as 'series part 1'; (4) fix the specific gap found (surgical), add regression tests, run full suites, checkpoint, commit, push. Do NOT redo r1/r2 work unless live evidence shows it broken.",
+      "commit": null,
+      "files_modified": [],
+      "tests_run": [],
+      "concerns": []
     }
   ],
-  "sweep_completed_at": "2026-09-12T23:45:00Z",
-  "sweep_summary": "Round 3 verification complete: no new code defect found \u2014 live release asset for the newest post-fix job proves the Super Series prompt template fires end-to-end; setting enabled:true on origin/main; request file carries super_series:true; all 248 bot + 15 pipeline super-series tests pass. Residual operator-facing symptom was pre-fix job data, not code. Operator must test with a newly created task.",
-  "round3": {
-    "trigger": "Operator re-report (2026-09-12): 'THE ISSUE IS STILL THERE DESPITE THE CLAIM THAT IT WAS FIXED.'",
-    "live_evidence_gathered": [
-      "Deployed prompt asset for NEWEST post-fix job manual-1789255279964 (release tag clipforge-manual-1789255279964, 00_READ_THIS_FIRST.txt, 75,580 bytes) downloaded from the live GitHub release: line 2 reads '## SUPER SERIES MODE \u2014 YOU ARE PLANNING THE WHOLE SERIES IN ONE DOCUMENT'; zero ordinary single-part SERIES MODE directive present. The deployed pipeline/workflow code IS firing the Super Series template for the new job.",
-      "jobs/manual-1789255279964/stage-a-request.json on origin/main carries series.super_series:true (and series.enabled:true, part:1) \u2014 the bug-73 round-2 persistence fix is live in the dispatched Stage A run (code_ref f983cb3, which is post-fix).",
-      "branding/super_series_settings.json on origin/main: enabled:true (updated_at_epoch 1789255273) \u2014 the toggle handlers ARE wired and live on the deployed worker.",
-      "settings/super-series chain in bot/src/index.js: three callback_data values set:superseries / set:superseries:on / set:superseries:off all matched by handlers (bug-73 round-1 work) \u2014 re-verified present.",
-      "Plan-upload router (index.js ~1341) gates handleSuperPlanUploadMessage on uploadRequest.series.super_series === true \u2014 with the request file now carrying the flag, super-plan documents route to the SUPER-plan validator, not the legacy single-part validator.",
-      "bundle.py:121 dispatch confirmed unchanged and correct; prompt.py SUPER_SERIES_DIRECTIVE emitted per live asset inspection."
-    ],
-    "bot_suite_local": "CONFIRMED ENV-ONLY: after 'npm install' in bot/ (tweetnacl et al. missing from fresh clone), node --test test/*.test.mjs => 248/248 pass, 0 fail. The earlier 12 failures were ERR_MODULE_NOT_FOUND for tweetnacl in a dependency-less sandbox, NOT code regressions. No bisect needed.",
-    "pipeline_super_series": "pipeline/tests/test_super_series.py: 15/15 pass.",
-    "next_step": "(1) Confirm the 12 bot-suite failures are environment-related by inspecting one failure's error output; if they are genuine regressions introduced after commit 713cd08, git-bisect and fix. (2) Then run the remaining end-to-end checks: simulate super-plan upload against the router with a synthetic valid super-plan and a deliberately malformed one; verify Super-Series-specific error text. (3) Update FIX_STATE, commit, push.",
-    "verdict": "Super Series IS functioning in production as of this verification (2026-09-12). The operator's 'still broken' observation traces to pre-fix jobs and/or stale release assets: (1) job manual-1789252767695 (created 22:39, BEFORE the round-2 fix commit 713cd08 at 23:0x) has a stage-a-request.json WITHOUT super_series and will forever route as ordinary single-part \u2014 unfixable retroactively, operator must create a NEW task; (2) the NEWEST job manual-1789255279964 (created after the fix) has series.super_series:true persisted, its Stage A ran on post-fix code (code_ref f983cb3), and its LIVE release prompt 00_READ_THIS_FIRST.txt contains the SUPER SERIES MODE whole-series directive \u2014 verified by downloading the actual release asset, not by unit test. (3) Toggle handlers, settings file write, bundle.py dispatch, prompt.py template, and the super-plan upload router are all wired and green. Tests this round: bot 248/248 (incl. super-series-handlers 7, super-series-persist 6, feature-01 14), pipeline test_super_series 15/15.",
-    "operator_action_required": "Create a FRESH task (Series Mode on) \u2014 do not reuse any job created before 2026-09-12 ~23:05 UTC. The fresh task's agent prompt will carry the SUPER SERIES MODE directive and its super-plan upload will hit the Super Series validator. If a specific new task still misbehaves, report THAT task's job id.",
-    "status": "done"
+  "history": {
+    "previous_sweeps": [
+      {
+        "sweep": "feature-01 Super Series implementation + bug-73 rounds 1-3",
+        "sweep_completed_at": "2026-09-12T23:45:00Z",
+        "summary": "r1: wired set:superseries / set:superseries:on / set:superseries:off handlers (7 handler tests). r2: fixed buildStageARequest (bot/src/github.js) silently stripping series.super_series when persisting stage-a-request.json; added optional series.super_series to schemas/stage_a_request.schema.json; new bot/test/super-series-persist.test.mjs (6 tests). Bot suite 248/248, pipeline super-series 15/15. r3: verified LIVE release asset for manual-1789255279964 contained SUPER SERIES MODE directive; setting enabled:true on origin/main; declared functioning, attributed operator's residual symptom to pre-fix jobs. Full prior FIX_STATE content available in git history (commit prior to this seed).",
+        "key_commits": "see git log 2026-09-12 (713cd08 r2 fix, f983cb3 post-fix code_ref, 4c8851d toggle write proof)"
+      }
+    ]
   }
 }
