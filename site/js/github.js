@@ -548,10 +548,12 @@ export async function saveSuperSeriesSettings(credentials, repo, enabled) {
     `${JSON.stringify({ version: 1, enabled: enabled === true, updated_at_epoch: Math.floor(Date.now() / 1000) }, null, 2)}\n`,
     'clipforge: update Super Series setting');
 }
+// Exact bot shape (bot/src/github.js saveNarrator): the pipeline reads
+// voice + engine; rate/volume/pitch defaults are written on every save.
 export async function saveNarrator(credentials, repo, voice, label) {
   return putTextFile(credentials, repo, TTS_SETTINGS_PATH,
-    `${JSON.stringify({ version: 1, voice: String(voice), label: String(label || voice), updated_at_epoch: Math.floor(Date.now() / 1000) }, null, 2)}\n`,
-    'clipforge: update narrator voice');
+    `${JSON.stringify({ version: 1, engine: 'edge-tts', voice: String(voice), voice_label: String(label || voice), rate: '+20%', volume: '+0%', pitch: '+0Hz', updated_at_epoch: Math.floor(Date.now() / 1000) }, null, 2)}\n`,
+    'clipforge: save Edge TTS narrator');
 }
 export async function saveWatermark(credentials, repo, creatorName) {
   return putTextFile(credentials, repo, WATERMARK_PATH,
