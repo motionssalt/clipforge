@@ -297,5 +297,10 @@
       }
     ]
   },
-  "spawned": []
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "cat-p1"
+    }
+  ]
 }
