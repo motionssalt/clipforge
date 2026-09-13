@@ -14,8 +14,12 @@
  *    the series (files + releases) and reclaims their labels
  *
  * Super Series anchors also appear here (their spawned parts are ordinary
- * series jobs of the same series_id) — the full queue/halt display and
- * super-plan submission are task-06.
+ * series jobs of the same series_id). task-06: each anchor card shows the
+ * full queue/halt display (spawned/total, per-part state, halt banner with
+ * the bot's exact message) via describeSuperQueue, and the view drives the
+ * client-side sweep (runSuperQueueSweep) every minute while open — the same
+ * pure superQueueAdvance the bot cron and the task-12 scheduled workflow
+ * share, so the durable repo record stays the only cursor.
  */
 
 import {
@@ -31,6 +35,7 @@ import {
   manualSeriesContinuation, nextPartJobId, nextPartRequestBody,
   extractPlanSeries, buildSeriesContext
 } from '../series.js';
+import { runSuperQueueSweep, describeSuperQueue } from '../supertick.js';
 
 const POLL_MS = 10000;
 const HOLD_MS = 700;
@@ -135,6 +140,16 @@ export async function renderSeries(app) {
       const total = Number(group.anchor.total_parts) || (group.anchor.plan && group.anchor.plan.parts ? group.anchor.plan.parts.length : 0);
       const spawned = Array.isArray(group.anchor.spawned) ? group.anchor.spawned.length : 0;
       superLine = `<p class="muted small">⚡ Super Series — ${spawned}/${total} parts dispatched</p>`;
+      if (group.superQueue && group.superQueue.outcome) {
+        const o = group.superQueue.outcome;
+        if (o.action === 'halted') {
+          superLine += `<p class="error-text">⏸ ${escapeHtml(o.message)}</p>`;
+        } else if (o.action === 'waiting') {
+          superLine += `<p class="muted small">⏳ Part ${o.part} of ${group.superQueue.totalParts} running — the next part dispatches automatically when it completes.</p>`;
+        } else if (o.action === 'done') {
+          superLine += `<p class="muted small">✔ All ${group.superQueue.totalParts} parts complete.</p>`;
+        }
+      }
     }
 
     return `
@@ -151,7 +166,19 @@ export async function renderSeries(app) {
   }
 
   async function draw() {
+    // Client-driven super-queue sweep first: any anchor whose latest part has
+    // completed since the last tick dispatches its next part now (the durable
+    // repo record is the only cursor — double-dispatch impossible).
+    try { await runSuperQueueSweep(credentials, credentials.repo); } catch { /* next tick retries */ }
     const groups = await loadSeries();
+    for (const group of groups) {
+      if (group.anchor) {
+        const anchorJobId = String(group.anchor.anchor_job_id || (group.parts[0] && group.parts[0].jobId) || '');
+        if (anchorJobId) {
+          group.superQueue = await describeSuperQueue(credentials, credentials.repo, anchorJobId).catch(() => null);
+        }
+      }
+    }
     app.innerHTML = groups.length
       ? groups.map(groupHtml).join('')
       : `<div class="card"><h2>Series</h2><p class="muted">No series yet. Enable Series Mode in Settings, then start a task from New video.</p></div>`;

@@ -35,6 +35,7 @@ import {
   mergeStatus, isTerminal, zernioPublishingSummary, readZernioSettingsSafe
 } from '../github.js';
 import { ingestProductionPlan, readPlanFile, MAX_PLAN_BYTES } from '../planupload.js';
+import { submitSuperPlan, describeSuperQueue, superQueueTick } from '../supertick.js';
 
 const POLL_LIST_MS = 8000;
 const POLL_DETAIL_MS = 5000;
@@ -340,6 +341,16 @@ export async function renderTaskDetail(app, jobId) {
       readStageARequest(credentials, credentials.repo, jobId).catch(() => null),
       readZernioSettingsSafe(credentials, credentials.repo).catch(() => null)
     ]);
+    // task-06: if this job is a Super Series anchor, advance its queue once
+    // (harmless no-op when waiting/done) and compute the queue/halt display.
+    let superQueue = null;
+    const superRaw = await tryGetJsonFile(credentials, credentials.repo, `jobs/${jobId}/super-plan.json`).catch(() => null);
+    if (superRaw && superRaw.document && Array.isArray(superRaw.document.spawned)) {
+      if (status && !isTerminal(status.state)) {
+        try { await superQueueTick(credentials, credentials.repo, jobId); } catch { /* sweep retries */ }
+      }
+      superQueue = await describeSuperQueue(credentials, credentials.repo, jobId).catch(() => null);
+    }
 
     if (!status) {
       app.innerHTML = `
@@ -411,6 +422,7 @@ export async function renderTaskDetail(app, jobId) {
         <div class="btn-row wrap">${actions.join('')}</div>
         <div class="btn-row">${links.join('')}<a class="btn ghost" href="#/tasks">← Tasks</a></div>
       </div>
+      ${superQueueCardHtml(superQueue)}
       <div class="card">
         <h3>Workflow logs</h3>
         <div id="log-steps"></div>
@@ -420,6 +432,40 @@ export async function renderTaskDetail(app, jobId) {
     wireCommon();
     wireActions(status, plan, request, state);
     renderLogsInto(app);
+    for (const row of app.querySelectorAll('[data-open]')) {
+      row.addEventListener('click', () => {
+        location.hash = `#/task/${encodeURIComponent(row.dataset.open)}`;
+      });
+    }
+  }
+
+  /** task-06: Super Series queue/halt display for an anchor job. */
+  function superQueueCardHtml(queue) {
+    if (!queue) return '';
+    const rows = queue.spawned.map((p) => `
+      <div class="list-row" data-open="${escapeHtml(p.jobId)}">
+        <span class="grow">${p.state === 'complete' ? '✔' : (p.state === 'error' || p.state === 'cancelled') ? '⚠' : '⏳'}
+          <b>Part ${p.part}</b> <span class="muted mono small">${escapeHtml(p.jobId)}</span></span>
+        <span class="state-pill ${escapeHtml(p.state)}">${escapeHtml(p.state)}</span>
+      </div>`).join('');
+    let banner = '';
+    if (queue.outcome.action === 'halted') {
+      banner = `<p class="error-text">⏸ ${escapeHtml(queue.outcome.message)}</p>`;
+    } else if (queue.outcome.action === 'waiting') {
+      banner = `<p class="muted">Part ${queue.outcome.part} of ${queue.totalParts} is still running — the next part dispatches automatically when it completes.</p>`;
+    } else if (queue.outcome.action === 'done') {
+      banner = `<p class="muted">✔ All ${queue.totalParts} parts complete.</p>`;
+    } else if (queue.outcome.action === 'queue' || queue.outcome.action === 'dispatched') {
+      banner = `<p class="muted">Part ${queue.outcome.part} of ${queue.totalParts} is being dispatched…</p>`;
+    }
+    return `
+      <div class="card">
+        <h3>⚡ Super Series — ${escapeHtml(queue.seriesId)}</h3>
+        <p class="muted small">${queue.spawned.length}/${queue.totalParts} parts dispatched</p>
+        ${banner}
+        <div class="list">${rows || '<p class="muted">No parts spawned yet.</p>'}</div>
+        <div class="btn-row"><a class="btn ghost" href="#/series">📚 Series view</a></div>
+      </div>`;
   }
 
   function wireCommon() {
@@ -557,8 +603,20 @@ export async function renderTaskDetail(app, jobId) {
           const result = await ingestProductionPlan(credentials, credentials.repo, jobId,
             document.getElementById('up-paste').value);
           if (result.superPlan) {
-            feedback('This task is a Super Series anchor — the whole-series super-plan flow (task-06) handles this document. Use the Series view once it lands; nothing was saved.', true);
-            submit.disabled = false;
+            // task-06: whole-series super-plan detour
+            // (handleSuperPlanUploadMessage equivalent) — validate, persist
+            // the durable queue record, then immediately dispatch part 1.
+            feedback('Super Series anchor — validating the whole-series super-plan…', false);
+            try {
+              const superResult = await submitSuperPlan(credentials, credentials.repo, jobId, result.text);
+              if (!superResult.ok) { feedback(escapeHtml(superResult.error), true); submit.disabled = false; return; }
+              toast(`Super Series plan accepted — ${superResult.parts} parts queued; part 1 dispatched.`, 'ok', 6000);
+              panel.innerHTML = '';
+              setTimeout(draw, 1500);
+            } catch (error) {
+              feedback(escapeHtml(error.message || String(error)), true);
+              submit.disabled = false;
+            }
             return;
           }
           if (!result.ok) { feedback(escapeHtml(result.error), true); submit.disabled = false; return; }
