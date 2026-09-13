@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "series-1789258211391-p2",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:1FEE714A26C4688EEC01BD94709F685D48D996D9&dn=Star.vs.the.Forces.of.Evil.S02.1080p.AMZN.WEBRip.DDP.2.0.x265-EDGE2020&tr=udp://tracker.opentrackr.org:1337/announce&tr=udp://tracker.torrent.eu.org:451&tr=udp://open.stealth.si:80/announce&tr=udp://tracker.openbittorrent.com:6969&tr=udp://tracker.tiny-vps.com:6969/announce&tr=udp://open.demonii.com:1337&tr=udp://tracker.opentrackr.org:1337/announce&tr=http://tracker.openbittorrent.com:80/announce&tr=udp://opentracker.i2p.rocks:6969/announce&tr=udp://tracker.internetwarriors.net:1337/announce&tr=udp://tracker.leechers-paradise.org:6969/announce&tr=udp://coppersurfer.tk:6969/announce&tr=udp://tracker.zer0day.to:1337/announce",
+    "torrent_file_index": "10"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789258211391",
+    "source_job_id": "manual-1789258181075",
+    "part": 2,
+    "start_seconds": 340,
+    "context": "Prior events (Part 1): Desperate to attend the sold-out Mackie Hand movie marathon, Marco is surprised when Stars demon ex-boyfriend Tom pulls up in an extravagant carriage offering an extra ticket. Star insists it is a dangerous trap, but Tom claims he has changed his wicked ways and genuinely wants to be friends. Inside the dragon-drawn vehicle, Tom showers Marco with royal comforts and Swedish kung fu trivia, winning him over until Marco suspects a deeper motive behind Toms suspicious generosity."
+  },
+  "music": {
+    "ref": "audio-library/Cinematic_Documentary_Chill_by_Infraction_Copyright_Free_Music_Silver.m4a",
+    "source": "default"
+  },
+  "saved_at_epoch": 1789260236
+}
