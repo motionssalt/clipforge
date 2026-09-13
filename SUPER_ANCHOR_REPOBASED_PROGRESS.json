@@ -1,0 +1,12 @@
+{
+  "fix": "Super Series: repo-based anchor tracking + 'Part N' banner titles",
+  "date": "2026-09-13",
+  "changes": [
+    "bot/src/index.js runSuperQueueSweep: discovers active anchors by scanning the GitHub repo (listJobIds + probing jobs/<id>/super-plan.json) instead of the D1 task_options super_series_anchor flag; isSuperSeriesAnchor() added; superQueueTick accepts preloaded options and no longer writes/clears the D1 anchor flag",
+    "bot/src/super_series.js sliceSuperPart: guarantees the sliced part's title carries 'Part N' (appends ' \u2014 Part N' when the authored title lacks it), mirroring ordinary Series Mode banner convention",
+    "pipeline/plan/super_series.py slice_part: identical 'Part N' guarantee (validators/slicers stay 1:1, pinned by pipeline/tests/test_super_series.py)",
+    "D1 task_options/setTaskOptions/getTaskOptions are otherwise untouched (halt-notify bookkeeping still uses task_options; labels/announcements/clone-jobs unchanged)"
+  ],
+  "migration": "Live D1 checked 2026-09-13 via Cloudflare API: task_options has 5 rows, ZERO with super_series_anchor=true => no in-flight Super Series anchors; no migration step required.",
+  "app_impact": "The Android app can now start a working Super Series purely by writing jobs/<anchor>/super-plan.json (+ the ordinary stage-a-request.json) to the repo; the existing per-minute cron sweep picks it up with no bot-only step and no app->D1 dependency."
+}

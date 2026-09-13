@@ -190,6 +190,19 @@ export function sliceSuperPart(document, partIndex, jobId) {
   series.part = partIndex + 1;
   part.series = series;
   part.job_id = String(jobId || '');
+  // feature-01 round: guarantee the rendered title banner carries "Part N",
+  // exactly like ordinary Series Mode (whose Stage A directive makes the AI
+  // write it into production.json). The super-plan is authored in one shot
+  // with no per-part directive, so the SLICING step — the single shared point
+  // both the Telegram bot and the Android app flow through — appends the
+  // marker when the author-supplied title lacks it. "Title — Part N" matches
+  // the banner convention of an ordinary series part ("... Part N"); titles
+  // that already name a part ("... Part 2", "Part 2: ...") are left verbatim.
+  const partNumber = partIndex + 1;
+  const title = isNonemptyString(part.title) ? part.title.trim() : '';
+  if (title && !new RegExp(`\\bpart\\s+${partNumber}\\b`, 'i').test(title)) {
+    part.title = `${title} — Part ${partNumber}`;
+  }
   return part;
 }
 

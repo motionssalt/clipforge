@@ -27,6 +27,7 @@ titles, consistent series_id) are applied on top.
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from pipeline.plan import schema as plan_schema
@@ -153,6 +154,15 @@ def slice_part(document: dict[str, Any], part_index: int) -> dict[str, Any]:
     valid document. The returned document is a plain §7.3 production plan —
     identical in shape to what a normal Series Mode part's AI would return —
     with its ``series.part`` field re-stamped to the positional part number.
+
+    Guarantees the rendered title banner carries "Part N", exactly like
+    ordinary Series Mode (whose Stage A directive makes the AI write it into
+    production.json). The super-plan is authored in one shot with no per-part
+    directive, so the SLICING step — the single shared point both the Telegram
+    bot and the Android app flow through — appends the marker when the
+    author-supplied title lacks it. "Title — Part N" matches the banner
+    convention of an ordinary series part; titles that already name this part
+    ("... Part 2", "Part 2: ...") are left verbatim.
     """
     parts = document["parts"]
     part = dict(parts[part_index])
@@ -160,6 +170,11 @@ def slice_part(document: dict[str, Any], part_index: int) -> dict[str, Any]:
     series["part"] = part_index + 1
     part["series"] = series
     part["job_id"] = ""  # stamped by the caller for the real spawned job id
+    part_number = part_index + 1
+    title = part.get("title")
+    title = title.strip() if _is_nonempty_string(title) else ""
+    if title and re.search(rf"\bpart\s+{part_number}\b", title, flags=re.IGNORECASE) is None:
+        part["title"] = f"{title} — Part {part_number}"
     return part
 
 
