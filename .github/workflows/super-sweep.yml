@@ -1,0 +1,43 @@
+name: Super Series Queue Sweep
+
+# GitHub-only headless replacement for the removed Telegram bot's per-minute
+# super-series cron. Scans jobs/ for ACTIVE super-series anchors
+# (jobs/<id>/super-plan.json whose parts are not all spawned) and advances each
+# queue by at most one part: writes the spawned part's stage-a-request.json +
+# production.json + status.json, marks it spawned in the anchor record, then
+# dispatches stage-b.yml. The durable repo record is the only cursor, so a
+# part is never double-dispatched. Runs on a schedule AND on every push that
+# touches an anchor (so submitting a plan from the site/app dispatches part 1
+# within seconds), and can be run manually.
+
+on:
+  schedule:
+    - cron: "* * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "jobs/**/super-plan.json"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: clipforge-super-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Advance Super Series queues
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run queue sweep
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SWEEP_REPO: ${{ github.repository }}
+        run: node scripts/super_sweep/super-sweep.mjs
