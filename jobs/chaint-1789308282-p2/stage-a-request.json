@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "job_id": "chaint-1789308282-p2",
+  "saved_at_epoch": 1789308295,
+  "source": {
+    "kind": "url",
+    "value": ""
+  },
+  "options": {
+    "focus": ""
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "chaint-1789308282",
+    "source_job_id": "chaint-1789308282",
+    "part": 2,
+    "start_seconds": 60,
+    "context": "Prior events (Part 1): Part 1 recap"
+  },
+  "music": {
+    "ref": "",
+    "source": "none"
+  }
+}
