@@ -2,8 +2,8 @@
   "project": "clipforge-dashboard",
   "purpose": "GitHub-only migration: remove Telegram Bot A/B; Cloudflare Pages Dashboard (site/) with full bot feature parity; GitHub is the ONLY backend.",
   "build_complete": false,
-  "updated_by": "session-17 (task-09)",
-  "current_task": "task-10",
+  "updated_by": "session-17 (task-09/10)",
+  "current_task": "task-11",
   "constraints": {
     "no_worker_dependency": true,
     "auth": "one-time GitHub PAT prompt, localStorage, explicit disconnect only",
@@ -176,8 +176,8 @@
     {
       "id": "task-10",
       "title": "Cross-check feature catalog (task-01) vs built (task-02..09); fix every gap; note checklist satisfied",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (session-17, 2026-09-13): full task-01 feature catalog cross-checked against task-02..09 code. Static cross-check: 26 catalog capabilities verified present (auth/PAT, clone creation, classifySourceText auto-detect, all source kinds + main-account gate, Actions logs runs/{id}/jobs + jobs/{id}/logs, restarta/b guards, cancel two-branch, Series start-next-part duplicate guard + hold-delete, Super Series submit/tick, Narrator previews, Music library, Watermark, Zernio full publish+settings+targets+smart-schedule, multi-select delete, cached audio, FS-Access download, downloaded markers, clone visibility/sync). 5 grep flags resolved: 3 false positives (series/super defaults present via readSeriesSettings/saveSeriesSettings/readSuperSeriesSettings/saveSuperSeriesSettings wrappers; super submission present via submitSuperPlan import in tasks.js; main-account gate present via isOriginalRepo in newvideo.js). 2 GENUINE GAPS FIXED this session: (a) Gemini keys settings section added (validated add -> GEMINI_API_KEYS secret + branding/gemini_keys.json fingerprints; clear -> delete secret + metadata); (b) main-account news broadcast compose section added (docs/news.json message/interval_hours, 6/12/24h/off, isOriginalRepo-gated). Catalog is now fully satisfied."
     },
     {
       "id": "task-11",
@@ -192,5 +192,8 @@
       "notes": ""
     }
   ],
-  "notes": "Session-16 2026-09-13. task-06 done (see its notes: exact super_series port, 17/17 bot-test parity, E2E live-dispatch verified stage-b run 34751456208). RESUME POINT: task-07 next (Settings view — currently a 4-line stub: js/features/settings.js). Sections to build, all direct GitHub reads/writes (helpers already in js/github.js): GitHub clone (connect/disconnect/delete/visibility/sync/main-account push), Narrator (12 VOICES + assets/tts-previews/<voiceId>.mp3 playback), Music library (list/preview/default/delete/upload), Watermark, Series Mode default, Super Series default, Gemini keys, Zernio full settings. Bot source already catalogued in feature_catalog. Then task-08 (Zernio per-task publish flow), task-09 (media/multi-select/download), task-10 (cross-check), task-11 (Pages deploy + live verify), task-12 (bot/D1/KV deletion LAST — prerequisite: port super-queue sweep to a scheduled super-sweep.yml workflow first)."
+  "notes": "Session-16 2026-09-13. task-06 done (see its notes: exact super_series port, 17/17 bot-test parity, E2E live-dispatch verified stage-b run 34751456208). RESUME POINT: task-07 next (Settings view — currently a 4-line stub: js/features/settings.js). Sections to build, all direct GitHub reads/writes (helpers already in js/github.js): GitHub clone (connect/disconnect/delete/visibility/sync/main-account push), Narrator (12 VOICES + assets/tts-previews/<voiceId>.mp3 playback), Music library (list/preview/default/delete/upload), Watermark, Series Mode default, Super Series default, Gemini keys, Zernio full settings. Bot source already catalogued in feature_catalog. Then task-08 (Zernio per-task publish flow), task-09 (media/multi-select/download), task-10 (cross-check), task-11 (Pages deploy + live verify), task-12 (bot/D1/KV deletion LAST — prerequisite: port super-queue sweep to a scheduled super-sweep.yml workflow first).",
+  "task12_prerequisites": {
+    "super_sweep_cron": "PENDING: port runSuperQueueSweep from Bot A cron to a scheduled GitHub-native workflow (super-sweep.yml) BEFORE deleting the Worker in task-12"
+  }
 }
