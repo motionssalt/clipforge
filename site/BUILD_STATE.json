@@ -2,8 +2,8 @@
   "project": "clipforge-dashboard",
   "purpose": "GitHub-only migration: remove Telegram Bot A/B; Cloudflare Pages Dashboard (site/) with full bot feature parity; GitHub is the ONLY backend.",
   "build_complete": false,
-  "updated_by": "session-16 (task-07)",
-  "current_task": "task-08",
+  "updated_by": "session-16 (task-08)",
+  "current_task": "task-09",
   "constraints": {
     "no_worker_dependency": true,
     "auth": "one-time GitHub PAT prompt, localStorage, explicit disconnect only",
@@ -157,8 +157,15 @@
     {
       "id": "task-08",
       "title": "Zernio full feature set: 3 platforms, 3 publish modes, per-account multi-target, summary, conditional visibility, full settings (read bot/src/zernio.js first \u2014 DONE in task-01)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (2026-09-13 session): Zernio per-task publish flow fully implemented in site/js/features/tasks.js, ported exactly from bot/src/zernio.js + bot/src/index.js \u00a78.5 (read in full first per contract). zernioTaskPublishButton (bug-62): CTA on complete tasks only when settings.enabled; status-aware label \u2014 'View publish status' for published/partial (\u2705) and publishing/scheduled (\u23f3), 'Publish (Zernio)' for not_requested/failed/cancelled. showZernioPublishMenu = zernioPublishText + zernioPublishKeyboard: complete-state gate, summary (zernioPublishingSummary), config guidance lines (no key / disabled / no targets), and action rows \u2014 Publish now / Smart schedule / Choose date and time (manual via datetime-local + validZernioDateTime); per-post actions for up to 6 posts with POST_ID_PATTERN guard: Retry (failed/error/partial), Publish-now + Reschedule + Cancel (scheduled/requested/publishing/partial/failed/error). dispatchZernioPublish = exact publish.yml action=publish dispatch with job_id/mode/scheduled_for/timezone/targets_json/request_id (zernioRequestId reuses prior idempotency key after a failed attempt); dispatchZernioPostAction = exact action=retry/update/cancel dispatch with post_id and cancel-confirmation. All guards match the bot verbatim (secret configured, controls enabled, >=1 active target, mode whitelist, manual datetime validation). Settings-side Zernio (key save/replace, refresh via publish.yml action=discover, toggles, target selection, smart-schedule editor, clear-key confirm) was already landed in task-07's settings.js with applySmartScheduleField/toggleZernioTarget validation.",
+      "commits": [
+        "PENDING"
+      ],
+      "files": [
+        "site/js/features/tasks.js"
+      ],
+      "tests": "node vm.SourceTextModule ESM syntax check passes for tasks.js; static named-import resolution check passes across all site modules."
     },
     {
       "id": "task-09",

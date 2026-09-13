@@ -31,8 +31,11 @@ import {
   tryGetJsonFile, saveStageARequest, putTextFile, deleteClipforgeJob,
   currentBranchSha, dispatchWorkflow, cancelWorkflowRun,
   getRunInfo, listRunJobs, getJobLogs, resolveMusicRef,
-  STATUS_PATH, STAGE_A_WORKFLOW, STAGE_B_WORKFLOW,
-  mergeStatus, isTerminal, zernioPublishingSummary, readZernioSettingsSafe
+  STATUS_PATH, STAGE_A_WORKFLOW, STAGE_B_WORKFLOW, PUBLISH_WORKFLOW,
+  mergeStatus, isTerminal, zernioPublishingSummary, readZernioSettingsSafe,
+  readZernioAccounts, actionsSecretExists, zernioTargets, zernioPostId,
+  zernioRequestId, validZernioDateTime, ZERNIO_SECRET_NAME, ZERNIO_PLATFORM_LABELS,
+  POST_ID_PATTERN
 } from '../github.js';
 import { ingestProductionPlan, readPlanFile, MAX_PLAN_BYTES } from '../planupload.js';
 import { submitSuperPlan, describeSuperQueue, superQueueTick } from '../supertick.js';
@@ -393,9 +396,19 @@ export async function renderTaskDetail(app, jobId) {
     }
     if (state === 'complete') {
       actions.push('<button type="button" class="primary" id="td-download">📥 Download</button>');
-      // bug-62 conditional visibility — the full publish flow lands in task-08.
+      // zernioTaskPublishButton (bug-62 exact port): the CTA only appears when
+      // Zernio is enabled, and reflects the §6.2 publishing state — once a task
+      // is published/partial/publishing/scheduled the raw publish CTA becomes a
+      // status-view affordance; not_requested/failed/cancelled stay publishable.
       if (zernio && zernio.enabled === true) {
-        actions.push('<button type="button" id="td-publish">📣 Publish</button>');
+        const pubStatus = String(status.publishing && status.publishing.status || 'not_requested').toLowerCase();
+        if (pubStatus === 'published' || pubStatus === 'partial') {
+          actions.push('<button type="button" id="td-publish">✅ View publish status</button>');
+        } else if (pubStatus === 'publishing' || pubStatus === 'scheduled') {
+          actions.push('<button type="button" id="td-publish">⏳ View publish status</button>');
+        } else {
+          actions.push('<button type="button" id="td-publish">📣 Publish (Zernio)</button>');
+        }
       }
       if (series.enabled === true) {
         actions.push('<button type="button" id="td-prompt">📋 Copy prompt</button>');
@@ -466,6 +479,202 @@ export async function renderTaskDetail(app, jobId) {
         <div class="list">${rows || '<p class="muted">No parts spawned yet.</p>'}</div>
         <div class="btn-row"><a class="btn ghost" href="#/series">📚 Series view</a></div>
       </div>`;
+  }
+
+  // ----- Zernio per-task publish (task-08 — port of bot index.js §8.5 ---- //
+
+  /** loadZernioConfig equivalent: settings + accounts + secret presence. */
+  async function loadZernioConfig() {
+    const [settings, accounts, secretConfigured] = await Promise.all([
+      readZernioSettingsSafe(credentials, credentials.repo),
+      readZernioAccounts(credentials, credentials.repo).catch(() => []),
+      actionsSecretExists(credentials, credentials.repo, ZERNIO_SECRET_NAME).catch(() => false)
+    ]);
+    return { settings, accounts, secretConfigured };
+  }
+
+  function zernioPublishingOf(status) {
+    return (status && status.publishing && typeof status.publishing === 'object')
+      ? status.publishing : { status: 'not_requested', posts: [], idempotency_key: '' };
+  }
+
+  /** Per-task publish menu — zernioPublishText + zernioPublishKeyboard. */
+  async function showZernioPublishMenu(panel, label) {
+    const status = await readStatus(credentials, credentials.repo, jobId).catch(() => null);
+    if (!status || status.state !== 'complete') {
+      panel.innerHTML = `<div class="card"><h3>Publish — Task ${escapeHtml(label)}</h3>
+        <p class="muted">Task ${escapeHtml(label)} is not complete yet — Zernio publishing is available only after Stage B reports <b>complete</b>.</p>
+        <div class="btn-row"><button type="button" class="ghost" id="pub-close">Close</button></div></div>`;
+      document.getElementById('pub-close').addEventListener('click', () => { panel.innerHTML = ''; });
+      return;
+    }
+    const config = await loadZernioConfig();
+    const publishing = zernioPublishingOf(status);
+    const targets = zernioTargets(config.settings, config.accounts);
+
+    // zernioPublishText body.
+    const lines = [];
+    if (!config.secretConfigured) lines.push('Save a Zernio API key in settings before submitting a request.');
+    else if (!config.settings.enabled) lines.push('Enable Zernio publishing controls in settings before submitting a request.');
+    else if (!targets.length) lines.push('Select at least one active TikTok, YouTube, or Instagram target account in settings.');
+    else {
+      lines.push(`Targets: ${targets.map((g) => `${g.platform} (${g.account_ids.length})`).join(' · ')}`);
+      lines.push(`Timezone: ${escapeHtml(config.settings.smart_schedule.timezone)}`);
+    }
+
+    // zernioPublishKeyboard rows: publish affordances + per-post actions.
+    const rows = [];
+    if (config.secretConfigured && config.settings.enabled && targets.length) {
+      rows.push(`<div class="btn-row">
+        <button type="button" class="primary" id="pub-now">Publish now</button>
+        <button type="button" id="pub-smart">Smart schedule</button>
+        <button type="button" id="pub-manual">Choose date and time</button>
+      </div>`);
+    }
+    const posts = Array.isArray(publishing.posts) ? publishing.posts : [];
+    for (const post of posts.slice(0, 6)) {
+      const postId = zernioPostId(post);
+      if (!POST_ID_PATTERN.test(postId)) continue;
+      const pstate = String(post.status || post.state || '').toLowerCase();
+      const platform = String(post.platform || 'post');
+      const platformLabel = ZERNIO_PLATFORM_LABELS[platform] || platform;
+      if (['failed', 'error', 'partial'].includes(pstate)) {
+        rows.push(`<div class="btn-row"><button type="button" data-post-retry="${escapeHtml(postId)}">Retry ${escapeHtml(platformLabel)}</button></div>`);
+      }
+      if (['scheduled', 'requested', 'publishing', 'partial', 'failed', 'error'].includes(pstate)) {
+        rows.push(`<div class="btn-row">
+          <button type="button" data-post-now="${escapeHtml(postId)}">Publish ${escapeHtml(platformLabel)} now</button>
+          <button type="button" data-post-resched="${escapeHtml(postId)}">Reschedule ${escapeHtml(platformLabel)}</button>
+          <button type="button" class="danger" data-post-cancel="${escapeHtml(postId)}">Cancel ${escapeHtml(platformLabel)}</button>
+        </div>`);
+      }
+    }
+
+    panel.innerHTML = `<div class="card">
+      <h3>Task ${escapeHtml(label)} — Zernio publishing</h3>
+      <p class="mono small">${escapeHtml(jobId)}</p>
+      <p class="muted">${escapeHtml(zernioPublishingSummary(publishing))}</p>
+      ${lines.map((l) => `<p class="muted">${l}</p>`).join('')}
+      ${rows.join('')}
+      <div class="btn-row">
+        <button type="button" class="ghost" id="pub-refresh">Refresh publish menu</button>
+        <button type="button" class="ghost" id="pub-close">Close</button>
+      </div>
+      <div id="pub-sub"></div>
+    </div>`;
+    panel.scrollIntoView({ behavior: 'smooth' });
+
+    const sub = panel.querySelector('#pub-sub');
+    panel.querySelector('#pub-close').addEventListener('click', () => { panel.innerHTML = ''; });
+    panel.querySelector('#pub-refresh').addEventListener('click', () => showZernioPublishMenu(panel, label));
+
+    const nowBtn = panel.querySelector('#pub-now');
+    if (nowBtn) nowBtn.addEventListener('click', () => dispatchZernioPublish(panel, label, 'publish_now', ''));
+    const smartBtn = panel.querySelector('#pub-smart');
+    if (smartBtn) smartBtn.addEventListener('click', () => dispatchZernioPublish(panel, label, 'smart_schedule', ''));
+    const manualBtn = panel.querySelector('#pub-manual');
+    if (manualBtn) manualBtn.addEventListener('click', () => {
+      sub.innerHTML = `<div class="field">
+        <p class="muted small">Send the local scheduled time as <span class="mono">YYYY-MM-DDTHH:MM</span>. The configured Zernio timezone (${escapeHtml(config.settings.smart_schedule.timezone)}) will be used.</p>
+        <input id="pub-dt" type="datetime-local">
+        <div class="btn-row">
+          <button type="button" class="primary" id="pub-dt-go">Schedule</button>
+          <button type="button" class="ghost" id="pub-dt-cancel">Cancel</button>
+        </div></div>`;
+      sub.querySelector('#pub-dt-cancel').addEventListener('click', () => { sub.innerHTML = ''; });
+      sub.querySelector('#pub-dt-go').addEventListener('click', () => {
+        const value = String(sub.querySelector('#pub-dt').value || '').trim();
+        if (!validZernioDateTime(value)) {
+          toast('Send the local scheduled time as YYYY-MM-DDTHH:MM.', 'err');
+          return;
+        }
+        dispatchZernioPublish(panel, label, 'manual_schedule', value);
+      });
+    });
+
+    for (const btn of panel.querySelectorAll('[data-post-retry]')) {
+      btn.addEventListener('click', () => dispatchZernioPostAction(panel, label, btn.dataset.postRetry, 'retry', '', ''));
+    }
+    for (const btn of panel.querySelectorAll('[data-post-now]')) {
+      btn.addEventListener('click', () => dispatchZernioPostAction(panel, label, btn.dataset.postNow, 'update', 'publish_now', ''));
+    }
+    for (const btn of panel.querySelectorAll('[data-post-cancel]')) {
+      btn.addEventListener('click', () => dispatchZernioPostAction(panel, label, btn.dataset.postCancel, 'cancel', '', ''));
+    }
+    for (const btn of panel.querySelectorAll('[data-post-resched]')) {
+      btn.addEventListener('click', () => {
+        const postId = btn.dataset.postResched;
+        sub.innerHTML = `<div class="field">
+          <p class="muted small">New local scheduled time as <span class="mono">YYYY-MM-DDTHH:MM</span> (${escapeHtml(config.settings.smart_schedule.timezone)}).</p>
+          <input id="pub-pdt" type="datetime-local">
+          <div class="btn-row">
+            <button type="button" class="primary" id="pub-pdt-go">Reschedule</button>
+            <button type="button" class="ghost" id="pub-pdt-cancel">Cancel</button>
+          </div></div>`;
+        sub.querySelector('#pub-pdt-cancel').addEventListener('click', () => { sub.innerHTML = ''; });
+        sub.querySelector('#pub-pdt-go').addEventListener('click', () => {
+          const value = String(sub.querySelector('#pub-pdt').value || '').trim();
+          if (!validZernioDateTime(value)) {
+            toast('Send the new local scheduled time as YYYY-MM-DDTHH:MM.', 'err');
+            return;
+          }
+          dispatchZernioPostAction(panel, label, postId, 'update', 'manual_schedule', value);
+        });
+      });
+    }
+  }
+
+  /** dispatchZernioPublish port: publish.yml action=publish for a new attempt. */
+  async function dispatchZernioPublish(panel, label, mode, scheduledFor) {
+    const status = await readStatus(credentials, credentials.repo, jobId).catch(() => null);
+    if (!status || status.state !== 'complete') throw new Error('Zernio publishing is available after Stage B completes.');
+    const config = await loadZernioConfig();
+    if (!config.secretConfigured) throw new Error('Save a Zernio API key in settings before publishing.');
+    if (!config.settings.enabled) throw new Error('Enable Zernio publishing controls in settings before publishing.');
+    const targets = zernioTargets(config.settings, config.accounts);
+    if (!targets.length) throw new Error('Select at least one active TikTok, YouTube, or Instagram account in Zernio settings.');
+    if (!['publish_now', 'smart_schedule', 'manual_schedule'].includes(mode)) throw new Error('That publishing mode is unavailable.');
+    if (mode === 'manual_schedule' && !validZernioDateTime(scheduledFor)) throw new Error('Send a local time in YYYY-MM-DDTHH:MM format.');
+    const publishing = zernioPublishingOf(status);
+    await dispatchWorkflow(credentials, credentials.repo, PUBLISH_WORKFLOW, {
+      action: 'publish',
+      job_id: jobId,
+      mode,
+      scheduled_for: scheduledFor || '',
+      timezone: config.settings.smart_schedule.timezone,
+      targets_json: JSON.stringify(targets),
+      request_id: zernioRequestId(jobId, publishing)
+    });
+    const modeLabel = mode === 'publish_now' ? 'publish-now' : mode === 'smart_schedule' ? 'smart-schedule' : 'scheduled';
+    toast(`Zernio ${modeLabel} request dispatched for task ${label}. Stage B stays complete while Zernio processes the request.`, 'ok', 6000);
+    showZernioPublishMenu(panel, label);
+  }
+
+  /** dispatchZernioPostAction port: publish.yml retry / update / cancel. */
+  async function dispatchZernioPostAction(panel, label, postId, action, mode, scheduledFor) {
+    if (!POST_ID_PATTERN.test(String(postId || '')) || !['retry', 'update', 'cancel'].includes(action)) {
+      throw new Error('That Zernio post action is invalid.');
+    }
+    if (action === 'cancel') {
+      const ok = await confirmDialog(`Cancel Zernio post ${postId}?`,
+        'The scheduled/pending Zernio post for this platform is cancelled.', 'Cancel post', true);
+      if (!ok) return;
+    }
+    const config = await loadZernioConfig();
+    if (!config.secretConfigured) throw new Error('Save a Zernio API key in settings before managing posts.');
+    if (action === 'update' && mode === 'manual_schedule' && !validZernioDateTime(scheduledFor)) {
+      throw new Error('Send a local time in YYYY-MM-DDTHH:MM format.');
+    }
+    await dispatchWorkflow(credentials, credentials.repo, PUBLISH_WORKFLOW, {
+      action,
+      job_id: jobId,
+      post_id: postId,
+      mode: mode || '',
+      scheduled_for: scheduledFor || '',
+      timezone: config.settings.smart_schedule.timezone
+    });
+    toast(`Zernio ${action} request dispatched for task ${label}. Refresh the publish menu after the workflow finishes.`, 'ok', 6000);
+    showZernioPublishMenu(panel, label);
   }
 
   function wireCommon() {
@@ -653,16 +862,12 @@ export async function renderTaskDetail(app, jobId) {
     });
 
     const publishBtn = document.getElementById('td-publish');
-    if (publishBtn) publishBtn.addEventListener('click', () => {
-      panel.innerHTML = `
-        <div class="card">
-          <h3>Publish — Task ${escapeHtml(label)}</h3>
-          <p class="muted">The full Zernio publish flow (platform/mode/target selection) is task-08 — it has not
-          landed yet. Nothing was dispatched.</p>
-          <div class="btn-row"><button type="button" class="ghost" id="pub-close">Close</button></div>
-        </div>`;
+    if (publishBtn) publishBtn.addEventListener('click', () => showZernioPublishMenu(panel, label).catch((error) => {
+      panel.innerHTML = `<div class="card"><h3>Publish — Task ${escapeHtml(label)}</h3>
+        <p class="error-text">${escapeHtml(error && error.message || String(error))}</p>
+        <div class="btn-row"><button type="button" class="ghost" id="pub-close">Close</button></div></div>`;
       document.getElementById('pub-close').addEventListener('click', () => { panel.innerHTML = ''; });
-    });
+    }));
   }
 
   async function showTorrentPanel(panel, page) {
