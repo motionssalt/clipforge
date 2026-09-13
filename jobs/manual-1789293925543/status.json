@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (magnet)",
+  "state": "awaiting_torrent_selection",
+  "message": "Source has 146 video files — pick one to continue.",
   "created_at_epoch": 1789293925,
-  "updated_at_epoch": 1789293972,
+  "updated_at_epoch": 1789293980,
   "expires_at_epoch": 1789466725,
   "release_tag": "clipforge-manual-1789293925543",
   "release_url": "",
