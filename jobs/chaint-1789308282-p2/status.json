@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "chaint-1789308282-p2",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 2 of 2 — Stage B dispatched (chained from part 1's completion).",
+  "updated_at_epoch": 1789308297,
+  "series": {
+    "enabled": true,
+    "series_id": "chaint-1789308282",
+    "part": 2,
+    "start_seconds": 60,
+    "is_final": true
+  },
+  "release_tag": "clipforge-chaint-1789308282-p2",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-chaint-1789308282-p2"
+}
