@@ -817,6 +817,18 @@
         "6aa607c5eb0fe9996243c615"
       ],
       "updated_at_epoch": 1789265861
+    },
+    {
+      "job_id": "scissors-p3",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-16T11:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6aa60b1c60ce66ebf298ec29",
+        "6aa60b1e60ce66ebf298ecad"
+      ],
+      "updated_at_epoch": 1789266718
     }
   ]
 }
