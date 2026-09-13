@@ -9,18 +9,18 @@
     "start_seconds": 995,
     "is_final": true
   },
-  "state": "stage_b_queued",
-  "message": "Super Series part 4 of 4 — Stage B dispatched.",
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
   "created_at_epoch": 1789266723,
-  "updated_at_epoch": 1789266723,
+  "updated_at_epoch": 1789266737,
   "expires_at_epoch": 1789439523,
   "release_tag": "clipforge-scissors-p4",
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-scissors-p4",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 34733286793,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34733286793",
+    "code_ref": "ff86304b15f1f23221a228fb60cb1fc426c9d91a"
   },
   "publishing": {
     "status": "not_requested",
