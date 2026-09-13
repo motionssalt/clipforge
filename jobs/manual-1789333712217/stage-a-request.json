@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "manual-1789333712217",
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:1e30258b599bc7f61a8342f187395fe790001915&dn=%5BFeibanyama%5D%20Mushoku%20Tensei%20Jobless%20Reincarnation%20S01%20%5BBILIBILI%20WebRip%202160p%20HEVC%20OPUS%20Multi-Subs%5D%20%28Mushoku%20Tensei%3A%20Isekai%20Ittara%20Honki%20Dasu%29&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789333712217",
+    "source_job_id": "manual-1789333712217",
+    "part": 1,
+    "start_seconds": 0,
+    "context": "",
+    "super_series": true
+  },
+  "music": {
+    "ref": "audio-library\/Dj_Quads_-_its_near_[No_Copyright_Music].m4a",
+    "source": "explicit_library"
+  },
+  "saved_at_epoch": 1789333712
+}
