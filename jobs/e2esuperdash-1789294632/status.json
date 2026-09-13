@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "job_id": "e2esuperdash-1789294632",
+  "mode": "manual",
+  "state": "awaiting_plan",
+  "message": "E2E anchor awaiting super-plan",
+  "created_at_epoch": 1789294633,
+  "updated_at_epoch": 1789294633,
+  "expires_at_epoch": 1789467433
+}
