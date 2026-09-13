@@ -130,7 +130,7 @@
     {
       "id": "task-05",
       "title": "Series: dedicated view, per-part status, Start Next Part w/ duplicate-dispatch guard, hold-to-delete series",
-      "status": "pending",
+      "status": "done",
       "notes": ""
     },
     {
@@ -176,5 +176,5 @@
       "notes": ""
     }
   ],
-  "notes": "Session-15 2026-09-13 (continued). task-04 done: features/tasks.js \u2014 Tasks list (bot commands/tasks.js parity: newest-first sort, unreadable-status explicit rows, inline Confirm-Delete row toggle, 8s live polling while non-terminal) + Completed view via shared renderer (done.js). Task detail = runtime.js showTask/taskKeyboard parity: awaiting_torrent_selection picker (6/page, saves torrent_file_index + redispatches stage-a.yml), awaiting_plan (agent prompt card = verbatim sendAgentPrompt text incl. SERIES/SUPER SERIES clauses + copy button; upload = planupload.js paste-or-file), stage_b_queued/running Cancel Stage B (confirm dialog + two-branch: cancel run id vs local cancelled status), error/cancelled restarts with bug-15 stage-B-started gate, complete Download assets panel, Zernio Publish CTA gated on zernio_settings.enabled (full flow is task-08), delete for terminal/unreadable. LOGS REWORK: listRunJobs + getJobLogs against run id from status.run.workflow_run_id; raw log lines grouped into REAL per-step sections by step started_at/completed_at timestamp windows; active step auto-expanded, finished step auto-collapses as the next activates; manual toggle always available; localStorage cache (cf.logs.<jobId>) renders instantly on reopen; completed-job logs are final and never re-fetched; poll appends only non-final jobs; polling stops at run terminal state. RESUME POINT: task-05 next (Series view: per-part status, Start Next Part with nextPartJobId/nextPartRequestBody duplicate-dispatch guard, hold-to-delete series)."
+  "notes": "Session-15 2026-09-13 (continued). task-05 done: site/js/series.js = EXACT port of bot/src/series.js (manualSeriesContinuation, extractPlanSeries nested-wins, buildSeriesContext 'Prior events (Part N)' capped 8000, nextPartRequestBody incl. bug-65 options carry + bug-64 source_job_id fallback, nextPartJobId with isValidJobId inlined from jobs.js; node-verified). features/series.js = Series view: groups every job by status.series.series_id, per-part rows sorted by part with state pills (anchor jobs detected via jobs/<id>/super-plan.json second pass, Super Series dispatch count line), Start Next Part on the latest completed part with the bot's exact startNextSeriesPart flow (continuation derivation -> duplicate-dispatch guard on existing request/status -> seriesContextSummaries -> saveStageARequest + queued status + stage-a dispatch -> label + setTaskOptions), hold-to-delete entire series (700ms pointer hold on the series title -> destructive confirmDialog -> every job's files+release removed, labels reclaimed), 10s live polling while any part non-terminal. RESUME POINT: task-06 next (Super Series: settings surface, super-plan submission via planupload.js superPlan detour, queue/halt display + client-driven superQueueTick port, verified real Stage B dispatch)."
 }
