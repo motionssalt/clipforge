@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "job_id": "cat-p3",
+  "saved_at_epoch": 1789329176,
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:0664096058102bc54ac7eda13f7e56d3765d7282&dn=%5BToonsHub%5D%20Chainsmoker%20Cat%20S01E01%20REPACK%201080p%20NF%20WEB-DL%20MULTi%20AAC2.0%20H.264%20%28Yani%20Neko%2C%20Multi-Audio%2C%20Multi-Subs%2C%20Uncensored%29&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "cat",
+    "source_job_id": "manual-1789317419261",
+    "part": 3,
+    "start_seconds": 991,
+    "context": "Prior events (Part 1): The chaotic cat girl accidentally drenches her landlord in sludge and faces a disastrous day of grueling physical labor and confrontation.\nPrior events (Part 2): Afflicted by a bizarre glowing illness, the cat girl suffers feverish visions before being ambushed in the dark by a mysterious assailant."
+  },
+  "music": {
+    "ref": "",
+    "source": "default"
+  }
+}
