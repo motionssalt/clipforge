@@ -36,6 +36,87 @@ from pathlib import Path
 
 
 # --------------------------------------------------------------------------- #
+# Live ffmpeg progress (visibility only — behavior unchanged)                  #
+# --------------------------------------------------------------------------- #
+
+def run_ffmpeg_streaming(cmd: list[str], desc: str) -> str:
+    """Run ffmpeg with stderr streamed LIVE, returning the full stderr text.
+
+    Returns ``(stderr_text, returncode)`` — a drop-in visibility
+    replacement for ``subprocess.run(cmd, capture_output=True, text=True)``
+    on the long single-pass decode passes in this module.
+    ``capture_output`` buffers every byte of stderr until
+    the process exits, so a multi-minute pass looks identical to a hung
+    process in the Actions log. Here stderr is read incrementally instead
+    (stderr=PIPE, iter over lines) and a compact heartbeat is printed as
+    frames/time advance, so a long run is visibly still working.
+
+    Behavior contract (unchanged vs. capture_output):
+      * waits for the process to finish however long it takes — NO
+        timeout, NO kill switch, nothing that aborts early;
+      * returns the COMPLETE stderr text exactly as ``proc.stderr`` under
+        capture_output would have, so callers parse the identical string;
+      * does NOT raise on a nonzero exit — the caller checks the exit
+        code and keeps its existing error path (full stderr tail
+        available). Same success path, same file outputs, same results.
+
+    ffmpeg's progress/stats lines use ``\\r`` carriage returns on one
+    terminal line, so chunks are split on ``\\r``/``\\n`` into logical
+    lines and only compact ``key=value`` progress lines (frame=, time=)
+    are echoed, throttled to one heartbeat per ~15s of output or when the
+    timestamp advances by >=30s; ``showinfo`` frame lines are sampled
+    1-in-25. All other lines (headers, errors) print verbatim.
+    """
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+        errors="replace",
+        bufsize=1,
+    )
+    assert proc.stderr is not None
+    collected: list[str] = []
+    partial = ""
+    last_progress_line = ""
+    frame_lines = 0
+    chunks = 0
+    while True:
+        chunk = proc.stderr.read(4096)
+        if not chunk:
+            break
+        chunks += 1
+        collected.append(chunk)
+        partial += chunk
+        parts = re.split(r"[\r\n]+", partial)
+        partial = parts.pop()  # last element may be an incomplete line
+        for part in parts:
+            part = part.strip()
+            if not part:
+                continue
+            if re.match(r"^(?:\S+=\S+\s+)+\S+=\S+\s*$", part):
+                # Compact ffmpeg progress/stats line (frame= ... time= ...).
+                if part != last_progress_line and ("frame=" in part or "time=" in part):
+                    if chunks % 32 == 1:
+                        print(f"  [ffmpeg:{desc}] {part}", flush=True)
+                        last_progress_line = part
+            elif re.match(r"^\[\S+ @ 0x[0-9a-fA-F]+\]", part) and " n:" in part:
+                # showinfo per-frame line — sample so the log shows decode
+                # position advancing without flooding it.
+                frame_lines += 1
+                if frame_lines % 25 == 1:
+                    print(f"  [ffmpeg:{desc}] {part[-160:]}", flush=True)
+            else:
+                print(f"  [ffmpeg:{desc}] {part}", flush=True)
+    tail = partial.strip()
+    if tail and tail != last_progress_line:
+        print(f"  [ffmpeg:{desc}] {tail}", flush=True)
+    returncode = proc.wait()  # no timeout: slow-but-completing runs finish
+    print(f"  [ffmpeg:{desc}] process exited rc={returncode}", flush=True)
+    return "".join(collected), returncode
+
+
+# --------------------------------------------------------------------------- #
 # Shot boundaries (from scene_index.py)                                        #
 # --------------------------------------------------------------------------- #
 
@@ -59,13 +140,13 @@ def detect_shots(video_path: str, threshold: float) -> list[float]:
         "-",
     ]
     print(f"$ {' '.join(cmd)}", flush=True)
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        print(proc.stderr[-2000:], file=sys.stderr)
-        raise RuntimeError(f"ffmpeg scene-detect failed (exit {proc.returncode})")
+    stderr_text, returncode = run_ffmpeg_streaming(cmd, "scene-detect")
+    if returncode != 0:
+        print(stderr_text[-2000:], file=sys.stderr)
+        raise RuntimeError(f"ffmpeg scene-detect failed (exit {returncode})")
 
     times: list[float] = []
-    for line in proc.stderr.splitlines():
+    for line in stderr_text.splitlines():
         m = SCENE_LINE_RE.search(line)
         if m:
             try:
@@ -542,10 +623,10 @@ def extract_baseline_composites(
         str(tmp_dir / "grid_%05d.jpg"),
     ]
     print(f"$ {' '.join(cmd)}", flush=True)
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        print(proc.stderr[-2000:], file=sys.stderr)
-        raise RuntimeError(f"ffmpeg baseline composite extraction failed (exit {proc.returncode})")
+    stderr_text, returncode = run_ffmpeg_streaming(cmd, "baseline-composites")
+    if returncode != 0:
+        print(stderr_text[-2000:], file=sys.stderr)
+        raise RuntimeError(f"ffmpeg baseline composite extraction failed (exit {returncode})")
 
     count = 0
     for f in sorted(tmp_dir.glob("grid_*.jpg")):
