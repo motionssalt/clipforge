@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "job_id": "scissors-p3",
+  "title": "Buff Frog Infiltrates Secret Monster Mill — Part 3",
+  "video_duration_seconds": 1315,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#starvstheforcesofevil",
+    "#svtfoe",
+    "#bufffrog",
+    "#mewni",
+    "#disneyanimation",
+    "#cartoonmystery"
+  ],
+  "youtube_tags": [
+    "star vs the forces of evil",
+    "svtfoe",
+    "buff frog",
+    "mewni force field",
+    "corn factory",
+    "secret operation",
+    "monster rebellion",
+    "disney cartoon",
+    "underground labor",
+    "disney xd",
+    "mystery clip",
+    "star vs monsters"
+  ],
+  "series": {
+    "series_id": "scissors",
+    "part": 3,
+    "start_seconds": 675,
+    "end_seconds": 995,
+    "is_final": false,
+    "summary": "Investigating a mysterious breach in the Mewman force field to find hope for his starving tadpoles, Buff Frog follows the trail into a hidden cavern. There he discovers a massive slave-labor facility where captured creatures grind infinite corn under threat of execution down a bottomless hole. Framed for stealing grain, Buff Frog is arrested by giant rodent guards and dragged toward the throne of an unknown tyrant."
+  },
+  "cuts": [
+    {
+      "start_seconds": 687,
+      "end_seconds": 712,
+      "voiceover_text": "Buff Frog investigates the perimeter and discovers a massive breach in the royal force field. Someone cracked Mewnis ancient magic. If monsters can exploit this vulnerability, he can finally secure a future for his tadpoles.",
+      "keywords": [
+        {
+          "word": "breach",
+          "color": "#0984E3"
+        }
+      ]
+    },
+    {
+      "start_seconds": 808,
+      "end_seconds": 835,
+      "voiceover_text": "Following the trail underground, Buff Frog is forced into a brutal slave camp. Captured monsters grind endless grain under one terrifying rule: work without stopping, or be thrown down the bottomless pit.",
+      "keywords": [
+        {
+          "word": "terrifying",
+          "color": "#E17055"
+        }
+      ]
+    },
+    {
+      "start_seconds": 862,
+      "end_seconds": 897,
+      "voiceover_text": "When stray kernels are planted in his coat, guards frame him for theft. Buff Frog is dragged kicking and screaming toward the inner sanctum, terrified of what creature rules this shadow empire.",
+      "keywords": [
+        {
+          "word": "theft",
+          "color": "#FD79A8"
+        }
+      ]
+    }
+  ]
+}
