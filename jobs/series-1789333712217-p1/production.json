@@ -1,0 +1,169 @@
+{
+  "video_duration_seconds": 1422,
+  "title": "Reborn Shut In Discovers Secret Magic — Part 1",
+  "series": {
+    "series_id": "series-1789333712217",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 654,
+    "is_final": false,
+    "summary": "After dying in a traffic accident, a former shut-in reincarnates into a fantasy world as baby Rudeus Greyrat and secretly teaches himself chantless water magic from a grimoire."
+  },
+  "series_summary": "After dying in a traffic accident, a former shut-in reincarnates into a fantasy world as baby Rudeus Greyrat and secretly teaches himself chantless water magic from a grimoire.",
+  "hashtags": [
+    "#anime",
+    "#mushokutensei",
+    "#joblessreincarnation",
+    "#isekai",
+    "#rudeus",
+    "#magic"
+  ],
+  "youtube_tags": [
+    "mushoku tensei",
+    "jobless reincarnation",
+    "rudeus greyrat",
+    "isekai anime",
+    "reincarnation anime",
+    "mushoku tensei episode 1",
+    "chantless magic",
+    "anime magic",
+    "rudeus magic practice",
+    "water magic",
+    "anime prodigy",
+    "magic book"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 17,
+      "end_seconds": 38,
+      "voiceover_text": "A fatal crash in the rain ends his wasted life, but death is not the finish. He sacrifices himself to shove strangers away from a speeding truck.",
+      "raw_narration": "A fatal crash in the rain ends his wasted life, but death is not the finish. He sacrifices himself to shove strangers away from a speeding truck.",
+      "keywords": [
+        {
+          "word": "fatal",
+          "color": "#FF4444"
+        },
+        {
+          "word": "sacrifices",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 98,
+      "end_seconds": 126,
+      "voiceover_text": "He opens his eyes inside a strange cottage. A joyous couple cradles him. He has reincarnated as a newborn baby named Rudeus.",
+      "raw_narration": "He opens his eyes inside a strange cottage. A joyous couple cradles him. He has reincarnated as a newborn baby named Rudeus.",
+      "keywords": [
+        {
+          "word": "reincarnated",
+          "color": "#00E5FF"
+        },
+        {
+          "word": "Rudeus",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 565,
+      "end_seconds": 589,
+      "voiceover_text": "As a toddler, Rudeus secretly opens an ancient grimoire. He focuses his mind, feeling mystical mana stir within his small hands.",
+      "raw_narration": "As a toddler, Rudeus secretly opens an ancient grimoire. He focuses his mind, feeling mystical mana stir within his small hands.",
+      "keywords": [
+        {
+          "word": "grimoire",
+          "color": "#FFD700"
+        },
+        {
+          "word": "mana",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 626,
+      "end_seconds": 654,
+      "voiceover_text": "Without uttering a single incantation, he forms a floating water sphere. But as the magic surges, can he keep this impossible talent hidden from his family?",
+      "raw_narration": "Without uttering a single incantation, he forms a floating water sphere. But as the magic surges, can he keep this impossible talent hidden from his family?",
+      "keywords": [
+        {
+          "word": "incantation",
+          "color": "#FF4444"
+        },
+        {
+          "word": "floating",
+          "color": "#00E5FF"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "start_seconds": 17,
+      "end_seconds": 38,
+      "voiceover_text": "A fatal crash in the rain ends his wasted life, but death is not the finish. He sacrifices himself to shove strangers away from a speeding truck.",
+      "raw_narration": "A fatal crash in the rain ends his wasted life, but death is not the finish. He sacrifices himself to shove strangers away from a speeding truck.",
+      "keywords": [
+        {
+          "word": "fatal",
+          "color": "#FF4444"
+        },
+        {
+          "word": "sacrifices",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 98,
+      "end_seconds": 126,
+      "voiceover_text": "He opens his eyes inside a strange cottage. A joyous couple cradles him. He has reincarnated as a newborn baby named Rudeus.",
+      "raw_narration": "He opens his eyes inside a strange cottage. A joyous couple cradles him. He has reincarnated as a newborn baby named Rudeus.",
+      "keywords": [
+        {
+          "word": "reincarnated",
+          "color": "#00E5FF"
+        },
+        {
+          "word": "Rudeus",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 565,
+      "end_seconds": 589,
+      "voiceover_text": "As a toddler, Rudeus secretly opens an ancient grimoire. He focuses his mind, feeling mystical mana stir within his small hands.",
+      "raw_narration": "As a toddler, Rudeus secretly opens an ancient grimoire. He focuses his mind, feeling mystical mana stir within his small hands.",
+      "keywords": [
+        {
+          "word": "grimoire",
+          "color": "#FFD700"
+        },
+        {
+          "word": "mana",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 626,
+      "end_seconds": 654,
+      "voiceover_text": "Without uttering a single incantation, he forms a floating water sphere. But as the magic surges, can he keep this impossible talent hidden from his family?",
+      "raw_narration": "Without uttering a single incantation, he forms a floating water sphere. But as the magic surges, can he keep this impossible talent hidden from his family?",
+      "keywords": [
+        {
+          "word": "incantation",
+          "color": "#FF4444"
+        },
+        {
+          "word": "floating",
+          "color": "#00E5FF"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 30,
+  "job_id": "series-1789333712217-p1"
+}
