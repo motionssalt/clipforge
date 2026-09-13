@@ -782,6 +782,41 @@ jobs:
             -f "request_id=$REQUEST_ID"
           echo "Dispatched publish.yml action=publish for $JOB_ID (mode=$MODE, request_id=$REQUEST_ID)."
 
+      # ---------------------------------------------------------------------
+      # SUPER SERIES CHAIN (success-only final step) — the operator-sanctioned
+      # alternative to the workflow_run trigger. GitHub's workflow_run trigger
+      # only fires for runs on the DEFAULT branch; this step runs INSIDE this
+      # completed Stage B run, so it is immune to that restriction and chains
+      # the next part the moment this part genuinely completes — no client,
+      # no cron, no poll. It reuses the SAME decision + dispatch code as
+      # super-chain.yml (scripts/super_chain/super-chain.mjs), which is a no-op
+      # unless this job is a spawned part of an active Super Series anchor
+      # whose queue says the next part is due. Failure/cancel never reaches
+      # this step (if: success()), so a failed part halts the chain by design.
+      # ---------------------------------------------------------------------
+      - name: Chain next Super Series part (if any)
+        if: success()
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHAIN_JOB_ID: ${{ steps.jid.outputs.job_id }}
+          CHAIN_CONCLUSION: success
+          CHAIN_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          # Resilience: a restart of a very old job may be pinned to a code_ref
+          # that predates scripts/super_chain/ — skip gracefully. A chain
+          # failure must NEVER retro-fail a render that already completed and
+          # pushed status=complete; surface it as a loud warning instead.
+          if [ ! -f scripts/super_chain/super-chain.mjs ]; then
+            echo "::warning::scripts/super_chain/super-chain.mjs not present at this code_ref — skipping Super Series chain."
+            exit 0
+          fi
+          if ! node scripts/super_chain/super-chain.mjs; then
+            echo "::warning::Super Series chain step failed for job ${{ steps.jid.outputs.job_id }} — the render itself completed; check the chain log above."
+            exit 0
+          fi
+
       - name: On failure, write error status
         if: failure()
         shell: bash
