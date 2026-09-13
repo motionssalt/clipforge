@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "job_id": "scissors-p4",
+  "title": "Ludo Returns With The Corrupted Wand — Part 4",
+  "video_duration_seconds": 1315,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#starvstheforcesofevil",
+    "#svtfoe",
+    "#ludo",
+    "#bufffrog",
+    "#darkmagic",
+    "#disneyxd"
+  ],
+  "youtube_tags": [
+    "star vs the forces of evil",
+    "svtfoe",
+    "ludo wand",
+    "corrupted wand",
+    "buff frog tadpoles",
+    "ludo return",
+    "star vs season 2",
+    "dark magic",
+    "disney animation",
+    "villain return",
+    "corn empire",
+    "svtfoe series finale"
+  ],
+  "series": {
+    "series_id": "scissors",
+    "part": 4,
+    "start_seconds": 995,
+    "end_seconds": 1315,
+    "is_final": true,
+    "summary": "Brought before the mysterious mastermind behind the corn empire, Buff Frog is stunned to come face-to-face with Ludo, who now wields a severed skeletal arm holding the shattered fragment of Stars wand. Half-mad from dark magic, Ludo offers Buff Frog a tempting partnership to conquer Mewni. Escaping back to his family with food, Buff Frog must decide if allying with the unpredictable dictator is worth the terrible risk to his tadpoles."
+  },
+  "cuts": [
+    {
+      "start_seconds": 998,
+      "end_seconds": 1034,
+      "voiceover_text": "Dragged past towering iron barricades, Buff Frog gasps in disbelief. Hidden behind the slave mill lies an immense private cornfield, guarded by ferocious predatory beasts and an ominous wooden throne.",
+      "keywords": [
+        {
+          "word": "disbelief",
+          "color": "#6C5CE7"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1136,
+      "end_seconds": 1168,
+      "voiceover_text": "From the shadows steps the mastermind behind the operation. It is Ludo, completely transformed, clutching a severed skeletal hand fused to the fractured royal wand. The fallen tyrant is armed with terrifying dark magic.",
+      "keywords": [
+        {
+          "word": "transformed",
+          "color": "#00CEC9"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1213,
+      "end_seconds": 1255,
+      "voiceover_text": "Drunk on forbidden power and losing his grip on sanity, Ludo offers his former henchman a shocking partnership to conquer Mewni. Clutching his innocent tadpoles, Buff Frog must decide if taking the tyrants deal will save or doom his family.",
+      "keywords": [
+        {
+          "word": "conquer",
+          "color": "#E84393"
+        }
+      ]
+    }
+  ]
+}
