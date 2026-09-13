@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "series-1789258211391-p1",
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789258211391",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "state": "stage_b_queued",
+  "message": "Super Series part 1 of 4 — Stage B dispatched.",
+  "created_at_epoch": 1789259407,
+  "updated_at_epoch": 1789259407,
+  "expires_at_epoch": 1789432207,
+  "release_tag": "clipforge-series-1789258211391-p1",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1789258211391-p1",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  }
+}
