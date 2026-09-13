@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "cat-p3",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789329324,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789329739,
   "series": {
     "enabled": true,
     "series_id": "cat",
@@ -13,12 +13,15 @@
     "is_final": true
   },
   "release_tag": "clipforge-cat-p3",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-cat-p3",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-cat-p3/clipforge-cat-p3-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-cat-p3/final.mp4"
+  },
   "run": {
     "workflow_run_id": 34779038192,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34779038192",
-    "code_ref": "b806b327556af22d20e2cc2f9f2ed9ac92c276e0"
+    "code_ref": "e5604a602f1f00e5f00686a6b34514ae11cb392c"
   },
   "publishing": {
     "status": "not_requested",
