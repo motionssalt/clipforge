@@ -203,3 +203,11 @@ pre.summary {
 .error-text { color: var(--err); }
 .ok-text { color: var(--ok); }
 input[type=file].hidden { display: none; }
+
+/* task-09: multi-select bar + media download rows + in-app preview */
+.task-check-wrap { display:flex; align-items:center; padding-right:8px; }
+.task-check { width:16px; height:16px; accent-color: var(--accent); }
+.selbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:8px 0; padding:8px 10px; border:1px solid var(--text-dim); border-radius:8px; }
+.dl-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--bg-overlay); }
+.dl-row .grow { flex:1; min-width:0; }
+.preview-video { width:100%; max-height:420px; margin-top:10px; border-radius:8px; background:#000; }

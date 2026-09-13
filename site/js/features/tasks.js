@@ -24,13 +24,14 @@
 
 import {
   getCredentials, escapeHtml, toast, confirmDialog, ensureTaskLabel,
-  getLogCache, setLogCache, removeTask, formatEpoch, formatBytes
+  getLogCache, setLogCache, removeTask, formatEpoch, formatBytes,
+  isDownloaded, markDownloaded
 } from '../state.js';
 import {
   listJobIds, readStatus, readStageARequest, readProductionPlan,
   tryGetJsonFile, saveStageARequest, putTextFile, deleteClipforgeJob,
   currentBranchSha, dispatchWorkflow, cancelWorkflowRun,
-  getRunInfo, listRunJobs, getJobLogs, resolveMusicRef,
+  getRunInfo, listRunJobs, getJobLogs, findReleaseAsset, downloadReleaseAsset, resolveMusicRef,
   STATUS_PATH, STAGE_A_WORKFLOW, STAGE_B_WORKFLOW, PUBLISH_WORKFLOW,
   mergeStatus, isTerminal, zernioPublishingSummary, readZernioSettingsSafe,
   readZernioAccounts, actionsSecretExists, zernioTargets, zernioPostId,
@@ -39,6 +40,7 @@ import {
 } from '../github.js';
 import { ingestProductionPlan, readPlanFile, MAX_PLAN_BYTES } from '../planupload.js';
 import { submitSuperPlan, describeSuperQueue, superQueueTick } from '../supertick.js';
+import { buildDownloadRow } from '../media.js';
 
 const POLL_LIST_MS = 8000;
 const POLL_DETAIL_MS = 5000;
@@ -83,7 +85,7 @@ async function loadAllTasks(credentials) {
   return sortEntries(entries);
 }
 
-function taskRowHtml(entry, pendingDelete) {
+function taskRowHtml(entry, pendingDelete, selected) {
   const unreadable = !entry.status;
   const state = unreadable ? '' : String(entry.status.state || 'queued');
   const text = describeState(entry.status, unreadable);
@@ -99,6 +101,7 @@ function taskRowHtml(entry, pendingDelete) {
   }
   return `
     <div class="task-row" data-job="${escapeHtml(entry.jobId)}">
+      <label class="task-check-wrap" title="Select for bulk actions"><input type="checkbox" class="task-check" data-check="${escapeHtml(entry.jobId)}"${selected && selected.has(entry.jobId) ? ' checked' : ''}></label>
       <div class="grow">
         <b>${escapeHtml(entry.label)}</b> <span class="muted mono">${escapeHtml(entry.jobId)}</span>${escapeHtml(series)}
         <div class="muted small">${escapeHtml((entry.status && entry.status.message) || '')}</div>
@@ -113,6 +116,8 @@ async function renderList(app, { completed }) {
   let pendingDelete = '';
   let alive = true;
   let timer = null;
+  // task-09: multi-select set — persists across poll redraws.
+  const selected = new Set();
 
   async function draw() {
     const entries = await loadAllTasks(credentials);
@@ -121,19 +126,74 @@ async function renderList(app, { completed }) {
       return completed ? (e.status && e.status.state === 'complete') : !terminal || !e.status;
     });
     const title = completed ? 'Completed' : 'Tasks';
-    const rows = filtered.map((e) => taskRowHtml(e, pendingDelete)).join('');
+    const rows = filtered.map((e) => taskRowHtml(e, pendingDelete, selected)).join('');
     const anyActive = !completed && filtered.some((e) => e.status && !isTerminal(e.status.state));
+    const selBar = filtered.length ? `
+      <div class="selbar">
+        <label class="check-row"><input type="checkbox" id="sel-all"${filtered.every((e) => selected.has(e.jobId)) ? ' checked' : ''}> Select all</label>
+        <span class="muted small" id="sel-count">${selected.size} selected</span>
+        <button type="button" class="danger small${selected.size ? '' : ' hidden'}" id="sel-delete">Delete selected (<span id="sel-n">${selected.size}</span>)</button>
+      </div>` : '';
     app.innerHTML = `
       <div class="card">
         <h2>${title}</h2>
         ${anyActive ? '<p class="muted"><i>working — open a task for its live progress</i></p>' : ''}
+        ${selBar}
         ${rows || `<p class="muted">${completed ? 'Nothing completed yet.' : 'No tasks yet. Start one from New video.'}</p>`}
         ${completed ? '' : '<div class="btn-row"><a class="btn primary" href="#/new">New video</a><a class="btn ghost" href="#/done">Completed</a></div>'}
       </div>`;
 
+    // --- task-09: multi-select wiring (no redraw on toggle — poll-safe) --- //
+    function syncSelUi() {
+      const count = app.querySelector('#sel-count');
+      const delBtn = app.querySelector('#sel-delete');
+      const n = app.querySelector('#sel-n');
+      if (count) count.textContent = `${selected.size} selected`;
+      if (n) n.textContent = String(selected.size);
+      if (delBtn) delBtn.classList.toggle('hidden', selected.size === 0);
+    }
+    for (const box of app.querySelectorAll('.task-check')) {
+      box.addEventListener('change', () => {
+        if (box.checked) selected.add(box.dataset.check);
+        else selected.delete(box.dataset.check);
+        syncSelUi();
+      });
+    }
+    const selAll = app.querySelector('#sel-all');
+    if (selAll) selAll.addEventListener('change', () => {
+      if (selAll.checked) { for (const e of filtered) selected.add(e.jobId); }
+      else { for (const e of filtered) selected.delete(e.jobId); }
+      draw();
+    });
+    const selDelete = app.querySelector('#sel-delete');
+    if (selDelete) selDelete.addEventListener('click', async () => {
+      const ids = [...selected];
+      if (!ids.length) return;
+      const ok = await confirmDialog(`Delete ${ids.length} task(s)?`,
+        'This permanently removes each job folder and its GitHub release. It cannot be undone.',
+        `Delete ${ids.length} task(s)`, true);
+      if (!ok) return;
+      selDelete.disabled = true;
+      let done = 0;
+      const failed = [];
+      for (const jobId2 of ids) {
+        try {
+          await deleteClipforgeJob(credentials, credentials.repo, jobId2);
+          removeTask(null, jobId2);
+          selected.delete(jobId2);
+          done += 1;
+        } catch (error) {
+          failed.push(`${jobId2} (${error.message})`);
+        }
+      }
+      if (done) toast(`Deleted ${done} task(s).`, 'ok');
+      if (failed.length) toast(`Could not delete: ${failed.join('; ')}`, 'err', 8000);
+      draw();
+    });
+
     for (const row of app.querySelectorAll('.task-row')) {
       row.addEventListener('click', (event) => {
-        if (event.target.closest('button')) return;
+        if (event.target.closest('button') || event.target.closest('.task-check-wrap')) return;
         location.hash = `#/task/${encodeURIComponent(row.dataset.job)}`;
       });
     }
@@ -841,24 +901,97 @@ export async function renderTaskDetail(app, jobId) {
     if (torrentBtn) torrentBtn.addEventListener('click', () => showTorrentPanel(panel, 0));
 
     const downloadBtn = document.getElementById('td-download');
-    if (downloadBtn) downloadBtn.addEventListener('click', () => {
-      // Full download/preview experience (progress, File System Access API)
-      // is task-09; the release assets are directly linked here as the
-      // bot's showDownloads equivalent.
+    if (downloadBtn) downloadBtn.addEventListener('click', async () => {
+      // task-09: the full download/preview experience — real progress + size
+      // (downloadReleaseAsset ReadableStream), File System Access API save
+      // (fallback: normal browser download), in-app video preview, and
+      // already-downloaded detection via localStorage markers.
       const assets = status.assets && typeof status.assets === 'object' ? status.assets : {};
-      const rows = Object.entries(assets)
-        .filter(([name, url]) => url && typeof url === 'string' && name !== 'analysis_bundle_url')
-        .map(([name, url]) => `<div class="list-row"><span class="mono">${escapeHtml(name)}</span>
-          <a class="btn primary small" href="${escapeHtml(String(url).replace(/\\\//g, '/'))}" target="_blank" rel="noopener">Download</a></div>`).join('');
+      const tag = String(status.release_tag || `clipforge-${jobId}`);
+      const FILENAMES = { final_mp4: 'final.mp4', final_zip: 'final.zip' };
+      const entries = Object.entries(assets)
+        .filter(([name, url]) => url && typeof url === 'string' && name !== 'analysis_bundle_url');
       panel.innerHTML = `
         <div class="card">
           <h3>Download — Task ${escapeHtml(label)}</h3>
-          ${rows ? `<div class="list">${rows}</div>` : '<p class="muted">No downloadable assets yet.</p>'}
+          <div id="dl-list" class="list"><p class="muted">Resolving release assets…</p></div>
+          <video id="dl-video" class="preview-video hidden" controls playsinline></video>
+          <p class="muted small" id="dl-note"></p>
           ${status.release_url ? `<div class="btn-row"><a class="btn ghost" href="${escapeHtml(status.release_url)}" target="_blank" rel="noopener">Open release page</a></div>` : ''}
           <div class="btn-row"><button type="button" class="ghost" id="dl-close">Close</button></div>
         </div>`;
       document.getElementById('dl-close').addEventListener('click', () => { panel.innerHTML = ''; });
       panel.scrollIntoView({ behavior: 'smooth' });
+      const listEl = panel.querySelector('#dl-list');
+      const videoEl = panel.querySelector('#dl-video');
+      const noteEl = panel.querySelector('#dl-note');
+      listEl.innerHTML = '';
+      if (!entries.length) {
+        listEl.innerHTML = '<p class="muted">No downloadable assets yet.</p>';
+        return;
+      }
+      for (const [name, url] of entries) {
+        const fileName = FILENAMES[name] || String(url).split('/').pop() || name;
+        let asset = null;
+        try { asset = await findReleaseAsset(credentials, credentials.repo, tag, fileName); } catch { asset = null; }
+        const downloaded = isDownloaded(jobId, fileName);
+        if (!asset) {
+          // Asset not on the release (or unreadable): direct-link fallback,
+          // exactly the bot's showDownloads behavior.
+          const row = document.createElement('div');
+          row.className = 'list-row';
+          row.innerHTML = `<span class="mono">${escapeHtml(name)}</span>
+            <a class="btn primary small" href="${escapeHtml(String(url).replace(/\\\//g, '/'))}" target="_blank" rel="noopener">Download</a>`;
+          listEl.appendChild(row);
+          continue;
+        }
+        if (downloaded) {
+          const badge = document.createElement('p');
+          badge.className = 'muted small';
+          badge.textContent = `✓ ${fileName} was already downloaded from this browser.`;
+          listEl.appendChild(badge);
+        }
+        if (name === 'final_mp4') {
+          // In-app player: stream the asset with progress, then play from a
+          // blob URL (private-repo assets need the authenticated API URL, so
+          // a plain <video src> to browser_download_url cannot work).
+          const pv = document.createElement('div');
+          pv.className = 'btn-row';
+          const pvBtn = document.createElement('button');
+          pvBtn.type = 'button';
+          pvBtn.className = 'small';
+          pvBtn.textContent = downloaded ? '▶ Preview (downloaded ✓)' : '▶ Preview in browser';
+          pv.appendChild(pvBtn);
+          listEl.appendChild(pv);
+          pvBtn.addEventListener('click', async () => {
+            pvBtn.disabled = true;
+            noteEl.textContent = 'Loading video…';
+            try {
+              const bytes = await downloadReleaseAsset(credentials, asset, (received, total) => {
+                const t = total || asset.size || 0;
+                noteEl.textContent = t
+                  ? `Loading video — ${formatBytes(received)} / ${formatBytes(t)}`
+                  : `Loading video — ${formatBytes(received)}…`;
+              });
+              const blob = new Blob([bytes], { type: 'video/mp4' });
+              if (videoEl.dataset.blobUrl) URL.revokeObjectURL(videoEl.dataset.blobUrl);
+              const objUrl = URL.createObjectURL(blob);
+              videoEl.dataset.blobUrl = objUrl;
+              videoEl.src = objUrl;
+              videoEl.classList.remove('hidden');
+              noteEl.textContent = '';
+              videoEl.play().catch(() => { noteEl.textContent = 'Preview ready — press play.'; });
+            } catch (error) {
+              noteEl.textContent = `Preview failed: ${error.message}`;
+              pvBtn.disabled = false;
+            }
+          });
+        }
+        buildDownloadRow({
+          credentials, asset, container: listEl,
+          onDone: () => { markDownloaded(jobId, asset.name); }
+        });
+      }
     });
 
     const publishBtn = document.getElementById('td-publish');
