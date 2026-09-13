@@ -9,18 +9,21 @@
     "start_seconds": 675,
     "is_final": false
   },
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1789265882,
-  "updated_at_epoch": 1789266032,
+  "updated_at_epoch": 1789266698,
   "expires_at_epoch": 1789438682,
   "release_tag": "clipforge-scissors-p3",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-scissors-p3",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-scissors-p3/clipforge-scissors-p3-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-scissors-p3/final.mp4"
+  },
   "run": {
     "workflow_run_id": 34732704222,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34732704222",
-    "code_ref": "70fc917c9c9b431af723cf486fd4e2122586ab66"
+    "code_ref": "a6d6109f2b11932361a774218bbb788e8f0f979a"
   },
   "publishing": {
     "status": "not_requested",
