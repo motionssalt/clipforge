@@ -39,7 +39,7 @@ import {
   POST_ID_PATTERN
 } from '../github.js';
 import { ingestProductionPlan, readPlanFile, MAX_PLAN_BYTES } from '../planupload.js';
-import { submitSuperPlan, describeSuperQueue, superQueueTick } from '../supertick.js';
+import { submitSuperPlan, describeSuperQueue } from '../supertick.js';
 import { buildDownloadRow } from '../media.js';
 
 const POLL_LIST_MS = 8000;
@@ -404,14 +404,14 @@ export async function renderTaskDetail(app, jobId) {
       readStageARequest(credentials, credentials.repo, jobId).catch(() => null),
       readZernioSettingsSafe(credentials, credentials.repo).catch(() => null)
     ]);
-    // task-06: if this job is a Super Series anchor, advance its queue once
-    // (harmless no-op when waiting/done) and compute the queue/halt display.
+    // task-06: if this job is a Super Series anchor, compute the queue/halt
+    // DISPLAY only. NO client-side advance: continuation is GitHub-native via
+    // super-chain.yml (workflow_run on stage-b.yml completion), so the chain
+    // advances with zero clients open — a client-side tick would reintroduce
+    // the "only advances when something happens to check" flaw.
     let superQueue = null;
     const superRaw = await tryGetJsonFile(credentials, credentials.repo, `jobs/${jobId}/super-plan.json`).catch(() => null);
     if (superRaw && superRaw.document && Array.isArray(superRaw.document.spawned)) {
-      if (status && !isTerminal(status.state)) {
-        try { await superQueueTick(credentials, credentials.repo, jobId); } catch { /* sweep retries */ }
-      }
       superQueue = await describeSuperQueue(credentials, credentials.repo, jobId).catch(() => null);
     }
 

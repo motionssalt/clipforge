@@ -17,7 +17,7 @@
  * series jobs of the same series_id). task-06: each anchor card shows the
  * full queue/halt display (spawned/total, per-part state, halt banner with
  * the bot's exact message) via describeSuperQueue, and the view drives the
- * client-side sweep (runSuperQueueSweep) every minute while open — the same
+ * Chain continuation is GitHub-native (super-chain.yml, workflow_run on stage-b.yml) — the same
  * pure superQueueAdvance the bot cron and the task-12 scheduled workflow
  * share, so the durable repo record stays the only cursor.
  */
@@ -35,7 +35,7 @@ import {
   manualSeriesContinuation, nextPartJobId, nextPartRequestBody,
   extractPlanSeries, buildSeriesContext
 } from '../series.js';
-import { runSuperQueueSweep, describeSuperQueue } from '../supertick.js';
+import { describeSuperQueue } from '../supertick.js';
 
 const POLL_MS = 10000;
 const HOLD_MS = 700;
@@ -166,10 +166,10 @@ export async function renderSeries(app) {
   }
 
   async function draw() {
-    // Client-driven super-queue sweep first: any anchor whose latest part has
-    // completed since the last tick dispatches its next part now (the durable
-    // repo record is the only cursor — double-dispatch impossible).
-    try { await runSuperQueueSweep(credentials, credentials.repo); } catch { /* next tick retries */ }
+    // NO client-side dispatch here. Chain continuation is GitHub-native:
+    // stage-b.yml's completion fires super-chain.yml (workflow_run), which
+    // dispatches the next part with zero client involvement. This view only
+    // READS queue/halt state for display.
     const groups = await loadSeries();
     for (const group of groups) {
       if (group.anchor) {

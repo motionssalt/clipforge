@@ -1,0 +1,56 @@
+name: Super Series — Chain Next Part on Stage B Completion
+
+# Replacement for the deleted super-sweep.yml cron. Super Series Stage B is
+# ordinary Stage B chained by completion: GitHub itself reacts natively to a
+# stage-b.yml run completing and — only on genuine success of a spawned part —
+# dispatches the next part through the SAME shared dispatch call ordinary
+# Stage B uses. No cron, no schedule, no push trigger, and no client needs to
+# be open, polling, or checking in for the chain to advance. A failed or
+# cancelled part fires this too, but the script halts the chain until the
+# operator restarts that part; the restart's own completion event resumes it.
+
+on:
+  workflow_run:
+    workflows: ["Stage B — Render Final Video (voiceover + captions, one merged MP4)"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: "Manual diagnostic: job id of the completed Stage B run"
+        required: true
+        type: string
+      conclusion:
+        description: "Manual diagnostic: conclusion of that run"
+        required: false
+        type: string
+        default: "success"
+      run_id:
+        description: "Manual diagnostic: workflow run id"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: clipforge-super-chain-${{ github.event.workflow_run.inputs.job_id || github.event.inputs.job_id || 'manual' }}
+  cancel-in-progress: false
+
+jobs:
+  chain:
+    name: Dispatch next Super Series part (if any)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Chain next part from this run's completion
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHAIN_JOB_ID: ${{ github.event.workflow_run.inputs.job_id || github.event.inputs.job_id }}
+          CHAIN_CONCLUSION: ${{ github.event.workflow_run.conclusion || github.event.inputs.conclusion }}
+          CHAIN_RUN_ID: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
+        run: node scripts/super_chain/super-chain.mjs
