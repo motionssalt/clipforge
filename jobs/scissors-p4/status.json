@@ -12,7 +12,7 @@
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
   "created_at_epoch": 1789266723,
-  "updated_at_epoch": 1789267517,
+  "updated_at_epoch": 1789267530,
   "expires_at_epoch": 1789439523,
   "release_tag": "clipforge-scissors-p4",
   "release_url": "",
@@ -26,7 +26,7 @@
     "code_ref": "163f7c6772098afa57abd909c8b18b06df8f696f"
   },
   "publishing": {
-    "status": "not_requested",
+    "status": "failed",
     "posts": [],
     "idempotency_key": ""
   }
