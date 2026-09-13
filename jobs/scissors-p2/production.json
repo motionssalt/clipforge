@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "job_id": "scissors-p2",
+  "title": "Tom Resurrects Martial Arts Legend Mackie — Part 2",
+  "video_duration_seconds": 1315,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#starvstheforcesofevil",
+    "#svtfoe",
+    "#mackiehand",
+    "#marcodiaz",
+    "#tomlucitor",
+    "#disneyxd"
+  ],
+  "youtube_tags": [
+    "star vs the forces of evil",
+    "svtfoe",
+    "mackie hand",
+    "too little too late",
+    "love sentence",
+    "tom and marco",
+    "anger management",
+    "disney xd",
+    "cartoon clips",
+    "resurrection spell",
+    "brian the rabbit",
+    "friend enemies episode"
+  ],
+  "series": {
+    "series_id": "scissors",
+    "part": 2,
+    "start_seconds": 340,
+    "end_seconds": 675,
+    "is_final": false,
+    "summary": "When Marco realizes the movie marathon is starting, Tom refuses to let him leave the carriage and erupts in demonic fury. Brian the life coach reveals Tom failed his anger management graduation test, which required three hours alone with Marco without losing his temper. Heartbroken by the deceit, Marco storms off, but Tom makes amends by singing their favorite boy band anthem and raising the actual Mackie Hand from the grave."
+  },
+  "cuts": [
+    {
+      "start_seconds": 389,
+      "end_seconds": 423,
+      "voiceover_text": "With ten minutes until showtime, Marco frantically tries to leave, but Tom blocks the exit. As the panic boils over, Tom loses control, erupting in demonic fire and instantly failing his anger management test.",
+      "keywords": [
+        {
+          "word": "erupting",
+          "color": "#FF2A2A"
+        }
+      ]
+    },
+    {
+      "start_seconds": 437,
+      "end_seconds": 480,
+      "voiceover_text": "The truth cuts deep. Tom only spent time with Marco to earn a graduation badge by enduring three hours with his most hated enemy. Betrayed and humiliated, Marco storms off into the night.",
+      "keywords": [
+        {
+          "word": "Betrayed",
+          "color": "#D63031"
+        }
+      ]
+    },
+    {
+      "start_seconds": 593,
+      "end_seconds": 626,
+      "voiceover_text": "Determined to prove his remorse, Tom unleashes forbidden underworld magic and raises the real Mackie Hand straight out of the grave. Marco is speechless as his childhood hero autographs his arm, forging an unforgettable bond.",
+      "keywords": [
+        {
+          "word": "remorse",
+          "color": "#00B894"
+        }
+      ]
+    }
+  ]
+}
