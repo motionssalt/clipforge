@@ -312,6 +312,10 @@
     {
       "part": 3,
       "job_id": "scissors-p3"
+    },
+    {
+      "part": 4,
+      "job_id": "scissors-p4"
     }
   ]
 }
