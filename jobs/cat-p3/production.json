@@ -1,0 +1,96 @@
+{
+  "video_duration_seconds": 1488,
+  "title": "The Midnight Recovery and Sisterly Bond — Part 3",
+  "hashtags": [
+    "#anime",
+    "#wholesome",
+    "#catgirl",
+    "#yanineko",
+    "#animerecovery",
+    "#familyanime"
+  ],
+  "youtube_tags": [
+    "anime ending",
+    "wholesome anime",
+    "sister bond anime",
+    "cat girl anime",
+    "yani neko",
+    "anime emotional",
+    "heartwarming anime",
+    "anime finale",
+    "recovery anime",
+    "night anime aesthetic"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 1003,
+      "end_seconds": 1025,
+      "voiceover_text": "Confined to a dim quarantine room, the cat girl rests under heavy blankets while a figure in a protective hazmat suit monitors her vitals.",
+      "keywords": [
+        {
+          "word": "quarantine",
+          "color": "#FFD600"
+        },
+        {
+          "word": "hazmat",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1084,
+      "end_seconds": 1104,
+      "voiceover_text": "Across town, her younger sister Imoko urgently navigates crowded pharmacy aisles with friends to secure vital medicine.",
+      "keywords": [
+        {
+          "word": "Imoko",
+          "color": "#EC407A"
+        },
+        {
+          "word": "medicine",
+          "color": "#26A69A"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1132,
+      "end_seconds": 1157,
+      "voiceover_text": "The group debates remedies beside the supply shelves, refusing to let illness or bad decisions tear their makeshift family apart.",
+      "keywords": [
+        {
+          "word": "remedies",
+          "color": "#66BB6A"
+        },
+        {
+          "word": "family",
+          "color": "#FFA726"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1278,
+      "end_seconds": 1315,
+      "voiceover_text": "Under the soft blue moonlight, a tender phone call bridges the distance as the recovering cat girl whispers her quiet gratitude. The crisis has passed, and she is finally safe.",
+      "keywords": [
+        {
+          "word": "moonlight",
+          "color": "#42A5F5"
+        },
+        {
+          "word": "safe",
+          "color": "#76FF03"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "cat",
+    "part": 3,
+    "start_seconds": 991,
+    "end_seconds": 1488,
+    "is_final": true,
+    "summary": "Quarantined and cared for by protective companions, the cat girl recovers as her sister Imoko brings aid, bringing peace under the midnight sky."
+  },
+  "job_id": "cat-p3"
+}
