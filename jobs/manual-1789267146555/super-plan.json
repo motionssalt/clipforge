@@ -1,0 +1,264 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789267146555",
+  "series_id": "dog",
+  "total_parts": 4,
+  "video_duration_seconds": 1360,
+  "plan": {
+    "version": 2,
+    "series_id": "dog",
+    "video_duration_seconds": 1360,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1360,
+        "target_total_duration_seconds": 30,
+        "title": "A Ruthless King Claims The Throne",
+        "hashtags": [
+          "#HunterxHunter",
+          "#ChimeraAnt",
+          "#Meruem",
+          "#AnimeMoments",
+          "#AnimeShorts",
+          "#HxH"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hxh",
+          "chimera ant arc",
+          "meruem",
+          "king meruem",
+          "east gorteau",
+          "neferpitou",
+          "shaiapouf",
+          "anime clip",
+          "anime scene",
+          "anime recap",
+          "shonen jump"
+        ],
+        "series": {
+          "series_id": "dog",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 447,
+          "is_final": false,
+          "summary": "The newly hatched Chimera Ant King infiltrates East Gorteau and executes its supreme dictator to seize the nation."
+        },
+        "cuts": [
+          {
+            "start_seconds": 1,
+            "end_seconds": 8,
+            "voiceover_text": "A monstrous predator enters the world without a single shred of mercy for human life."
+          },
+          {
+            "start_seconds": 101,
+            "end_seconds": 107,
+            "voiceover_text": "Flanked by his devoted royal guards, the Chimera Ant King marches directly toward the Republic of East Gorteau."
+          },
+          {
+            "start_seconds": 402,
+            "end_seconds": 409,
+            "voiceover_text": "Inside the opulent palace, the nation's supreme dictator arrogantly assumes this strange intruder will bow to his absolute authority."
+          },
+          {
+            "start_seconds": 410,
+            "end_seconds": 418,
+            "voiceover_text": "Without speaking a single word, the King whips his armored tail and instantly executes the dictator on the spot."
+          },
+          {
+            "start_seconds": 428,
+            "end_seconds": 440,
+            "voiceover_text": "Claiming the throne for himself, he orders a horrifying nationwide culling, leaving humanity to wonder who could ever stand against him."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1360,
+        "target_total_duration_seconds": 30,
+        "title": "The Monster Who Begged For Mercy",
+        "hashtags": [
+          "#HunterxHunter",
+          "#ChimeraAnt",
+          "#Colt",
+          "#AnimeMoments",
+          "#AnimeShorts",
+          "#HxH"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hxh",
+          "chimera ant arc",
+          "colt",
+          "morel",
+          "knov",
+          "hunter association",
+          "chimera ant queen",
+          "anime clip",
+          "anime scene",
+          "anime recap",
+          "shonen jump"
+        ],
+        "series": {
+          "series_id": "dog",
+          "part": 2,
+          "start_seconds": 447,
+          "end_seconds": 840,
+          "is_final": false,
+          "summary": "As the ant colony dissolves in chaos, Squadron Leader Colt surrenders to the Hunters and begs for human medicine to save the Queen."
+        },
+        "cuts": [
+          {
+            "start_seconds": 678,
+            "end_seconds": 685,
+            "voiceover_text": "While the surviving squad leaders abandon their ruined hive to chase selfish ambitions, one creature refuses to desert his queen."
+          },
+          {
+            "start_seconds": 762,
+            "end_seconds": 765,
+            "voiceover_text": "Squadron Leader Colt emerges from the tree line alone, raising a makeshift white flag high above his head."
+          },
+          {
+            "start_seconds": 774,
+            "end_seconds": 776,
+            "voiceover_text": "Hunters Morel and Knov immediately raise their weapons, bracing for what they suspect is a deadly ambush."
+          },
+          {
+            "start_seconds": 806,
+            "end_seconds": 815,
+            "voiceover_text": "Instead, Colt drops to his knees in the dirt, desperately pleading for human doctors to treat his dying mother."
+          },
+          {
+            "start_seconds": 829,
+            "end_seconds": 835,
+            "voiceover_text": "Deeply moved by an insect displaying authentic filial devotion, Morel accepts the surrender, yet will human medicine suffice to save her life?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1360,
+        "target_total_duration_seconds": 30,
+        "title": "The Dying Queen Reveals His Name",
+        "hashtags": [
+          "#HunterxHunter",
+          "#ChimeraAnt",
+          "#Meruem",
+          "#AnimeMoments",
+          "#AnimeShorts",
+          "#HxH"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hxh",
+          "chimera ant arc",
+          "chimera ant queen",
+          "meruem name",
+          "colt",
+          "morel",
+          "kite rebirth",
+          "anime clip",
+          "anime scene",
+          "anime recap",
+          "shonen jump"
+        ],
+        "series": {
+          "series_id": "dog",
+          "part": 3,
+          "start_seconds": 840,
+          "end_seconds": 1144,
+          "is_final": false,
+          "summary": "Inside the hive, the dying Queen reveals the King's true name before Colt discovers an unexpected newborn hidden within her."
+        },
+        "cuts": [
+          {
+            "start_seconds": 1038,
+            "end_seconds": 1055,
+            "voiceover_text": "Human surgeons rush deep into the hive, battling against time to stabilize the massive internal wounds of the Queen."
+          },
+          {
+            "start_seconds": 1058,
+            "end_seconds": 1062,
+            "voiceover_text": "Despite every medical effort, her organs are completely devastated from the violent birth of her firstborn son."
+          },
+          {
+            "start_seconds": 1068,
+            "end_seconds": 1085,
+            "voiceover_text": "With her final fading breath, she whispers her maternal love, giving the King his true name: Meruem, the illuminating light."
+          },
+          {
+            "start_seconds": 1103,
+            "end_seconds": 1120,
+            "voiceover_text": "As Colt weeps over her lifeless body, he catches sight of a miraculous flutter deep within her hollowed womb."
+          },
+          {
+            "start_seconds": 1133,
+            "end_seconds": 1141,
+            "voiceover_text": "He gently cradles a fragile, premature newborn, forcing Morel to promise this innocent child will be protected from the coming slaughter."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1360,
+        "target_total_duration_seconds": 30,
+        "title": "Killua Vows To Protect His Friend",
+        "hashtags": [
+          "#HunterxHunter",
+          "#Killua",
+          "#GonFreecss",
+          "#AnimeMoments",
+          "#AnimeShorts",
+          "#HxH"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hxh",
+          "chimera ant arc",
+          "killua",
+          "gon",
+          "netero",
+          "killua needle",
+          "illumi",
+          "anime clip",
+          "anime scene",
+          "anime recap",
+          "shonen jump"
+        ],
+        "series": {
+          "series_id": "dog",
+          "part": 4,
+          "start_seconds": 1144,
+          "end_seconds": 1360,
+          "is_final": true,
+          "summary": "As Netero readies for war, Killua confronts the terrifying assassin conditioning in his mind and swears to protect the powerless Gon."
+        },
+        "cuts": [
+          {
+            "start_seconds": 1148,
+            "end_seconds": 1157,
+            "voiceover_text": "While Chairman Netero readies himself for an impending war against the King, another quiet struggle unfolds in the shadows."
+          },
+          {
+            "start_seconds": 1182,
+            "end_seconds": 1195,
+            "voiceover_text": "Gon lies completely helpless in his hotel room, his Nen locked away and leaving him defenseless to enemy attacks."
+          },
+          {
+            "start_seconds": 1196,
+            "end_seconds": 1199,
+            "voiceover_text": "Killua stands guard alone, tormented by his brother's sinister voice telling him to flee whenever facing fatal odds."
+          },
+          {
+            "start_seconds": 1203,
+            "end_seconds": 1214,
+            "voiceover_text": "Clutching his throbbing skull, he wrestles against the deep assassin conditioning that commands him to abandon his closest companion."
+          },
+          {
+            "start_seconds": 1220,
+            "end_seconds": 1238,
+            "voiceover_text": "Breaking through the paralyzing terror with tears of resolve, Killua cements an unbreakable vow to protect Gon with his very life."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
