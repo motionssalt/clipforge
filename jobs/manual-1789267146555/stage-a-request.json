@@ -3,7 +3,8 @@
   "job_id": "manual-1789267146555",
   "source": {
     "kind": "magnet",
-    "value": "magnet:?xt=urn:btih:8f41458308da865d82f262d7bd9b314d9e2d2e64&dn=%5BLumen%5D%20Hunter%20X%20Hunter%20%282011%29%20%5B1080p%20AV1%5D%5BBD%5D%5BMulti-EN%2BFR%5D%20V2&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce"
+    "value": "magnet:?xt=urn:btih:8f41458308da865d82f262d7bd9b314d9e2d2e64&dn=%5BLumen%5D%20Hunter%20X%20Hunter%20%282011%29%20%5B1080p%20AV1%5D%5BBD%5D%5BMulti-EN%2BFR%5D%20V2&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce",
+    "torrent_file_index": "76"
   },
   "options": {
     "whisper_model": "base",
@@ -27,5 +28,5 @@
     "ref": "audio-library\/180DB_ [130] (Intro Slowed).m4a",
     "source": "explicit_library"
   },
-  "saved_at_epoch": 1789267146
+  "saved_at_epoch": 1789267261
 }
