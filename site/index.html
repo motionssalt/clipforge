@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>ClipForge Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark">CF</span>
+    <span class="brand-name">ClipForge Dashboard</span>
+    <span id="repo-badge" class="repo-badge hidden"></span>
+  </div>
+  <nav id="nav" class="hidden">
+    <a href="#/home" data-nav="home">Home</a>
+    <a href="#/new" data-nav="new">New video</a>
+    <a href="#/tasks" data-nav="tasks">Tasks</a>
+    <a href="#/done" data-nav="done">Completed</a>
+    <a href="#/series" data-nav="series">Series</a>
+    <a href="#/settings" data-nav="settings">Settings</a>
+  </nav>
+  <button id="disconnect-btn" class="ghost hidden" type="button">Disconnect</button>
+</header>
+<main id="app" aria-live="polite"></main>
+<div id="toast-region" class="toast-region" aria-live="assertive"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

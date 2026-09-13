@@ -1,0 +1,180 @@
+{
+  "project": "clipforge-dashboard",
+  "purpose": "GitHub-only migration: remove Telegram Bot A/B; Cloudflare Pages Dashboard (site/) with full bot feature parity; GitHub is the ONLY backend.",
+  "build_complete": false,
+  "updated_by": "session-14",
+  "current_task": "task-02",
+  "constraints": {
+    "no_worker_dependency": true,
+    "auth": "one-time GitHub PAT prompt, localStorage, explicit disconnect only",
+    "ordering_rule": "Do NOT delete Bot A/B Workers, CLIPFORGE_BOT_D1, KV, or bot code until task-11 verification is fully green (task-12 is last).",
+    "keep": [
+      "telegram_channel source kind (public t.me link, MTProto retrieval in Stage A), main-account-only gate (isOriginalRepo equivalent) reproduced in site + app",
+      "pipeline workflows: stage-a.yml, stage-b.yml, publish.yml, diagnostics.yml, cleanup.yml"
+    ],
+    "remove_last": [
+      "Bot A (bot/src/index.js + commands), Bot A Worker, CLIPFORGE_BOT_D1, bot-side KV",
+      "telegram_relay source kind, Bot B (bot/src/relay-worker.js), telegram-relay.yml",
+      "deploy-bots.yml, news-push.yml (if confirmed bot-only)",
+      "_legacy/telegram-bot/ (if no live dependents)"
+    ]
+  },
+  "super_series_anchor_status": "REPO-BASED, VERIFIED IN LIVE CODE (session-14): bot/src/index.js runSuperQueueSweep (line ~1648) discovers anchors by scanning listJobIds + probing each jobs/<id>/super-plan.json via isSuperSeriesAnchor (line ~1673: anchor iff super-plan.json has plan.parts array and spawned.length < total_parts). superQueueTick takes preloaded options and NEVER reads/writes the D1 super_series_anchor flag. The ONE remaining D1 write of that flag is handleSuperPlanUploadMessage line 1631 (setTaskOptions { super_series_anchor: true }) — a vestigial no-op that nothing reads anymore. D1's remaining legitimate roles: task_labels (per-chat A/B/C labels), task_options (mode/source_kind bookkeeping + super_halted_notified_part), clone_jobs (Worker-side clone resume), awaiting_input, announced markers. For the Dashboard ALL of these become client-side (localStorage) or repo-based: the Dashboard IS the operator's own client, so per-chat label state becomes localStorage, and clone-creation resume becomes client-side polling (the Dashboard browser tab does what the bot cron did). IMPORTANT FOR DASHBOARD SUPER SERIES: because the sweep runs inside the Bot A Worker cron, a Dashboard-submitted super-plan is picked up by the SAME repo-scanning sweep — writing jobs/<anchor>/super-plan.json + status.json (stage_b_queued) + stage-a-request.json is sufficient and requires NO bot-side step (E2E-verified session-13, stage-b run 34731756595). After task-12 deletes the Worker, the sweep must move to a GitHub-native cron (a scheduled workflow) — noted as a task-12 prerequisite.",
+  "feature_catalog": {
+    "source_of_truth": "bot/src/index.js (3008 lines), bot/src/commands/*.js, wizard.js, series.js, super_series.js, settings_super.js, zernio.js, views.js, constants.js, github.js — all read in full 2026-09-13.",
+    "commands": [
+      "/start home screen",
+      "/help command reference + Telegraph guide link",
+      "menu:helpvideo tutorial video from assets/help/help.mp4",
+      "/new wizard",
+      "/tasks active list",
+      "/done completed list",
+      "/settings",
+      "/cancel input-flow cancel"
+    ],
+    "onboarding_clone": [
+      "clone:new — create private Shadow Clone: name prompt (or clone:newauto auto-name) -> PAT prompt -> beginShadowCloneCreation (github.js:265): getGitHubIdentity, resolve source tree of motionssalt/clipforge, POST /user/repos (private, auto_init:false), bootstrap .clipforge-sync.json + one-time clone-copy.yml via Contents API, dispatch clone-copy.yml with {source_sha, bootstrap_commit, expected_files}, inline wait CLONE_COPY_FIRST_WAIT_MS=120s then pending:true",
+      "pollShadowCloneJob (github.js:542): read .clipforge-clone-status.json each tick; states copying/finalizing/complete/failed; stall guard CLONE_COPY_STALL_MS=360s; never-started guard CLONE_COPY_START_MS=120s; deadline CLONE_COPY_DEADLINE_MS=600s; resolves runId via findCloneCopyRunId",
+      "finalizeShadowClone (github.js:651): copy workflow files excluded from bulk copy + delete one-time clone-copy.yml; returns { repo, copiedFiles }",
+      "clone:connect — connect existing clone: PAT prompt -> repo prompt -> validateConnection (github.js:204); stores credentials",
+      "auto-login after creation = putCredentials(githubPat, repo) — for the Dashboard: PAT+repo in localStorage",
+      "failure handling: cancelShadowCloneRun + deleteRepository best-effort cleanup + loud error"
+    ],
+    "new_task_wizard": [
+      "Fixed steps: source -> focus (skipped when series) -> length (TARGET_DURATIONS 30/60/120/180/300) -> music (none/default/explicit_library) -> confirm",
+      "classifySourceText EXACT logic (wizard.js:79): empty->error; magnet:?->magnet; TELEGRAM_PUBLIC_POST_RE ^https?://(t.me|telegram.me)/(s/)?[A-Za-z0-9_]{5,64}/[1-9][0-9]*(/[?#]|$)->telegram_channel; https?:// -> host in DISABLED_SOCIAL_HOSTS (youtube-nocookie.com, youtu.be, youtube.com, vm./vt.tiktok.com, tiktok.com, fb.watch, facebook.com, instagram.com, twitter.com, x.com, vimeo.com, redd.it, reddit.com) -> reject with guidance; drive|docs.google.com -> drive; else url",
+      "telegram_channel gated to isOriginalRepo (main account) at BOTH wizard answer time and startJob commit boundary",
+      ".torrent file upload <=1MB staged to jobs/<jobId>/source.torrent, source kind torrent_file, optional torrent_file_index",
+      "telegram_relay (direct video upload) — BEING REMOVED per operator, not ported",
+      "startJob (index.js:677): wizardComplete check; series default read from branding/series_settings.json at commit (not per-task); superSeries = series && branding/super_series_settings.json.enabled; seriesId = series-<ts>; wizardToRequest -> saveStageARequest; status.json state=queued with series block + release_tag/clipforge-<jobId>; dispatch stage-a.yml { job_id, code_ref: currentBranchSha }; setTaskOptions(mode, source_kind)",
+      "production.json upload: FILE-ONLY (paste removed), any UTF-8 text file <=1MB, stripCodeFence, parseAndValidateProductionPlan; requires status.state == awaiting_plan; super_series jobs route to handleSuperPlanUploadMessage instead; on accept: saveProductionPlan, dispatch stage-b.yml { job_id, production_ref: path:jobs/<id>/production.json, music_ref: resolveMusicRef(request), code_ref }, status -> stage_b_queued",
+      "resolveMusicRef: none->'' ; explicit_library/job_upload->path:<ref> ; default->branding/music_default.json library_track_path -> path:<path>",
+      "agent prompt handoff (sendAgentPrompt, task:prompt) — manual-mode prompt text embedding series metadata"
+    ],
+    "task_views": [
+      "/tasks list: taskLabels (D1) -> readStatus per job, sorted by created_at_epoch desc, terminal tasks STAY visible, unreadable status = explicit 'status unavailable' row, per-row delete with inline Confirm-Delete toggle",
+      "/done list: terminal-only, Release URL button, series parts shortcut",
+      "task detail showTask (runtime.js): live status, state machine states (queued, stage_a_running, awaiting_plan, awaiting_torrent_selection, stage_b_queued, stage_b_running, complete, error, cancelled), progress animation, run.workflow_run_id tracking",
+      "REAL GITHUB ACTIONS LOGS (operator spec, task-04): GET /actions/runs/{run_id}/jobs -> per-step collapsible sections (real step names/status/timestamps); GET /actions/jobs/{job_id}/logs -> FULL log text per step; active step auto-expanded, auto-collapse on completion + next auto-expands; manual toggle always; local cache so reopening never starts blank; append-only polling (only new content); polling stops at terminal run state",
+      "restarta (index.js:1432): dispatch stage-a.yml { job_id, code_ref } — no plan guard",
+      "restartb (index.js:1443): requires production.json present (else error message); dispatch stage-b.yml { job_id, production_ref, music_ref, code_ref }",
+      "cancelb/cancelby two-branch (index.js:1797): if status.run.workflow_run_id -> cancelWorkflowRun(runId); else if non-terminal -> mergeStatus state=cancelled written to status.json. Confirmation screen first.",
+      "deleteTask: deleteClipforgeJob (job files + GitHub release) + removeTask label",
+      "showDownloads: status.assets final_mp4/final_zip links + release page",
+      "deliverVideoToChat (task:sendvideo): find final.mp4 on release; <50MB send video w/ production.json caption (title+hashtags); >=50MB direct download link. Dashboard equivalent: browser download w/ real progress+size, File System Access API where available",
+      "torrent selection (task:tsel/tselpick): jobs/<id>/torrent-selection.json video_candidates paged 8/page, pick sets request.source.torrent_file_index + re-dispatches stage-a + status back to stage_a_running"
+    ],
+    "series": [
+      "showSeriesParts: group by status.series.series_id, per-part state marks, release links",
+      "startNextSeriesPart (index.js:1529): manualSeriesContinuation (series.js:82 — complete state, series.enabled, valid series_id/part, plan not final, valid end_seconds); nextPartJobId = seriesId-p<part>; DUPLICATE GUARD: existing request OR status for nextId -> open existing instead; seriesContextSummaries (Prior events (Part N): ... capped 8000); nextPartRequestBody (source_job_id fallback = completing part's job id, NEVER series_id); saveStageARequest; status queued with series block; dispatch stage-a.yml; ensureTaskLabel + setTaskOptions",
+      "hold-to-delete entire series (app-side v9: deleteSeries deletes every job dir under series_id + super-plan anchor) — Dashboard equivalent required"
+    ],
+    "super_series": [
+      "Settings toggle (branding/super_series_settings.json) — only meaningful when Series Mode on",
+      "Super-plan submission: jobs/<anchor>/super-plan.json validated by parseAndValidateSuperPlan (MAX_PARTS 20, shared series_id, positive video_duration_seconds/target_total_duration_seconds, parts tile with no gaps, exactly one is_final LAST part, unique titles, per-part validateProductionPlan); series_id must match the task's request; status must be awaiting_plan",
+      "buildSuperState: { version, anchor_job_id, series_id, total_parts, video_duration_seconds, plan, spawned[] } durable in repo",
+      "Queue controller superQueueAdvance (pure): first non-complete spawned part decides: error/cancelled -> halted (notify once per part via super_halted_notified_part); running -> waiting; all complete + more -> queue next; all -> done",
+      "Dispatch (superQueueTick): duplicate guard (existing status/request), sliceSuperPart (re-stamps series.part, sets job_id, appends ' — Part N' to title when missing), superPartRequestBody via nextPartRequestBody, saveStageARequest+saveProductionPlan, status stage_b_queued w/ series block, mark spawned BEFORE dispatch, dispatch stage-b.yml { job_id, production_ref, music_ref, code_ref }",
+      "Dashboard equivalent: submit super-plan by writing jobs/<anchor>/super-plan.json + status stage_b_queued; the repo-scanning sweep picks it up (VERIFIED session-13 E2E); queue/halt display reads super-plan.json + spawned parts' status.json — all pure repo reads"
+    ],
+    "settings_sections": [
+      "GitHub clone: connect/disconnect (deleteCredentials); delete (2-step confirm, deleteRepository, delete_repo scope hint); visibility toggle (getRepositoryVisibility/setRepositoryVisibility, public=unmetered Actions explanation, confirm screen); sync from source (checkCloneUpdates/applyCloneUpdates, preserves branding/jobs/audio-library); main-account-only: pushupdate (docs/update_notice.json), news broadcast (docs/news.json, compose + interval 6/12/24h/off min 6h); clone secrets hint (CLOUDFLARE_API_TOKEN/ACCOUNT_ID)",
+      "Narrator: 12 Edge TTS voices (VOICES in constants.js), select saves branding/tts_settings.json, preview plays assets/tts-previews/<voiceId>.mp3",
+      "Music library: listAudioLibrary (audio-library/), paged 6/page, preview (bytes), set default (branding/music_default.json library_track_path), delete w/ confirm + clearMusicDefaultIfTrack, upload batch (<=8MB each, SAFE_AUDIO_FILENAME_RE mp3/m4a/aac/wav/ogg/opus/flac, putBinaryFile audio-library/<name>)",
+      "Watermark: creator name (<=80 chars) -> branding/creator_watermark.json; clear",
+      "Series Mode default: branding/series_settings.json on/off + save confirmation",
+      "Super Series default: branding/super_series_settings.json on/off + warning when Series Mode off",
+      "Gemini keys: add (validated [A-Za-z0-9._-]{30,128}, quotes/whitespace stripped) -> GEMINI_API_KEYS secret + branding/gemini_keys.json fingerprints; clear (delete secret + metadata). (Not in operator's Dashboard settings list but in bot catalog — include for parity completeness; cheap.)",
+      "Zernio settings: see zernio section"
+    ],
+    "zernio": [
+      "Config triple: branding/zernio_settings.json (normalized by zernioSettingsOrDefault: enabled, auto_publish, automatic_mode publish_now|smart_schedule, target_accounts per platform, smart_schedule{timezone, interval_hours 1-8760 w/ legacy interval_days*24 carry-over, preferred_time HH:MM, queue_depth 1-100, start_mode next_available|custom, custom_start}) + branding/zernio_accounts.json snapshot + actionsSecretExists(ZERNIO_API_KEY)",
+      "Platforms: tiktok, youtube, instagram; Instagram requires Business/Creator, posts Reel+Story automatically",
+      "Per-task publish menu (only for status.state==complete): publish now / smart schedule / manual schedule (YYYY-MM-DDTHH:MM validated); targets_json = zernioTargets (selected active account ids per platform); dispatch publish.yml { action:'publish', job_id, mode, scheduled_for, timezone, targets_json, request_id: zernioRequestId (reuse idempotency_key when last attempt failed) }",
+      "Post actions: retry (failed/error/partial), publish-now/reschedule/cancel (scheduled/requested/publishing/partial/failed/error) via publish.yml { action: retry|update|cancel, job_id, post_id, mode, scheduled_for, timezone }",
+      "zernioTaskPublishButton conditional: published/partial -> 'View publish status'; publishing/scheduled -> 'View publish status'; else 'Publish (Zernio)'; entire affordance only when secret configured + enabled + targets exist",
+      "Settings: save/replace API key (>=20 chars no whitespace) -> ZERNIO_API_KEY sealed Actions secret (zernioFingerprint masked display); refresh accounts (publish.yml action=discover); enable/auto-publish/mode toggles; targets multi-select (toggleZernioTarget, unavailable accounts refused); smart-schedule fields (applySmartScheduleField: timezone IANA, interval 1-8760, time HH:MM, depth 1-100, custom_start datetime); clear key with confirm (deleteZernioSecret)"
+    ],
+    "media": [
+      "Audio preview: getRepositoryFileBytes + play (bot sends audio; Dashboard: <audio> with cached blob, tap-to-play)",
+      "Video: findReleaseAsset final.mp4 + browser download with real progress (ReadableStream + content-length) and size display; File System Access API where available; already-downloaded detection (app concept — Dashboard: mark downloaded in localStorage)"
+    ],
+    "news_broadcast": "Main-account only: docs/news.json compose/push + recurring interval; clones announce on home render. Dashboard gets the compose/push side when connected to the main repo.",
+    "multi_select_delete": "Music/task multi-select + delete (operator list) — app-side pattern; Dashboard: checkboxes + bulk delete via deleteClipforgeJob/deleteAudioLibraryTrack"
+  },
+  "tasks": [
+    {
+      "id": "task-01",
+      "title": "Read ARCHITECTURE.md + bot/src/index.js + bot/src/commands/*; produce complete feature catalog; confirm Super Series anchor migration status; scaffold site/ Cloudflare Pages project",
+      "status": "done",
+      "notes": "Catalog COMPLETE (see feature_catalog above — all bot source read in full). Super Series anchor: CONFIRMED repo-based (see super_series_anchor_status). Scaffold: site/ = static client-rendered vanilla-JS SPA (no framework build step — Pages-deployable as-is, no Worker, direct GitHub REST from browser). Files: index.html, styles.css, app.js (router+views), js/github.js (API client), js/state.js (PAT auth + localStorage), js/features/*.js (one module per feature area mirroring the catalog). VALIDATED: all site JS passes Node 22 ESM syntax check; github.js exports verified (17 functions incl. dispatchWorkflow/listRunJobs/getJobLogs/zernio*/secrets). Scaffold committed."
+    },
+    {
+      "id": "task-02",
+      "title": "Dashboard GitHub-only auth (one-time PAT, localStorage, disconnect) + clone creation/auto-login (beginShadowCloneCreation/pollShadowCloneJob/finalizeShadowClone equivalent)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-03",
+      "title": "New Video/task creation: classifySourceText-exact auto-detect port; all source kinds incl. main-account-gated telegram_channel; paste-or-upload production.json",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-04",
+      "title": "Tasks/Completed/task-detail: live status + real GitHub Actions logs (runs/{run_id}/jobs + jobs/{job_id}/logs, per-step collapse, active auto-expand, cache+append polling); restart A/B guards; cancel two-branch logic",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05",
+      "title": "Series: dedicated view, per-part status, Start Next Part w/ duplicate-dispatch guard, hold-to-delete series",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-06",
+      "title": "Super Series: settings, super-plan submission, queue/halt display, repo-based anchor tracking; verify real Stage B dispatch in Actions",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-07",
+      "title": "All Settings sections: GitHub clone (visibility/sync/push), Narrator w/ voice preview, Music library w/ default resolution, Watermark, Series Mode default, Super Series default, Zernio settings",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-08",
+      "title": "Zernio full feature set: 3 platforms, 3 publish modes, per-account multi-target, summary, conditional visibility, full settings (read bot/src/zernio.js first — DONE in task-01)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-09",
+      "title": "Music/task multi-select+delete; audio tap-to-play cached; video preview w/ downloaded detection; browser download w/ real progress+size",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-10",
+      "title": "Cross-check feature catalog (task-01) vs built (task-02..09); fix every gap; note checklist satisfied",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-11",
+      "title": "Deploy Dashboard to Cloudflare Pages; verify live end to end (clone, task per source kind, Super Series->real Stage B, settings, Zernio publish, series delete)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-12",
+      "title": "ONLY after task-11: delete Bot A/B Workers, CLIPFORGE_BOT_D1, bot KV, bot/ (or archive under _legacy/), dead workflows (deploy-bots.yml, telegram-relay.yml, news-push.yml if bot-only); PREREQUISITE: the Super Series queue sweep + clone-job sweep currently ride the Bot A Worker per-minute cron — before deleting the Worker, port the repo-scanning super-queue sweep to a scheduled GitHub Actions workflow (super-sweep.yml, cron * * * * *) so Super Series keeps working with zero Worker; update ARCHITECTURE.md + README; re-verify; build_complete=true",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
+  "notes": "Session-14 2026-09-13. task-01 in progress: catalog complete, site/ scaffold next. Live repo state: bot/ present (Bot A index.js 3008 lines + 6 commands + 18 modules, Bot B relay-worker.js), workflows: cleanup/deploy-bots/diagnostics/news-push/publish/stage-a/stage-b/telegram-relay all present, _legacy/telegram-bot/ present, site/ created by this session. Bot A Worker name: clipforge-bot-a (wrangler.bot-a.jsonc), D1: clipforge-bot-state (720de60e-1a08-492a-9ce6-64cb9534098d), KV: b09957b233c247deb40cc703ffadc95d."
+}
