@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "cat-p3",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 3 of 3 — Stage B dispatched (chained from part 2's completion).",
-  "updated_at_epoch": 1789329177,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789329188,
   "series": {
     "enabled": true,
     "series_id": "cat",
@@ -13,5 +13,17 @@
     "is_final": true
   },
   "release_tag": "clipforge-cat-p3",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-cat-p3"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-cat-p3",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 34779038192,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34779038192",
+    "code_ref": "32869abdedc47ed737d3d39f7932e59f01594121"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789372388
 }
