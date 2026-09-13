@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-e2e-1789264541",
+  "series_id": "e2esuper-1789264541",
+  "total_parts": 2,
+  "video_duration_seconds": 600,
+  "plan": {
+    "version": 2,
+    "series_id": "e2esuper-1789264541",
+    "video_duration_seconds": 600,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "E2E Alpha",
+        "video_duration_seconds": 600,
+        "target_total_duration_seconds": 30,
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 300,
+            "voiceover_text": "Hi."
+          }
+        ],
+        "series": {
+          "series_id": "e2esuper-1789264541",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 300,
+          "is_final": false,
+          "summary": "Recap for part 1."
+        }
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "E2E Beta",
+        "video_duration_seconds": 600,
+        "target_total_duration_seconds": 30,
+        "cuts": [
+          {
+            "start_seconds": 300,
+            "end_seconds": 600,
+            "voiceover_text": "Hi."
+          }
+        ],
+        "series": {
+          "series_id": "e2esuper-1789264541",
+          "part": 2,
+          "start_seconds": 300,
+          "end_seconds": 600,
+          "is_final": true,
+          "summary": "Recap for part 2."
+        }
+      }
+    ]
+  },
+  "spawned": []
+}
