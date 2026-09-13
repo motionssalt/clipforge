@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789317419261",
+  "series_id": "cat",
+  "total_parts": 3,
+  "video_duration_seconds": 1488,
+  "plan": {
+    "version": 2,
+    "series_id": "cat",
+    "video_duration_seconds": 1488,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1488,
+        "title": "The Cat Girl Slapstick Workday Crisis",
+        "hashtags": [
+          "#anime",
+          "#comedy",
+          "#catgirl",
+          "#yanineko",
+          "#funnyanime",
+          "#sliceoflife"
+        ],
+        "youtube_tags": [
+          "anime comedy",
+          "cat girl anime",
+          "funny anime moments",
+          "slapstick anime",
+          "yani neko",
+          "anime highlights",
+          "cat anime",
+          "relatable anime",
+          "comedy anime clips",
+          "daily life anime"
+        ],
+        "cuts": [
+          {
+            "start_seconds": 64,
+            "end_seconds": 74,
+            "voiceover_text": "A sudden blast of dark sewage drenches the landlord right outside the doorway. The green-haired cat girl slips away before anyone catches her.",
+            "keywords": [
+              {
+                "word": "sewage",
+                "color": "#8B5A2B"
+              },
+              {
+                "word": "slips",
+                "color": "#00E5FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 124,
+            "end_seconds": 138,
+            "voiceover_text": "Panic strikes immediately as intense stomach spasms hit, sending her sprinting desperately for the nearest toilet.",
+            "keywords": [
+              {
+                "word": "Panic",
+                "color": "#FF3D00"
+              },
+              {
+                "word": "sprinting",
+                "color": "#FFD600"
+              }
+            ]
+          },
+          {
+            "start_seconds": 317,
+            "end_seconds": 353,
+            "voiceover_text": "Desperate for cash to fix her mess, she reports for heavy industrial labor, but the punishing jackhammer leaves her trembling and dazed.",
+            "keywords": [
+              {
+                "word": "industrial",
+                "color": "#78909C"
+              },
+              {
+                "word": "trembling",
+                "color": "#AB47BC"
+              }
+            ]
+          },
+          {
+            "start_seconds": 405,
+            "end_seconds": 478,
+            "voiceover_text": "Her day unravels when a strict matriarch corners her in the hallway to deliver a furious reprimand. Will she keep her job, or is she about to be thrown onto the street?",
+            "keywords": [
+              {
+                "word": "reprimand",
+                "color": "#D50000"
+              },
+              {
+                "word": "thrown",
+                "color": "#FF1744"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "cat",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 484,
+          "is_final": false,
+          "summary": "The chaotic cat girl accidentally drenches her landlord in sludge and faces a disastrous day of grueling physical labor and confrontation."
+        }
+      },
+      {
+        "video_duration_seconds": 1488,
+        "title": "A Toxic Dilemma in the Alley",
+        "hashtags": [
+          "#anime",
+          "#mystery",
+          "#catgirl",
+          "#yanineko",
+          "#animedrama",
+          "#suspense"
+        ],
+        "youtube_tags": [
+          "anime mystery",
+          "anime suspense",
+          "cat girl anime",
+          "yani neko",
+          "anime plot twist",
+          "dramatic anime",
+          "anime scene",
+          "cliffhanger anime",
+          "dark comedy anime",
+          "anime moment"
+        ],
+        "cuts": [
+          {
+            "start_seconds": 500,
+            "end_seconds": 511,
+            "voiceover_text": "High above the neighborhood rooftops, the cat girl stands on her balcony exhaling thin clouds of smoke into the clear afternoon air.",
+            "keywords": [
+              {
+                "word": "rooftops",
+                "color": "#29B6F6"
+              },
+              {
+                "word": "smoke",
+                "color": "#B0BEC5"
+              }
+            ]
+          },
+          {
+            "start_seconds": 620,
+            "end_seconds": 645,
+            "voiceover_text": "Hours later, quiet calm turns into horror as she collapses across the tatami floor beside a strange, glowing rainbow puddle.",
+            "keywords": [
+              {
+                "word": "horror",
+                "color": "#E91E63"
+              },
+              {
+                "word": "rainbow",
+                "color": "#00E676"
+              }
+            ]
+          },
+          {
+            "start_seconds": 798,
+            "end_seconds": 825,
+            "voiceover_text": "Feverish memories of a weeping elder rush through her mind, warning her of the destructive path she is following.",
+            "keywords": [
+              {
+                "word": "weeping",
+                "color": "#1E88E5"
+              },
+              {
+                "word": "destructive",
+                "color": "#FF6D00"
+              }
+            ]
+          },
+          {
+            "start_seconds": 981,
+            "end_seconds": 991,
+            "voiceover_text": "Vulnerability turns to terror when a dark gloved hand lunges directly at her face in the shadows. Does she have the strength to fight back, or has her luck finally run out?",
+            "keywords": [
+              {
+                "word": "terror",
+                "color": "#D50000"
+              },
+              {
+                "word": "lunges",
+                "color": "#FFAB00"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "cat",
+          "part": 2,
+          "start_seconds": 484,
+          "end_seconds": 991,
+          "is_final": false,
+          "summary": "Afflicted by a bizarre glowing illness, the cat girl suffers feverish visions before being ambushed in the dark by a mysterious assailant."
+        }
+      },
+      {
+        "video_duration_seconds": 1488,
+        "title": "The Midnight Recovery and Sisterly Bond",
+        "hashtags": [
+          "#anime",
+          "#wholesome",
+          "#catgirl",
+          "#yanineko",
+          "#animerecovery",
+          "#familyanime"
+        ],
+        "youtube_tags": [
+          "anime ending",
+          "wholesome anime",
+          "sister bond anime",
+          "cat girl anime",
+          "yani neko",
+          "anime emotional",
+          "heartwarming anime",
+          "anime finale",
+          "recovery anime",
+          "night anime aesthetic"
+        ],
+        "cuts": [
+          {
+            "start_seconds": 1003,
+            "end_seconds": 1025,
+            "voiceover_text": "Confined to a dim quarantine room, the cat girl rests under heavy blankets while a figure in a protective hazmat suit monitors her vitals.",
+            "keywords": [
+              {
+                "word": "quarantine",
+                "color": "#FFD600"
+              },
+              {
+                "word": "hazmat",
+                "color": "#00E5FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1084,
+            "end_seconds": 1104,
+            "voiceover_text": "Across town, her younger sister Imoko urgently navigates crowded pharmacy aisles with friends to secure vital medicine.",
+            "keywords": [
+              {
+                "word": "Imoko",
+                "color": "#EC407A"
+              },
+              {
+                "word": "medicine",
+                "color": "#26A69A"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1132,
+            "end_seconds": 1157,
+            "voiceover_text": "The group debates remedies beside the supply shelves, refusing to let illness or bad decisions tear their makeshift family apart.",
+            "keywords": [
+              {
+                "word": "remedies",
+                "color": "#66BB6A"
+              },
+              {
+                "word": "family",
+                "color": "#FFA726"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1278,
+            "end_seconds": 1315,
+            "voiceover_text": "Under the soft blue moonlight, a tender phone call bridges the distance as the recovering cat girl whispers her quiet gratitude. The crisis has passed, and she is finally safe.",
+            "keywords": [
+              {
+                "word": "moonlight",
+                "color": "#42A5F5"
+              },
+              {
+                "word": "safe",
+                "color": "#76FF03"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "cat",
+          "part": 3,
+          "start_seconds": 991,
+          "end_seconds": 1488,
+          "is_final": true,
+          "summary": "Quarantined and cared for by protective companions, the cat girl recovers as her sister Imoko brings aid, bringing peace under the midnight sky."
+        }
+      }
+    ]
+  },
+  "spawned": []
+}
