@@ -300,5 +300,10 @@
       }
     ]
   },
-  "spawned": []
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "scissors-p1"
+    }
+  ]
 }
