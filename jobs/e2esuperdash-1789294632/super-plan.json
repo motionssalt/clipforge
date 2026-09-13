@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "anchor_job_id": "e2esuperdash-1789294632",
+  "series_id": "series-1789294632",
+  "total_parts": 2,
+  "video_duration_seconds": 600,
+  "plan": {
+    "version": 2,
+    "series_id": "series-1789294632",
+    "video_duration_seconds": 600,
+    "target_total_duration_seconds": 60,
+    "parts": [
+      {
+        "version": 2,
+        "title": "E2E Dashboard Super 1",
+        "video_duration_seconds": 600,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "series-1789294632",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 300,
+          "is_final": false,
+          "summary": "E2E recap part 1."
+        },
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 30,
+            "voiceover_text": "E2E dashboard super series verification line."
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "E2E Dashboard Super 2",
+        "video_duration_seconds": 600,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "series-1789294632",
+          "part": 2,
+          "start_seconds": 300,
+          "end_seconds": 600,
+          "is_final": true,
+          "summary": "E2E recap part 2."
+        },
+        "cuts": [
+          {
+            "start_seconds": 300,
+            "end_seconds": 330,
+            "voiceover_text": "E2E dashboard super series verification line."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
