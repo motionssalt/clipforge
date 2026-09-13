@@ -2,10 +2,10 @@
   "version": 1,
   "job_id": "series-1789294632-p1",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34751456208",
   "created_at_epoch": 1789294639,
-  "updated_at_epoch": 1789294783,
+  "updated_at_epoch": 1789294877,
   "expires_at_epoch": 1789467439,
   "series": {
     "enabled": true,
