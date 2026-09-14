@@ -158,7 +158,14 @@ export function validateProductionPlan(document, options = {}) {
   }
 
   // -- Cuts ---------------------------------------------------------------- //
-  const cuts = document.cuts;
+  let cuts = document.cuts;
+  if (!Array.isArray(cuts) && Array.isArray(document.segments) && document.segments.length > 0) {
+    // Alias: some AIs return `segments` instead of `cuts`; normalize in place
+    // so the whole flow (and the backend) sees the canonical `cuts` key.
+    document.cuts = document.segments;
+    delete document.segments;
+    cuts = document.cuts;
+  }
   if (!Array.isArray(cuts)) {
     errors.push('`cuts` must be an array.');
     return errors;

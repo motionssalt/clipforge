@@ -223,7 +223,8 @@ HARD REQUIREMENTS FOR THE SUPER-PLAN DOCUMENT:
     single-part production.json (exactly the shape described later in this
     file: cuts, hashtags, title, and a NESTED "series" object). Do NOT put a
     top-level cuts array on the super-plan itself — the cuts live INSIDE each
-    part.
+    part. The per-part array MUST be named `cuts` — never `segments` or any
+    other key.
   * Every part's series.series_id MUST equal "{series_id}" character-for-
     character.
   * The parts tile the source without gaps or overlaps: parts[0].series.
@@ -239,6 +240,14 @@ PER-PART NARRATION LENGTH (CRITICAL — THIS IS PER PART, NOT PER SERIES):
     {narration_words} words per part), applying the SAME NARRATION DURATION
     CONTRACT the rest of this file spells out — per part, not once for the
     whole series total.
+  * WORD-COUNT ARITHMETIC (do this explicitly before writing): spoken pace is
+    ~3.1 words per second. {target_duration}s of part = ~{narration_words}
+    words for THIS part. Reference: 30s ≈ 94 words, 60s ≈ 188 words,
+    90s ≈ 282 words, 120s ≈ 376 words — PER PART. NEVER hand one part a word
+    budget sized for the whole series, and NEVER stretch one part's budget
+    across its footage window: a part whose footage spans 80s still needs only
+    ~{narration_words} spoken words when {target_duration}s is the target;
+    the footage beyond the narration is B-roll and is retimed, not narrated.
   * end_seconds for every cut is still chosen FIRST on the PICKING end_seconds
     visual-payoff rules; narration length is a CONSEQUENCE, never an input.
     Footage running LONGER than the narration is expected and desirable —
@@ -261,6 +270,13 @@ GLOBAL DIRECTIVES:
   * The super-plan covers the whole source from 0s to the source's total
     length. If the source cannot honestly support this many parts, use fewer
     parts — a shorter series with fully-realized parts is correct.
+  * PART COUNT — NO ARTIFICIAL CAP: there is no limit on the number of parts
+    (the tool accepts up to 20). Plan AS MANY parts as the source honestly
+    supports: every distinct strong thread, revelation, or turning point that
+    has enough material for a full {target_duration}s part DESERVES its own
+    part. Do NOT default to 2-3 parts out of caution — a long, dense source
+    should yield many parts. Use few parts ONLY when the material genuinely
+    runs out, never to be conservative.
   * Deliver ONLY the super-plan JSON. Prefer a .json file attachment; if you
     cannot attach files, reply with ONE ```json code block and nothing else.
 

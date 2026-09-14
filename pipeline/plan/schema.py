@@ -206,6 +206,15 @@ def validate_production_plan(document: Any, part_number: int | None = None) -> l
     # -- Cuts ---------------------------------------------------------------- #
     cuts = document.get("cuts")
     if not isinstance(cuts, list):
+        # Alias: some AIs return `segments` instead of `cuts` (operator-reported
+        # recurring mismatch). Normalize in place so every downstream consumer
+        # (Stage B resolve/render) sees the canonical `cuts` key.
+        segments = document.get("segments")
+        if isinstance(segments, list) and segments:
+            document["cuts"] = segments
+            document.pop("segments", None)
+            cuts = segments
+    if not isinstance(cuts, list):
         errors.append("`cuts` must be an array.")
         return errors
     if len(cuts) < 1:

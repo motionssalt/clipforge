@@ -29,7 +29,9 @@
     "presidential debate",
     "adult swim"
   ],
-  "segments": [
+  "target_total_duration_seconds": 30,
+  "job_id": "Rick-p1",
+  "cuts": [
     {
       "start_seconds": 17,
       "end_seconds": 50,
@@ -75,7 +77,5 @@
         }
       ]
     }
-  ],
-  "target_total_duration_seconds": 30,
-  "job_id": "Rick-p1"
+  ]
 }

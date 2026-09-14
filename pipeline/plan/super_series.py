@@ -166,6 +166,10 @@ def slice_part(document: dict[str, Any], part_index: int) -> dict[str, Any]:
     """
     parts = document["parts"]
     part = dict(parts[part_index])
+    # Canonical key is `cuts`; tolerate the legacy `segments` alias so the
+    # sliced part handed to Stage B always validates against schema.py.
+    if "cuts" not in part and isinstance(part.get("segments"), list):
+        part["cuts"] = part.pop("segments")
     series = dict(part.get("series") if isinstance(part.get("series"), dict) else {})
     series["part"] = part_index + 1
     part["series"] = series
