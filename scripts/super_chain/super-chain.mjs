@@ -78,6 +78,16 @@ const now = () => Math.floor(Date.now() / 1000);
 await putJson(credentials, credentials.repo, STAGE_A_REQUEST_PATH(outcome.jobId),
   { version: 1, job_id: outcome.jobId, saved_at_epoch: now(), ...requestBody },
   `clipforge: stage-a request for super part ${outcome.part} (${outcome.jobId})`);
+// Read-back verify the inherited Stage-A state BEFORE dispatching: this is the
+// exact file Stage B's >2GiB re-fetch fallback depends on. A Contents-API PUT
+// that silently 409/422'd must abort the spawn HERE (operator-visible) instead
+// of letting Stage B run against an incompletely-inherited job folder
+// (2026-09-14 Rick-p1 failure — production.json present, request missing).
+const verify = await getJson(credentials, credentials.repo, STAGE_A_REQUEST_PATH(outcome.jobId));
+if (!verify || !verify.source || !verify.source.kind) {
+  console.error(`[chain] stage-a-request.json for ${outcome.jobId} did not commit durably with a usable source — aborting BEFORE dispatch so no part runs without its inherited Stage-A state.`);
+  process.exit(1);
+}
 await putJson(credentials, credentials.repo, PRODUCTION_PATH(outcome.jobId), outcome.plan,
   `clipforge: production plan for super part ${outcome.part} (${outcome.jobId})`);
 const ns = newStatus({
@@ -106,3 +116,17 @@ await dispatchWorkflow(credentials, credentials.repo, STAGE_B_WORKFLOW, {
   code_ref: codeRef,
 });
 console.log(`[chain] DISPATCHED stage-b.yml for part ${outcome.part} (${outcome.jobId}) — chained directly from run ${runId} (${jobId}) completion.`);
+// Anchor status LAST — the anchor card stops being a dead 'Rendering queued'
+// card: it now tracks which part the chain is on, which job is running it, and
+// when. A failure of this put must NOT fail the chain (the part is dispatched).
+await putJson(credentials, credentials.repo, STATUS_PATH(anchorId), {
+  version: 1, job_id: anchorId, mode: 'manual', state: 'stage_b_queued',
+  message: `Super Series part ${outcome.part} of ${state.total_parts} running (${outcome.jobId}) — chained from part ${outcome.part - 1}'s completion.`,
+  updated_at_epoch: now(),
+  series: {
+    enabled: true, series_id: state.series_id, part: outcome.part,
+    start_seconds: 0,
+  },
+  active_part_job_id: outcome.jobId,
+}, `clipforge: super series anchor — part ${outcome.part} running (${outcome.jobId})`).catch((e) =>
+  console.log(`[chain] anchor status update failed (non-fatal): ${e && e.message}`));
