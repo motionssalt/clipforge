@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Rick-p7",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 7 of 7 — Stage B dispatched (chained from part 6's completion).",
-  "updated_at_epoch": 1789389156,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789389169,
   "series": {
     "enabled": true,
     "series_id": "Rick",
@@ -13,5 +13,17 @@
     "is_final": true
   },
   "release_tag": "clipforge-Rick-p7",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-p7"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-p7",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 34843994079,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34843994079",
+    "code_ref": "50f2fe09f428371d3bd0c953e9ec7f534dbf91ca"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789432369
 }
