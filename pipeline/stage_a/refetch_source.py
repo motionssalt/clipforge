@@ -68,11 +68,46 @@ def _fail(reason: str) -> IngestError:
     )
 
 
+def _find_super_anchor(job_id: str, root: Path) -> str:
+    """Return the Super Series anchor job id whose durable spawn cursor names
+    ``job_id`` as a spawned part — ``""`` when the job is not a spawned part.
+
+    A spawned Super Series part inherits EVERYTHING from its anchor's Stage A
+    (same source, same options); the durable inheritance record is the anchor's
+    ``super-plan.json`` ``spawned`` list, written by every spawn path
+    (supertick.js / super-chain.mjs / the Android app) BEFORE Stage B is ever
+    dispatched. When a part's own ``stage-a-request.json`` is missing (a spawn
+    path that failed to write it), this is the correct recovery source — the
+    anchor's request carries the ORIGINAL source reference, which is exactly
+    what the part's synthesized request would have carried forward.
+    """
+    if not root.is_dir():
+        return ""
+    for child in sorted(root.iterdir()):
+        if not child.is_dir() or child.name == job_id:
+            continue
+        plan_path = child / "super-plan.json"
+        if not plan_path.is_file():
+            continue
+        try:
+            doc = json.loads(plan_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        spawned = doc.get("spawned")
+        if isinstance(spawned, list) and any(
+            isinstance(e, dict) and str(e.get("job_id")) == job_id for e in spawned
+        ):
+            return child.name
+    return ""
+
+
 def _resolve_request_path(job_id: str, source_job: str, root: Path) -> tuple[Path, str]:
     """Pick the request file to re-fetch from.
 
-    Prefer the explicit ``source_job`` (a series Part 1), else fall back to
-    the job's own request. Returns (request_path, owner_job_id).
+    Prefer the explicit ``source_job`` (a series Part 1), else the job's own
+    request, else — for a Super Series spawned part — the anchor's request
+    (the part inherits its source from the anchor; see ``_find_super_anchor``).
+    Returns (request_path, owner_job_id).
     """
     candidates: list[tuple[str, Path]] = []
     if source_job:
@@ -81,9 +116,21 @@ def _resolve_request_path(job_id: str, source_job: str, root: Path) -> tuple[Pat
     for owner, path in candidates:
         if path.is_file():
             return path, owner
+    anchor = _find_super_anchor(job_id, root)
+    if anchor:
+        anchor_path = root / anchor / "stage-a-request.json"
+        if anchor_path.is_file():
+            print(
+                f"[refetch] {job_id} has no stage-a-request.json of its own — "
+                f"re-fetching via Super Series anchor {anchor}'s saved request "
+                f"(the part inherits its source from the anchor).",
+                flush=True,
+            )
+            return anchor_path, anchor
     raise _fail(
         "no stage-a-request.json found for the job"
         + (f" or its series source job '{source_job}'" if source_job else "")
+        + (f" or its Super Series anchor '{anchor}'" if anchor else "")
         + " — cannot re-fetch without the saved source reference."
     )
 

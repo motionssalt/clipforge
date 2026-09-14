@@ -402,3 +402,101 @@ def test_refetch_unsupported_kind_fails(tmp_path):
     with pytest.raises(ingest.IngestError) as exc:
         refetch_source.refetch_source("job-bad", str(tmp_path / "work"), root=str(jobs_root))
     assert "unsupported source kind" in str(exc.value)
+
+
+# --------------------------------------------------------------------------- #
+# Super Series anchor fallback (2026-09-14 inheritance fix)                    #
+# --------------------------------------------------------------------------- #
+
+def _write_super_anchor(jobs_root: Path, anchor_id: str, spawned_job_id: str,
+                        source: dict) -> None:
+    """An anchor job dir with a durable spawn cursor naming spawned_job_id."""
+    _write_request(jobs_root, anchor_id, source)
+    (jobs_root / anchor_id / "super-plan.json").write_text(json.dumps({
+        "version": 1,
+        "anchor_job_id": anchor_id,
+        "series_id": "Rick",
+        "total_parts": 7,
+        "plan": {"version": 2, "parts": []},
+        "spawned": [{"part": 1, "job_id": spawned_job_id}],
+    }), encoding="utf-8")
+
+
+def test_refetch_spawned_part_falls_back_to_super_anchor(tmp_path, monkeypatch):
+    """The Rick-p1 failure shape: a spawned Super Series part whose own
+    stage-a-request.json is missing re-fetches via the anchor's saved request
+    instead of failing with 'no stage-a-request.json found'."""
+    _patch_container_ext(monkeypatch)
+    jobs_root = tmp_path / "jobs"
+    _write_super_anchor(jobs_root, "manual-anchor", "Rick-p1",
+                        {"kind": "url", "value": "https://example.com/source.mp4"})
+    # The spawned part dir exists (production.json/status.json were written)
+    # but its stage-a-request.json is NOT — the exact live failure shape.
+    (jobs_root / "Rick-p1").mkdir(parents=True)
+    calls = {}
+
+    def fake_download_direct(url, out):
+        calls["url"] = url
+        Path(out).write_bytes(b"\x00" * 64)
+        return 64
+
+    monkeypatch.setattr(ingest, "download_direct", fake_download_direct)
+    rec = refetch_source.refetch_source("Rick-p1", str(tmp_path / "work"), root=str(jobs_root))
+
+    assert calls["url"] == "https://example.com/source.mp4"
+    assert rec["refetched_from_job"] == "manual-anchor"
+    assert rec["refetch"] is True
+    assert Path(rec["original_path"]).is_file()
+
+
+def test_refetch_spawned_part_own_request_preferred_over_anchor(tmp_path, monkeypatch):
+    """When the part DOES have its own request, the anchor fallback never
+    fires — the part's own saved reference stays authoritative."""
+    _patch_container_ext(monkeypatch)
+    jobs_root = tmp_path / "jobs"
+    _write_super_anchor(jobs_root, "manual-anchor", "Rick-p1",
+                        {"kind": "url", "value": "https://example.com/anchor.mp4"})
+    _write_request(jobs_root, "Rick-p1",
+                   {"kind": "url", "value": "https://example.com/part.mp4"})
+    calls = {}
+
+    def fake_download_direct(url, out):
+        calls["url"] = url
+        Path(out).write_bytes(b"\x00" * 64)
+        return 64
+
+    monkeypatch.setattr(ingest, "download_direct", fake_download_direct)
+    rec = refetch_source.refetch_source("Rick-p1", str(tmp_path / "work"), root=str(jobs_root))
+
+    assert calls["url"] == "https://example.com/part.mp4"
+    assert rec["refetched_from_job"] == "Rick-p1"
+
+
+def test_refetch_spawned_part_anchor_missing_request_still_fails(tmp_path):
+    """Anchor fallback only helps when the anchor's request actually exists —
+    otherwise the clearly-labelled failure is preserved."""
+    jobs_root = tmp_path / "jobs"
+    anchor = jobs_root / "manual-anchor"
+    anchor.mkdir(parents=True)
+    (anchor / "super-plan.json").write_text(json.dumps({
+        "version": 1, "anchor_job_id": "manual-anchor",
+        "plan": {"parts": []},
+        "spawned": [{"part": 1, "job_id": "Rick-p1"}],
+    }), encoding="utf-8")
+    (jobs_root / "Rick-p1").mkdir(parents=True)
+    with pytest.raises(ingest.IngestError) as exc:
+        refetch_source.refetch_source("Rick-p1", str(tmp_path / "work"), root=str(jobs_root))
+    assert "no stage-a-request.json found" in str(exc.value)
+    assert "manual-anchor" in str(exc.value)
+
+
+def test_refetch_non_spawned_job_unchanged(tmp_path):
+    """A job named in NO anchor's spawned list behaves exactly as before —
+    the anchor scan never alters ordinary jobs."""
+    jobs_root = tmp_path / "jobs"
+    _write_super_anchor(jobs_root, "manual-anchor", "some-other-part",
+                        {"kind": "url", "value": "https://example.com/x.mp4"})
+    (jobs_root / "ghost").mkdir(parents=True)
+    with pytest.raises(ingest.IngestError) as exc:
+        refetch_source.refetch_source("ghost", str(tmp_path / "work"), root=str(jobs_root))
+    assert "no stage-a-request.json found" in str(exc.value)
