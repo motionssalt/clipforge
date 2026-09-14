@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Rick-p1",
   "mode": "manual",
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34828114788",
-  "updated_at_epoch": 1789378609,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789380311,
   "series": {
     "enabled": true,
     "series_id": "Rick",
@@ -13,9 +13,9 @@
   },
   "assets": {},
   "run": {
-    "workflow_run_id": 34828114788,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34828114788",
-    "code_ref": "418fc04ff07bc4683f5a3779f82faf870f2ce6eb"
+    "workflow_run_id": 34831328894,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34831328894",
+    "code_ref": "33c1faa185e6fe4fd468c27b1578e01eda30f6a2"
   },
   "publishing": {
     "status": "not_requested",
