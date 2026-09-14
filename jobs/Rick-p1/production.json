@@ -1,0 +1,81 @@
+{
+  "video_duration_seconds": 1335,
+  "title": "A Powerless Morty Dares To Run — Part 1",
+  "series_summary": "Rick C-137 rejects the Citadel of Ricks, the wafer plant harvests a captive Rick's brain for luxury cookies, and underdog Candidate Morty calmly launches his election campaign despite his manager's warnings.",
+  "series": {
+    "series_id": "Rick",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 206,
+    "is_final": false
+  },
+  "hashtags": [
+    "#rickandmorty",
+    "#evilmorty",
+    "#citadel",
+    "#adultswim",
+    "#cartoon",
+    "#scifi"
+  ],
+  "youtube_tags": [
+    "rick and morty",
+    "citadel of ricks",
+    "evil morty",
+    "candidate morty",
+    "ricklantis mixup",
+    "simple rick",
+    "tales from the citadel",
+    "season 3",
+    "presidential debate",
+    "adult swim"
+  ],
+  "segments": [
+    {
+      "start_seconds": 17,
+      "end_seconds": 50,
+      "voiceover_text": "Across the multiverse, duplicate geniuses gathered to construct an empire. But Rick C-137 rejects the Citadel with furious contempt, leaving the council destroyed and the society to rot.",
+      "keywords": [
+        {
+          "word": "empire",
+          "color": "#4EA8DE"
+        },
+        {
+          "word": "contempt",
+          "color": "#E63946"
+        }
+      ]
+    },
+    {
+      "start_seconds": 142,
+      "end_seconds": 166,
+      "voiceover_text": "Inside the wafer plant, freedom is an illusion. Technicians harvest an innocent Rick's brain chemistry on an eternal loop to flavor luxury wafer cookies for the elite. The Citadel preys on its own.",
+      "keywords": [
+        {
+          "word": "illusion",
+          "color": "#9B5DE5"
+        },
+        {
+          "word": "eternal",
+          "color": "#F77F00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 183,
+      "end_seconds": 206,
+      "voiceover_text": "Now, an election arrives, and Candidate Morty launches an underdog campaign. His campaign manager begs him to quit before the debate. Morty smiles with eerie calm. Can a powerless Morty survive?",
+      "keywords": [
+        {
+          "word": "underdog",
+          "color": "#06D6A0"
+        },
+        {
+          "word": "calm",
+          "color": "#118AB2"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 30,
+  "job_id": "Rick-p1"
+}
