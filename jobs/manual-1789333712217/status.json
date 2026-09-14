@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "manual-1789333712217",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 1\/3 dispatched.",
-  "updated_at_epoch": 1789343170,
+  "state": "cancelled",
+  "message": "Cancelled before the Stage B run started.",
+  "updated_at_epoch": 1789369078,
   "series": {
     "enabled": true,
     "series_id": "series-1789333712217",
