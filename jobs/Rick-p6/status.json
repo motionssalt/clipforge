@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Rick-p6",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789388396,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789389144,
   "series": {
     "enabled": true,
     "series_id": "Rick",
@@ -13,12 +13,15 @@
     "is_final": false
   },
   "release_tag": "clipforge-Rick-p6",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-p6",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-Rick-p6/clipforge-Rick-p6-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-Rick-p6/final.mp4"
+  },
   "run": {
     "workflow_run_id": 34842572924,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34842572924",
-    "code_ref": "dd74f9de7de7a1caf6066ac977f24b1742e9d236"
+    "code_ref": "4ee08454230674fcd5425ebc28357e52e3815231"
   },
   "publishing": {
     "status": "not_requested",
