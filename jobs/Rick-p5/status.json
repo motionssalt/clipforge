@@ -3,8 +3,8 @@
   "job_id": "Rick-p5",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1789387222,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1789387368,
   "series": {
     "enabled": true,
     "series_id": "Rick",
@@ -18,7 +18,7 @@
   "run": {
     "workflow_run_id": 34841049448,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34841049448",
-    "code_ref": "ecf683bdcb119f52e5fab08aa18c62217b608afe"
+    "code_ref": "552d7b023480550ba7480e58f1ffb203da9200a4"
   },
   "publishing": {
     "status": "not_requested",
