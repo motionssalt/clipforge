@@ -1,0 +1,81 @@
+{
+  "video_duration_seconds": 1335,
+  "title": "Citadel Streets Corrupt The Strongest Minds — Part 2",
+  "series_summary": "Rookie Cop Rick partners with a ruthless Cop Morty in Morty Town, School Mortys dread a graduation into servitude and chase rumors of a wishing portal, and factory worker Rick J-22 is humiliated after fifteen years on the line.",
+  "series": {
+    "series_id": "Rick",
+    "part": 2,
+    "start_seconds": 206,
+    "end_seconds": 375,
+    "is_final": false
+  },
+  "hashtags": [
+    "#rickandmorty",
+    "#copmorty",
+    "#citadel",
+    "#animation",
+    "#rickandmortyseason3",
+    "#police"
+  ],
+  "youtube_tags": [
+    "cop rick",
+    "cop morty",
+    "mortytown",
+    "citadel police",
+    "ricklantis mixup",
+    "rick and morty",
+    "school mortys",
+    "simple rick wafers",
+    "rick j22",
+    "training day parody"
+  ],
+  "target_total_duration_seconds": 30,
+  "cuts": [
+    {
+      "start_seconds": 216,
+      "end_seconds": 258,
+      "voiceover_text": "Rookie Cop Rick arrives in Morty Town expecting honor. Instead, he gets paired with a cynical, corrupt veteran Cop Morty. His new partner despises his own kind with ruthless fury. The badge has poisoned him.",
+      "keywords": [
+        {
+          "word": "honor",
+          "color": "#4EA8DE"
+        },
+        {
+          "word": "ruthless",
+          "color": "#E63946"
+        }
+      ]
+    },
+    {
+      "start_seconds": 293,
+      "end_seconds": 321,
+      "voiceover_text": "Across town at the academy, student Mortys dread their upcoming graduation. Trapped without a Rick, they face a bleak future of servitude. Desperate rumors spread of a mythical wishing portal that offers escape.",
+      "keywords": [
+        {
+          "word": "graduation",
+          "color": "#FFB703"
+        },
+        {
+          "word": "mythical",
+          "color": "#9B5DE5"
+        }
+      ]
+    },
+    {
+      "start_seconds": 334,
+      "end_seconds": 375,
+      "voiceover_text": "At the wafer factory, worker Rick J-22 has slaved on the line for fifteen years. When a promotion opens, his supervisor mocks him and gives it to a clone. Will this humiliated worker finally break?",
+      "keywords": [
+        {
+          "word": "fifteen",
+          "color": "#06D6A0"
+        },
+        {
+          "word": "humiliated",
+          "color": "#E63946"
+        }
+      ]
+    }
+  ],
+  "job_id": "Rick-p2"
+}
