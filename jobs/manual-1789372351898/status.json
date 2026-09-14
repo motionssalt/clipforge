@@ -3,13 +3,13 @@
   "job_id": "manual-1789372351898",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 6 of 7 running (Rick-p6) — chained from part 5's completion.",
-  "updated_at_epoch": 1789388215,
+  "message": "Super Series part 7 of 7 running (Rick-p7) — chained from part 6's completion.",
+  "updated_at_epoch": 1789389159,
   "series": {
     "enabled": true,
     "series_id": "Rick",
-    "part": 6,
+    "part": 7,
     "start_seconds": 0
   },
-  "active_part_job_id": "Rick-p6"
+  "active_part_job_id": "Rick-p7"
 }
