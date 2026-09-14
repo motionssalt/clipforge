@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "Rick-p4",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 4 of 7 — Stage B dispatched (chained from part 3's completion).",
+  "updated_at_epoch": 1789386168,
+  "series": {
+    "enabled": true,
+    "series_id": "Rick",
+    "part": 4,
+    "start_seconds": 565,
+    "is_final": false
+  },
+  "release_tag": "clipforge-Rick-p4",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-p4"
+}
