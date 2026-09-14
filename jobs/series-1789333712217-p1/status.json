@@ -1,42 +1,30 @@
 {
-  "version": 1,
+  "version": 2,
   "job_id": "series-1789333712217-p1",
   "mode": "manual",
-<<<<<<< Updated upstream
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/34790652480",
-  "updated_at_epoch": 1789343419,
-=======
-  "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1789367165,
->>>>>>> Stashed changes
   "series": {
-    "enabled": true,
-    "series_id": "series-1789333712217",
-    "part": 1,
-    "start_seconds": 0
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
+    "start_seconds": 0,
+    "is_final": false
   },
+  "state": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1789367329,
+  "updated_at_epoch": 1789367329,
+  "expires_at_epoch": 1789410529,
+  "release_tag": "clipforge-series-1789333712217-p1",
+  "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 34790652480,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/34790652480",
-<<<<<<< Updated upstream
-    "code_ref": "03dc32e469977dc95f16c3c47de0fdcb95c6d722"
-=======
-    "code_ref": "a9a326d8591b5993ed49caeec5a8eda1f96730d3"
->>>>>>> Stashed changes
+    "code_ref": "3d7a1e068bd9c7b0b0d23dc22c0595f8f136c4da"
   },
   "publishing": {
     "status": "not_requested",
     "posts": [],
     "idempotency_key": ""
-  },
-  "release_tag": "clipforge-series-1789333712217-p1",
-  "release_url": "",
-<<<<<<< Updated upstream
-  "expires_at_epoch": 1789386388
-=======
-  "expires_at_epoch": 1789410365
->>>>>>> Stashed changes
+  }
 }
