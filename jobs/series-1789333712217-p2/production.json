@@ -1,0 +1,169 @@
+{
+  "video_duration_seconds": 1422,
+  "title": "Arrogant Magic Tutor Underestimates Toddler Prodigy — Part 2",
+  "series": {
+    "series_id": "series-1789333712217",
+    "part": 2,
+    "start_seconds": 654,
+    "end_seconds": 1066,
+    "is_final": false,
+    "summary": "Rudeus gets caught casting water magic by his mother Zenith, sparking a parenting dispute with Paul that leads to hiring the aloof Migurd mage Roxy as his private tutor."
+  },
+  "series_summary": "Rudeus gets caught casting water magic by his mother Zenith, sparking a parenting dispute with Paul that leads to hiring the aloof Migurd mage Roxy as his private tutor.",
+  "hashtags": [
+    "#anime",
+    "#mushokutensei",
+    "#roxy",
+    "#roxymigurdia",
+    "#rudeus",
+    "#isekai"
+  ],
+  "youtube_tags": [
+    "mushoku tensei",
+    "jobless reincarnation",
+    "roxy migurdia",
+    "rudeus greyrat",
+    "paul greyrat",
+    "zenith greyrat",
+    "mushoku tensei episode 1",
+    "anime tutor",
+    "magic training",
+    "migurd race",
+    "water saint",
+    "anime family clash"
+  ],
+  "cuts": [
+    {
+      "start_seconds": 872,
+      "end_seconds": 886,
+      "voiceover_text": "Zenith catches young Rudeus casting magic, triggering a fierce clash between his parents over his future.",
+      "raw_narration": "Zenith catches young Rudeus casting magic, triggering a fierce clash between his parents over his future.",
+      "keywords": [
+        {
+          "word": "Zenith",
+          "color": "#FFD700"
+        },
+        {
+          "word": "fierce",
+          "color": "#FF4444"
+        }
+      ]
+    },
+    {
+      "start_seconds": 898,
+      "end_seconds": 934,
+      "voiceover_text": "Paul wants him to train as a swordsman. But Zenith insists their toddler is a prodigy, forcing Paul to hire an elite tutor.",
+      "raw_narration": "Paul wants him to train as a swordsman. But Zenith insists their toddler is a prodigy, forcing Paul to hire an elite tutor.",
+      "keywords": [
+        {
+          "word": "swordsman",
+          "color": "#FF8800"
+        },
+        {
+          "word": "prodigy",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 941,
+      "end_seconds": 976,
+      "voiceover_text": "A cloaked rider arrives on horseback. Roxy Migurdia dismounts, carrying an oversized wizard staff and wearing a pointed hat.",
+      "raw_narration": "A cloaked rider arrives on horseback. Roxy Migurdia dismounts, carrying an oversized wizard staff and wearing a pointed hat.",
+      "keywords": [
+        {
+          "word": "Roxy",
+          "color": "#00E5FF"
+        },
+        {
+          "word": "wizard",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1004,
+      "end_seconds": 1066,
+      "voiceover_text": "Convinced the parents are exaggerating a spoiled toddler's basic party tricks, Roxy skeptically leads Rudeus outside to the open fields. What will she do when she realizes the true scale of his magic?",
+      "raw_narration": "Convinced the parents are exaggerating a spoiled toddler's basic party tricks, Roxy skeptically leads Rudeus outside to the open fields. What will she do when she realizes the true scale of his magic?",
+      "keywords": [
+        {
+          "word": "skeptically",
+          "color": "#FF8800"
+        },
+        {
+          "word": "magic",
+          "color": "#00E5FF"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "start_seconds": 872,
+      "end_seconds": 886,
+      "voiceover_text": "Zenith catches young Rudeus casting magic, triggering a fierce clash between his parents over his future.",
+      "raw_narration": "Zenith catches young Rudeus casting magic, triggering a fierce clash between his parents over his future.",
+      "keywords": [
+        {
+          "word": "Zenith",
+          "color": "#FFD700"
+        },
+        {
+          "word": "fierce",
+          "color": "#FF4444"
+        }
+      ]
+    },
+    {
+      "start_seconds": 898,
+      "end_seconds": 934,
+      "voiceover_text": "Paul wants him to train as a swordsman. But Zenith insists their toddler is a prodigy, forcing Paul to hire an elite tutor.",
+      "raw_narration": "Paul wants him to train as a swordsman. But Zenith insists their toddler is a prodigy, forcing Paul to hire an elite tutor.",
+      "keywords": [
+        {
+          "word": "swordsman",
+          "color": "#FF8800"
+        },
+        {
+          "word": "prodigy",
+          "color": "#00E5FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 941,
+      "end_seconds": 976,
+      "voiceover_text": "A cloaked rider arrives on horseback. Roxy Migurdia dismounts, carrying an oversized wizard staff and wearing a pointed hat.",
+      "raw_narration": "A cloaked rider arrives on horseback. Roxy Migurdia dismounts, carrying an oversized wizard staff and wearing a pointed hat.",
+      "keywords": [
+        {
+          "word": "Roxy",
+          "color": "#00E5FF"
+        },
+        {
+          "word": "wizard",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1004,
+      "end_seconds": 1066,
+      "voiceover_text": "Convinced the parents are exaggerating a spoiled toddler's basic party tricks, Roxy skeptically leads Rudeus outside to the open fields. What will she do when she realizes the true scale of his magic?",
+      "raw_narration": "Convinced the parents are exaggerating a spoiled toddler's basic party tricks, Roxy skeptically leads Rudeus outside to the open fields. What will she do when she realizes the true scale of his magic?",
+      "keywords": [
+        {
+          "word": "skeptically",
+          "color": "#FF8800"
+        },
+        {
+          "word": "magic",
+          "color": "#00E5FF"
+        }
+      ]
+    }
+  ],
+  "target_total_duration_seconds": 30,
+  "job_id": "series-1789333712217-p2"
+}
