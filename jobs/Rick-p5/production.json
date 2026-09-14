@@ -1,0 +1,81 @@
+{
+  "video_duration_seconds": 1335,
+  "title": "Gunfire Shatters The Citadel Frontrunner — Part 5",
+  "series_summary": "Student Mortys journey toward the wishing portal, Candidate Morty's fired manager shoots him at a rally, and a nightclub shootout ends with Rookie Rick killing his corrupt partner in self-defense.",
+  "series": {
+    "series_id": "Rick",
+    "part": 5,
+    "start_seconds": 751,
+    "end_seconds": 925,
+    "is_final": false
+  },
+  "hashtags": [
+    "#rickandmorty",
+    "#assassination",
+    "#candidatemorty",
+    "#shootout",
+    "#citadel",
+    "#shocking"
+  ],
+  "youtube_tags": [
+    "candidate morty shot",
+    "citadel assassination",
+    "cop morty shootout",
+    "big morty",
+    "cop rick",
+    "stand by me mortys",
+    "wishing portal",
+    "ricklantis mixup",
+    "rick and morty",
+    "citadel rally"
+  ],
+  "target_total_duration_seconds": 30,
+  "cuts": [
+    {
+      "start_seconds": 776,
+      "end_seconds": 810,
+      "voiceover_text": "Along the rusty railroad tracks, four student Mortys journey toward the mythical wishing portal. They share fragile dreams of freedom, unaware that tragedy stalks this city.",
+      "keywords": [
+        {
+          "word": "fragile",
+          "color": "#4EA8DE"
+        },
+        {
+          "word": "tragedy",
+          "color": "#E63946"
+        }
+      ]
+    },
+    {
+      "start_seconds": 817,
+      "end_seconds": 861,
+      "voiceover_text": "At a triumphant rally, Candidate Morty greets thousands of cheering followers. Suddenly, his former manager bursts through security with a pistol. Shouting in panic, he shoots Morty point-blank. The frontrunner collapses in blood.",
+      "keywords": [
+        {
+          "word": "triumphant",
+          "color": "#06D6A0"
+        },
+        {
+          "word": "shoots",
+          "color": "#E63946"
+        }
+      ]
+    },
+    {
+      "start_seconds": 895,
+      "end_seconds": 925,
+      "voiceover_text": "Simultaneously, a nightclub bust erupts into slaughter. When Cop Morty pulls his weapon on Rookie Rick, the rookie fires in self-defense, killing his corrupt partner. Amidst the bloodshed, did the frontrunner survive?",
+      "keywords": [
+        {
+          "word": "slaughter",
+          "color": "#D90429"
+        },
+        {
+          "word": "survive",
+          "color": "#FFB703"
+        }
+      ]
+    }
+  ],
+  "job_id": "Rick-p5"
+}
