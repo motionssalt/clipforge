@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "series-1789333712217-p2",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 2 of 3 — Stage B dispatched (chained from part 1's completion).",
+  "updated_at_epoch": 1789368203,
+  "series": {
+    "enabled": true,
+    "series_id": "series-1789333712217",
+    "part": 2,
+    "start_seconds": 654,
+    "is_final": false
+  },
+  "release_tag": "clipforge-series-1789333712217-p2",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-series-1789333712217-p2"
+}
