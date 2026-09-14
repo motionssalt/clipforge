@@ -1,0 +1,576 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789372351898",
+  "series_id": "Rick",
+  "total_parts": 7,
+  "video_duration_seconds": 1335,
+  "plan": {
+    "version": 2,
+    "series_id": "Rick",
+    "video_duration_seconds": 1335,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1335,
+        "title": "A Powerless Morty Dares To Run",
+        "series_summary": "Rick C-137 rejects the Citadel of Ricks, the wafer plant harvests a captive Rick's brain for luxury cookies, and underdog Candidate Morty calmly launches his election campaign despite his manager's warnings.",
+        "series": {
+          "series_id": "Rick",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 206,
+          "is_final": false
+        },
+        "hashtags": [
+          "#rickandmorty",
+          "#evilmorty",
+          "#citadel",
+          "#adultswim",
+          "#cartoon",
+          "#scifi"
+        ],
+        "youtube_tags": [
+          "rick and morty",
+          "citadel of ricks",
+          "evil morty",
+          "candidate morty",
+          "ricklantis mixup",
+          "simple rick",
+          "tales from the citadel",
+          "season 3",
+          "presidential debate",
+          "adult swim"
+        ],
+        "segments": [
+          {
+            "start_seconds": 17,
+            "end_seconds": 50,
+            "voiceover_text": "Across the multiverse, duplicate geniuses gathered to construct an empire. But Rick C-137 rejects the Citadel with furious contempt, leaving the council destroyed and the society to rot.",
+            "keywords": [
+              {
+                "word": "empire",
+                "color": "#4EA8DE"
+              },
+              {
+                "word": "contempt",
+                "color": "#E63946"
+              }
+            ]
+          },
+          {
+            "start_seconds": 142,
+            "end_seconds": 166,
+            "voiceover_text": "Inside the wafer plant, freedom is an illusion. Technicians harvest an innocent Rick's brain chemistry on an eternal loop to flavor luxury wafer cookies for the elite. The Citadel preys on its own.",
+            "keywords": [
+              {
+                "word": "illusion",
+                "color": "#9B5DE5"
+              },
+              {
+                "word": "eternal",
+                "color": "#F77F00"
+              }
+            ]
+          },
+          {
+            "start_seconds": 183,
+            "end_seconds": 206,
+            "voiceover_text": "Now, an election arrives, and Candidate Morty launches an underdog campaign. His campaign manager begs him to quit before the debate. Morty smiles with eerie calm. Can a powerless Morty survive?",
+            "keywords": [
+              {
+                "word": "underdog",
+                "color": "#06D6A0"
+              },
+              {
+                "word": "calm",
+                "color": "#118AB2"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      },
+      {
+        "video_duration_seconds": 1335,
+        "title": "Citadel Streets Corrupt The Strongest Minds",
+        "series_summary": "Rookie Cop Rick partners with a ruthless Cop Morty in Morty Town, School Mortys dread a graduation into servitude and chase rumors of a wishing portal, and factory worker Rick J-22 is humiliated after fifteen years on the line.",
+        "series": {
+          "series_id": "Rick",
+          "part": 2,
+          "start_seconds": 206,
+          "end_seconds": 375,
+          "is_final": false
+        },
+        "hashtags": [
+          "#rickandmorty",
+          "#copmorty",
+          "#citadel",
+          "#animation",
+          "#rickandmortyseason3",
+          "#police"
+        ],
+        "youtube_tags": [
+          "cop rick",
+          "cop morty",
+          "mortytown",
+          "citadel police",
+          "ricklantis mixup",
+          "rick and morty",
+          "school mortys",
+          "simple rick wafers",
+          "rick j22",
+          "training day parody"
+        ],
+        "segments": [
+          {
+            "start_seconds": 216,
+            "end_seconds": 258,
+            "voiceover_text": "Rookie Cop Rick arrives in Morty Town expecting honor. Instead, he gets paired with a cynical, corrupt veteran Cop Morty. His new partner despises his own kind with ruthless fury. The badge has poisoned him.",
+            "keywords": [
+              {
+                "word": "honor",
+                "color": "#4EA8DE"
+              },
+              {
+                "word": "ruthless",
+                "color": "#E63946"
+              }
+            ]
+          },
+          {
+            "start_seconds": 293,
+            "end_seconds": 321,
+            "voiceover_text": "Across town at the academy, student Mortys dread their upcoming graduation. Trapped without a Rick, they face a bleak future of servitude. Desperate rumors spread of a mythical wishing portal that offers escape.",
+            "keywords": [
+              {
+                "word": "graduation",
+                "color": "#FFB703"
+              },
+              {
+                "word": "mythical",
+                "color": "#9B5DE5"
+              }
+            ]
+          },
+          {
+            "start_seconds": 334,
+            "end_seconds": 375,
+            "voiceover_text": "At the wafer factory, worker Rick J-22 has slaved on the line for fifteen years. When a promotion opens, his supervisor mocks him and gives it to a clone. Will this humiliated worker finally break?",
+            "keywords": [
+              {
+                "word": "fifteen",
+                "color": "#06D6A0"
+              },
+              {
+                "word": "humiliated",
+                "color": "#E63946"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      },
+      {
+        "video_duration_seconds": 1335,
+        "title": "A Radical Speech Stuns The Citadel",
+        "series_summary": "Cop Morty's brutality horrifies Rookie Rick, Rick candidates turn the national debate into a circus while ignoring working-class suffering, and Candidate Morty delivers a fearless speech exposing the Citadel's exploitation.",
+        "series": {
+          "series_id": "Rick",
+          "part": 3,
+          "start_seconds": 375,
+          "end_seconds": 565,
+          "is_final": false
+        },
+        "hashtags": [
+          "#rickandmorty",
+          "#candidatemorty",
+          "#citadeldebate",
+          "#evilmorty",
+          "#citadel",
+          "#scifi"
+        ],
+        "youtube_tags": [
+          "candidate morty speech",
+          "citadel debate",
+          "juggling rick",
+          "ricklantis mixup",
+          "evil morty speech",
+          "rick and morty",
+          "cop morty brutality",
+          "election debate",
+          "citadel of ricks",
+          "season 3 episode 7"
+        ],
+        "segments": [
+          {
+            "start_seconds": 382,
+            "end_seconds": 431,
+            "voiceover_text": "In the neon alleys of Morty Town, Cop Morty displays his vicious instincts. He batters unarmed suspects without mercy. Rookie Rick recoils in horror as his dirty partner laughs off the brutality.",
+            "keywords": [
+              {
+                "word": "vicious",
+                "color": "#E63946"
+              },
+              {
+                "word": "horror",
+                "color": "#9B5DE5"
+              }
+            ]
+          },
+          {
+            "start_seconds": 450,
+            "end_seconds": 486,
+            "voiceover_text": "At the national debate, arrogant Rick candidates treat the crisis like a circus. Juggling Rick mocks serious issues with cheap stunts, ignoring the agony of the working class.",
+            "keywords": [
+              {
+                "word": "circus",
+                "color": "#FB8500"
+              },
+              {
+                "word": "agony",
+                "color": "#D90429"
+              }
+            ]
+          },
+          {
+            "start_seconds": 533,
+            "end_seconds": 565,
+            "voiceover_text": "Then Candidate Morty takes the stage. He delivers a fearless, electric speech that exposes the Citadel's exploitation. The entire auditorium freezes in shock. Did he just seal his own death sentence?",
+            "keywords": [
+              {
+                "word": "fearless",
+                "color": "#06D6A0"
+              },
+              {
+                "word": "shock",
+                "color": "#118AB2"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      },
+      {
+        "video_duration_seconds": 1335,
+        "title": "Factory Hostage And A Dark Secret",
+        "series_summary": "Rick J-22 snaps and takes the wafer plant hostage, Candidate Morty's manager is fired amid surging poll numbers, and a mysterious investigator hands the ousted manager a classified dossier.",
+        "series": {
+          "series_id": "Rick",
+          "part": 4,
+          "start_seconds": 565,
+          "end_seconds": 751,
+          "is_final": false
+        },
+        "hashtags": [
+          "#rickandmorty",
+          "#simplerick",
+          "#rickj22",
+          "#citadel",
+          "#secrets",
+          "#conspiracy"
+        ],
+        "youtube_tags": [
+          "factory hostage",
+          "rick j22",
+          "simple rick",
+          "campaign manager morty",
+          "citadel secrets",
+          "investigator rick",
+          "ricklantis mixup",
+          "rick and morty conspiracy",
+          "portal gun hostage",
+          "tales from the citadel"
+        ],
+        "segments": [
+          {
+            "start_seconds": 585,
+            "end_seconds": 616,
+            "voiceover_text": "At the wafer plant, fifteen years of silence explode into violence. Rick J-22 executes his supervisor, seals the blast doors, and seizes the Simple Rick core. He demands an untraceable portal gun to escape.",
+            "keywords": [
+              {
+                "word": "violence",
+                "color": "#E63946"
+              },
+              {
+                "word": "untraceable",
+                "color": "#06D6A0"
+              }
+            ]
+          },
+          {
+            "start_seconds": 642,
+            "end_seconds": 665,
+            "voiceover_text": "Across town, Candidate Morty's poll numbers surge. But when his manager urges caution, Morty fires him without hesitation. Cast out into the night, the manager drinks alone in bitter defeat.",
+            "keywords": [
+              {
+                "word": "surge",
+                "color": "#4EA8DE"
+              },
+              {
+                "word": "defeat",
+                "color": "#6C757D"
+              }
+            ]
+          },
+          {
+            "start_seconds": 669,
+            "end_seconds": 705,
+            "voiceover_text": "Suddenly, a trench-coat investigator approaches the discarded manager and slips him an unmarked envelope. Inside lie classified intelligence files. The manager gasps in utter dread. What dark secret did he uncover?",
+            "keywords": [
+              {
+                "word": "classified",
+                "color": "#FFB703"
+              },
+              {
+                "word": "dread",
+                "color": "#9B5DE5"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      },
+      {
+        "video_duration_seconds": 1335,
+        "title": "Gunfire Shatters The Citadel Frontrunner",
+        "series_summary": "Student Mortys journey toward the wishing portal, Candidate Morty's fired manager shoots him at a rally, and a nightclub shootout ends with Rookie Rick killing his corrupt partner in self-defense.",
+        "series": {
+          "series_id": "Rick",
+          "part": 5,
+          "start_seconds": 751,
+          "end_seconds": 925,
+          "is_final": false
+        },
+        "hashtags": [
+          "#rickandmorty",
+          "#assassination",
+          "#candidatemorty",
+          "#shootout",
+          "#citadel",
+          "#shocking"
+        ],
+        "youtube_tags": [
+          "candidate morty shot",
+          "citadel assassination",
+          "cop morty shootout",
+          "big morty",
+          "cop rick",
+          "stand by me mortys",
+          "wishing portal",
+          "ricklantis mixup",
+          "rick and morty",
+          "citadel rally"
+        ],
+        "segments": [
+          {
+            "start_seconds": 776,
+            "end_seconds": 810,
+            "voiceover_text": "Along the rusty railroad tracks, four student Mortys journey toward the mythical wishing portal. They share fragile dreams of freedom, unaware that tragedy stalks this city.",
+            "keywords": [
+              {
+                "word": "fragile",
+                "color": "#4EA8DE"
+              },
+              {
+                "word": "tragedy",
+                "color": "#E63946"
+              }
+            ]
+          },
+          {
+            "start_seconds": 817,
+            "end_seconds": 861,
+            "voiceover_text": "At a triumphant rally, Candidate Morty greets thousands of cheering followers. Suddenly, his former manager bursts through security with a pistol. Shouting in panic, he shoots Morty point-blank. The frontrunner collapses in blood.",
+            "keywords": [
+              {
+                "word": "triumphant",
+                "color": "#06D6A0"
+              },
+              {
+                "word": "shoots",
+                "color": "#E63946"
+              }
+            ]
+          },
+          {
+            "start_seconds": 895,
+            "end_seconds": 925,
+            "voiceover_text": "Simultaneously, a nightclub bust erupts into slaughter. When Cop Morty pulls his weapon on Rookie Rick, the rookie fires in self-defense, killing his corrupt partner. Amidst the bloodshed, did the frontrunner survive?",
+            "keywords": [
+              {
+                "word": "slaughter",
+                "color": "#D90429"
+              },
+              {
+                "word": "survive",
+                "color": "#FFB703"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      },
+      {
+        "video_duration_seconds": 1335,
+        "title": "Tragic Sacrifices And A Shock Victory",
+        "series_summary": "Rick J-22 is tricked into a torture trap disguised as freedom, Slick Morty sacrifices himself into a fake wishing portal, and the assassin learns from prison that Candidate Morty survived and won the presidency.",
+        "series": {
+          "series_id": "Rick",
+          "part": 6,
+          "start_seconds": 925,
+          "end_seconds": 1144,
+          "is_final": false
+        },
+        "hashtags": [
+          "#rickandmorty",
+          "#simplerick",
+          "#slickmorty",
+          "#election",
+          "#citadel",
+          "#twist"
+        ],
+        "youtube_tags": [
+          "simple rick freedom",
+          "slick morty sacrifice",
+          "wishing portal dump",
+          "candidate morty wins",
+          "citadel election results",
+          "campaign manager arrested",
+          "rick d sanchez iii",
+          "ricklantis mixup",
+          "rick and morty season 3",
+          "citadel president"
+        ],
+        "segments": [
+          {
+            "start_seconds": 1005,
+            "end_seconds": 1044,
+            "voiceover_text": "At the factory, the eccentric owner promises Rick J-22 full freedom and an escape portal. Rick surrenders in tears of relief. But it is a trap. Guards ambush him, strapping him down to harvest his fresh despair.",
+            "keywords": [
+              {
+                "word": "freedom",
+                "color": "#4EA8DE"
+              },
+              {
+                "word": "trap",
+                "color": "#E63946"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1101,
+            "end_seconds": 1135,
+            "voiceover_text": "At the wishing portal, student Mortys realize it is just a garbage incinerator. Overcome by heartbreak, Slick Morty dives into the churning void, sacrificing himself. His friends stare in stunned sorrow.",
+            "keywords": [
+              {
+                "word": "heartbreak",
+                "color": "#9B5DE5"
+              },
+              {
+                "word": "sacrificing",
+                "color": "#F77F00"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1137,
+            "end_seconds": 1144,
+            "voiceover_text": "In prison, the assassin discovers his bullets failed. Candidate Morty survived and swept the presidency in a historic landslide. The prisoner screams in horror. What monster has the Citadel elected?",
+            "keywords": [
+              {
+                "word": "landslide",
+                "color": "#06D6A0"
+              },
+              {
+                "word": "monster",
+                "color": "#E63946"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      },
+      {
+        "video_duration_seconds": 1335,
+        "title": "The Sinister Purge Of The Citadel",
+        "series_summary": "President Morty confronts the arrogant Citadel oligarchs, orders the ruthless purge of the shadow council, and is revealed as the ruthless eyepatch mastermind: Evil Morty now rules the Citadel.",
+        "series": {
+          "series_id": "Rick",
+          "part": 7,
+          "start_seconds": 1144,
+          "end_seconds": 1335,
+          "is_final": true
+        },
+        "hashtags": [
+          "#evilmorty",
+          "#rickandmorty",
+          "#citadelpurge",
+          "#eyepatchmorty",
+          "#presidentmorty",
+          "#multiverse"
+        ],
+        "youtube_tags": [
+          "evil morty reveal",
+          "president morty",
+          "citadel purge",
+          "shadow council ricks",
+          "eyepatch morty theme",
+          "ricklantis mixup ending",
+          "airlock execution",
+          "rick and morty season 3",
+          "citadel of ricks",
+          "blonde morty"
+        ],
+        "segments": [
+          {
+            "start_seconds": 1185,
+            "end_seconds": 1217,
+            "voiceover_text": "President Morty enters the grand boardroom to meet the Citadel's oligarchs. The arrogant Ricks laugh in his face, warning him that the presidency is merely a decorative puppet show under their control.",
+            "keywords": [
+              {
+                "word": "oligarchs",
+                "color": "#FFB703"
+              },
+              {
+                "word": "puppet",
+                "color": "#6C757D"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1231,
+            "end_seconds": 1272,
+            "voiceover_text": "Morty sips his drink with icy calm. He declares that speeches were for campaigning, but now is the time for action. Guards open fire instantly, slaughtering the entire shadow council and purging them into space.",
+            "keywords": [
+              {
+                "word": "calm",
+                "color": "#118AB2"
+              },
+              {
+                "word": "slaughtering",
+                "color": "#E63946"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1272,
+            "end_seconds": 1312,
+            "voiceover_text": "As the dead drift into the galactic abyss, the secret dossier floats past. The photos reveal the chilling truth: President Morty is the ruthless eyepatch mastermind. Evil Morty now rules the Citadel.",
+            "keywords": [
+              {
+                "word": "chilling",
+                "color": "#9B5DE5"
+              },
+              {
+                "word": "mastermind",
+                "color": "#E63946"
+              }
+            ]
+          }
+        ],
+        "target_total_duration_seconds": 30
+      }
+    ]
+  },
+  "spawned": []
+}
