@@ -925,6 +925,18 @@
         "6aa7da0aa9bc07cc3d1c2eef"
       ],
       "updated_at_epoch": 1789385226
+    },
+    {
+      "job_id": "Rick-p3",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-18T23:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6aa7ddbf5dc3d520f74adf14",
+        "6aa7ddc05dc3d520f74adfca"
+      ],
+      "updated_at_epoch": 1789386177
     }
   ]
 }
