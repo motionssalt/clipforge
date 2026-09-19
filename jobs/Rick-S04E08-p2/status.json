@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Rick-S04E08-p2",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 2 of 6 — Stage B dispatched (chained from part 1's completion).",
-  "updated_at_epoch": 1789851437,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789851448,
   "series": {
     "enabled": true,
     "series_id": "Rick-S04E08",
@@ -13,5 +13,17 @@
     "is_final": false
   },
   "release_tag": "clipforge-Rick-S04E08-p2",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-S04E08-p2"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-S04E08-p2",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 35468952080,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35468952080",
+    "code_ref": "a58dda4edea4a0fa2b7f2ceac61b4d21ed23777b"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789894648
 }
