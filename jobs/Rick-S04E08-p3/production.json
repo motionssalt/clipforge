@@ -1,0 +1,93 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Morty Lives Life with Zero Consequences — Part 3",
+  "hashtags": [
+    "#rickandmorty",
+    "#adultswim",
+    "#timeloop",
+    "#jessica",
+    "#ricksanchez",
+    "#animation"
+  ],
+  "youtube_tags": [
+    "rick and morty",
+    "morty save point",
+    "consequences",
+    "rick and morty funny",
+    "adult swim",
+    "morty and jessica",
+    "time travel remote",
+    "vat of acid",
+    "cartoon comedy"
+  ],
+  "series": {
+    "series_id": "Rick-S04E08",
+    "part": 3,
+    "start_seconds": 521,
+    "end_seconds": 703,
+    "is_final": false,
+    "series_summary": "After a fake acid vat escape goes humiliatingly wrong, Rick and Morty engage in a bitter war of egos over a video game reset remote, triggering devastating multiverse chaos until Morty is forced to crawl back to the vat."
+  },
+  "target_total_duration_seconds": 30,
+  "series_summary": "After a fake acid vat escape goes humiliatingly wrong, Rick and Morty engage in a bitter war of egos over a video game reset remote, triggering devastating multiverse chaos until Morty is forced to crawl back to the vat.",
+  "segments": [
+    {
+      "start_seconds": 521,
+      "end_seconds": 569,
+      "voiceover_text": "Morty tests the remote by pulling outrageous stunts on his teacher and clumsily flirting with Jessica, discovering he can reset every humiliating mistake until he gets her phone number.",
+      "keywords": [
+        {
+          "word": "stunts",
+          "color": "#F59E0B"
+        },
+        {
+          "word": "Jessica",
+          "color": "#EC4899"
+        },
+        {
+          "word": "reset",
+          "color": "#3B82F6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 582,
+      "end_seconds": 649,
+      "voiceover_text": "Intoxicated by absolute freedom, Morty launches into a reckless joyride: leaping off skyscrapers, mocking law enforcement, and enjoying wild thrills with zero fear of repercussions.",
+      "keywords": [
+        {
+          "word": "freedom",
+          "color": "#10B981"
+        },
+        {
+          "word": "joyride",
+          "color": "#F97316"
+        },
+        {
+          "word": "thrills",
+          "color": "#8B5CF6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 680,
+      "end_seconds": 703,
+      "voiceover_text": "Reality has become a harmless playground. But when Morty sits in a diner and locks eyes with an intriguing girl across the room, he suddenly hesitates to touch the button. Can he risk pursuing genuine love if one accidental click could erase her forever?",
+      "keywords": [
+        {
+          "word": "playground",
+          "color": "#06B6D4"
+        },
+        {
+          "word": "love",
+          "color": "#EC4899"
+        },
+        {
+          "word": "erase",
+          "color": "#EF4444"
+        }
+      ]
+    }
+  ],
+  "job_id": "Rick-S04E08-p3"
+}
