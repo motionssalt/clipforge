@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "Rick-S04E08-p3",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 3 of 6 — Stage B dispatched (chained from part 2's completion).",
+  "updated_at_epoch": 1789853329,
+  "series": {
+    "enabled": true,
+    "series_id": "Rick-S04E08",
+    "part": 3,
+    "start_seconds": 521,
+    "is_final": false
+  },
+  "release_tag": "clipforge-Rick-S04E08-p3",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-S04E08-p3"
+}
