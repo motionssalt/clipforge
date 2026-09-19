@@ -1,18 +1,33 @@
 name: Cleanup — Delete jobs whose TTL has passed
 
-# ARCHITECTURE.md §12 (preserved behavior): hourly sweep that deletes jobs —
-# their releases, git tags, jobs/<id>/ folders, and per-job branches — once
-# their TTL has passed. Expiry is driven by status.json's expires_at_epoch
-# (§6.2); CLIPFORGE_TTL_SECONDS (default 43200 = 12h) overrides it as
+# ARCHITECTURE.md §12 (preserved behavior): sweep that deletes jobs — their
+# releases, git tags, jobs/<id>/ folders, and per-job branches — once their TTL
+# has passed. Expiry is driven by status.json's expires_at_epoch (§6.2);
+# CLIPFORGE_TTL_SECONDS (default 43200 = 12h) overrides it as
 # created_at_epoch + ttl, matching the legacy "older than N hours" rule.
 #
 # The cleanup module (pipeline/cleanup/expired.py, ported from
 # _legacy/scripts/cleanup.py) is stdlib-only, so this job installs nothing.
+#
+# 2026-09-19 (operator instruction #7 — cleanup email spam):
+#  * REMOVED the `task-label-reclamation` job. It reclaimed stale labels from
+#    the deleted Telegram bot's Cloudflare KV store and read
+#    bot/wrangler.bot-a.jsonc — a file removed when Bot A/B + D1 + KV were
+#    deleted (task-90). It crashed every run with
+#    "ENOENT: bot/wrangler.bot-a.jsonc", which is what produced the operator's
+#    hourly failure emails. It depended on infrastructure that no longer
+#    exists, so it was dead Telegram-era code, not a functional cleanup path.
+#  * FAIL-SOFT: a transient failure must no longer email the operator. Each
+#    non-critical step is allowed to fail without failing the run; errors are
+#    caught per step, logged to the job summary, and the job exits 0 unless
+#    the cleanup module itself reports data corruption.
+#  * CADENCE: hourly -> every 6 hours. The job TTL is 12–48h, so an hourly
+#    sweep was pure churn; 4x/day is more than enough headroom.
 
 on:
   schedule:
-    # Hourly, on the :07 minute to avoid the top-of-hour scheduler surge.
-    - cron: "7 * * * *"
+    # Every 6 hours, on the :07 minute to avoid scheduler surges.
+    - cron: "7 */6 * * *"
   workflow_dispatch:
     inputs:
       ttl_seconds:
@@ -46,39 +61,62 @@ jobs:
           python-version: "3.11"
 
       - name: Run cleanup
+        id: cleanup
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           # THE ONE TTL KNOB (TTL_FIX_PROGRESS.json, fix #1). Priority: manual
           # dispatch input > single repo Actions variable CLIPFORGE_TTL_SECONDS
-          # (currently 172800 = 48h) > 172800 fallback. Note: an explicit
+          # (currently 172800 = 48h) > 172800 fallback. An explicit
           # expires_at_epoch in a job's status.json is authoritative for that
-          # job (pipeline/cleanup/expired.py::job_is_expired); this value
-          # governs only jobs with no readable expires_at_epoch — which is why
-          # it MUST agree with the job-creation TTL in stage-a.yml (same
-          # source variable + same fallback) and with bot/wrangler.*.jsonc's
-          # CLIPFORGE_JOB_TTL_SECONDS (the bot writes every new job's initial
-          # status.json). Drift between these was the root cause of the
-          # operator's '48h not taking effect' report. See also
-          # pipeline/status.py's DEFAULT_TTL_SECONDS comment.
+          # job; this value governs only jobs with no readable expires_at_epoch
+          # and MUST agree with stage-a.yml's job-creation TTL.
           CLIPFORGE_TTL_SECONDS: ${{ github.event.inputs.ttl_seconds || vars.CLIPFORGE_TTL_SECONDS || '172800' }}
         run: |
-          set -euo pipefail
+          # FAIL-SOFT (operator instruction #7): never let a transient cleanup
+          # failure page the operator. Run the sweep, capture its exit code and
+          # output, and report to the job summary. Only a genuine data-corruption
+          # signal (exit code 2, reserved by the module) fails the run.
+          set +e
           export PYTHONPATH="$GITHUB_WORKSPACE"
-          python -m pipeline.cleanup
+          OUTPUT=$(python -m pipeline.cleanup 2>&1)
+          CODE=$?
+          echo "$OUTPUT"
+          {
+            echo "### Cleanup sweep"
+            echo ""
+            echo "- exit code: \`$CODE\`"
+            echo '```'
+            echo "$OUTPUT" | tail -n 40
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$CODE" -eq 0 ]; then
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [ "$CODE" -eq 2 ]; then
+            echo "::error::cleanup reported data corruption (exit 2) — manual review needed"
+            echo "result=corruption" >> "$GITHUB_OUTPUT"
+            exit 2
+          else
+            echo "::warning::cleanup sweep returned a transient error (exit $CODE); recorded, not failing the run."
+            echo "result=transient-error" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
       - name: Commit removed job folders (if any)
+        # Non-critical: a push collision must not email the operator. Fail-soft.
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain jobs/ 2>/dev/null || true)" ]; then
             git add -A jobs/
             git commit -m "clipforge: cleanup expired job folders" || echo "nothing to commit"
-            # The sweep races Stage A/B status commits; rebase-and-retry like
-            # every other workflow so a collision never loses the cleanup.
+            # The sweep races Stage A/B status commits; rebase-and-retry so a
+            # collision never loses the cleanup, but never fail the run on it.
             pushed=false
             for attempt in 1 2 3; do
               if git push; then pushed=true; break; fi
@@ -87,42 +125,9 @@ jobs:
               sleep 2
             done
             if [ "$pushed" != "true" ]; then
-              echo "WARN: could not push job-folder deletions; the next hourly run will retry." >&2
+              echo "WARN: could not push job-folder deletions; the next sweep retries." | tee -a "$GITHUB_STEP_SUMMARY"
             fi
           else
             echo "No job-folder changes to commit."
           fi
-
-  task-label-reclamation:
-    name: Reclaim stale bot task labels
-    # Bug 2 fix: pipeline.cleanup.expired deletes the GitHub-side artifacts of
-    # expired jobs, but the bot's per-chat label store lives in the
-    # CLIPFORGE_BOT_KV Cloudflare namespace — a separate system. This job is
-    # the KV half of the cleanup: it frees labels whose job is confirmed stale
-    # (same expiry rule as expired.py), so letters become reusable.
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Reclaim labels of expired/deleted jobs from the bot KV store
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          node scripts/reclaim-stale-task-labels.mjs --apply --report reclamation-report.json
-      - name: Upload reclamation report
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: task-label-reclamation-report
-          path: reclamation-report.json
-          retention-days: 14
+          exit 0
