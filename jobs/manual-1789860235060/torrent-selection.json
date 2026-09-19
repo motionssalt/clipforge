@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "job_id": "manual-1789860235060",
+  "torrent_name": "Hyakkano.S01.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Hyakkano.S01E01.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1454791868
+    },
+    {
+      "index": 2,
+      "path": "Hyakkano.S01E02.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1455171372
+    },
+    {
+      "index": 3,
+      "path": "Hyakkano.S01E03.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1438416742
+    },
+    {
+      "index": 4,
+      "path": "Hyakkano.S01E04.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1452527820
+    },
+    {
+      "index": 5,
+      "path": "Hyakkano.S01E05.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1447923470
+    },
+    {
+      "index": 6,
+      "path": "Hyakkano.S01E06.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1455289870
+    },
+    {
+      "index": 7,
+      "path": "Hyakkano.S01E07.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1452175475
+    },
+    {
+      "index": 8,
+      "path": "Hyakkano.S01E08.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1447469436
+    },
+    {
+      "index": 9,
+      "path": "Hyakkano.S01E09.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1450281485
+    },
+    {
+      "index": 10,
+      "path": "Hyakkano.S01E10.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1449247268
+    },
+    {
+      "index": 11,
+      "path": "Hyakkano.S01E11.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1481457437
+    },
+    {
+      "index": 12,
+      "path": "Hyakkano.S01E12.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1484753169
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "30",
+    "focus": ""
+  }
+}
