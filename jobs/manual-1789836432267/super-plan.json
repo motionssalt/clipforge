@@ -595,5 +595,10 @@
       }
     ]
   },
-  "spawned": []
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "Rick-S04E08-p1"
+    }
+  ]
 }
