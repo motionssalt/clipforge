@@ -12,12 +12,12 @@
     ]
   },
   "smart_schedule": {
-    "timezone": "UTC",
-    "interval_hours": 6,
+    "timezone": "Europe\/Lagos",
+    "interval_hours": 4,
     "preferred_time": "05:00",
     "queue_depth": 100,
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1789853223
+  "updated_at_epoch": 1789860284
 }
