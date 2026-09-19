@@ -1274,10 +1274,9 @@ Rules for `hashtags`:
 
 Rules for `youtube_tags`:
 
-  - JSON array of 10-20 strings.
-  - Each string is one YouTube keyword tag — plain lowercase words or
-    short phrases, NO leading `#`, NO commas inside a single tag, NO
-    quotes, NO emoji. Multi-word phrases are fine (`"hunter x hunter
+  - JSON array of strings — any count is acceptable (including none);
+    tags are never validated and can never fail a job.
+  - Each string is one YouTube keyword tag — plain lowercase words or short phrases (no format rules are enforced). Multi-word phrases are fine (`"hunter x hunter
     hanzo fight"`).
   - Mix broad + niche + long-tail, ordered most-relevant-first, so the
     concatenated list stays under YouTube's 500-character total limit.
@@ -1302,8 +1301,8 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
   "youtube_tags": [
     "keyword tag 1",
     "keyword tag 2"
-    // ... 10-20 YouTube keyword tags total, most-relevant-first, no '#', no commas
-    // inside a single tag (see POSTING PACKAGE METADATA above)
+    // ... any number of YouTube keyword tags, most-relevant-first
+    // (see POSTING PACKAGE METADATA above)
   ],
   "cuts": [
     {{
@@ -1456,9 +1455,8 @@ CONSTRAINTS
   - `hashtags` is a JSON array of 5-8 non-empty strings, each beginning
     with `#`, no spaces inside a hashtag, no duplicates. See the
     POSTING PACKAGE METADATA section above.
-  - `youtube_tags` is a JSON array of 10-20 non-empty strings, no leading
-    `#`, no commas inside a single tag, no duplicates, joined length under
-    500 characters. See the POSTING PACKAGE METADATA section above.
+  - `youtube_tags` is a JSON array of strings — any count (including
+    none), with no format constraints; it is never validated. See the POSTING PACKAGE METADATA section above.
   - `voiceover_text` is the final spoken line for its cut: engaging
     prose meant to be READ ALOUD, not a flat matter-of-fact summary.
     Its word count contributes to the TOTAL narration budget defined in the

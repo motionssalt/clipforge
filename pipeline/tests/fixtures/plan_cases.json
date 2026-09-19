@@ -8,8 +8,16 @@
         "video_duration_seconds": 120,
         "target_total_duration_seconds": 30,
         "cuts": [
-          { "start_seconds": 0, "end_seconds": 10, "voiceover_text": "hello" },
-          { "start_seconds": 20, "end_seconds": 30, "voiceover_text": "world" }
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "hello"
+          },
+          {
+            "start_seconds": 20,
+            "end_seconds": 30,
+            "voiceover_text": "world"
+          }
         ]
       }
     },
@@ -20,10 +28,31 @@
         "video_duration_seconds": 200,
         "target_total_duration_seconds": 60,
         "cuts": [
-          { "start_seconds": 5, "end_seconds": 15, "voiceover_text": "line" }
+          {
+            "start_seconds": 5,
+            "end_seconds": 15,
+            "voiceover_text": "line"
+          }
         ],
-        "hashtags": ["#one", "#two", "#three", "#four", "#five"],
-        "youtube_tags": ["a1", "b2", "c3", "d4", "e5", "f6", "g7", "h8", "i9", "j10"]
+        "hashtags": [
+          "#one",
+          "#two",
+          "#three",
+          "#four",
+          "#five"
+        ],
+        "youtube_tags": [
+          "a1",
+          "b2",
+          "c3",
+          "d4",
+          "e5",
+          "f6",
+          "g7",
+          "h8",
+          "i9",
+          "j10"
+        ]
       }
     },
     {
@@ -33,7 +62,11 @@
         "video_duration_seconds": 60,
         "target_total_duration_seconds": 20,
         "cuts": [
-          { "start_seconds": 0, "end_seconds": 20, "raw_narration": "legacy narrator" }
+          {
+            "start_seconds": 0,
+            "end_seconds": 20,
+            "raw_narration": "legacy narrator"
+          }
         ]
       }
     },
@@ -52,7 +85,11 @@
           "summary": "prior part summary"
         },
         "cuts": [
-          { "start_seconds": 110, "end_seconds": 150, "voiceover_text": "part two" }
+          {
+            "start_seconds": 110,
+            "end_seconds": 150,
+            "voiceover_text": "part two"
+          }
         ]
       }
     },
@@ -69,20 +106,38 @@
         "series_final": false,
         "series_summary": "prior part summary",
         "cuts": [
-          { "start_seconds": 110, "end_seconds": 150, "voiceover_text": "part two" }
+          {
+            "start_seconds": 110,
+            "end_seconds": 150,
+            "voiceover_text": "part two"
+          }
         ]
       }
     },
     {
       "name": "reject_top_level_not_object",
       "valid": false,
-      "document": [1, 2, 3],
-      "expected_errors": ["Top level must be a JSON object."]
+      "document": [
+        1,
+        2,
+        3
+      ],
+      "expected_errors": [
+        "Top level must be a JSON object."
+      ]
     },
     {
       "name": "reject_missing_scalars",
       "valid": false,
-      "document": { "cuts": [{ "start_seconds": 0, "end_seconds": 5, "voiceover_text": "x" }] },
+      "document": {
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 5,
+            "voiceover_text": "x"
+          }
+        ]
+      },
       "expected_errors": [
         "`video_duration_seconds` must be a positive integer.",
         "`target_total_duration_seconds` must be a positive integer."
@@ -94,7 +149,13 @@
       "document": {
         "video_duration_seconds": 1.5,
         "target_total_duration_seconds": "60",
-        "cuts": [{ "start_seconds": 0, "end_seconds": 5, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 5,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "`video_duration_seconds` must be a positive integer.",
@@ -108,7 +169,13 @@
         "title": "",
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "`title` must be a non-empty string when present (or omit it entirely)."
@@ -122,7 +189,9 @@
         "target_total_duration_seconds": 30,
         "cuts": []
       },
-      "expected_errors": ["`cuts` is empty — at least one cut is required."]
+      "expected_errors": [
+        "`cuts` is empty \u2014 at least one cut is required."
+      ]
     },
     {
       "name": "reject_cuts_not_array",
@@ -132,7 +201,9 @@
         "target_total_duration_seconds": 30,
         "cuts": "not-an-array"
       },
-      "expected_errors": ["`cuts` must be an array."]
+      "expected_errors": [
+        "`cuts` must be an array."
+      ]
     },
     {
       "name": "reject_cut_end_before_start",
@@ -140,7 +211,13 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "cuts": [{ "start_seconds": 30, "end_seconds": 10, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 30,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "cuts[0].end_seconds must be greater than start_seconds."
@@ -152,7 +229,13 @@
       "document": {
         "video_duration_seconds": 20,
         "target_total_duration_seconds": 10,
-        "cuts": [{ "start_seconds": 5, "end_seconds": 100, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 5,
+            "end_seconds": 100,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "cuts[0].end_seconds exceeds video_duration_seconds."
@@ -164,7 +247,13 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "cuts": [{ "start_seconds": -1, "end_seconds": 10, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": -1,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "cuts[0].start_seconds must be at least 0."
@@ -177,8 +266,16 @@
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
         "cuts": [
-          { "start_seconds": 0, "end_seconds": 30, "voiceover_text": "a" },
-          { "start_seconds": 20, "end_seconds": 40, "voiceover_text": "b" }
+          {
+            "start_seconds": 0,
+            "end_seconds": 30,
+            "voiceover_text": "a"
+          },
+          {
+            "start_seconds": 20,
+            "end_seconds": 40,
+            "voiceover_text": "b"
+          }
         ]
       },
       "expected_errors": [
@@ -191,7 +288,12 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10 }]
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10
+          }
+        ]
       },
       "expected_errors": [
         "cuts[0].voiceover_text must be a non-empty string (legacy raw_narration accepted)."
@@ -203,7 +305,13 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "cuts": [{ "start_seconds": 1.5, "end_seconds": "10", "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 1.5,
+            "end_seconds": "10",
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "cuts[0].start_seconds must be an integer.",
@@ -216,8 +324,17 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "hashtags": ["#a", "#b"],
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
+        "hashtags": [
+          "#a",
+          "#b"
+        ],
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "`hashtags` must contain between 5 and 8 entries."
@@ -229,8 +346,20 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "hashtags": ["one", "#two", "#three", "#four", "#five with space"],
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
+        "hashtags": [
+          "one",
+          "#two",
+          "#three",
+          "#four",
+          "#five with space"
+        ],
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "hashtags[0] must start with #.",
@@ -243,38 +372,23 @@
       "document": {
         "video_duration_seconds": 100,
         "target_total_duration_seconds": 30,
-        "hashtags": ["#one", "#Two", "#three", "#four", "#TWO"],
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
+        "hashtags": [
+          "#one",
+          "#Two",
+          "#three",
+          "#four",
+          "#TWO"
+        ],
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "hashtags[4] duplicates an earlier entry."
-      ]
-    },
-    {
-      "name": "reject_youtube_tags_forbidden_hash_and_comma",
-      "valid": false,
-      "document": {
-        "video_duration_seconds": 100,
-        "target_total_duration_seconds": 30,
-        "youtube_tags": ["#hash", "com,ma", "c", "d", "e", "f", "g", "h", "i", "j"],
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
-      },
-      "expected_errors": [
-        "youtube_tags[0] must not start with #.",
-        "youtube_tags[1] must not contain ,."
-      ]
-    },
-    {
-      "name": "reject_youtube_tags_too_few",
-      "valid": false,
-      "document": {
-        "video_duration_seconds": 100,
-        "target_total_duration_seconds": 30,
-        "youtube_tags": ["a", "b", "c"],
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
-      },
-      "expected_errors": [
-        "`youtube_tags` must contain between 10 and 20 entries."
       ]
     },
     {
@@ -289,7 +403,13 @@
         "series_end_seconds": -1,
         "series_final": "yes",
         "series_summary": "",
-        "cuts": [{ "start_seconds": 0, "end_seconds": 10, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "`series_id` must be a non-empty string for a series production plan.",
@@ -314,7 +434,13 @@
           "is_final": false,
           "summary": "x"
         },
-        "cuts": [{ "start_seconds": 100, "end_seconds": 110, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 100,
+            "end_seconds": 110,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "`series_end_seconds` must be greater than `series_start_seconds`.",
@@ -336,7 +462,11 @@
           "summary": "s"
         },
         "cuts": [
-          { "start_seconds": 50, "end_seconds": 250, "voiceover_text": "x" }
+          {
+            "start_seconds": 50,
+            "end_seconds": 250,
+            "voiceover_text": "x"
+          }
         ]
       },
       "expected_errors": [
@@ -358,13 +488,44 @@
           "is_final": false,
           "summary": "SUMMARY_PLACEHOLDER"
         },
-        "cuts": [{ "start_seconds": 110, "end_seconds": 150, "voiceover_text": "x" }]
+        "cuts": [
+          {
+            "start_seconds": 110,
+            "end_seconds": 150,
+            "voiceover_text": "x"
+          }
+        ]
       },
       "expected_errors": [
         "`series_summary` exceeds the maximum allowed length."
       ],
       "post_process": {
         "expand_summary_to_length": 1201
+      }
+    },
+    {
+      "name": "accept_youtube_tags_any_count_or_missing",
+      "valid": true,
+      "document": {
+        "video_duration_seconds": 120,
+        "target_total_duration_seconds": 30,
+        "cuts": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 10,
+            "voiceover_text": "hello"
+          },
+          {
+            "start_seconds": 20,
+            "end_seconds": 30,
+            "voiceover_text": "world"
+          }
+        ],
+        "youtube_tags": [
+          "only",
+          "two",
+          "tags"
+        ]
       }
     }
   ]

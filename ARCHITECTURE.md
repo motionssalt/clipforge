@@ -458,7 +458,7 @@ consumes. It is the same file for every job and every series part.
     }
   ],
   "hashtags": ["#one", "#two", "#three", "#four", "#five"],
-  "youtube_tags": ["tag1", "tag2", "…up to 20"],
+  "youtube_tags": ["tag1", "tag2", "…any number"],
   "series": {
     "series_id": "",
     "part": 0,
@@ -482,8 +482,9 @@ before rendering — never trust the producer):
   `voiceover_text`.)
 - `hashtags`: optional; if present 5–8 entries, each `#`-prefixed, no
   whitespace, case-insensitively unique.
-- `youtube_tags`: optional; if present 10–20 entries, no `#` prefix, no
-  commas, unique.
+- `youtube_tags`: optional; NEVER validated (operator decision 2026-09-19)
+  — any number of entries (including none) and any string content is
+  accepted. A plan must never be rejected over its YouTube tags.
 - `series.*`: present only for series parts. `summary` ≤ 1200 chars.
 - Unknown top-level fields are allowed (forward compatibility).
 

@@ -103,14 +103,9 @@ export function validateProductionPlan(document, options = {}) {
     forbidWhitespace: true,
   }, errors);
 
-  validateStringArray(document.youtube_tags, {
-    name: 'youtube_tags',
-    present: Object.prototype.hasOwnProperty.call(document, 'youtube_tags'),
-    minimum: 10,
-    maximum: 20,
-    forbidPrefix: '#',
-    forbidSubstring: ',',
-  }, errors);
+  // youtube_tags: operator decision 2026-09-19 -- NEVER validated. Any count
+  // (including none) and any format is accepted; a plan must never fail over
+  // its YouTube tags. Consumers read them loosely (missing -> []).
 
   // -- Series (optional) --------------------------------------------------- //
   const { isSeriesPlan, values: seriesValues } = extractSeries(document);

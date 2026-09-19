@@ -146,16 +146,10 @@ def validate_production_plan(document: Any, part_number: int | None = None) -> l
         forbid_whitespace=True,
         errors=errors,
     )
-    _validate_string_array(
-        document.get("youtube_tags"),
-        name="youtube_tags",
-        present=("youtube_tags" in document),
-        minimum=10,
-        maximum=20,
-        forbid_prefix="#",
-        forbid_substring=",",
-        errors=errors,
-    )
+    # youtube_tags: operator decision 2026-09-19 -- NEVER validated. Any count
+    # (including none) and any format is accepted; a production plan must never
+    # be rejected, delayed or failed over its YouTube tags. Consumers read them
+    # loosely (missing -> []).
 
     # -- Series (optional) --------------------------------------------------- #
     # feature-01: when part_number is supplied (super-plan slicing), the
