@@ -985,6 +985,18 @@
         "6aa7ed35d202af46a034c114"
       ],
       "updated_at_epoch": 1789390134
+    },
+    {
+      "job_id": "Rick-S04E08-p1",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-20T05:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6aaef738e28dffceb31f9fec",
+        "6aaef73a22d30b014fe2cf53"
+      ],
+      "updated_at_epoch": 1789851450
     }
   ]
 }
