@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "enabled": true,
+  "enabled": false,
   "auto_publish": true,
   "automatic_mode": "smart_schedule",
   "target_accounts": {
@@ -22,5 +22,6 @@
     "queue_depth": 100,
     "start_mode": "next_available",
     "custom_start": ""
-  }
+  },
+  "updated_at_epoch": 1789852849
 }
