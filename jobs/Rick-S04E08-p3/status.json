@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Rick-S04E08-p3",
   "mode": "manual",
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/35470535308",
-  "updated_at_epoch": 1789854012,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789857529,
   "series": {
     "enabled": true,
     "series_id": "Rick-S04E08",
@@ -16,9 +16,9 @@
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Rick-S04E08-p3",
   "assets": {},
   "run": {
-    "workflow_run_id": 35470535308,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35470535308",
-    "code_ref": "e34388999757cbd9d15ad668eff0dc8c5a03f4f9"
+    "workflow_run_id": 35473918171,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35473918171",
+    "code_ref": "a84f1b901709e71e3ace25c1437189ab7532c223"
   },
   "publishing": {
     "status": "not_requested",
