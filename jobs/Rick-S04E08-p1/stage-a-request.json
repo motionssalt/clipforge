@@ -1,0 +1,31 @@
+{
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:c06cf84555fdfa3e1376e3f0040056f127d88618&dn=Rick and Morty - S04 - 2160p HDR Ai Upscale -Mesc&xl=15711137535&tr=https:\/\/seedpool.org\/announce\/9b684f045f3361654d93e5f1bd3514e7&tr=udp:\/\/open.stealth.si:80\/announce&tr=udp:\/\/tracker.opentrackr.org:1337\/announce&tr=udp:\/\/tracker.torrent.eu.org:451\/announce&tr=udp:\/\/explodie.org:6969\/announce&tr=udp:\/\/ttk2.nbaonlineservice.com:6969\/announce&tr=udp:\/\/ec2-18-191-163-220.us-east-2.compute.amazonaws.com:6969\/announce",
+    "torrent_file_index": "10"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "Rick-S04E08",
+    "source_job_id": "manual-1789836432267",
+    "part": 1,
+    "start_seconds": 0,
+    "context": "(No prior summaries.)"
+  },
+  "music": {
+    "ref": "audio-library\/180DB_ [130] (Intro Slowed).m4a",
+    "source": "explicit_library"
+  },
+  "version": 2,
+  "job_id": "Rick-S04E08-p1",
+  "saved_at_epoch": 1789850152
+}
