@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Rick-S04E08-p3",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789857665,
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/35473918171",
+  "updated_at_epoch": 1789857666,
   "series": {
     "enabled": true,
     "series_id": "Rick-S04E08",
