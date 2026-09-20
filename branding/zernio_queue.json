@@ -1057,6 +1057,18 @@
         "6ab01265ed1bade947a17a83"
       ],
       "updated_at_epoch": 1789923941
+    },
+    {
+      "job_id": "Hyakkano_S01E02-p6",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-21T13:00:00",
+      "timezone": "Africa/Lagos",
+      "post_ids": [
+        "6ab013d1cad7f6c8bd5488ba",
+        "6ab013d4dee7d45fdec06258"
+      ],
+      "updated_at_epoch": 1789924308
     }
   ]
 }
