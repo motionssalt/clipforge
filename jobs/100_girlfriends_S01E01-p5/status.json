@@ -3,8 +3,8 @@
   "job_id": "100_girlfriends_S01E01-p5",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1789894682,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1789894826,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
@@ -18,7 +18,7 @@
   "run": {
     "workflow_run_id": 35500991094,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35500991094",
-    "code_ref": "1cab9602869fb566a3d3cb1ea1e9a5b3fa40deef"
+    "code_ref": "6fca6a88f10452a63c770a11e8dcecdb75b82e0e"
   },
   "publishing": {
     "status": "not_requested",
