@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "e2e_musicfix_1789909775-p2",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789911659,
+  "state": "error",
+  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/35514069333",
+  "updated_at_epoch": 1789911908,
   "series": {
     "enabled": true,
     "series_id": "e2e_musicfix_1789909775",
