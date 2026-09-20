@@ -3,8 +3,8 @@
   "job_id": "e2e_musicfix_1789909775-p1",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1789909831,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1789910000,
   "series": {
     "enabled": true,
     "series_id": "e2e_musicfix_1789909775",
@@ -17,7 +17,7 @@
   "run": {
     "workflow_run_id": 35512718938,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35512718938",
-    "code_ref": "16056eddf4ab9671fed533d4d5c2160cc8d281aa"
+    "code_ref": "d5c4863c348265f98b46cc0d87efb1cf1786f715"
   },
   "publishing": {
     "status": "not_requested",
