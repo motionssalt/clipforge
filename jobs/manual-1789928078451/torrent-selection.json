@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "job_id": "manual-1789928078451",
+  "torrent_name": "Hyakkano.S01.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman",
+  "video_candidates": [
+    {
+      "index": 1,
+      "path": "Hyakkano.S01E01.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1473857839
+    },
+    {
+      "index": 2,
+      "path": "Hyakkano.S01E02.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1476966891
+    },
+    {
+      "index": 3,
+      "path": "Hyakkano.S01E03.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1459867573
+    },
+    {
+      "index": 4,
+      "path": "Hyakkano.S01E04.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1474963925
+    },
+    {
+      "index": 5,
+      "path": "Hyakkano.S01E05.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1469711438
+    },
+    {
+      "index": 6,
+      "path": "Hyakkano.S01E06.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1476596758
+    },
+    {
+      "index": 7,
+      "path": "Hyakkano.S01E07.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1474612846
+    },
+    {
+      "index": 8,
+      "path": "Hyakkano.S01E08.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1469726473
+    },
+    {
+      "index": 9,
+      "path": "Hyakkano.S01E09.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1472036449
+    },
+    {
+      "index": 10,
+      "path": "Hyakkano.S01E10.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1471911928
+    },
+    {
+      "index": 11,
+      "path": "Hyakkano.S01E11.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1504035916
+    },
+    {
+      "index": 12,
+      "path": "Hyakkano.S01E12.REPACK.1080p.CR.WEB-DL.DUAL.Opus2.0.H.264-DemiHuman.mkv",
+      "length": 1506719293
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "30",
+    "focus": ""
+  }
+}
