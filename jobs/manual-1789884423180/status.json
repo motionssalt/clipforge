@@ -1,40 +1,15 @@
 {
-  "version": 2,
+  "version": 1,
   "job_id": "manual-1789884423180",
   "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 1\/6 dispatched (100_girlfriends_S01E01-p1). The chain updates this anchor when the part completes.",
+  "updated_at_epoch": 1789889147,
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
-    "start_seconds": 0,
-    "is_final": false
+    "enabled": true,
+    "series_id": "100_girlfriends_S01E01",
+    "part": 1,
+    "start_seconds": 0
   },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
-  "created_at_epoch": 1789884774,
-  "updated_at_epoch": 1789886563,
-  "expires_at_epoch": 1790057574,
-  "release_tag": "clipforge-manual-1789884423180",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789884423180",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/00_READ_THIS_FIRST.txt",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789884423180/transcript.json",
-    "analysis_bundle_url": ""
-  },
-  "run": {
-    "workflow_run_id": 35493603869,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35493603869",
-    "code_ref": "b9a84da6765733bd735847a7d23abd81de7236cc"
-  },
-  "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
-  }
+  "active_part_job_id": "100_girlfriends_S01E01-p1"
 }
