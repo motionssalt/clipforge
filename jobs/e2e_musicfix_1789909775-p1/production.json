@@ -1,0 +1,23 @@
+{
+  "title": "E2E Musicfix Alpha \u2014 Part 1",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#e2e"
+  ],
+  "series": {
+    "series_id": "e2e_musicfix_1789909775",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 120,
+    "is_final": false,
+    "summary": "Part one of the music-fix E2E."
+  },
+  "segments": [
+    {
+      "start_seconds": 12,
+      "end_seconds": 20,
+      "voiceover_text": "E2E music fix part one opening."
+    }
+  ]
+}

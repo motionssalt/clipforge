@@ -58,6 +58,11 @@
       }
     ]
   },
-  "spawned": [],
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "e2e_musicfix_1789909775-p1"
+    }
+  ],
   "created_at_epoch": 1789909775
 }
