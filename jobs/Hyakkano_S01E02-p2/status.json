@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Hyakkano_S01E02-p2",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 2 of 6 — Stage B dispatched (chained from part 1's completion).",
-  "updated_at_epoch": 1789920998,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789921010,
   "series": {
     "enabled": true,
     "series_id": "Hyakkano_S01E02",
@@ -13,5 +13,17 @@
     "is_final": false
   },
   "release_tag": "clipforge-Hyakkano_S01E02-p2",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Hyakkano_S01E02-p2"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Hyakkano_S01E02-p2",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 35522207068,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35522207068",
+    "code_ref": "4eab8e071aa58b4a6aa47e7302d2f2b8f3727069"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789964210
 }
