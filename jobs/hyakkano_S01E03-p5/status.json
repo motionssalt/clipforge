@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hyakkano_S01E03-p5",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789939095,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789939467,
   "series": {
     "enabled": true,
     "series_id": "hyakkano_S01E03",
@@ -13,12 +13,15 @@
     "is_final": true
   },
   "release_tag": "clipforge-hyakkano_S01E03-p5",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano_S01E03-p5",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano_S01E03-p5/clipforge-hyakkano_S01E03-p5-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano_S01E03-p5/final.mp4"
+  },
   "run": {
     "workflow_run_id": 35538142652,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35538142652",
-    "code_ref": "1b6cb3eb56e49eae494c5bb42ff4be256e463006"
+    "code_ref": "9a7a470ee39023bd4286187cfa5c66609b3cf7bf"
   },
   "publishing": {
     "status": "not_requested",
