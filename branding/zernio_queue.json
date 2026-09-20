@@ -1189,6 +1189,18 @@
         "6ab04cff27afd46f15784c53"
       ],
       "updated_at_epoch": 1789938944
+    },
+    {
+      "job_id": "hyakkano_S01E03-p5",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-24T02:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ab04f1e57203a76b6f54e22",
+        "6ab04f2038ceb044bc190473"
+      ],
+      "updated_at_epoch": 1789939488
     }
   ]
 }
