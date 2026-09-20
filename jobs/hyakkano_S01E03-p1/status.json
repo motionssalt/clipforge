@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789936772,
+  "updated_at_epoch": 1789936790,
   "series": {
     "enabled": true,
     "series_id": "hyakkano_S01E03",
@@ -22,9 +22,56 @@
     "code_ref": "8805406338b51164a6e3b4cfb400e4f96901bc35"
   },
   "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6ab04494f47d26713faceb23",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-23T02:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a9e0ce977555aae01e7ae22",
+              "platform": "tiktok",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=bf664260&x-expires=1790053200&x-signature=G%2BMcjmTE1Rz658KogNMTnV1%2Fe5g%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "username": ".chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-hyakkano_S01E03-p1-45d64507-8faf-4e0b-b6a6-141b0f981bc8-tiktok"
+      },
+      {
+        "post_id": "6ab04495f47d26713faceba8",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-23T02:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-hyakkano_S01E03-p1-45d64507-8faf-4e0b-b6a6-141b0f981bc8-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-auto-hyakkano_S01E03-p1-45d64507-8faf-4e0b-b6a6-141b0f981bc8"
   },
   "release_tag": "clipforge-hyakkano_S01E03-p1",
   "release_url": "",
