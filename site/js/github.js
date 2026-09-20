@@ -760,8 +760,40 @@ export function toggleZernioTarget(settings, accounts, platform, accountId) {
   return settings;
 }
 
+/**
+ * Genuine IANA timezone list from the JS engine (Intl.supportedValuesOf) — the
+ * same tz database family the pipeline's Python zoneinfo validates against, so
+ * the picker and publish-time validation can never disagree. A small fallback
+ * covers engines without supportedValuesOf. NEVER a regex-only check: that is
+ * how the bogus "Europe/Lagos" was saved and broke every smart-schedule publish.
+ */
+const FALLBACK_IANA_TIMEZONES = [
+  'UTC', 'Africa/Cairo', 'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Nairobi',
+  'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Mexico_City',
+  'America/New_York', 'America/Sao_Paulo', 'America/Toronto',
+  'Asia/Dubai', 'Asia/Hong_Kong', 'Asia/Jakarta', 'Asia/Kolkata', 'Asia/Manila',
+  'Asia/Singapore', 'Asia/Tokyo',
+  'Australia/Melbourne', 'Australia/Sydney',
+  'Europe/Amsterdam', 'Europe/Berlin', 'Europe/London', 'Europe/Madrid',
+  'Europe/Paris', 'Europe/Rome',
+  'Pacific/Auckland', 'Pacific/Honolulu'
+];
+let ianaTimezoneCache = null;
+export function ianaTimezones() {
+  if (!ianaTimezoneCache) {
+    let zones = null;
+    try {
+      if (typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function') {
+        zones = Intl.supportedValuesOf('timeZone');
+      }
+    } catch (err) { zones = null; }
+    if (!Array.isArray(zones) || zones.length === 0) zones = FALLBACK_IANA_TIMEZONES;
+    ianaTimezoneCache = [...new Set([...zones, 'UTC'])].sort();
+  }
+  return ianaTimezoneCache;
+}
 export function validZernioTimezone(value) {
-  return /^(?:UTC|[A-Za-z_]+(?:\/[A-Za-z_+\-]+)+)$/.test(String(value || '').trim());
+  return ianaTimezones().includes(String(value || '').trim());
 }
 export function validZernioTime(value) {
   return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(value || '').trim());
