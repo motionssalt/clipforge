@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "enabled": true,
+  "enabled": false,
   "auto_publish": true,
   "automatic_mode": "smart_schedule",
   "target_accounts": {
@@ -12,12 +12,12 @@
     ]
   },
   "smart_schedule": {
-    "timezone": "Africa/Lagos",
-    "interval_hours": 4,
+    "timezone": "UTC",
+    "interval_hours": 6,
     "preferred_time": "05:00",
     "queue_depth": 100,
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1789860284
+  "updated_at_epoch": 1789927599
 }
