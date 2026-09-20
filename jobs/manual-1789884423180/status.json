@@ -3,13 +3,13 @@
   "job_id": "manual-1789884423180",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 2 of 6 running (100_girlfriends_S01E01-p2) — chained from part 1's completion.",
-  "updated_at_epoch": 1789892122,
+  "message": "Super Series part 3 of 6 running (100_girlfriends_S01E01-p3) — chained from part 2's completion.",
+  "updated_at_epoch": 1789892990,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
-    "part": 2,
+    "part": 3,
     "start_seconds": 0
   },
-  "active_part_job_id": "100_girlfriends_S01E01-p2"
+  "active_part_job_id": "100_girlfriends_S01E01-p3"
 }
