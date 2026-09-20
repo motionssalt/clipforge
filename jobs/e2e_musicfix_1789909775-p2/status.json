@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "e2e_musicfix_1789909775-p2",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 2 of 2 — Stage B dispatched (chained from part 1's completion).",
-  "updated_at_epoch": 1789911469,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789911481,
   "series": {
     "enabled": true,
     "series_id": "e2e_musicfix_1789909775",
@@ -13,5 +13,17 @@
     "is_final": true
   },
   "release_tag": "clipforge-e2e_musicfix_1789909775-p2",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-e2e_musicfix_1789909775-p2"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-e2e_musicfix_1789909775-p2",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 35514069333,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35514069333",
+    "code_ref": "38e158ead48e4f8120e1eae0dc237860b4ea3c74"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789954681
 }
