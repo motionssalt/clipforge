@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "100_girlfriends_S01E01-p4",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 4 of 6 — Stage B dispatched (chained from part 3's completion).",
+  "updated_at_epoch": 1789893890,
+  "series": {
+    "enabled": true,
+    "series_id": "100_girlfriends_S01E01",
+    "part": 4,
+    "start_seconds": 508,
+    "is_final": false
+  },
+  "release_tag": "clipforge-100_girlfriends_S01E01-p4",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-100_girlfriends_S01E01-p4"
+}
