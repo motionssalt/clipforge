@@ -1,0 +1,49 @@
+{
+  "title": "The 100th Rejection — Part 1",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#Anime",
+    "#RomCom",
+    "#Rentaro",
+    "#Heartbreak",
+    "#AnimeShorts"
+  ],
+  "series": {
+    "series_id": "100_girlfriends_S01E01",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 180,
+    "is_final": false,
+    "summary": "On middle school graduation day, Rentaro Aijou confesses his love to his classmate Asakawa, only to suffer his 100th consecutive rejection. Utterly devastated, he decides to pray for a miracle at a matchmaking shrine."
+  },
+  "segments": [
+    {
+      "start_seconds": 12,
+      "end_seconds": 20,
+      "voiceover_text": "On graduation day, Rentaro Aijou believes his cursed streak of bad luck is finally over."
+    },
+    {
+      "start_seconds": 36,
+      "end_seconds": 46,
+      "voiceover_text": "He pours his heart out to his classmate Asakawa, only to receive the most brutal rejection of his life."
+    },
+    {
+      "start_seconds": 70,
+      "end_seconds": 79,
+      "voiceover_text": "This devastating failure marks his one hundredth consecutive heartbreak since kindergarten, shattering his spirit."
+    },
+    {
+      "start_seconds": 98,
+      "end_seconds": 106,
+      "voiceover_text": "His friends can only watch in disbelief, noting that nobody in history has ever suffered a hundred romantic rejections in a row."
+    },
+    {
+      "start_seconds": 168,
+      "end_seconds": 180,
+      "voiceover_text": "Desperate for a miracle before high school begins, Rentaro visits a sacred matchmaking shrine to pray for love, completely unaware of the divine shock waiting for him."
+    }
+  ],
+  "job_id": "100_girlfriends_S01E01-p1"
+}
