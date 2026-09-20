@@ -1,0 +1,72 @@
+{
+  "title": "The Rooftop Bento Duel and the Pocky Trap — Part 2",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#Hyakkano",
+    "#HakariHanazono",
+    "#KaraneInda",
+    "#AnimeLove",
+    "#AnimeReactions",
+    "#WaifuWar"
+  ],
+  "series": {
+    "series_id": "Hyakkano_S01E02",
+    "part": 2,
+    "start_seconds": 250,
+    "end_seconds": 502,
+    "is_final": false,
+    "summary": "Upon discovering Rentaro has never had his first kiss, Hakari and Karane wage war on the rooftop with homemade bentos and a Pocky game trap."
+  },
+  "segments": [
+    {
+      "start_seconds": 265,
+      "end_seconds": 345,
+      "voiceover_text": "During a quiet conversation in class, Rentaro casually admits that he has never kissed anyone before, sending immediate shockwaves through both Hakari and Karane.",
+      "keywords": [
+        {
+          "word": "shockwaves",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 350,
+      "end_seconds": 420,
+      "voiceover_text": "At lunchtime on the sunny rooftop, Hakari unveils an elaborate gourmet bento, playfully attempting to feed Rentaro to steal the upper hand.",
+      "keywords": [
+        {
+          "word": "gourmet",
+          "color": "#32CD32"
+        }
+      ]
+    },
+    {
+      "start_seconds": 425,
+      "end_seconds": 470,
+      "voiceover_text": "Panicking at being outdone, Karane furiously shoves her own rolled omelette directly into his mouth, turning lunch into a high-stakes culinary duel.",
+      "keywords": [
+        {
+          "word": "duel",
+          "color": "#FF4500"
+        }
+      ]
+    },
+    {
+      "start_seconds": 475,
+      "end_seconds": 500,
+      "voiceover_text": "Hakari swiftly counters by whipping out a box of Pocky for a seductive kissing game, leaving Karane scrambling desperately to protect his lips.",
+      "keywords": [
+        {
+          "word": "seductive",
+          "color": "#FF1493"
+        },
+        {
+          "word": "scrambling",
+          "color": "#FF8C00"
+        }
+      ]
+    }
+  ],
+  "job_id": "Hyakkano_S01E02-p2"
+}
