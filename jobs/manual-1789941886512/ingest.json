@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "job_id": "manual-1789941886512",
+  "source_kind": "torrent_file",
+  "original_path": "work/original.mkv",
+  "original_asset_name": "original.mkv",
+  "size_bytes": 1474963925,
+  "container": "mkv",
+  "ingested_at_epoch": 1789942215
+}
