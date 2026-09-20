@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "Hyakkano_S01E02-p5",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 5 of 6 — Stage B dispatched (chained from part 4's completion).",
+  "updated_at_epoch": 1789922770,
+  "series": {
+    "enabled": true,
+    "series_id": "Hyakkano_S01E02",
+    "part": 5,
+    "start_seconds": 976,
+    "is_final": false
+  },
+  "release_tag": "clipforge-Hyakkano_S01E02-p5",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Hyakkano_S01E02-p5"
+}
