@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789936790,
+  "updated_at_epoch": 1789937328,
   "series": {
     "enabled": true,
     "series_id": "hyakkano_S01E03",
@@ -22,12 +22,12 @@
     "code_ref": "8805406338b51164a6e3b4cfb400e4f96901bc35"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "published",
     "posts": [
       {
-        "post_id": "6ab04494f47d26713faceb23",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-23T02:00:00.000Z",
+        "post_id": "6ab0469c92d93bcfd03507da",
+        "status": "published",
+        "scheduled_for": "2026-09-20T20:48:26.873Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -41,16 +41,18 @@
               "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=bf664260&x-expires=1790053200&x-signature=G%2BMcjmTE1Rz658KogNMTnV1%2Fe5g%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
               "username": ".chimeravfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7687722145954138120",
+            "platformPostUrl": ""
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-auto-hyakkano_S01E03-p1-45d64507-8faf-4e0b-b6a6-141b0f981bc8-tiktok"
+        "request_id": "android-hyakkano_S01E03-p1-publish_now-1789937295055-tiktok"
       },
       {
-        "post_id": "6ab04495f47d26713faceba8",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-23T02:00:00.000Z",
+        "post_id": "6ab046acccd2fe32d929468a",
+        "status": "published",
+        "scheduled_for": "2026-09-20T20:48:42.506Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -64,14 +66,16 @@
               "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
               "username": "chimera_vfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "SKY0xZ9AmNg",
+            "platformPostUrl": "https://www.youtube.com/watch?v=SKY0xZ9AmNg"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-hyakkano_S01E03-p1-45d64507-8faf-4e0b-b6a6-141b0f981bc8-youtube"
+        "request_id": "android-hyakkano_S01E03-p1-publish_now-1789937295055-youtube"
       }
     ],
-    "idempotency_key": "clipforge-auto-hyakkano_S01E03-p1-45d64507-8faf-4e0b-b6a6-141b0f981bc8"
+    "idempotency_key": "android-hyakkano_S01E03-p1-publish_now-1789937295055"
   },
   "release_tag": "clipforge-hyakkano_S01E03-p1",
   "release_url": "",
