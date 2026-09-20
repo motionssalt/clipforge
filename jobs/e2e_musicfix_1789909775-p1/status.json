@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "e2e_musicfix_1789909775-p1",
   "mode": "manual",
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/35512718938",
-  "updated_at_epoch": 1789910582,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789910841,
   "series": {
     "enabled": true,
     "series_id": "e2e_musicfix_1789909775",
@@ -15,9 +15,9 @@
   "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-e2e_musicfix_1789909775-p1",
   "assets": {},
   "run": {
-    "workflow_run_id": 35512718938,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35512718938",
-    "code_ref": "d5c4863c348265f98b46cc0d87efb1cf1786f715"
+    "workflow_run_id": 35513544321,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35513544321",
+    "code_ref": "9cf9785c03dce443524886aa5b51d43f8c193c3d"
   },
   "publishing": {
     "status": "not_requested",
