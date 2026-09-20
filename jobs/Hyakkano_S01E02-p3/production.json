@@ -1,0 +1,68 @@
+{
+  "title": "The First Kiss Crisis and the Blindfolded Dice Game — Part 3",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#Hyakkano",
+    "#AnimeHarem",
+    "#AnimeTropes",
+    "#FirstKiss",
+    "#RomcomAnime",
+    "#FunnyAnime"
+  ],
+  "series": {
+    "series_id": "Hyakkano_S01E02",
+    "part": 3,
+    "start_seconds": 502,
+    "end_seconds": 720,
+    "is_final": false,
+    "summary": "To prevent favoritism and heartache, Rentaro invents a sensory-deprivation dice game to decide his first kiss under strict anonymity."
+  },
+  "segments": [
+    {
+      "start_seconds": 515,
+      "end_seconds": 600,
+      "voiceover_text": "Rentaro sees through their escalating schemes and realizes that surrendering his first kiss to either girl will crush the other's heart.",
+      "keywords": [
+        {
+          "word": "escalating",
+          "color": "#FF4500"
+        }
+      ]
+    },
+    {
+      "start_seconds": 605,
+      "end_seconds": 650,
+      "voiceover_text": "Hakari suggests settling the matter with rock-paper-scissors, but Karane furiously objects, refusing to let something as sacred as a first kiss depend on luck.",
+      "keywords": [
+        {
+          "word": "sacred",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 655,
+      "end_seconds": 695,
+      "voiceover_text": "Determined to stay completely fair, Rentaro devises an elaborate randomized contest, strapping on a blindfold and blaring headphones while rolling dice in secret.",
+      "keywords": [
+        {
+          "word": "blindfold",
+          "color": "#1E90FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 700,
+      "end_seconds": 718,
+      "voiceover_text": "With Rentaro completely helpless in sensory deprivation, Hakari rolls the winning number and leans in close, but their fragile truce is already fracturing.",
+      "keywords": [
+        {
+          "word": "fracturing",
+          "color": "#DC143C"
+        }
+      ]
+    }
+  ],
+  "job_id": "Hyakkano_S01E02-p3"
+}
