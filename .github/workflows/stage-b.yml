@@ -576,8 +576,33 @@ jobs:
           ref="${{ github.event.inputs.music_ref }}"
           jid="${{ steps.jid.outputs.job_id }}"
           if [ -z "$ref" ]; then
-            echo "No music_ref supplied — final video ships without background music."
-            exit 0
+            # bug: an empty music_ref (bare/restart workflow_dispatch, e.g. Super Series
+            # Part 1 recovery run) must NOT silently drop music. Re-derive from the job own
+            # durable stage-a-request.json, exactly like resolveMusicRef at dispatch, so every
+            # part resolves music identically regardless of which caller dispatched it.
+            # FAIL-SAFE: any read/resolve trouble leaves ref empty -> ship WITHOUT music
+            # (never fatal, never blocks Stage B). No step reordering, no new dependency.
+            if [ -f "jobs/$jid/stage-a-request.json" ]; then
+              ref="$(python3 -c '
+          import json,sys
+          try:
+              req=json.load(open("jobs/"+sys.argv[1]+"/stage-a-request.json"))
+              m=req.get("music") or {}
+              s=str(m.get("source","none")); r=str(m.get("ref",""))
+              if s in ("explicit_library","job_upload") and r: print("path:"+r)
+              elif s=="default":
+                  try:
+                      p=str(json.load(open("branding/music_default.json")).get("library_track_path",""))
+                      if p: print("path:"+p)
+                  except Exception: pass
+          except Exception: pass
+          ' "$jid" 2>/dev/null || true)"
+            fi
+            if [ -z "$ref" ]; then
+              echo "No music_ref supplied and none derivable — final video ships without background music."
+              exit 0
+            fi
+            echo "music_ref empty at dispatch — re-derived from stage-a-request.json: $ref"
           fi
           ref="${ref//<JOB_ID>/$jid}"
           case "$ref" in
