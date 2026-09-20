@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "100_girlfriends_S01E01-p4",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 4 of 6 — Stage B dispatched (chained from part 3's completion).",
-  "updated_at_epoch": 1789893890,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789893902,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
@@ -13,5 +13,17 @@
     "is_final": false
   },
   "release_tag": "clipforge-100_girlfriends_S01E01-p4",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-100_girlfriends_S01E01-p4"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-100_girlfriends_S01E01-p4",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 35500406766,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35500406766",
+    "code_ref": "21d96f1df34bc4ac14bb297c03aa4659d94cf8d3"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789937102
 }
