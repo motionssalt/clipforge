@@ -3,13 +3,13 @@
   "job_id": "manual-1789918863251",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 1\/6 dispatched (Hyakkano_S01E02-p1). The chain updates this anchor when the part completes.",
-  "updated_at_epoch": 1789920461,
+  "message": "Super Series part 2 of 6 running (Hyakkano_S01E02-p2) — chained from part 1's completion.",
+  "updated_at_epoch": 1789921001,
   "series": {
     "enabled": true,
     "series_id": "Hyakkano_S01E02",
-    "part": 1,
+    "part": 2,
     "start_seconds": 0
   },
-  "active_part_job_id": "Hyakkano_S01E02-p1"
+  "active_part_job_id": "Hyakkano_S01E02-p2"
 }
