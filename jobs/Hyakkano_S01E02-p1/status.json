@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789925034,
+  "updated_at_epoch": 1789927220,
   "series": {
     "enabled": true,
     "series_id": "Hyakkano_S01E02",
@@ -22,13 +22,13 @@
     "code_ref": "7c87a468c5e1598bf45e980dbd280890f59f361e"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "published",
     "posts": [
       {
-        "post_id": "6ab016a7da7643868e742f27",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-22T12:00:00.000Z",
-        "timezone": "Africa/Lagos",
+        "post_id": "6ab01f1626b5c562f1db4be3",
+        "status": "published",
+        "scheduled_for": "2026-09-20T17:59:47.706Z",
+        "timezone": "UTC",
         "platforms": [
           {
             "platform": "tiktok",
@@ -41,17 +41,19 @@
               "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=bf664260&x-expires=1790053200&x-signature=G%2BMcjmTE1Rz658KogNMTnV1%2Fe5g%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
               "username": ".chimeravfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7687678063919974401",
+            "platformPostUrl": ""
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-manual-Hyakkano_S01E02-p1-35525716458-tiktok"
+        "request_id": "android-Hyakkano_S01E02-p1-publish_now-1789927174368-tiktok"
       },
       {
-        "post_id": "6ab016a9cd3b5475e8353cef",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-22T12:00:00.000Z",
-        "timezone": "Africa/Lagos",
+        "post_id": "6ab01f2d26b5c562f1db506d",
+        "status": "published",
+        "scheduled_for": "2026-09-20T18:00:10.979Z",
+        "timezone": "UTC",
         "platforms": [
           {
             "platform": "youtube",
@@ -64,14 +66,16 @@
               "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
               "username": "chimera_vfx"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "aPN_gx_uocc",
+            "platformPostUrl": "https://www.youtube.com/watch?v=aPN_gx_uocc"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-manual-Hyakkano_S01E02-p1-35525716458-youtube"
+        "request_id": "android-Hyakkano_S01E02-p1-publish_now-1789927174368-youtube"
       }
     ],
-    "idempotency_key": "clipforge-manual-Hyakkano_S01E02-p1-35525716458"
+    "idempotency_key": "android-Hyakkano_S01E02-p1-publish_now-1789927174368"
   },
   "release_tag": "clipforge-Hyakkano_S01E02-p1",
   "release_url": "",
