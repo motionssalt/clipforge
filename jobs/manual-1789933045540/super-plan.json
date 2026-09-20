@@ -490,5 +490,10 @@
       }
     ]
   },
-  "spawned": []
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "hyakkano_S01E03-p1"
+    }
+  ]
 }
