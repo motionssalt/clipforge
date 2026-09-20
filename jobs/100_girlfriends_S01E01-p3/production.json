@@ -1,0 +1,49 @@
+{
+  "title": "A Double Zing on Day One — Part 3",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#HakariHanazono",
+    "#KaraneInda",
+    "#AnimeZing",
+    "#HaremAnime",
+    "#LoveAtFirstSight"
+  ],
+  "series": {
+    "series_id": "100_girlfriends_S01E01",
+    "part": 3,
+    "start_seconds": 345,
+    "end_seconds": 508,
+    "is_final": false,
+    "summary": "Rentaro begins his high school career and immediately locks eyes with two gorgeous classmates, Hakari and Karane. An electric shockwave strikes all three, sparking instant and overwhelming love."
+  },
+  "segments": [
+    {
+      "start_seconds": 364,
+      "end_seconds": 376,
+      "voiceover_text": "Rentaro steps onto his new high school campus, praying the god's wild prophecy was just an absurd dream."
+    },
+    {
+      "start_seconds": 397,
+      "end_seconds": 406,
+      "voiceover_text": "While crossing the entrance courtyard, he accidentally locks eyes with two gorgeous classmates, Hakari and Karane."
+    },
+    {
+      "start_seconds": 408,
+      "end_seconds": 421,
+      "voiceover_text": "The instant their gazes meet, a violent romantic shockwave electrifies all three of their souls."
+    },
+    {
+      "start_seconds": 472,
+      "end_seconds": 490,
+      "voiceover_text": "This is the legendary zing of destiny, sparking an uncontrollable passion that leaves Karane blushing furiously and Hakari starry-eyed."
+    },
+    {
+      "start_seconds": 493,
+      "end_seconds": 508,
+      "voiceover_text": "Rentaro is struck with total panic: he has fallen madly in love with two different girls simultaneously, and neither girl has any intention of backing down."
+    }
+  ],
+  "job_id": "100_girlfriends_S01E01-p3"
+}
