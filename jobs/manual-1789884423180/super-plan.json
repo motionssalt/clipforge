@@ -300,5 +300,10 @@
       }
     ]
   },
-  "spawned": []
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "100_girlfriends_S01E01-p1"
+    }
+  ]
 }
