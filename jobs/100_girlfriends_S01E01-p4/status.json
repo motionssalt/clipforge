@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789894660,
+  "updated_at_epoch": 1789894686,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
@@ -24,7 +24,7 @@
     "code_ref": "215a343b37b92ad43e3df3107872282292d4c6ba"
   },
   "publishing": {
-    "status": "not_requested",
+    "status": "failed",
     "posts": [],
     "idempotency_key": ""
   },
