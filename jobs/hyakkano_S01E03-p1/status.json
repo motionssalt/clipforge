@@ -2,13 +2,27 @@
   "version": 1,
   "job_id": "hyakkano_S01E03-p1",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 1 queued for Stage B.",
-  "updated_at_epoch": 1789936200,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789936233,
   "series": {
     "enabled": true,
     "series_id": "hyakkano_S01E03",
     "part": 1,
     "start_seconds": 0
-  }
+  },
+  "assets": {},
+  "run": {
+    "workflow_run_id": 35535761764,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35535761764",
+    "code_ref": "773cae07341fd4fda35862047d604755f291d132"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "release_tag": "clipforge-hyakkano_S01E03-p1",
+  "release_url": "",
+  "expires_at_epoch": 1789979433
 }
