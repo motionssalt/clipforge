@@ -2,22 +2,26 @@
   "version": 1,
   "job_id": "e2e_musicfix_1789909775-p1",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789910968,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789911461,
   "series": {
     "enabled": true,
     "series_id": "e2e_musicfix_1789909775",
     "part": 1,
-    "start_seconds": 0
+    "start_seconds": 0,
+    "is_final": false
   },
   "release_tag": "clipforge-e2e_musicfix_1789909775-p1",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-e2e_musicfix_1789909775-p1",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e_musicfix_1789909775-p1/clipforge-e2e_musicfix_1789909775-p1-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e_musicfix_1789909775-p1/final.mp4"
+  },
   "run": {
     "workflow_run_id": 35513544321,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35513544321",
-    "code_ref": "b1f0317bd97f2971d157abbf8d380da7c59e6006"
+    "code_ref": "fb3a156b5a70f5ff7ecd47d87e67df95ce060830"
   },
   "publishing": {
     "status": "not_requested",
