@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "hyakkano_S01E03-p3",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 3 of 5 — Stage B dispatched (chained from part 2's completion).",
+  "updated_at_epoch": 1789937497,
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano_S01E03",
+    "part": 3,
+    "start_seconds": 631,
+    "is_final": false
+  },
+  "release_tag": "clipforge-hyakkano_S01E03-p3",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano_S01E03-p3"
+}
