@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "100_girlfriends_S01E01-p1",
   "mode": "manual",
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/35496843177",
-  "updated_at_epoch": 1789889285,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789891162,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
@@ -13,9 +13,9 @@
   },
   "assets": {},
   "run": {
-    "workflow_run_id": 35496843177,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35496843177",
-    "code_ref": "1efb499bce3a251c7974d7b1c622dd75f9dc5153"
+    "workflow_run_id": 35498315342,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35498315342",
+    "code_ref": "6e33d1db7feb52c1c15e0dbbcda638dfb12eca84"
   },
   "publishing": {
     "status": "not_requested",
