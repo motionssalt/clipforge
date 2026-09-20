@@ -1165,6 +1165,18 @@
         "6ab04761401d2595a12edffb"
       ],
       "updated_at_epoch": 1789937505
+    },
+    {
+      "job_id": "hyakkano_S01E03-p3",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-23T14:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ab04a687cd2461f27bc605a",
+        "6ab04a6a0e95a93a4ad37c2f"
+      ],
+      "updated_at_epoch": 1789938282
     }
   ]
 }
