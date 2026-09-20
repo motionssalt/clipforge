@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789921642,
+  "updated_at_epoch": 1789921657,
   "series": {
     "enabled": true,
     "series_id": "Hyakkano_S01E02",
@@ -24,7 +24,7 @@
     "code_ref": "298bf75e7a7c5c4a0a5d3769cd561c3b47f2972f"
   },
   "publishing": {
-    "status": "not_requested",
+    "status": "failed",
     "posts": [],
     "idempotency_key": ""
   },
