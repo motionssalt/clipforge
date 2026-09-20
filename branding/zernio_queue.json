@@ -1069,6 +1069,18 @@
         "6ab013d4dee7d45fdec06258"
       ],
       "updated_at_epoch": 1789924308
+    },
+    {
+      "job_id": "100_girlfriends_S01E01-p2",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-21T17:00:00",
+      "timezone": "Africa/Lagos",
+      "post_ids": [
+        "6ab0154b8b7f715862684388",
+        "6ab0154c59a5266cfc9a40cc"
+      ],
+      "updated_at_epoch": 1789924685
     }
   ]
 }

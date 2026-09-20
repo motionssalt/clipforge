@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789892994,
+  "updated_at_epoch": 1789924685,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
@@ -24,9 +24,56 @@
     "code_ref": "8042ca0442bf2ebe9062ac9613a8f6c4d604c1a7"
   },
   "publishing": {
-    "status": "failed",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6ab0154b8b7f715862684388",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-21T16:00:00.000Z",
+        "timezone": "Africa/Lagos",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a9e0ce977555aae01e7ae22",
+              "platform": "tiktok",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=bf664260&x-expires=1790053200&x-signature=G%2BMcjmTE1Rz658KogNMTnV1%2Fe5g%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "username": ".chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-manual-100_girlfriends_S01E01-p2-35525408839-tiktok"
+      },
+      {
+        "post_id": "6ab0154c59a5266cfc9a40cc",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-21T16:00:00.000Z",
+        "timezone": "Africa/Lagos",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-manual-100_girlfriends_S01E01-p2-35525408839-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-manual-100_girlfriends_S01E01-p2-35525408839"
   },
   "expires_at_epoch": 1789935332
 }
