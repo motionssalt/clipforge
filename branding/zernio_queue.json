@@ -1033,6 +1033,18 @@
         "6ab01241dd35c9a969df4946"
       ],
       "updated_at_epoch": 1789923906
+    },
+    {
+      "job_id": "e2e_musicfix_1789909775-p1",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-21T05:00:00",
+      "timezone": "Africa/Lagos",
+      "post_ids": [
+        "6ab012506b07e4d814632f0b",
+        "6ab01252684023d5ef1386b1"
+      ],
+      "updated_at_epoch": 1789923922
     }
   ]
 }
