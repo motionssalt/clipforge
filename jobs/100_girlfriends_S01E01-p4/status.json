@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "100_girlfriends_S01E01-p4",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1789894027,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789894660,
   "series": {
     "enabled": true,
     "series_id": "100_girlfriends_S01E01",
@@ -13,12 +13,15 @@
     "is_final": false
   },
   "release_tag": "clipforge-100_girlfriends_S01E01-p4",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-100_girlfriends_S01E01-p4",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-100_girlfriends_S01E01-p4/clipforge-100_girlfriends_S01E01-p4-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-100_girlfriends_S01E01-p4/final.mp4"
+  },
   "run": {
     "workflow_run_id": 35500406766,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35500406766",
-    "code_ref": "0ad41508b878f71e63a21fe2cf929acc437c2ca3"
+    "code_ref": "215a343b37b92ad43e3df3107872282292d4c6ba"
   },
   "publishing": {
     "status": "not_requested",
