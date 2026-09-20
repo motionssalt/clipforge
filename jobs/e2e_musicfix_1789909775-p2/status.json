@@ -1,43 +1,30 @@
 {
-  "version": 1,
+  "version": 2,
   "job_id": "e2e_musicfix_1789909775-p2",
   "mode": "manual",
-<<<<<<< Updated upstream
-  "state": "error",
-  "message": "Stage B failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/35514069333",
-  "updated_at_epoch": 1789911908,
-=======
-  "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1789912017,
->>>>>>> Stashed changes
   "series": {
-    "enabled": true,
-    "series_id": "e2e_musicfix_1789909775",
-    "part": 2,
-    "start_seconds": 120,
-    "is_final": true
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
+    "start_seconds": 0,
+    "is_final": false
   },
+  "state": "stage_b_running",
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "created_at_epoch": 1789912145,
+  "updated_at_epoch": 1789912145,
+  "expires_at_epoch": 1789955345,
   "release_tag": "clipforge-e2e_musicfix_1789909775-p2",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-e2e_musicfix_1789909775-p2",
+  "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 35514069333,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35514069333",
-<<<<<<< Updated upstream
-    "code_ref": "b558590a5da53b28ea4bd26002540e26de2af047"
-=======
-    "code_ref": "38e158ead48e4f8120e1eae0dc237860b4ea3c74"
->>>>>>> Stashed changes
+    "code_ref": "cd9c07daac140022d52fb38e88976d0124806ce2"
   },
   "publishing": {
     "status": "not_requested",
     "posts": [],
     "idempotency_key": ""
-  },
-<<<<<<< Updated upstream
-  "expires_at_epoch": 1789954681
-=======
-  "expires_at_epoch": 1789955217
->>>>>>> Stashed changes
+  }
 }
