@@ -3,8 +3,8 @@
   "job_id": "Hyakkano_S01E02-p5",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1789922782,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1789922943,
   "series": {
     "enabled": true,
     "series_id": "Hyakkano_S01E02",
@@ -18,7 +18,7 @@
   "run": {
     "workflow_run_id": 35523747198,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35523747198",
-    "code_ref": "a45ecbca8ec55e72278e009a9dea5e9e1ed5df00"
+    "code_ref": "1f15c8dbb73d01f0f2858664ab28a6d89bd25bcc"
   },
   "publishing": {
     "status": "not_requested",
