@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hyakkano_S01E03-p5",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 5 of 5 — Stage B dispatched (chained from part 4's completion).",
-  "updated_at_epoch": 1789938934,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1789938945,
   "series": {
     "enabled": true,
     "series_id": "hyakkano_S01E03",
@@ -13,5 +13,17 @@
     "is_final": true
   },
   "release_tag": "clipforge-hyakkano_S01E03-p5",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano_S01E03-p5"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano_S01E03-p5",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 35538142652,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35538142652",
+    "code_ref": "eb7a465ec1e5ebb7f6daf0737f3028f1005ba256"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1789982145
 }
