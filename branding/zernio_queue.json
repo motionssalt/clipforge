@@ -1153,6 +1153,18 @@
         "6ab016c4cffc34c096bf0cda"
       ],
       "updated_at_epoch": 1789925061
+    },
+    {
+      "job_id": "100_girlfriends_S01E01-p5",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-22T21:00:00",
+      "timezone": "Africa/Lagos",
+      "post_ids": [
+        "6ab01a7e388a27ca6e71141c",
+        "6ab01a7f7cf99132fb474b4b"
+      ],
+      "updated_at_epoch": 1789926016
     }
   ]
 }
