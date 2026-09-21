@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "title": "The Mock Exam and the Electric Zing — Part 1",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#NanoEiai",
+    "#RentaroAijou",
+    "#AnimeMoments",
+    "#AnimeRomcom"
+  ],
+  "series": {
+    "series_id": "hyakkano5",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 222,
+    "is_final": false,
+    "summary": "When high school midterm exam results are posted, Rentaro celebrates alongside Hakari, Karane, and Shizuka until top-ranked prodigy Nano Eiai passes by. A sudden lock of eyes triggers a blinding Zing shock, revealing Nano as Rentaro’s fourth destined soulmate."
+  },
+  "segments": [
+    {
+      "start_seconds": 0,
+      "end_seconds": 26,
+      "voiceover_text": "When midterm exam rankings drop outside the high school, Rentaro celebrates his score alongside Hakari, Karane, and sweet Shizuka.",
+      "keywords": [
+        {
+          "word": "midterm",
+          "color": "#FFD700"
+        },
+        {
+          "word": "celebrates",
+          "color": "#4ADE80"
+        }
+      ]
+    },
+    {
+      "start_seconds": 41,
+      "end_seconds": 58,
+      "voiceover_text": "Suddenly, top-ranked prodigy Nano Eiai strides past the crowd, showing total indifference toward her spotless, perfect mock exam score.",
+      "keywords": [
+        {
+          "word": "prodigy",
+          "color": "#60A5FA"
+        },
+        {
+          "word": "indifference",
+          "color": "#A78BFA"
+        }
+      ]
+    },
+    {
+      "start_seconds": 58,
+      "end_seconds": 77,
+      "voiceover_text": "As their eyes instantly meet, a violent electric shockwave freezes time, signaling Rentaro’s fourth destined soulmate has finally arrived.",
+      "keywords": [
+        {
+          "word": "electric",
+          "color": "#FBBF24"
+        },
+        {
+          "word": "soulmate",
+          "color": "#F43F5E"
+        }
+      ]
+    },
+    {
+      "start_seconds": 77,
+      "end_seconds": 93,
+      "voiceover_text": "Nano clutches her racing chest in sudden bewilderment before coldly departing, clearly unnerved by this bizarre, illogical emotional disturbance.",
+      "keywords": [
+        {
+          "word": "bewilderment",
+          "color": "#FB923C"
+        },
+        {
+          "word": "illogical",
+          "color": "#94A3B8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 213,
+      "end_seconds": 222,
+      "voiceover_text": "Rentaro stands completely paralyzed in utter disbelief, realizing his next destined girlfriend is a ruthlessly detached, living analytical machine.",
+      "keywords": [
+        {
+          "word": "paralyzed",
+          "color": "#F87171"
+        },
+        {
+          "word": "machine",
+          "color": "#38BDF8"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano5-p1"
+}
