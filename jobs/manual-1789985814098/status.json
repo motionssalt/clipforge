@@ -3,13 +3,13 @@
   "job_id": "manual-1789985814098",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 1\/4 dispatched (hyakkano4-p1). The chain updates this anchor when the part completes.",
-  "updated_at_epoch": 1789987749,
+  "message": "Super Series part 2 of 4 running (hyakkano4-p2) — chained from part 1's completion.",
+  "updated_at_epoch": 1789988566,
   "series": {
     "enabled": true,
     "series_id": "hyakkano4",
-    "part": 1,
+    "part": 2,
     "start_seconds": 0
   },
-  "active_part_job_id": "hyakkano4-p1"
+  "active_part_job_id": "hyakkano4-p2"
 }
