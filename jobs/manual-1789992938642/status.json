@@ -1,41 +1,15 @@
 {
-  "version": 2,
+  "version": 1,
   "job_id": "manual-1789992938642",
   "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 1\/6 dispatched (hyakkano5-p1). The chain updates this anchor when the part completes.",
+  "updated_at_epoch": 1789994873,
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
-    "start_seconds": 0,
-    "is_final": false
+    "enabled": true,
+    "series_id": "hyakkano5",
+    "part": 1,
+    "start_seconds": 0
   },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
-  "created_at_epoch": 1789993334,
-  "updated_at_epoch": 1789994206,
-  "expires_at_epoch": 1790166134,
-  "release_tag": "clipforge-manual-1789992938642",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1789992938642",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/00_READ_THIS_FIRST.txt",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/transcript.json",
-    "validator.py": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1789992938642/validator.py",
-    "analysis_bundle_url": ""
-  },
-  "run": {
-    "workflow_run_id": 35599034918,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35599034918",
-    "code_ref": "8ec2df7521d9e72ec1552992d923a803625702ec"
-  },
-  "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
-  }
+  "active_part_job_id": "hyakkano5-p1"
 }
