@@ -1285,6 +1285,18 @@
         "6ab1353def3e22228fa4d202"
       ],
       "updated_at_epoch": 1789998398
+    },
+    {
+      "job_id": "hyakkano5-p5",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-25T14:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ab1391c7109dbb9b9a85417",
+        "6ab1391e9ba73f2b476c468d"
+      ],
+      "updated_at_epoch": 1789999390
     }
   ]
 }
