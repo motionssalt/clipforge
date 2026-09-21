@@ -1,0 +1,56 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "The High Stakes Tickle Showdown — Part 2",
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#AnimeMoments",
+    "#AnimeHumor",
+    "#CardGame",
+    "#RomanceComedy"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "hyakkano",
+    "tickle game",
+    "karane",
+    "hakari"
+  ],
+  "series": {
+    "series_id": "hyakkano4",
+    "part": 2,
+    "start_seconds": 382,
+    "end_seconds": 680,
+    "is_final": false,
+    "summary": "The Old Maid tournament kicks off with brutal intensity as Karane and Hakari each lose rounds and suffer Rentaro's merciless tickle punishments. When Shizuka finally turns the tables on Rentaro, the shared laughter bonds the group together, but Karane soon spots a lingering hesitation in Shizuka that threatens their newfound peace."
+  },
+  "segments": [
+    {
+      "start_seconds": 395,
+      "end_seconds": 426,
+      "voiceover_text": "The Babanuki showdown begins, and Karane is the first unlucky victim caught holding the joker."
+    },
+    {
+      "start_seconds": 435,
+      "end_seconds": 455,
+      "voiceover_text": "Rentaro unleashes a relentless tickle attack, leaving the fiery tsundere writhing on the ground in breathless laughter."
+    },
+    {
+      "start_seconds": 456,
+      "end_seconds": 471,
+      "voiceover_text": "Next up is Hakari, whose smug confidence evaporates the second Rentaro's fingers find her ribs, squealing in delight."
+    },
+    {
+      "start_seconds": 551,
+      "end_seconds": 589,
+      "voiceover_text": "Finally, Shizuka takes her turn, timidly tickling Rentaro as he bites his lip, fighting desperately not to laugh."
+    },
+    {
+      "start_seconds": 658,
+      "end_seconds": 680,
+      "voiceover_text": "Their shared laughter breaks the ice at last, but Karane catches Shizuka looking away with a troubled expression. What secret is she still hiding?"
+    }
+  ],
+  "job_id": "hyakkano4-p2"
+}
