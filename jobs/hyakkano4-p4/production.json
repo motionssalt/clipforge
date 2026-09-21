@@ -1,0 +1,57 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "The Four Way First Kiss — Part 4",
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#AnimeKiss",
+    "#RomanceAnime",
+    "#AnimeFinale",
+    "#AnimeLove"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "first kiss",
+    "rentaro",
+    "shizuka",
+    "hakari",
+    "karane"
+  ],
+  "series": {
+    "series_id": "hyakkano4",
+    "part": 4,
+    "start_seconds": 1072,
+    "end_seconds": 1422,
+    "is_final": true,
+    "summary": "With her doubts swept away, Shizuka confesses her longing to experience her first kiss with Rentaro despite her old vows. Rentaro reaffirms his boundless devotion to all three girlfriends equally, culminating in an unforgettable, heartwarming four-way kiss that officially binds their extraordinary romance together."
+  },
+  "segments": [
+    {
+      "start_seconds": 1073,
+      "end_seconds": 1086,
+      "voiceover_text": "Blushing furiously, Shizuka timidly confesses through her text-to-speech app that she wants to kiss Rentaro."
+    },
+    {
+      "start_seconds": 1150,
+      "end_seconds": 1169,
+      "voiceover_text": "Karane and Hakari erupt in flustered squawking, shocked yet utterly captivated by their shy friend's adorable bravery."
+    },
+    {
+      "start_seconds": 1186,
+      "end_seconds": 1195,
+      "voiceover_text": "Rentaro steps forward with fiery resolve, declaring that his love for all three girls is boundless and entirely equal."
+    },
+    {
+      "start_seconds": 1240,
+      "end_seconds": 1256,
+      "voiceover_text": "Surrounded by falling petals, Rentaro tenderly presses his lips to Shizuka, Hakari, and Karane in a glorious group kiss."
+    },
+    {
+      "start_seconds": 1301,
+      "end_seconds": 1320,
+      "voiceover_text": "Tears of pure happiness fill Shizuka's eyes as the four lovers beam together, sealing their unbreakable bond forever."
+    }
+  ],
+  "job_id": "hyakkano4-p4"
+}
