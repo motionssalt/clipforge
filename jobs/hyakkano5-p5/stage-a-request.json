@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "hyakkano5-p5",
+  "saved_at_epoch": 1789998374,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1789992938642/source.torrent",
+    "torrent_file_index": "5"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano5",
+    "source_job_id": "manual-1789992938642",
+    "part": 5,
+    "start_seconds": 1028,
+    "context": "Prior events (Part 1): When high school midterm exam results are posted, Rentaro celebrates alongside Hakari, Karane, and Shizuka until top-ranked prodigy Nano Eiai passes by. A sudden lock of eyes triggers a blinding Zing shock, revealing Nano as Rentaro’s fourth destined soulmate.\nPrior events (Part 2): Rentaro learns that Nano Eiai organizes her entire life around absolute efficiency, rejecting normal food for nutrient paste and scorning social interaction. When Rentaro attempts to approach her in the hallway with juice and conversation, she coldly brushes him aside as a total waste of time.\nPrior events (Part 3): Rentaro refuses to give up on Nano and chases her down, but she recites pi at supersonic speed to tune him out. In a desperate gamble, Rentaro wagers a one-day date: if she feels nothing, he promises to leave her alone forever. Calculating a net gain in future efficiency, Nano accepts.\nPrior events (Part 4): Rentaro and Nano embark on their one-day date at the amusement park. Despite Nano attempting to quantify roller coaster velocity and haunted house mechanics, Rentaro’s genuine warmth and park snacks begin melting her icy exterior until she admits the day was surprisingly fun."
+  },
+  "music": {
+    "ref": "audio-library/Dj_Quads_-_its_near_[No_Copyright_Music].m4a",
+    "source": "explicit_library"
+  }
+}
