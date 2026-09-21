@@ -1,0 +1,377 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789955614483",
+  "series_id": "episode 4",
+  "total_parts": 4,
+  "video_duration_seconds": 1422,
+  "plan": {
+    "version": 2,
+    "series_id": "episode 4",
+    "video_duration_seconds": 1422,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1422,
+        "series_summary": "Rentarou introduces his shy new girlfriend Shizuka to Hakari and Karane, leading to an intense rooftop card game, emotional revelations about insecurity, and a romantic first kiss that unites all four lovers.",
+        "title": "Why She Refused Her First Kiss",
+        "hashtags": [
+          "#100girlfriends",
+          "#hyakkano",
+          "#animerecap",
+          "#rentarou",
+          "#shizuka",
+          "#animeclips",
+          "#romcom"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "rentarou",
+          "shizuka yoshimoto",
+          "hakari hanazono",
+          "karane inda",
+          "anime recap",
+          "romcom anime"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "episode 4",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 380,
+          "is_final": false
+        },
+        "segments": [
+          {
+            "start_seconds": 5,
+            "end_seconds": 29,
+            "voiceover_text": "Rentarou introduces his newest girlfriend, the quiet and timid Shizuka, to Hakari and Karane on the rooftop. Karane crosses her arms in tsundere suspicion, wondering how Rentarou charmed another classmate.",
+            "keywords": [
+              {
+                "word": "girlfriend",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "suspicion",
+                "color": "#FFAA00"
+              }
+            ]
+          },
+          {
+            "start_seconds": 122,
+            "end_seconds": 157,
+            "voiceover_text": "Unable to speak aloud, Shizuka pulls out her smartphone. Using a text-to-speech app connected to her favorite novel, she quotes passages to communicate. Hakari and Karane are instantly charmed by her innocence.",
+            "keywords": [
+              {
+                "word": "text-to-speech",
+                "color": "#00D4FF"
+              },
+              {
+                "word": "innocence",
+                "color": "#5CFF88"
+              }
+            ]
+          },
+          {
+            "start_seconds": 342,
+            "end_seconds": 380,
+            "voiceover_text": "When talk turns to kissing, Shizuka blushes furiously. She taps a line vowing to save her first kiss until marriage. Rentarou respects her choice, but why does Shizuka look so heartbroken?",
+            "keywords": [
+              {
+                "word": "marriage",
+                "color": "#FF5CE5"
+              },
+              {
+                "word": "heartbroken",
+                "color": "#FF3333"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "series_summary": "Rentarou introduces his shy new girlfriend Shizuka to Hakari and Karane, leading to an intense rooftop card game, emotional revelations about insecurity, and a romantic first kiss that unites all four lovers.",
+        "title": "A Ruthless Game of Old Maid",
+        "hashtags": [
+          "#100girlfriends",
+          "#hyakkano",
+          "#animerecap",
+          "#animecomedy",
+          "#rentarou",
+          "#shizuka",
+          "#karane"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "rentarou",
+          "shizuka yoshimoto",
+          "karane inda",
+          "old maid game",
+          "anime funny moments",
+          "romcom anime"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "episode 4",
+          "part": 2,
+          "start_seconds": 380,
+          "end_seconds": 650,
+          "is_final": false
+        },
+        "segments": [
+          {
+            "start_seconds": 385,
+            "end_seconds": 416,
+            "voiceover_text": "Seeing Shizuka isolated at lunch, Rentarou acts quickly. He proposes an intense game of Old Maid, where the loser faces an unforgiving tickle punishment from the winner.",
+            "keywords": [
+              {
+                "word": "isolated",
+                "color": "#FFAA00"
+              },
+              {
+                "word": "punishment",
+                "color": "#FF5C5C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 474,
+            "end_seconds": 514,
+            "voiceover_text": "Chaos breaks out when Hakari and Karane lose their rounds. Rentarou tickles them mercilessly, reducing Karane to squealing laughter.",
+            "keywords": [
+              {
+                "word": "chaos",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "laughter",
+                "color": "#5CFF88"
+              }
+            ]
+          },
+          {
+            "start_seconds": 533,
+            "end_seconds": 565,
+            "voiceover_text": "When Shizuka wins, she shyly steps forward. Instead of tickling him, she delivers a gentle poke to Rentarou’s chest, melting everyone with her cuteness.",
+            "keywords": [
+              {
+                "word": "poke",
+                "color": "#00D4FF"
+              },
+              {
+                "word": "cuteness",
+                "color": "#FF5CE5"
+              }
+            ]
+          },
+          {
+            "start_seconds": 601,
+            "end_seconds": 648,
+            "voiceover_text": "The moment Rentarou steps away to buy drinks, Karane turns to Shizuka with a piercing glare. What is Karane about to do to her?",
+            "keywords": [
+              {
+                "word": "steps away",
+                "color": "#FFAA00"
+              },
+              {
+                "word": "glare",
+                "color": "#FF3333"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "series_summary": "Rentarou introduces his shy new girlfriend Shizuka to Hakari and Karane, leading to an intense rooftop card game, emotional revelations about insecurity, and a romantic first kiss that unites all four lovers.",
+        "title": "Her Heartbreaking Secret Left Them Speechless",
+        "hashtags": [
+          "#100girlfriends",
+          "#hyakkano",
+          "#animerecap",
+          "#animefeels",
+          "#rentarou",
+          "#shizuka",
+          "#emotionalanime"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "rentarou",
+          "shizuka yoshimoto",
+          "karane inda",
+          "hakari hanazono",
+          "emotional anime",
+          "anime confession"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "episode 4",
+          "part": 3,
+          "start_seconds": 650,
+          "end_seconds": 990,
+          "is_final": false
+        },
+        "segments": [
+          {
+            "start_seconds": 754,
+            "end_seconds": 819,
+            "voiceover_text": "With Rentarou gone, Karane aggressively corners Shizuka. She demands to know why Shizuka is holding back and refusing to treat them as real equals.",
+            "keywords": [
+              {
+                "word": "corners",
+                "color": "#FF3333"
+              },
+              {
+                "word": "equals",
+                "color": "#00D4FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 867,
+            "end_seconds": 911,
+            "voiceover_text": "Cornered and weeping, Shizuka bares her deepest insecurity through her phone. She confesses that she feels cowardly, plain, and hopelessly inferior next to Karane and Hakari.",
+            "keywords": [
+              {
+                "word": "insecurity",
+                "color": "#FFAA00"
+              },
+              {
+                "word": "inferior",
+                "color": "#FF5C5C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 915,
+            "end_seconds": 955,
+            "voiceover_text": "Moved to tears by her honesty, Hakari and Karane wrap Shizuka in a tight embrace, showering her with affection and declaring her irreplaceable.",
+            "keywords": [
+              {
+                "word": "embrace",
+                "color": "#FF5CE5"
+              },
+              {
+                "word": "irreplaceable",
+                "color": "#5CFF88"
+              }
+            ]
+          },
+          {
+            "start_seconds": 966,
+            "end_seconds": 988,
+            "voiceover_text": "As Rentarou approaches with their drinks, Karane pushes Shizuka to make a choice. Will Shizuka finally confess her deepest secret to the boy she loves?",
+            "keywords": [
+              {
+                "word": "choice",
+                "color": "#00D4FF"
+              },
+              {
+                "word": "secret",
+                "color": "#FF3333"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "series_summary": "Rentarou introduces his shy new girlfriend Shizuka to Hakari and Karane, leading to an intense rooftop card game, emotional revelations about insecurity, and a romantic first kiss that unites all four lovers.",
+        "title": "The Truth Behind Her First Kiss",
+        "hashtags": [
+          "#100girlfriends",
+          "#hyakkano",
+          "#animerecap",
+          "#firstkiss",
+          "#rentarou",
+          "#shizuka",
+          "#romanceanime"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "rentarou",
+          "shizuka first kiss",
+          "shizuka yoshimoto",
+          "hakari hanazono",
+          "karane inda",
+          "anime kiss"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "episode 4",
+          "part": 4,
+          "start_seconds": 990,
+          "end_seconds": 1422,
+          "is_final": true
+        },
+        "segments": [
+          {
+            "start_seconds": 991,
+            "end_seconds": 1045,
+            "voiceover_text": "Rentarou returns with their drinks, immediately sensing the charged rooftop atmosphere. Shizuka stands before him, clutching her phone as her hands tremble.",
+            "keywords": [
+              {
+                "word": "atmosphere",
+                "color": "#FFAA00"
+              },
+              {
+                "word": "tremble",
+                "color": "#00D4FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1066,
+            "end_seconds": 1098,
+            "voiceover_text": "Taking a deep breath, Shizuka reveals her shocking truth: saving her first kiss until marriage was a lie. She was just terrified, but now she desperately wants Rentarou to kiss her.",
+            "keywords": [
+              {
+                "word": "lie",
+                "color": "#FF3333"
+              },
+              {
+                "word": "kiss",
+                "color": "#FF5CE5"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1136,
+            "end_seconds": 1169,
+            "voiceover_text": "Rentarou is overwhelmed with emotion, and both Hakari and Karane cheer her on, throwing aside jealousy to support their precious new girlfriend.",
+            "keywords": [
+              {
+                "word": "overwhelmed",
+                "color": "#5CFF88"
+              },
+              {
+                "word": "support",
+                "color": "#00D4FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1177,
+            "end_seconds": 1222,
+            "voiceover_text": "Rentarou leans down and shares an emotional, tender kiss with Shizuka, before sealing their unbreakable bond with Hakari and Karane together.",
+            "keywords": [
+              {
+                "word": "tender kiss",
+                "color": "#FF5CE5"
+              },
+              {
+                "word": "unbreakable bond",
+                "color": "#5CFF88"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
