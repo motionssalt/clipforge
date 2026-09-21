@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "title": "The Ruthless Machine of Pure Efficiency — Part 2",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#NanoEiai",
+    "#AnimeGirl",
+    "#RomcomAnime",
+    "#AnimeClips"
+  ],
+  "series": {
+    "series_id": "hyakkano5",
+    "part": 2,
+    "start_seconds": 222,
+    "end_seconds": 530,
+    "is_final": false,
+    "summary": "Rentaro learns that Nano Eiai organizes her entire life around absolute efficiency, rejecting normal food for nutrient paste and scorning social interaction. When Rentaro attempts to approach her in the hallway with juice and conversation, she coldly brushes him aside as a total waste of time."
+  },
+  "segments": [
+    {
+      "start_seconds": 222,
+      "end_seconds": 257,
+      "voiceover_text": "Back on the rooftop, his girlfriends warn Rentaro that Nano operates purely on clinical logic, completely devoid of human sentiment.",
+      "keywords": [
+        {
+          "word": "clinical",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "sentiment",
+          "color": "#F472B6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 257,
+      "end_seconds": 294,
+      "voiceover_text": "She sustains herself strictly on nutritional calorie paste, openly declaring flavorful dining an irrational waste of valuable, productive time.",
+      "keywords": [
+        {
+          "word": "paste",
+          "color": "#A3E635"
+        },
+        {
+          "word": "irrational",
+          "color": "#FB7185"
+        }
+      ]
+    },
+    {
+      "start_seconds": 415,
+      "end_seconds": 451,
+      "voiceover_text": "Determined to connect with her, Rentaro ambushes Nano in the quiet hallway, desperately offering juice and warm, friendly conversation.",
+      "keywords": [
+        {
+          "word": "ambushes",
+          "color": "#FBBF24"
+        },
+        {
+          "word": "conversation",
+          "color": "#34D399"
+        }
+      ]
+    },
+    {
+      "start_seconds": 455,
+      "end_seconds": 487,
+      "voiceover_text": "He earnestly tries coaxing a genuine smile from her, but Nano merely stares back with completely empty, robotic, unreadable eyes.",
+      "keywords": [
+        {
+          "word": "smile",
+          "color": "#F43F5E"
+        },
+        {
+          "word": "robotic",
+          "color": "#94A3B8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 508,
+      "end_seconds": 530,
+      "voiceover_text": "Brutally dismissing his emotional overtures as utterly worthless noise, Nano turns her back on him and coldly walks away.",
+      "keywords": [
+        {
+          "word": "dismissing",
+          "color": "#EF4444"
+        },
+        {
+          "word": "coldly",
+          "color": "#67E8F9"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano5-p2"
+}
