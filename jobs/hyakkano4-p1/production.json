@@ -1,0 +1,56 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "The Triple Girlfriend Lunch Dilemma — Part 1",
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#AnimeComedy",
+    "#RomanceAnime",
+    "#AnimeHarem",
+    "#Rentaro"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "hyakkano",
+    "anime",
+    "shizuka",
+    "rentaro"
+  ],
+  "series": {
+    "series_id": "hyakkano4",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 382,
+    "is_final": false,
+    "summary": "Rentaro introduces his three girlfriends on the school roof, but Hakari and Karane turn lunchtime into a furious feeding contest that leaves timid Shizuka feeling isolated and neglected. Desperate to prevent his harem from fracturing, Rentaro concocts a high-stakes group game to break the tension, but will the embarrassing penalty drive them further apart?"
+  },
+  "segments": [
+    {
+      "start_seconds": 0,
+      "end_seconds": 9,
+      "voiceover_text": "Rentaro proudly introduces Hakari and Karane to Shizuka on the roof, but adding a third girlfriend creates instant romantic chaos."
+    },
+    {
+      "start_seconds": 13,
+      "end_seconds": 22,
+      "voiceover_text": "Timid Shizuka bows nervously with her book, while Hakari and Karane size up their tiny new rival."
+    },
+    {
+      "start_seconds": 200,
+      "end_seconds": 221,
+      "voiceover_text": "Lunchtime erupts into a vicious feeding war as Hakari and Karane fiercely compete to stuff their homemade food into Rentaro's mouth."
+    },
+    {
+      "start_seconds": 272,
+      "end_seconds": 295,
+      "voiceover_text": "Watching from the sidelines, Shizuka clutches her tiny lunchbox in despair, convinced she cannot compete."
+    },
+    {
+      "start_seconds": 327,
+      "end_seconds": 382,
+      "voiceover_text": "Determined to rescue her, Rentaro announces a chaotic card tournament with a humiliating tickle penalty. But will his daring gamble unite them, or tear them apart?"
+    }
+  ],
+  "job_id": "hyakkano4-p1"
+}
