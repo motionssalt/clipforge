@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "hyakkano5-p2",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 2 of 6 — Stage B dispatched (chained from part 1's completion).",
+  "updated_at_epoch": 1789995708,
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano5",
+    "part": 2,
+    "start_seconds": 222,
+    "is_final": false
+  },
+  "release_tag": "clipforge-hyakkano5-p2",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano5-p2"
+}
