@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "title": "The Sacred Memory Saved From Fire — Part 5",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#AnimeConfession",
+    "#NanoEiai",
+    "#AnimeHeartbreak",
+    "#TrueLove"
+  ],
+  "series": {
+    "series_id": "hyakkano5",
+    "part": 5,
+    "start_seconds": 1028,
+    "end_seconds": 1242,
+    "is_final": false,
+    "summary": "Believing sentimentality is inefficient, Nano prepares to destroy their souvenir photo after the date ends. Rentaro stops her in tears, explaining that love and cherished memories give human life its true meaning. Moved to tears by his earnest devotion, Nano embraces the picture and agrees to become his girlfriend."
+  },
+  "segments": [
+    {
+      "start_seconds": 1034,
+      "end_seconds": 1066,
+      "voiceover_text": "Examining their souvenir snapshot, Nano prepares to incinerate the photo, declaring emotional nostalgia an inefficient, utterly useless sentimental burden.",
+      "keywords": [
+        {
+          "word": "incinerate",
+          "color": "#EF4444"
+        },
+        {
+          "word": "burden",
+          "color": "#64748B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1101,
+      "end_seconds": 1131,
+      "voiceover_text": "Horrified by her cold detachment, Rentaro lunges forward without hesitation and wrestles the precious keepsake safely from her grip.",
+      "keywords": [
+        {
+          "word": "detachment",
+          "color": "#06B6D4"
+        },
+        {
+          "word": "precious",
+          "color": "#F59E0B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1135,
+      "end_seconds": 1166,
+      "voiceover_text": "With tears spilling down his face, he passionately shouts that shared memories and love give human existence its true meaning.",
+      "keywords": [
+        {
+          "word": "tears",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "meaning",
+          "color": "#F43F5E"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1170,
+      "end_seconds": 1195,
+      "voiceover_text": "Deeply stunned by his raw sincerity, Nano feels her armored defenses dissolve into genuine, unquantifiable emotional warmth and wonder.",
+      "keywords": [
+        {
+          "word": "sincerity",
+          "color": "#10B981"
+        },
+        {
+          "word": "warmth",
+          "color": "#F472B6"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1209,
+      "end_seconds": 1239,
+      "voiceover_text": "Embracing the photo tightly against her chest, she surrenders her cold calculations and happily accepts him as her boyfriend.",
+      "keywords": [
+        {
+          "word": "embracing",
+          "color": "#EC4899"
+        },
+        {
+          "word": "boyfriend",
+          "color": "#FBBF24"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano5-p5"
+}
