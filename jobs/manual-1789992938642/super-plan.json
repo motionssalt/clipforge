@@ -1,0 +1,610 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789992938642",
+  "series_id": "hyakkano5",
+  "total_parts": 6,
+  "video_duration_seconds": 1421,
+  "plan": {
+    "version": 2,
+    "series_id": "hyakkano5",
+    "video_duration_seconds": 1421,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "version": 2,
+        "title": "The Mock Exam and the Electric Zing — Part 1",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#NanoEiai",
+          "#RentaroAijou",
+          "#AnimeMoments",
+          "#AnimeRomcom"
+        ],
+        "series": {
+          "series_id": "hyakkano5",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 222,
+          "is_final": false,
+          "summary": "When high school midterm exam results are posted, Rentaro celebrates alongside Hakari, Karane, and Shizuka until top-ranked prodigy Nano Eiai passes by. A sudden lock of eyes triggers a blinding Zing shock, revealing Nano as Rentaro’s fourth destined soulmate."
+        },
+        "segments": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 26,
+            "voiceover_text": "When midterm exam rankings drop outside the high school, Rentaro celebrates his score alongside Hakari, Karane, and sweet Shizuka.",
+            "keywords": [
+              {
+                "word": "midterm",
+                "color": "#FFD700"
+              },
+              {
+                "word": "celebrates",
+                "color": "#4ADE80"
+              }
+            ]
+          },
+          {
+            "start_seconds": 41,
+            "end_seconds": 58,
+            "voiceover_text": "Suddenly, top-ranked prodigy Nano Eiai strides past the crowd, showing total indifference toward her spotless, perfect mock exam score.",
+            "keywords": [
+              {
+                "word": "prodigy",
+                "color": "#60A5FA"
+              },
+              {
+                "word": "indifference",
+                "color": "#A78BFA"
+              }
+            ]
+          },
+          {
+            "start_seconds": 58,
+            "end_seconds": 77,
+            "voiceover_text": "As their eyes instantly meet, a violent electric shockwave freezes time, signaling Rentaro’s fourth destined soulmate has finally arrived.",
+            "keywords": [
+              {
+                "word": "electric",
+                "color": "#FBBF24"
+              },
+              {
+                "word": "soulmate",
+                "color": "#F43F5E"
+              }
+            ]
+          },
+          {
+            "start_seconds": 77,
+            "end_seconds": 93,
+            "voiceover_text": "Nano clutches her racing chest in sudden bewilderment before coldly departing, clearly unnerved by this bizarre, illogical emotional disturbance.",
+            "keywords": [
+              {
+                "word": "bewilderment",
+                "color": "#FB923C"
+              },
+              {
+                "word": "illogical",
+                "color": "#94A3B8"
+              }
+            ]
+          },
+          {
+            "start_seconds": 213,
+            "end_seconds": 222,
+            "voiceover_text": "Rentaro stands completely paralyzed in utter disbelief, realizing his next destined girlfriend is a ruthlessly detached, living analytical machine.",
+            "keywords": [
+              {
+                "word": "paralyzed",
+                "color": "#F87171"
+              },
+              {
+                "word": "machine",
+                "color": "#38BDF8"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "The Ruthless Machine of Pure Efficiency — Part 2",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#NanoEiai",
+          "#AnimeGirl",
+          "#RomcomAnime",
+          "#AnimeClips"
+        ],
+        "series": {
+          "series_id": "hyakkano5",
+          "part": 2,
+          "start_seconds": 222,
+          "end_seconds": 530,
+          "is_final": false,
+          "summary": "Rentaro learns that Nano Eiai organizes her entire life around absolute efficiency, rejecting normal food for nutrient paste and scorning social interaction. When Rentaro attempts to approach her in the hallway with juice and conversation, she coldly brushes him aside as a total waste of time."
+        },
+        "segments": [
+          {
+            "start_seconds": 222,
+            "end_seconds": 257,
+            "voiceover_text": "Back on the rooftop, his girlfriends warn Rentaro that Nano operates purely on clinical logic, completely devoid of human sentiment.",
+            "keywords": [
+              {
+                "word": "clinical",
+                "color": "#38BDF8"
+              },
+              {
+                "word": "sentiment",
+                "color": "#F472B6"
+              }
+            ]
+          },
+          {
+            "start_seconds": 257,
+            "end_seconds": 294,
+            "voiceover_text": "She sustains herself strictly on nutritional calorie paste, openly declaring flavorful dining an irrational waste of valuable, productive time.",
+            "keywords": [
+              {
+                "word": "paste",
+                "color": "#A3E635"
+              },
+              {
+                "word": "irrational",
+                "color": "#FB7185"
+              }
+            ]
+          },
+          {
+            "start_seconds": 415,
+            "end_seconds": 451,
+            "voiceover_text": "Determined to connect with her, Rentaro ambushes Nano in the quiet hallway, desperately offering juice and warm, friendly conversation.",
+            "keywords": [
+              {
+                "word": "ambushes",
+                "color": "#FBBF24"
+              },
+              {
+                "word": "conversation",
+                "color": "#34D399"
+              }
+            ]
+          },
+          {
+            "start_seconds": 455,
+            "end_seconds": 487,
+            "voiceover_text": "He earnestly tries coaxing a genuine smile from her, but Nano merely stares back with completely empty, robotic, unreadable eyes.",
+            "keywords": [
+              {
+                "word": "smile",
+                "color": "#F43F5E"
+              },
+              {
+                "word": "robotic",
+                "color": "#94A3B8"
+              }
+            ]
+          },
+          {
+            "start_seconds": 508,
+            "end_seconds": 530,
+            "voiceover_text": "Brutally dismissing his emotional overtures as utterly worthless noise, Nano turns her back on him and coldly walks away.",
+            "keywords": [
+              {
+                "word": "dismissing",
+                "color": "#EF4444"
+              },
+              {
+                "word": "coldly",
+                "color": "#67E8F9"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "The High Stakes One Day Wager — Part 3",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#RentaroAijou",
+          "#NanoEiai",
+          "#AnimeRomance",
+          "#AnimeLove"
+        ],
+        "series": {
+          "series_id": "hyakkano5",
+          "part": 3,
+          "start_seconds": 530,
+          "end_seconds": 740,
+          "is_final": false,
+          "summary": "Rentaro refuses to give up on Nano and chases her down, but she recites pi at supersonic speed to tune him out. In a desperate gamble, Rentaro wagers a one-day date: if she feels nothing, he promises to leave her alone forever. Calculating a net gain in future efficiency, Nano accepts."
+        },
+        "segments": [
+          {
+            "start_seconds": 555,
+            "end_seconds": 577,
+            "voiceover_text": "Refusing to surrender her soul to empty calculation, Rentaro chases after Nano once again through the crowded school halls.",
+            "keywords": [
+              {
+                "word": "surrender",
+                "color": "#F87171"
+              },
+              {
+                "word": "calculation",
+                "color": "#60A5FA"
+              }
+            ]
+          },
+          {
+            "start_seconds": 578,
+            "end_seconds": 608,
+            "voiceover_text": "To drown out his heartfelt pleas, Nano rapidly rattles off endless digits of pi with machine-gun speed and icy precision.",
+            "keywords": [
+              {
+                "word": "digits",
+                "color": "#38BDF8"
+              },
+              {
+                "word": "precision",
+                "color": "#818CF8"
+              }
+            ]
+          },
+          {
+            "start_seconds": 623,
+            "end_seconds": 649,
+            "voiceover_text": "Rentaro steps directly into her path, fiercely insisting that true living requires love, messy human feelings, and warm shared moments.",
+            "keywords": [
+              {
+                "word": "fiercely",
+                "color": "#F59E0B"
+              },
+              {
+                "word": "feelings",
+                "color": "#EC4899"
+              }
+            ]
+          },
+          {
+            "start_seconds": 693,
+            "end_seconds": 726,
+            "voiceover_text": "He boldly wagers everything on a single desperate proposal: grant him just one day together on an unforgettable date.",
+            "keywords": [
+              {
+                "word": "wagers",
+                "color": "#E11D48"
+              },
+              {
+                "word": "unforgettable",
+                "color": "#FBBF24"
+              }
+            ]
+          },
+          {
+            "start_seconds": 726,
+            "end_seconds": 740,
+            "voiceover_text": "Calculating that one afternoon permanently eliminates years of persistent disruption, Nano rationally accepts his high-stakes wager and terms.",
+            "keywords": [
+              {
+                "word": "rationally",
+                "color": "#10B981"
+              },
+              {
+                "word": "accepts",
+                "color": "#6366F1"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "Amusement Park Chaos Cracks the Code — Part 4",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#AmusementPark",
+          "#AnimeCouple",
+          "#NanoEiai",
+          "#AnimeComedy"
+        ],
+        "series": {
+          "series_id": "hyakkano5",
+          "part": 4,
+          "start_seconds": 740,
+          "end_seconds": 1028,
+          "is_final": false,
+          "summary": "Rentaro and Nano embark on their one-day date at the amusement park. Despite Nano attempting to quantify roller coaster velocity and haunted house mechanics, Rentaro’s genuine warmth and park snacks begin melting her icy exterior until she admits the day was surprisingly fun."
+        },
+        "segments": [
+          {
+            "start_seconds": 763,
+            "end_seconds": 817,
+            "voiceover_text": "Meeting outside the vibrant amusement park, Rentaro immediately snaps a smiling souvenir photo together, deeply baffling her analytical mind.",
+            "keywords": [
+              {
+                "word": "souvenir",
+                "color": "#F59E0B"
+              },
+              {
+                "word": "baffling",
+                "color": "#8B5CF6"
+              }
+            ]
+          },
+          {
+            "start_seconds": 824,
+            "end_seconds": 860,
+            "voiceover_text": "Aboard the towering roller coaster, Nano measures wind velocity while Rentaro screams his absolute lungs out right beside her.",
+            "keywords": [
+              {
+                "word": "velocity",
+                "color": "#06B6D4"
+              },
+              {
+                "word": "screams",
+                "color": "#EF4444"
+              }
+            ]
+          },
+          {
+            "start_seconds": 883,
+            "end_seconds": 922,
+            "voiceover_text": "Through spooky haunted houses and chaotic carnival games, he faithfully shields her from every single manufactured jump scare and trap.",
+            "keywords": [
+              {
+                "word": "haunted",
+                "color": "#A855F7"
+              },
+              {
+                "word": "shields",
+                "color": "#10B981"
+              }
+            ]
+          },
+          {
+            "start_seconds": 960,
+            "end_seconds": 998,
+            "voiceover_text": "Resting together on a quiet bench, Nano samples sweet park treats, tasting genuine culinary pleasure for the very first time.",
+            "keywords": [
+              {
+                "word": "samples",
+                "color": "#F472B6"
+              },
+              {
+                "word": "pleasure",
+                "color": "#FBBF24"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1007,
+            "end_seconds": 1028,
+            "voiceover_text": "As sunset falls across the park, she softly confesses that this joyful afternoon far exceeded all her rigorous mathematical expectations.",
+            "keywords": [
+              {
+                "word": "sunset",
+                "color": "#FB923C"
+              },
+              {
+                "word": "exceeded",
+                "color": "#EC4899"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "The Sacred Memory Saved From Fire — Part 5",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#AnimeConfession",
+          "#NanoEiai",
+          "#AnimeHeartbreak",
+          "#TrueLove"
+        ],
+        "series": {
+          "series_id": "hyakkano5",
+          "part": 5,
+          "start_seconds": 1028,
+          "end_seconds": 1242,
+          "is_final": false,
+          "summary": "Believing sentimentality is inefficient, Nano prepares to destroy their souvenir photo after the date ends. Rentaro stops her in tears, explaining that love and cherished memories give human life its true meaning. Moved to tears by his earnest devotion, Nano embraces the picture and agrees to become his girlfriend."
+        },
+        "segments": [
+          {
+            "start_seconds": 1034,
+            "end_seconds": 1066,
+            "voiceover_text": "Examining their souvenir snapshot, Nano prepares to incinerate the photo, declaring emotional nostalgia an inefficient, utterly useless sentimental burden.",
+            "keywords": [
+              {
+                "word": "incinerate",
+                "color": "#EF4444"
+              },
+              {
+                "word": "burden",
+                "color": "#64748B"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1101,
+            "end_seconds": 1131,
+            "voiceover_text": "Horrified by her cold detachment, Rentaro lunges forward without hesitation and wrestles the precious keepsake safely from her grip.",
+            "keywords": [
+              {
+                "word": "detachment",
+                "color": "#06B6D4"
+              },
+              {
+                "word": "precious",
+                "color": "#F59E0B"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1135,
+            "end_seconds": 1166,
+            "voiceover_text": "With tears spilling down his face, he passionately shouts that shared memories and love give human existence its true meaning.",
+            "keywords": [
+              {
+                "word": "tears",
+                "color": "#38BDF8"
+              },
+              {
+                "word": "meaning",
+                "color": "#F43F5E"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1170,
+            "end_seconds": 1195,
+            "voiceover_text": "Deeply stunned by his raw sincerity, Nano feels her armored defenses dissolve into genuine, unquantifiable emotional warmth and wonder.",
+            "keywords": [
+              {
+                "word": "sincerity",
+                "color": "#10B981"
+              },
+              {
+                "word": "warmth",
+                "color": "#F472B6"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1209,
+            "end_seconds": 1239,
+            "voiceover_text": "Embracing the photo tightly against her chest, she surrenders her cold calculations and happily accepts him as her boyfriend.",
+            "keywords": [
+              {
+                "word": "embracing",
+                "color": "#EC4899"
+              },
+              {
+                "word": "boyfriend",
+                "color": "#FBBF24"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "Four Hearts Form an Unbreakable Family — Part 6",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#HaremAnime",
+          "#AnimeEnding",
+          "#NanoEiai",
+          "#WholesomeAnime"
+        ],
+        "series": {
+          "series_id": "hyakkano5",
+          "part": 6,
+          "start_seconds": 1242,
+          "end_seconds": 1421,
+          "is_final": true,
+          "summary": "Rentaro introduces Nano to Hakari, Karane, and Shizuka on the school rooftop. Nano logically argues that sharing Rentaro across four girlfriends maximizes emotional efficiency and scheduling. The girls embrace their newest companion, cementing a four-way bond of boundless love."
+        },
+        "segments": [
+          {
+            "start_seconds": 1243,
+            "end_seconds": 1262,
+            "voiceover_text": "Rentaro proudly brings Nano to the sunny rooftop garden to introduce her to his other three beloved, faithful girlfriends.",
+            "keywords": [
+              {
+                "word": "rooftop",
+                "color": "#10B981"
+              },
+              {
+                "word": "girlfriends",
+                "color": "#F43F5E"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1262,
+            "end_seconds": 1287,
+            "voiceover_text": "Nano casually reveals they are now officially dating, leaving Hakari, Karane, and little Shizuka completely and utterly speechless in shock.",
+            "keywords": [
+              {
+                "word": "dating",
+                "color": "#EC4899"
+              },
+              {
+                "word": "speechless",
+                "color": "#F59E0B"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1287,
+            "end_seconds": 1310,
+            "voiceover_text": "She explains with clinical precision that a four-girlfriend harem mathematically optimizes schedule efficiency, daily chores, and shared romantic affection.",
+            "keywords": [
+              {
+                "word": "optimizes",
+                "color": "#3B82F6"
+              },
+              {
+                "word": "affection",
+                "color": "#FB7185"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1310,
+            "end_seconds": 1338,
+            "voiceover_text": "Overcoming their initial shock, all four girls immediately bond, enthusiastically planning their upcoming group dates all around the town.",
+            "keywords": [
+              {
+                "word": "bond",
+                "color": "#8B5CF6"
+              },
+              {
+                "word": "dates",
+                "color": "#FBBF24"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1348,
+            "end_seconds": 1390,
+            "voiceover_text": "Rentaro weeps tears of boundless gratitude as his expanding family unites together in complete, radiant, and harmonious love.",
+            "keywords": [
+              {
+                "word": "gratitude",
+                "color": "#34D399"
+              },
+              {
+                "word": "harmonious",
+                "color": "#F43F5E"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
