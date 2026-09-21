@@ -47,6 +47,9 @@ BUNDLE_ASSETS: list[tuple[str, str, bool]] = [
     ("scene_index.json", "shot_boundaries", False),
     ("key_moments.json", "key_moments", False),
     ("00_READ_THIS_FIRST.txt", "agent_prompt", False),
+    # validator.py: agent-facing pre-delivery validator (same logic as Stage B).
+    # Shipped with EVERY bundle — ordinary task, series part, Super Series anchor.
+    ("validator.py", "plan_validator", True),
     ("manifest.json", "self_manifest", False),
 ]
 
@@ -262,6 +265,12 @@ def run_bundle(
     event_zip = work / "event_composites.zip"
     if event_zip.is_file():
         staged["event_composites.zip"] = event_zip
+    # validator.py lives at the repo root; ship it alongside the prompt so the
+    # authoring agent can validate its production.json / super-plan.json with
+    # the exact Stage B logic before delivering.
+    validator_src = Path(__file__).resolve().parents[2] / "validator.py"
+    if validator_src.is_file():
+        staged["validator.py"] = validator_src
 
     for name, src in staged.items():
         shutil.copyfile(src, bundle_dir / name)

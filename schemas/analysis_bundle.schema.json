@@ -29,6 +29,7 @@
               "scene_index.json",
               "key_moments.json",
               "00_READ_THIS_FIRST.txt",
+              "validator.py",
               "manifest.json"
             ]
           },
@@ -42,6 +43,7 @@
               "shot_boundaries",
               "key_moments",
               "agent_prompt",
+              "plan_validator",
               "self_manifest"
             ]
           },
