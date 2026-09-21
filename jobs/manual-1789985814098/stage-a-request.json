@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "manual-1789985814098",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs\/manual-1789985814098\/source.torrent"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano4",
+    "source_job_id": "manual-1789985814098",
+    "part": 1,
+    "start_seconds": 0,
+    "context": "",
+    "super_series": true
+  },
+  "music": {
+    "ref": "",
+    "source": "default"
+  },
+  "saved_at_epoch": 1789985814
+}
