@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1789990186,
+  "updated_at_epoch": 1789990214,
   "series": {
     "enabled": true,
     "series_id": "hyakkano4",
@@ -24,9 +24,56 @@
     "code_ref": "01a0019301bc68f22ceec6bb848a7ce056873304"
   },
   "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6ab115433e3ce54aaba3ebe2",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-24T14:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a9e0ce977555aae01e7ae22",
+              "platform": "tiktok",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=2ccc13f0&x-expires=1790139600&x-signature=TaqkOATvcL5UnhSBTxkbC1%2B3rZY%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "username": ".chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-hyakkano4-p3-f08a88a8-2b06-4a9b-9d6e-dd6b6f98fd4a-tiktok"
+      },
+      {
+        "post_id": "6ab115454e32c3c313e16d5d",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-24T14:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-hyakkano4-p3-f08a88a8-2b06-4a9b-9d6e-dd6b6f98fd4a-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-auto-hyakkano4-p3-f08a88a8-2b06-4a9b-9d6e-dd6b6f98fd4a"
   },
   "expires_at_epoch": 1790032576
 }
