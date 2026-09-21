@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "title": "The High Stakes One Day Wager — Part 3",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#RentaroAijou",
+    "#NanoEiai",
+    "#AnimeRomance",
+    "#AnimeLove"
+  ],
+  "series": {
+    "series_id": "hyakkano5",
+    "part": 3,
+    "start_seconds": 530,
+    "end_seconds": 740,
+    "is_final": false,
+    "summary": "Rentaro refuses to give up on Nano and chases her down, but she recites pi at supersonic speed to tune him out. In a desperate gamble, Rentaro wagers a one-day date: if she feels nothing, he promises to leave her alone forever. Calculating a net gain in future efficiency, Nano accepts."
+  },
+  "segments": [
+    {
+      "start_seconds": 555,
+      "end_seconds": 577,
+      "voiceover_text": "Refusing to surrender her soul to empty calculation, Rentaro chases after Nano once again through the crowded school halls.",
+      "keywords": [
+        {
+          "word": "surrender",
+          "color": "#F87171"
+        },
+        {
+          "word": "calculation",
+          "color": "#60A5FA"
+        }
+      ]
+    },
+    {
+      "start_seconds": 578,
+      "end_seconds": 608,
+      "voiceover_text": "To drown out his heartfelt pleas, Nano rapidly rattles off endless digits of pi with machine-gun speed and icy precision.",
+      "keywords": [
+        {
+          "word": "digits",
+          "color": "#38BDF8"
+        },
+        {
+          "word": "precision",
+          "color": "#818CF8"
+        }
+      ]
+    },
+    {
+      "start_seconds": 623,
+      "end_seconds": 649,
+      "voiceover_text": "Rentaro steps directly into her path, fiercely insisting that true living requires love, messy human feelings, and warm shared moments.",
+      "keywords": [
+        {
+          "word": "fiercely",
+          "color": "#F59E0B"
+        },
+        {
+          "word": "feelings",
+          "color": "#EC4899"
+        }
+      ]
+    },
+    {
+      "start_seconds": 693,
+      "end_seconds": 726,
+      "voiceover_text": "He boldly wagers everything on a single desperate proposal: grant him just one day together on an unforgettable date.",
+      "keywords": [
+        {
+          "word": "wagers",
+          "color": "#E11D48"
+        },
+        {
+          "word": "unforgettable",
+          "color": "#FBBF24"
+        }
+      ]
+    },
+    {
+      "start_seconds": 726,
+      "end_seconds": 740,
+      "voiceover_text": "Calculating that one afternoon permanently eliminates years of persistent disruption, Nano rationally accepts his high-stakes wager and terms.",
+      "keywords": [
+        {
+          "word": "rationally",
+          "color": "#10B981"
+        },
+        {
+          "word": "accepts",
+          "color": "#6366F1"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano5-p3"
+}
