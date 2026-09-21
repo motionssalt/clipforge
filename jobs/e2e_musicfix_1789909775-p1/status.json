@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "job_id": "e2e_musicfix_1789909775-p1",
+  "mode": "manual",
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789923922,
+  "series": {
+    "enabled": true,
+    "series_id": "e2e_musicfix_1789909775",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "release_tag": "clipforge-e2e_musicfix_1789909775-p1",
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e_musicfix_1789909775-p1/clipforge-e2e_musicfix_1789909775-p1-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-e2e_musicfix_1789909775-p1/final.mp4"
+  },
+  "run": {
+    "workflow_run_id": 35513544321,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35513544321",
+    "code_ref": "fb3a156b5a70f5ff7ecd47d87e67df95ce060830"
+  },
+  "publishing": {
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6ab012506b07e4d814632f0b",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-21T04:00:00.000Z",
+        "timezone": "Africa/Lagos",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a9e0ce977555aae01e7ae22",
+              "platform": "tiktok",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=bf664260&x-expires=1790053200&x-signature=G%2BMcjmTE1Rz658KogNMTnV1%2Fe5g%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "username": ".chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-manual-e2e_musicfix_1789909775-p1-35524731846-tiktok"
+      },
+      {
+        "post_id": "6ab01252684023d5ef1386b1",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-21T04:00:00.000Z",
+        "timezone": "Africa/Lagos",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-manual-e2e_musicfix_1789909775-p1-35524731846-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-manual-e2e_musicfix_1789909775-p1-35524731846"
+  },
+  "expires_at_epoch": 1789953031
+}

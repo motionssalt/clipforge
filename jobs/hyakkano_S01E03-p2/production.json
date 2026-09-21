@@ -1,0 +1,93 @@
+{
+  "video_duration_seconds": 1421,
+  "series_summary": "Rentaro Aijo encounters his destined third soulmate, the painfully shy and mute bookworm Shizuka Yoshimoto, in the school library. To bridge the silence that has isolated her from the world, Rentaro immerses himself in her favorite romance novel, passionately reenacting its climax to win her trust, and manually transcribes the entire book into a digital text-to-speech app so her beloved characters can give voice to her deepest thoughts. Confronting his existing girlfriends Hakari and Karane on the school rooftop, Rentaro and Shizuka bravely face their scrutiny, ultimately winning their hearts and uniting all three soulmates in a heartwarming bond of mutual devotion.",
+  "series": {
+    "series_id": "hyakkano_S01E03",
+    "series_summary": "Rentaro Aijo encounters his destined third soulmate, the painfully shy and mute bookworm Shizuka Yoshimoto, in the school library. To bridge the silence that has isolated her from the world, Rentaro immerses himself in her favorite romance novel, passionately reenacting its climax to win her trust, and manually transcribes the entire book into a digital text-to-speech app so her beloved characters can give voice to her deepest thoughts. Confronting his existing girlfriends Hakari and Karane on the school rooftop, Rentaro and Shizuka bravely face their scrutiny, ultimately winning their hearts and uniting all three soulmates in a heartwarming bond of mutual devotion.",
+    "part": 2,
+    "start_seconds": 397,
+    "end_seconds": 631,
+    "is_final": false
+  },
+  "title": "He Read Her Secret All Night — Part 2",
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#shizuka",
+    "#rentaro",
+    "#animereaction"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "shizuka yoshimoto",
+    "rentaro reading",
+    "circus story",
+    "anime emotional moments",
+    "best romcom anime"
+  ],
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 405,
+      "end_seconds": 428,
+      "voiceover_text": "Determined to understand her silent world, Rentaro borrows Shizuka's beloved novel, refusing to sleep as he devours every single emotional chapter before sunrise.",
+      "keywords": [
+        {
+          "word": "Rentaro",
+          "color": "#FF4500"
+        },
+        {
+          "word": "novel",
+          "color": "#32CD32"
+        }
+      ]
+    },
+    {
+      "start_seconds": 518,
+      "end_seconds": 536,
+      "voiceover_text": "The very next morning, he surprises her by passionately reenacting the fantasy story's dramatic climax aloud right in the middle of the quiet library aisle. Shizuka stares in stunned disbelief.",
+      "keywords": [
+        {
+          "word": "climax",
+          "color": "#FF6347"
+        },
+        {
+          "word": "Shizuka",
+          "color": "#BA55D3"
+        }
+      ]
+    },
+    {
+      "start_seconds": 538,
+      "end_seconds": 554,
+      "voiceover_text": "Pouring unhinged theatricality into every tragic line, Rentaro boldly shouts the characters' eternal devotion until nearby library patrons turn around to gawk in utter shock.",
+      "keywords": [
+        {
+          "word": "devotion",
+          "color": "#FF1493"
+        },
+        {
+          "word": "shock",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 570,
+      "end_seconds": 586,
+      "voiceover_text": "Seeing someone truly honor her private sanctuary, Shizuka beams through overwhelming tears. But can printed pages truly keep her connected to the real world?",
+      "keywords": [
+        {
+          "word": "tears",
+          "color": "#1E90FF"
+        },
+        {
+          "word": "sanctuary",
+          "color": "#9370DB"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano_S01E03-p2"
+}

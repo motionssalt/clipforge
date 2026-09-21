@@ -1,0 +1,93 @@
+{
+  "video_duration_seconds": 1421,
+  "series_summary": "Rentaro Aijo encounters his destined third soulmate, the painfully shy and mute bookworm Shizuka Yoshimoto, in the school library. To bridge the silence that has isolated her from the world, Rentaro immerses himself in her favorite romance novel, passionately reenacting its climax to win her trust, and manually transcribes the entire book into a digital text-to-speech app so her beloved characters can give voice to her deepest thoughts. Confronting his existing girlfriends Hakari and Karane on the school rooftop, Rentaro and Shizuka bravely face their scrutiny, ultimately winning their hearts and uniting all three soulmates in a heartwarming bond of mutual devotion.",
+  "series": {
+    "series_id": "hyakkano_S01E03",
+    "series_summary": "Rentaro Aijo encounters his destined third soulmate, the painfully shy and mute bookworm Shizuka Yoshimoto, in the school library. To bridge the silence that has isolated her from the world, Rentaro immerses himself in her favorite romance novel, passionately reenacting its climax to win her trust, and manually transcribes the entire book into a digital text-to-speech app so her beloved characters can give voice to her deepest thoughts. Confronting his existing girlfriends Hakari and Karane on the school rooftop, Rentaro and Shizuka bravely face their scrutiny, ultimately winning their hearts and uniting all three soulmates in a heartwarming bond of mutual devotion.",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 397,
+    "is_final": false
+  },
+  "title": "Destiny Struck In A Silent Library — Part 1",
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#romcom",
+    "#animemoments",
+    "#animeedit"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "hyakkano episode 3",
+    "rentaro aijo",
+    "shizuka yoshimoto",
+    "anime romance",
+    "funny anime moments"
+  ],
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 12,
+      "end_seconds": 26,
+      "voiceover_text": "Rentaro believed surviving two simultaneous soulmates was already impossible, but destiny was far from finished with him.",
+      "keywords": [
+        {
+          "word": "Rentaro",
+          "color": "#FF4500"
+        },
+        {
+          "word": "destiny",
+          "color": "#9370DB"
+        }
+      ]
+    },
+    {
+      "start_seconds": 178,
+      "end_seconds": 212,
+      "voiceover_text": "Reaching for an out-of-reach book in the quiet school library, his fingers brush against a tiny classmate. Their eyes lock, and an electric shock of soulmate lightning violently jolts them both.",
+      "keywords": [
+        {
+          "word": "library",
+          "color": "#4682B4"
+        },
+        {
+          "word": "lightning",
+          "color": "#FFD700"
+        }
+      ]
+    },
+    {
+      "start_seconds": 239,
+      "end_seconds": 286,
+      "voiceover_text": "Panicking, she hides behind a worn romance novel. When Rentaro gently speaks to her, she refuses to utter a sound, instead pointing her trembling finger at printed sentences on the page.",
+      "keywords": [
+        {
+          "word": "novel",
+          "color": "#32CD32"
+        },
+        {
+          "word": "sentences",
+          "color": "#FF69B4"
+        }
+      ]
+    },
+    {
+      "start_seconds": 377,
+      "end_seconds": 395,
+      "voiceover_text": "Her student card reveals her name is Shizuka Yoshimoto, a girl trapped in complete silence. What painful secret stole her voice?",
+      "keywords": [
+        {
+          "word": "Shizuka",
+          "color": "#BA55D3"
+        },
+        {
+          "word": "silence",
+          "color": "#00CED1"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano_S01E03-p1"
+}

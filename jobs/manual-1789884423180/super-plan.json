@@ -1,0 +1,329 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1789884423180",
+  "series_id": "100_girlfriends_S01E01",
+  "total_parts": 6,
+  "video_duration_seconds": 1421,
+  "plan": {
+    "version": 2,
+    "series_id": "100_girlfriends_S01E01",
+    "video_duration_seconds": 1421,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "title": "The 100th Rejection",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Anime",
+          "#RomCom",
+          "#Rentaro",
+          "#Heartbreak",
+          "#AnimeShorts"
+        ],
+        "series": {
+          "series_id": "100_girlfriends_S01E01",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 180,
+          "is_final": false,
+          "summary": "On middle school graduation day, Rentaro Aijou confesses his love to his classmate Asakawa, only to suffer his 100th consecutive rejection. Utterly devastated, he decides to pray for a miracle at a matchmaking shrine."
+        },
+        "segments": [
+          {
+            "start_seconds": 12,
+            "end_seconds": 20,
+            "voiceover_text": "On graduation day, Rentaro Aijou believes his cursed streak of bad luck is finally over."
+          },
+          {
+            "start_seconds": 36,
+            "end_seconds": 46,
+            "voiceover_text": "He pours his heart out to his classmate Asakawa, only to receive the most brutal rejection of his life."
+          },
+          {
+            "start_seconds": 70,
+            "end_seconds": 79,
+            "voiceover_text": "This devastating failure marks his one hundredth consecutive heartbreak since kindergarten, shattering his spirit."
+          },
+          {
+            "start_seconds": 98,
+            "end_seconds": 106,
+            "voiceover_text": "His friends can only watch in disbelief, noting that nobody in history has ever suffered a hundred romantic rejections in a row."
+          },
+          {
+            "start_seconds": 168,
+            "end_seconds": 180,
+            "voiceover_text": "Desperate for a miracle before high school begins, Rentaro visits a sacred matchmaking shrine to pray for love, completely unaware of the divine shock waiting for him."
+          }
+        ]
+      },
+      {
+        "title": "The God of Love's 100-Soulmate Blunder",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#AnimeComedy",
+          "#GodOfLove",
+          "#RentaroAijou",
+          "#RomanceAnime",
+          "#AnimeClips"
+        ],
+        "series": {
+          "series_id": "100_girlfriends_S01E01",
+          "part": 2,
+          "start_seconds": 180,
+          "end_seconds": 345,
+          "is_final": false,
+          "summary": "At the matchmaking shrine, the God of Love manifests before Rentaro with shocking news: due to a clerical mistake while watching anime, Rentaro is destined to meet one hundred soulmates in high school."
+        },
+        "segments": [
+          {
+            "start_seconds": 194,
+            "end_seconds": 215,
+            "voiceover_text": "As Rentaro bows before the shrine altar, a blinding celestial light descends from the sky."
+          },
+          {
+            "start_seconds": 250,
+            "end_seconds": 268,
+            "voiceover_text": "The God of Love manifests in person, declaring that he has arrived to answer Rentaro's prayers."
+          },
+          {
+            "start_seconds": 270,
+            "end_seconds": 286,
+            "voiceover_text": "Consulting the sacred registry of fate, the deity reveals that every normal human is granted only one destined soulmate."
+          },
+          {
+            "start_seconds": 299,
+            "end_seconds": 316,
+            "voiceover_text": "Yet Rentaro's destiny is shattered by an astronomical number: he will meet one hundred destined soulmates during high school."
+          },
+          {
+            "start_seconds": 328,
+            "end_seconds": 338,
+            "voiceover_text": "The panicked god prostrates in apology, confessing he made a clerical error while watching anime—leaving Rentaro terrified of what will happen on his first morning of school."
+          }
+        ]
+      },
+      {
+        "title": "A Double Zing on Day One",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#HakariHanazono",
+          "#KaraneInda",
+          "#AnimeZing",
+          "#HaremAnime",
+          "#LoveAtFirstSight"
+        ],
+        "series": {
+          "series_id": "100_girlfriends_S01E01",
+          "part": 3,
+          "start_seconds": 345,
+          "end_seconds": 508,
+          "is_final": false,
+          "summary": "Rentaro begins his high school career and immediately locks eyes with two gorgeous classmates, Hakari and Karane. An electric shockwave strikes all three, sparking instant and overwhelming love."
+        },
+        "segments": [
+          {
+            "start_seconds": 364,
+            "end_seconds": 376,
+            "voiceover_text": "Rentaro steps onto his new high school campus, praying the god's wild prophecy was just an absurd dream."
+          },
+          {
+            "start_seconds": 397,
+            "end_seconds": 406,
+            "voiceover_text": "While crossing the entrance courtyard, he accidentally locks eyes with two gorgeous classmates, Hakari and Karane."
+          },
+          {
+            "start_seconds": 408,
+            "end_seconds": 421,
+            "voiceover_text": "The instant their gazes meet, a violent romantic shockwave electrifies all three of their souls."
+          },
+          {
+            "start_seconds": 472,
+            "end_seconds": 490,
+            "voiceover_text": "This is the legendary zing of destiny, sparking an uncontrollable passion that leaves Karane blushing furiously and Hakari starry-eyed."
+          },
+          {
+            "start_seconds": 493,
+            "end_seconds": 508,
+            "voiceover_text": "Rentaro is struck with total panic: he has fallen madly in love with two different girls simultaneously, and neither girl has any intention of backing down."
+          }
+        ]
+      },
+      {
+        "title": "Competing Desires and the Double Confession",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Tsundere",
+          "#AnimeRomance",
+          "#Hakari",
+          "#Karane",
+          "#DoubleConfession"
+        ],
+        "series": {
+          "series_id": "100_girlfriends_S01E01",
+          "part": 4,
+          "start_seconds": 508,
+          "end_seconds": 780,
+          "is_final": false,
+          "summary": "Hakari and Karane actively compete for Rentaro's affection throughout the school day. At sunset, both girls summon Rentaro and independently confess their love to him."
+        },
+        "segments": [
+          {
+            "start_seconds": 510,
+            "end_seconds": 529,
+            "voiceover_text": "With destiny pulling them together, Hakari and Karane immediately begin competing for Rentaro's undivided attention."
+          },
+          {
+            "start_seconds": 601,
+            "end_seconds": 610,
+            "voiceover_text": "Karane attempts to maintain her tough facade, but melts into flustered stammering the second Rentaro looks her way."
+          },
+          {
+            "start_seconds": 668,
+            "end_seconds": 686,
+            "voiceover_text": "Meanwhile, the sweet and alluring Hakari takes the offensive, offering homemade bento and feeding him with disarming sweetness."
+          },
+          {
+            "start_seconds": 755,
+            "end_seconds": 770,
+            "voiceover_text": "Rentaro finds himself completely captivated by both girls, utterly unable to deny his genuine affection for either of them."
+          },
+          {
+            "start_seconds": 770,
+            "end_seconds": 780,
+            "voiceover_text": "As the sun sets, both Hakari and Karane corner him to confess their undying love, leaving Rentaro terrified of the heartbreaking choice he must make."
+          }
+        ]
+      },
+      {
+        "title": "The Fatal Curse of Unreturned Love",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#PlotTwist",
+          "#AnimeSecret",
+          "#Kamisama",
+          "#HighStakes",
+          "#AnimeCliffhanger"
+        ],
+        "series": {
+          "series_id": "100_girlfriends_S01E01",
+          "part": 5,
+          "start_seconds": 780,
+          "end_seconds": 1060,
+          "is_final": false,
+          "summary": "Rentaro rushes back to the shrine to ask the God of Love how to choose between his two soulmates, only to learn the horrific truth: if a destined soulmate is rejected, she will die."
+        },
+        "segments": [
+          {
+            "start_seconds": 788,
+            "end_seconds": 816,
+            "voiceover_text": "Receiving two confessions from dream girls should be paradise, but for Rentaro, it feels like sheer torture."
+          },
+          {
+            "start_seconds": 867,
+            "end_seconds": 888,
+            "voiceover_text": "Unable to bear crushing either girl's spirit, he sprints through the dark back to the sacred shrine."
+          },
+          {
+            "start_seconds": 927,
+            "end_seconds": 946,
+            "voiceover_text": "He summons the God of Love, desperate for advice on how to choose between his two soulmates."
+          },
+          {
+            "start_seconds": 954,
+            "end_seconds": 976,
+            "voiceover_text": "The deity's cheerful grin fades into grim gravity as he delivers a chilling warning."
+          },
+          {
+            "start_seconds": 1021,
+            "end_seconds": 1055,
+            "voiceover_text": "The god reveals the horrifying truth: if any destined soulmate fails to find love with Rentaro, fatal misfortune will strike and she will die—leaving Rentaro only hours to save both girls."
+          }
+        ]
+      },
+      {
+        "title": "The Two-Girlfriend Dogeza",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#AnimeFinale",
+          "#TwoGirlfriends",
+          "#Dogeza",
+          "#HaremKing",
+          "#PeakRomCom"
+        ],
+        "series": {
+          "series_id": "100_girlfriends_S01E01",
+          "part": 6,
+          "start_seconds": 1060,
+          "end_seconds": 1421,
+          "is_final": true,
+          "summary": "On the rooftop, Rentaro refuses to let either soulmate die. Falling into a desperate dogeza, he confesses his genuine love to both Hakari and Karane, proposing to date them both—a plea they shockingly accept."
+        },
+        "segments": [
+          {
+            "start_seconds": 1081,
+            "end_seconds": 1092,
+            "voiceover_text": "With two innocent lives hanging in the balance, Rentaro meets Hakari and Karane on the rooftop at dawn."
+          },
+          {
+            "start_seconds": 1140,
+            "end_seconds": 1172,
+            "voiceover_text": "Both girls wait with racing hearts, anxiously bracing for his final decision between them."
+          },
+          {
+            "start_seconds": 1172,
+            "end_seconds": 1192,
+            "voiceover_text": "Refusing to let either girl die, Rentaro drops into a desperate dogeza, begging to date them both simultaneously."
+          },
+          {
+            "start_seconds": 1208,
+            "end_seconds": 1226,
+            "voiceover_text": "Though stunned by his shameless proposal, both girls are deeply moved by his fierce honesty and boundless devotion."
+          },
+          {
+            "start_seconds": 1314,
+            "end_seconds": 1328,
+            "voiceover_text": "Blushing through their tears, Hakari and Karane accept his outrageous plea, officially launching Rentaro's legendary journey with his first two loving girlfriends."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "100_girlfriends_S01E01-p1"
+    },
+    {
+      "part": 2,
+      "job_id": "100_girlfriends_S01E01-p2"
+    },
+    {
+      "part": 3,
+      "job_id": "100_girlfriends_S01E01-p3"
+    },
+    {
+      "part": 4,
+      "job_id": "100_girlfriends_S01E01-p4"
+    },
+    {
+      "part": 5,
+      "job_id": "100_girlfriends_S01E01-p5"
+    },
+    {
+      "part": 6,
+      "job_id": "100_girlfriends_S01E01-p6"
+    }
+  ]
+}

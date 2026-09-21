@@ -1,0 +1,29 @@
+{
+  "title": "E2E Musicfix Beta — Part 2",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#e2e",
+    "#musicfix",
+    "#clipforge",
+    "#series",
+    "#shorts",
+    "#render"
+  ],
+  "series": {
+    "series_id": "e2e_musicfix_1789909775",
+    "part": 2,
+    "start_seconds": 120,
+    "end_seconds": 240,
+    "is_final": true,
+    "summary": "Part two of the music-fix E2E."
+  },
+  "segments": [
+    {
+      "start_seconds": 130,
+      "end_seconds": 138,
+      "voiceover_text": "E2E music fix part two opening."
+    }
+  ],
+  "job_id": "e2e_musicfix_1789909775-p2"
+}

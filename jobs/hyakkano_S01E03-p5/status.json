@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "job_id": "hyakkano_S01E03-p5",
+  "mode": "manual",
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1789939488,
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano_S01E03",
+    "part": 5,
+    "start_seconds": 1140,
+    "is_final": true
+  },
+  "release_tag": "clipforge-hyakkano_S01E03-p5",
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano_S01E03-p5/clipforge-hyakkano_S01E03-p5-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano_S01E03-p5/final.mp4"
+  },
+  "run": {
+    "workflow_run_id": 35538142652,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35538142652",
+    "code_ref": "9a7a470ee39023bd4286187cfa5c66609b3cf7bf"
+  },
+  "publishing": {
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6ab04f1e57203a76b6f54e22",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-24T02:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a9e0ce977555aae01e7ae22",
+              "platform": "tiktok",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX",
+              "isActive": true,
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=bf664260&x-expires=1790053200&x-signature=G%2BMcjmTE1Rz658KogNMTnV1%2Fe5g%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "username": ".chimeravfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-hyakkano_S01E03-p5-30aa618a-1d7e-422d-9560-e6b1c902ba9a-tiktok"
+      },
+      {
+        "post_id": "6ab04f2038ceb044bc190473",
+        "status": "scheduled",
+        "scheduled_for": "2026-09-24T02:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "profileId": "6a23f22dba1bebcaf7982ef3",
+              "displayName": "CHIMERAVFX ",
+              "isActive": true,
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "username": "chimera_vfx"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-hyakkano_S01E03-p5-30aa618a-1d7e-422d-9560-e6b1c902ba9a-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-auto-hyakkano_S01E03-p5-30aa618a-1d7e-422d-9560-e6b1c902ba9a"
+  },
+  "expires_at_epoch": 1789982145
+}

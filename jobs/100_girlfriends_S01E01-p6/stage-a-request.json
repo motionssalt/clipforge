@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "100_girlfriends_S01E01-p6",
+  "saved_at_epoch": 1789895574,
+  "source": {
+    "kind": "magnet",
+    "value": "magnet:?xt=urn:btih:d0340d789688b11145e1fbec2472bbc03d531398&dn=%5BDemiHuman%5D%20Hyakkano%20-%20S01%20v2%20%28CR%20WEB-DL%201080p%20x264%20Opus%202.0%29%20%5BDual-Audio%2C%20Multi-Sub%5D%20%28Japanese%2C%20English%20Dubs%29%20%7C%20The%20100%20Girlfriends%20Who%20Really%2C%20Really%2C%20Really%2C%20Really%2C%20REALLY%20Love%20You%20%7C%20Kimi%20no%20Koto%20ga%20Dai%20Dai%20Dai%20Dai%20Daisuki%20na%20100-nin%20no%20Kanojo&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce&tr=udp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannounce&tr=udp%3A%2F%2Fexodus.desync.com%3A6969%2Fannounce&tr=udp%3A%2F%2Ftracker.torrent.eu.org%3A451%2Fannounce",
+    "torrent_file_index": "1"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "100_girlfriends_S01E01",
+    "source_job_id": "manual-1789884423180",
+    "part": 6,
+    "start_seconds": 1060,
+    "context": "Prior events (Part 1): On middle school graduation day, Rentaro Aijou confesses his love to his classmate Asakawa, only to suffer his 100th consecutive rejection. Utterly devastated, he decides to pray for a miracle at a matchmaking shrine.\nPrior events (Part 2): At the matchmaking shrine, the God of Love manifests before Rentaro with shocking news: due to a clerical mistake while watching anime, Rentaro is destined to meet one hundred soulmates in high school.\nPrior events (Part 3): Rentaro begins his high school career and immediately locks eyes with two gorgeous classmates, Hakari and Karane. An electric shockwave strikes all three, sparking instant and overwhelming love.\nPrior events (Part 4): Hakari and Karane actively compete for Rentaro's affection throughout the school day. At sunset, both girls summon Rentaro and independently confess their love to him.\nPrior events (Part 5): Rentaro rushes back to the shrine to ask the God of Love how to choose between his two soulmates, only to learn the horrific truth: if a destined soulmate is rejected, she will die."
+  },
+  "music": {
+    "ref": "",
+    "source": "default"
+  }
+}
