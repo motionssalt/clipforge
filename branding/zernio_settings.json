@@ -13,11 +13,11 @@
   },
   "smart_schedule": {
     "timezone": "UTC",
-    "interval_hours": 6,
+    "interval_hours": 4,
     "preferred_time": "05:00",
     "queue_depth": 100,
     "start_mode": "next_available",
     "custom_start": ""
   },
-  "updated_at_epoch": 1789928010
+  "updated_at_epoch": 1789985987
 }
