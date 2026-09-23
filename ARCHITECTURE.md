@@ -775,7 +775,6 @@ text, so the callback handler reads its state back out of
 | `repo` | — | owner/repo entry (PAT rides in encrypted credentials KV) |
 | `gemkey` | — | Gemini API key entry (dead UI since bug-30, converted anyway) |
 | `wm` | — | watermark text |
-| `news` | — | news broadcast compose |
 | `zkey` | — | Zernio API key |
 | `zsch` | field | smart-schedule field (timezone/interval/time/depth/custom_start) |
 | `tpm` | label | Zernio manual publish time |
@@ -807,7 +806,7 @@ Nothing else may touch either backend:
 | `task_labels` | (chat_id, label) | task label → job_id bindings; lowest-free-label reuse (§6.3) |
 | `task_options` | (chat_id, job_id) | per-task options JSON blob |
 | `clone_jobs` | (chat_id) | Shadow Clone resume records (bug-51), incl. the encrypted PAT envelope (same crypto.js AES-GCM, storage location only changed); a row's existence IS the cron sweep's scan set |
-| `announcements` | (chat_id, kind) | last-announced markers for kinds `update_notice`, `deploy_failure`, `news_notice` |
+| `announcements` | (chat_id, kind) | last-announced markers for kinds `update_notice`, `deploy_failure` |
 
 Bot B (relay-worker) has **no D1 binding** — it never reads task, clone, or
 announcement data. Menu/flow navigation state lives in **no** datastore

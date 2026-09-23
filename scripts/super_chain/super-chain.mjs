@@ -53,7 +53,22 @@ const statuses = {};
 for (const entry of spawned) statuses[entry.job_id] = await getJson(credentials, credentials.repo, STATUS_PATH(entry.job_id)).catch(() => null);
 const outcome = superQueueAdvance(state, (j) => statuses[j]);
 console.log(`[chain] superQueueAdvance -> ${JSON.stringify({ ...outcome, plan: undefined })}`);
-if (outcome.action === 'done') { console.log('[chain] all parts complete — Super Series finished.'); process.exit(0); }
+if (outcome.action === 'done') {
+  console.log('[chain] all parts complete — Super Series finished.');
+  // Issue 2 fix: the anchor's Stage A finished the moment the super-plan was
+  // produced. Its status.json is repurposed during the run to track parts; now
+  // that every part is complete, write the anchor's OWN terminal state so the
+  // app/dashboard stop showing the anchor as ongoing forever.
+  await putJson(credentials, credentials.repo, STATUS_PATH(anchorId), {
+    version: 1, job_id: anchorId, mode: 'manual', state: 'complete',
+    message: `Super Series complete — all ${state.total_parts} parts rendered.`,
+    updated_at_epoch: now(),
+    series: { enabled: true, series_id: state.series_id, part: state.total_parts, start_seconds: 0, is_final: true },
+    super_stage_a_complete: true,
+  }, `clipforge: super series ${state.series_id} complete — anchor ${anchorId} closed`).catch((e) =>
+    console.log(`[chain] anchor final status update failed (non-fatal): ${e && e.message}`));
+  process.exit(0);
+}
 if (outcome.action !== 'queue') { console.log(`[chain] action=${outcome.action} — nothing to dispatch.`); process.exit(0); }
 
 if ((await getJson(credentials, credentials.repo, STATUS_PATH(outcome.jobId))) ||
@@ -128,5 +143,9 @@ await putJson(credentials, credentials.repo, STATUS_PATH(anchorId), {
     start_seconds: 0,
   },
   active_part_job_id: outcome.jobId,
+  // Issue 2 fix: explicit marker that the anchor's Stage A genuinely finished
+  // (the super-plan exists) — lets clients render anchor Stage A complete
+  // independently of this repurposed part-tracking state.
+  super_stage_a_complete: true,
 }, `clipforge: super series anchor — part ${outcome.part} running (${outcome.jobId})`).catch((e) =>
   console.log(`[chain] anchor status update failed (non-fatal): ${e && e.message}`));

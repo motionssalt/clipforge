@@ -527,7 +527,6 @@ export const SERIES_SETTINGS_PATH = 'branding/series_settings.json';
 export const SUPER_SERIES_SETTINGS_PATH = 'branding/super_series_settings.json';
 export const ZERNIO_SETTINGS_PATH = 'branding/zernio_settings.json';
 export const ZERNIO_ACCOUNTS_PATH = 'branding/zernio_accounts.json';
-export const NEWS_PATH = 'docs/news.json';
 export const UPDATE_NOTICE_PATH = 'docs/update_notice.json';
 
 export async function readSeriesSettings(credentials, repo) {
