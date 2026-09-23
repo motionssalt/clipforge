@@ -1,0 +1,55 @@
+{
+  "version": 2,
+  "title": "The Four-Way Swimsuit Reveal — Part 1",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#100Girlfriends",
+    "#Hyakkano",
+    "#SwimsuitEpisode",
+    "#RentaroFamily",
+    "#AnimeMoments",
+    "#AnimeRomcom"
+  ],
+  "series": {
+    "series_id": "hyakkano6",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 226,
+    "is_final": false,
+    "summary": "Before their big group date, Karane endures an agonizingly embarrassing shopping trip searching for the right swimsuit. When Hakari, Karane, Shizuka, and Nano arrive at the indoor water park and unveil their stunning swimsuits, Rentaro is overwhelmed by their beauty, sparking an explosive comedic nosebleed."
+  },
+  "segments": [
+    {
+      "start_seconds": 10,
+      "end_seconds": 33,
+      "description": "Karane blushes frantically inside the swimsuit shop while eyeing the mannequins in total panic.",
+      "voiceover_text": "Before their grand poolside date, Karane suffers through an excruciating shopping trip, desperately searching for the perfect, cute swimsuit."
+    },
+    {
+      "start_seconds": 36,
+      "end_seconds": 55,
+      "description": "Karane clutches her burning red face in front of the store clerk, utterly humiliated by her options.",
+      "voiceover_text": "Paralyzed with pure embarrassment, she wrestles with her fiery tsundere pride, terrified of looking ridiculous in front of Rentaro."
+    },
+    {
+      "start_seconds": 186,
+      "end_seconds": 202,
+      "description": "The four girlfriends walk out onto the glistening indoor water park deck in their brand new swimsuits.",
+      "voiceover_text": "Arriving at the indoor water park resort, all four gorgeous girlfriends step out onto the sunlit deck, unveiling their swimsuits."
+    },
+    {
+      "start_seconds": 202,
+      "end_seconds": 210,
+      "description": "Rentaro turns around and looks at Hakari, Karane, Shizuka, and Nano standing together.",
+      "voiceover_text": "Hakari flaunts her bold bikini, Shizuka radiates sweet innocence, Nano looks sleek, and Karane stands adorably self-conscious."
+    },
+    {
+      "start_seconds": 210,
+      "end_seconds": 225,
+      "description": "Rentaro's eyes widen before blood sprays comically from his nose and he collapses backward onto the deck.",
+      "voiceover_text": "Rentaro's brain completely short-circuits at the jaw-dropping spectacle, triggering a massive comedic nosebleed that sends him crashing down."
+    }
+  ],
+  "job_id": "hyakkano6-p1"
+}
