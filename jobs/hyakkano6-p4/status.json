@@ -3,8 +3,8 @@
   "job_id": "hyakkano6-p4",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1790195001,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1790195159,
   "series": {
     "enabled": true,
     "series_id": "hyakkano6",
@@ -18,7 +18,7 @@
   "run": {
     "workflow_run_id": 35915578921,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/35915578921",
-    "code_ref": "e01f009806ef101c507cdb2455e02e3bbcc582e5"
+    "code_ref": "dc32917999b303b2a10d83f12689a3b0a7fcbb18"
   },
   "publishing": {
     "status": "not_requested",
