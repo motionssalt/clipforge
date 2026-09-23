@@ -1,0 +1,340 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1790102858883",
+  "series_id": "hyakkano6",
+  "total_parts": 6,
+  "video_duration_seconds": 1422,
+  "plan": {
+    "version": 2,
+    "series_id": "hyakkano6",
+    "video_duration_seconds": 1422,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "version": 2,
+        "title": "The Four-Way Swimsuit Reveal — Part 1",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#SwimsuitEpisode",
+          "#RentaroFamily",
+          "#AnimeMoments",
+          "#AnimeRomcom"
+        ],
+        "series": {
+          "series_id": "hyakkano6",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 226,
+          "is_final": false,
+          "summary": "Before their big group date, Karane endures an agonizingly embarrassing shopping trip searching for the right swimsuit. When Hakari, Karane, Shizuka, and Nano arrive at the indoor water park and unveil their stunning swimsuits, Rentaro is overwhelmed by their beauty, sparking an explosive comedic nosebleed."
+        },
+        "segments": [
+          {
+            "start_seconds": 10,
+            "end_seconds": 33,
+            "description": "Karane blushes frantically inside the swimsuit shop while eyeing the mannequins in total panic.",
+            "voiceover_text": "Before their grand poolside date, Karane suffers through an excruciating shopping trip, desperately searching for the perfect, cute swimsuit."
+          },
+          {
+            "start_seconds": 36,
+            "end_seconds": 55,
+            "description": "Karane clutches her burning red face in front of the store clerk, utterly humiliated by her options.",
+            "voiceover_text": "Paralyzed with pure embarrassment, she wrestles with her fiery tsundere pride, terrified of looking ridiculous in front of Rentaro."
+          },
+          {
+            "start_seconds": 186,
+            "end_seconds": 202,
+            "description": "The four girlfriends walk out onto the glistening indoor water park deck in their brand new swimsuits.",
+            "voiceover_text": "Arriving at the indoor water park resort, all four gorgeous girlfriends step out onto the sunlit deck, unveiling their swimsuits."
+          },
+          {
+            "start_seconds": 202,
+            "end_seconds": 210,
+            "description": "Rentaro turns around and looks at Hakari, Karane, Shizuka, and Nano standing together.",
+            "voiceover_text": "Hakari flaunts her bold bikini, Shizuka radiates sweet innocence, Nano looks sleek, and Karane stands adorably self-conscious."
+          },
+          {
+            "start_seconds": 210,
+            "end_seconds": 225,
+            "description": "Rentaro's eyes widen before blood sprays comically from his nose and he collapses backward onto the deck.",
+            "voiceover_text": "Rentaro's brain completely short-circuits at the jaw-dropping spectacle, triggering a massive comedic nosebleed that sends him crashing down."
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "The High-Stakes Compliment Gauntlet — Part 2",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#RentaroAijou",
+          "#HakariHanazono",
+          "#NanoEiai",
+          "#AnimeComedy"
+        ],
+        "series": {
+          "series_id": "hyakkano6",
+          "part": 2,
+          "start_seconds": 226,
+          "end_seconds": 510,
+          "is_final": false,
+          "summary": "Determined not to favor any girlfriend, Rentaro blindfolds himself, but the girls demand his full, honest admiration. Rentaro passionately praises each girl's unique beauty, but when arrogant pickup artists try to hit on them, Hakari and Nano boldly kiss Rentaro in public to claim their man."
+        },
+        "segments": [
+          {
+            "start_seconds": 236,
+            "end_seconds": 250,
+            "description": "Rentaro blindfolds himself in panic to avoid staring, but the four girls pull at him demanding his praise.",
+            "voiceover_text": "Terrified of showing disrespect, Rentaro tries blindfolding himself, but his girlfriends aggressively demand his full, honest admiration."
+          },
+          {
+            "start_seconds": 257,
+            "end_seconds": 283,
+            "description": "Rentaro delivers heartfelt, rapid-fire compliments to each girl, making Hakari, Karane, Shizuka, and Nano blush.",
+            "voiceover_text": "Refusing to leave anyone neglected, Rentaro showers each girl with explosive, personalized compliments that leave every single one flustered."
+          },
+          {
+            "start_seconds": 298,
+            "end_seconds": 330,
+            "description": "The group splashes into the crystal pool water together, laughing and enjoying their date.",
+            "voiceover_text": "Splashing into the refreshing pool water, the group enjoys an idyllic summer afternoon filled with joyous laughter and mutual affection."
+          },
+          {
+            "start_seconds": 443,
+            "end_seconds": 475,
+            "description": "Two pushy pickup guys approach the girlfriends trying to flirt, only to be coldly rejected.",
+            "voiceover_text": "Trouble suddenly brews when arrogant pickup artists try aggressively hitting on the girls, completely oblivious to who they are."
+          },
+          {
+            "start_seconds": 495,
+            "end_seconds": 508,
+            "description": "Hakari and Nano boldly plant kisses on Rentaro right before the guys, knocking Rentaro completely unconscious with bliss.",
+            "voiceover_text": "Hakari and Nano silence the intruders by boldly kissing Rentaro in broad daylight, overwhelming him into sweet, blissful unconsciousness."
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "Chaos in the Artificial Wave Pool — Part 3",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#ShizukaYoshimoto",
+          "#WavePool",
+          "#AnimeSuspense",
+          "#RentaroFamily"
+        ],
+        "series": {
+          "series_id": "hyakkano6",
+          "part": 3,
+          "start_seconds": 510,
+          "end_seconds": 775,
+          "is_final": false,
+          "summary": "When the water park's artificial wave machine roars to life, playful waves quickly turn into a raging surge. Shizuka loses hold of her float ring and gets swept into the churning deep end, prompting Rentaro to leap straight into the treacherous current to save her life."
+        },
+        "segments": [
+          {
+            "start_seconds": 548,
+            "end_seconds": 568,
+            "description": "Warning alarms sound as the wave generator begins pumping massive swells through the indoor pool.",
+            "voiceover_text": "A sudden siren echoes through the water park as the artificial wave machine powers up, generating towering, churning swells."
+          },
+          {
+            "start_seconds": 640,
+            "end_seconds": 666,
+            "description": "Swimmers cheer in the swelling water, while Shizuka floats gently near the edge on her inner tube.",
+            "voiceover_text": "While throngs of swimmers gleefully ride the rising swell, tiny Shizuka floats peacefully on her small inflatable inner tube."
+          },
+          {
+            "start_seconds": 713,
+            "end_seconds": 725,
+            "description": "A violent rogue wave flips Shizuka off her float ring and drags her toward the deep current.",
+            "voiceover_text": "Suddenly, an unexpectedly violent wave flips Shizuka into the deep water, violently separating her from her only safety float."
+          },
+          {
+            "start_seconds": 725,
+            "end_seconds": 742,
+            "description": "Shizuka struggles underwater as the girls shout in horror from the poolside deck.",
+            "voiceover_text": "Unable to swim, Shizuka desperately gasps for air beneath the churning foam as panicked screams erupt across the deck."
+          },
+          {
+            "start_seconds": 767,
+            "end_seconds": 775,
+            "description": "Rentaro spots Shizuka sinking and launches himself headfirst into the turbulent waves without a second thought.",
+            "voiceover_text": "Spotting his beloved soulmate drowning, Rentaro rockets into the raging water with superhuman speed to rescue his precious girl."
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "The Heroic Rescue and Nano's Awakening — Part 4",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#NanoEiai",
+          "#ShizukaYoshimoto",
+          "#AnimeHero",
+          "#PureLove"
+        ],
+        "series": {
+          "series_id": "hyakkano6",
+          "part": 4,
+          "start_seconds": 775,
+          "end_seconds": 1000,
+          "is_final": false,
+          "summary": "Rentaro dives through the turbulent swells and rescues Shizuka, carrying her safely to the deck. Watching Rentaro risk his life, Nano questions her own cold, detached logic of efficiency, only for Rentaro to warmly teach her that in the Rentaro Family, love is never divided, but infinitely shared."
+        },
+        "segments": [
+          {
+            "start_seconds": 785,
+            "end_seconds": 816,
+            "description": "Rentaro powers through the churning waves, scoops Shizuka into his arms, and swims toward safety.",
+            "voiceover_text": "Powering through the brutal current, Rentaro scoops Shizuka into his protective embrace, swimming furiously toward the safe pool shallows."
+          },
+          {
+            "start_seconds": 816,
+            "end_seconds": 842,
+            "description": "Rentaro carries a coughing, tearful Shizuka onto the deck, checking her face with tender relief.",
+            "voiceover_text": "Carrying the trembling, tearful Shizuka onto dry deck, Rentaro gently wraps her in warm towels, overflowing with immense relief."
+          },
+          {
+            "start_seconds": 880,
+            "end_seconds": 903,
+            "description": "Nano watches Rentaro's total devotion, her stoic analytical expression giving way to deep contemplation.",
+            "voiceover_text": "Observing Rentaro's selfless heroism, Nano feels her analytical worldview fracture, realizing human devotion completely defies cold mathematical efficiency."
+          },
+          {
+            "start_seconds": 903,
+            "end_seconds": 924,
+            "description": "Rentaro looks into Nano's eyes, smiling warmly as he explains how much she means to him and everyone.",
+            "voiceover_text": "Rentaro tenderly reassures Nano that loving multiple partners never divides affection, but multiplies warmth so everyone is completely cherished."
+          },
+          {
+            "start_seconds": 943,
+            "end_seconds": 959,
+            "description": "The girlfriends smile and hug Shizuka, enjoying the waterslides together as joy returns to the group.",
+            "voiceover_text": "Relief and joyous cheer return as the girlfriends rally together, sliding down colorful water tubes with renewed happiness."
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "Karane's Secret Heartache on the Bench — Part 5",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#KaraneInda",
+          "#Tsundere",
+          "#AnimeHeartbreak",
+          "#RentaroFamily"
+        ],
+        "series": {
+          "series_id": "hyakkano6",
+          "part": 5,
+          "start_seconds": 1000,
+          "end_seconds": 1188,
+          "is_final": false,
+          "summary": "While the others continue swimming, Karane sits alone on a poolside bench wrapped tightly in a towel, shivering from a mysterious chill. Comparing her flat chest and prickly personality to Hakari and Nano, she drowns in painful self-doubt until Rentaro gently sits down right beside her."
+        },
+        "segments": [
+          {
+            "start_seconds": 1019,
+            "end_seconds": 1039,
+            "description": "Karane sits alone on the bench, hugging her knees inside an oversized bath towel while shivering.",
+            "voiceover_text": "While everyone else frolics, Karane sits alone on the bench, wrapped tightly in an oversized towel while shivering miserably."
+          },
+          {
+            "start_seconds": 1071,
+            "end_seconds": 1097,
+            "description": "Karane looks down at herself, comparing her body to Hakari and Nano's voluptuous figures with a bitter frown.",
+            "voiceover_text": "Comparing her slender silhouette to Hakari and Nano's glamorous curves, crushing insecurity gnaws painfully at her fragile self-esteem."
+          },
+          {
+            "start_seconds": 1102,
+            "end_seconds": 1126,
+            "description": "Karane bites her lip in quiet frustration, feeling like her tsundere outbursts make her unworthy of love.",
+            "voiceover_text": "She agonizes over her prickly, violent tsundere temper, terrified that Rentaro secretly wishes she was softer and more feminine."
+          },
+          {
+            "start_seconds": 1135,
+            "end_seconds": 1159,
+            "description": "Karane hugs herself tighter, her eyes welling with quiet, lonely tears beneath her bangs.",
+            "voiceover_text": "A lonely chill settles over her soul, making her wonder if she truly belongs among Rentaro's breathtaking family of soulmates."
+          },
+          {
+            "start_seconds": 1166,
+            "end_seconds": 1186,
+            "description": "Rentaro's footsteps approach and he quietly sits down right next to Karane, gazing at her with profound tenderness.",
+            "voiceover_text": "Suddenly, gentle footsteps approach as Rentaro quietly sits right beside her, gazing into her tearful eyes with pure devotion."
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "title": "An Unconditional Declaration of Love — Part 6",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#100Girlfriends",
+          "#Hyakkano",
+          "#KaraneInda",
+          "#AnimeKiss",
+          "#AnimeRomance",
+          "#RentaroFamily"
+        ],
+        "series": {
+          "series_id": "hyakkano6",
+          "part": 6,
+          "start_seconds": 1188,
+          "end_seconds": 1422,
+          "is_final": true,
+          "summary": "Rentaro unleashes an impassioned, unstoppable confession, praising every single aspect of Karane's body, personality, and tsundere charm. Overcome with tears of joy, Karane shares a passionate kiss with Rentaro before Hakari, Shizuka, and Nano join them in the steaming spa, united forever."
+        },
+        "segments": [
+          {
+            "start_seconds": 1194,
+            "end_seconds": 1217,
+            "description": "Rentaro passionately speaks to Karane, gesturing with fiery conviction as he praises her entire being.",
+            "voiceover_text": "Looking straight into Karane's eyes, Rentaro passionately declares that he loves every single curve, flaw, and tsundere quirk she possesses."
+          },
+          {
+            "start_seconds": 1223,
+            "end_seconds": 1242,
+            "description": "Karane's face flushes scarlet as huge tears spill from her eyes, her insecurities melting away completely.",
+            "voiceover_text": "Hearing his unabashed, unconditional worship, Karane's icy walls shatter into overwhelming tears of absolute, euphoric relief and gratitude."
+          },
+          {
+            "start_seconds": 1261,
+            "end_seconds": 1277,
+            "description": "Rentaro gently leans in and kisses Karane on the lips by the quiet poolside, their silhouettes glowing.",
+            "voiceover_text": "Leaning softly closer, Rentaro seals his eternal vow with an unforgettable romantic kiss, wiping away every trace of doubt."
+          },
+          {
+            "start_seconds": 1293,
+            "end_seconds": 1313,
+            "description": "Hakari, Shizuka, and Nano join Rentaro and Karane in the warm spa bath, smiling and laughing together.",
+            "voiceover_text": "Hakari, Shizuka, and Nano warmly embrace them in the steaming hot tub, welcoming Karane back with pure family love."
+          },
+          {
+            "start_seconds": 1323,
+            "end_seconds": 1346,
+            "description": "The five soulmates sit together in the steaming water against the evening sky, happy and completely inseparable.",
+            "voiceover_text": "Surrounded by steaming waters and glowing smiles, the Rentaro Family stands closer, stronger, and more deeply in love than ever."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
