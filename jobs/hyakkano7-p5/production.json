@@ -1,0 +1,87 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "She Spikes The Rooftop Tea — Part 5",
+  "hashtags": [
+    "#anime",
+    "#100girlfriends",
+    "#hyakkano",
+    "#kusuri",
+    "#lovepotion",
+    "#animeromcom"
+  ],
+  "youtube_tags": [
+    "rooftop tea party anime",
+    "kusuri potion tea",
+    "100 girlfriends episode 7 scene",
+    "hyakkano kusuri failure",
+    "anime cliffhanger"
+  ],
+  "series": {
+    "series_id": "hyakkano7",
+    "start_seconds": 1000,
+    "end_seconds": 1160,
+    "is_final": false,
+    "summary": "At the rooftop tea party Kusuri admits she thinks her last batch failed. She runs off, returns with two thermoses, and pours for everyone.",
+    "part": 5
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 1010,
+      "end_seconds": 1030,
+      "voiceover_text": "On the rooftop, everyone sits down for tea. It should be a calm afternoon. Karane blushes at nothing. Kusuri goes very quiet.",
+      "keywords": [
+        {
+          "word": "calm",
+          "color": "#7AA7FF"
+        },
+        {
+          "word": "quiet",
+          "color": "#FFD166"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1046,
+      "end_seconds": 1070,
+      "voiceover_text": "Then Kusuri admits it. She thinks her last batch was a failure. She says it lightly, shrugging it off, but the doubt is real and Rentarou hears it.",
+      "keywords": [
+        {
+          "word": "failure",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "doubt",
+          "color": "#B07CFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1074,
+      "end_seconds": 1092,
+      "voiceover_text": "So she fixes it herself. She bolts inside, fists shaking with excitement, and comes back with two thermoses. One is marked for five people. One is only for him.",
+      "keywords": [
+        {
+          "word": "thermoses",
+          "color": "#3BD16F"
+        },
+        {
+          "word": "him",
+          "color": "#FF3B3B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1093,
+      "end_seconds": 1104,
+      "voiceover_text": "Everyone drinks. Hearts bloom over the rooftop. Kusuri peeks around the corner, beaming.",
+      "keywords": [
+        {
+          "word": "Hearts",
+          "color": "#FF8AC5"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano7-p5"
+}
