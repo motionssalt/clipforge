@@ -1,0 +1,77 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "The Potion Girl Hands Him A Green Beaker — Part 1",
+  "hashtags": [
+    "#anime",
+    "#100girlfriends",
+    "#hyakkano",
+    "#kusuri",
+    "#rentarou",
+    "#animeromcom"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "hyakkano kusuri",
+    "kusuri yakuzen potion",
+    "anime romcom scene",
+    "100 girlfriends episode 7",
+    "rentarou aijou"
+  ],
+  "series": {
+    "series_id": "hyakkano7",
+    "start_seconds": 0,
+    "end_seconds": 230,
+    "is_final": false,
+    "summary": "Kusuri, the tiny potion-obsessed girl in the lab coat, talks Rentarou into drinking her newest green brew in the chemistry room. He swallows it. She immediately reaches for the next tube.",
+    "part": 1
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 29,
+      "end_seconds": 42,
+      "voiceover_text": "A single green test tube glows in an empty chemistry room. The woman holding it is not who you think she is.",
+      "keywords": [
+        {
+          "word": "green",
+          "color": "#3BD16F"
+        },
+        {
+          "word": "glows",
+          "color": "#FFD166"
+        }
+      ]
+    },
+    {
+      "start_seconds": 162,
+      "end_seconds": 186,
+      "voiceover_text": "Rentarou walks in and finds Kusuri beaming behind a beaker of something violently green. She calls it her masterpiece. He has seen what her masterpieces do. She holds it out anyway, thrilled.",
+      "keywords": [
+        {
+          "word": "masterpiece",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "thrilled",
+          "color": "#FF8AC5"
+        }
+      ]
+    },
+    {
+      "start_seconds": 190,
+      "end_seconds": 216,
+      "voiceover_text": "He drinks it. She is already reaching for the next tube, grinning, and his face drains. Whatever that green stuff was, it is inside him now. Kusuri is not finished experimenting. Not even close.",
+      "keywords": [
+        {
+          "word": "drinks",
+          "color": "#3BD16F"
+        },
+        {
+          "word": "drains",
+          "color": "#7AA7FF"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano7-p1"
+}
