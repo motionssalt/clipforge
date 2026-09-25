@@ -1,0 +1,76 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "Her Love Potion Sales Pitch Backfires — Part 2",
+  "hashtags": [
+    "#anime",
+    "#100girlfriends",
+    "#hyakkano",
+    "#kusuri",
+    "#rentarou",
+    "#animeromcom"
+  ],
+  "youtube_tags": [
+    "kusuri potion scene",
+    "100 girlfriends funny moments",
+    "hyakkano romcom",
+    "anime love potion",
+    "rentarou and kusuri"
+  ],
+  "series": {
+    "series_id": "hyakkano7",
+    "start_seconds": 230,
+    "end_seconds": 400,
+    "is_final": false,
+    "summary": "Kusuri explains what her potions actually do, teases Rentarou with a red one, then hugs him out of nowhere. The mad scientist act slips for a second.",
+    "part": 2
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 273,
+      "end_seconds": 300,
+      "voiceover_text": "Later, Kusuri explains the rules with total confidence. Drink it, she says, and everything you have been holding back comes out. Rentarou asks what that actually means. Her answer only makes it worse.",
+      "keywords": [
+        {
+          "word": "confidence",
+          "color": "#FFD166"
+        },
+        {
+          "word": "worse",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 303,
+      "end_seconds": 336,
+      "voiceover_text": "She keeps talking up the red one, giggling behind the tube. The pitch lands somewhere between a love potion and a threat. Rentarou panics. She finds his panic adorable.",
+      "keywords": [
+        {
+          "word": "red",
+          "color": "#FF3B3B"
+        },
+        {
+          "word": "panic",
+          "color": "#7AA7FF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 337,
+      "end_seconds": 356,
+      "voiceover_text": "Then she just hugs him. No potion, no gimmick. He freezes, embarrassed and completely disarmed. For one second the mad scientist is only a girl who likes him.",
+      "keywords": [
+        {
+          "word": "hugs",
+          "color": "#FF8AC5"
+        },
+        {
+          "word": "disarmed",
+          "color": "#FFD166"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano7-p2"
+}
