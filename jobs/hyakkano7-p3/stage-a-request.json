@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "hyakkano7-p3",
+  "saved_at_epoch": 1790366836,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1790363888240/source.torrent",
+    "torrent_file_index": "7"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano7",
+    "source_job_id": "manual-1790363888240",
+    "part": 3,
+    "start_seconds": 400,
+    "context": "Prior events (Part 1): Kusuri, the tiny potion-obsessed girl in the lab coat, talks Rentarou into drinking her newest green brew in the chemistry room. He swallows it. She immediately reaches for the next tube.\nPrior events (Part 2): Kusuri explains what her potions actually do, teases Rentarou with a red one, then hugs him out of nowhere. The mad scientist act slips for a second."
+  },
+  "music": {
+    "ref": "audio-library/Cinematic_Documentary_Chill_by_Infraction_Copyright_Free_Music_Silver.m4a",
+    "source": "explicit_library"
+  }
+}
