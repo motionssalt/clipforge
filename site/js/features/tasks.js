@@ -450,7 +450,12 @@ export async function renderTaskDetail(app, jobId) {
     }
     if (state === 'error' || state === 'cancelled') {
       // bug-15: only offer restarts for stages that actually RAN.
-      const stageBStarted = /stage b/i.test(String(status.message || ''));
+      // hyakkano7-p5 fix: don't key this off the error message wording alone
+      // (a message like "Stage B failed. See workflow run for logs" matches,
+      // but any other phrasing silently hid the button). production.json on
+      // disk is hard evidence Stage B became runnable, so its presence also
+      // enables the restart.
+      const stageBStarted = /stage b/i.test(String(status.message || '')) || !!plan;
       actions.push('<button type="button" id="td-restarta">↻ Restart Stage A</button>');
       if (stageBStarted) actions.push('<button type="button" id="td-restartb">↻ Restart Stage B</button>');
     }

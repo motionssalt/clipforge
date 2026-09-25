@@ -209,5 +209,15 @@
       "date": "2026-09-13",
       "summary": "Super Series Stage B rewrite (operator 2026-09-13): cron super-sweep.yml + duplicate-dispatch super-sweep.mjs DELETED; replaced by super-chain.yml (workflow_run on stage-b.yml completion) + scripts/super_chain/{dispatch.mjs,super-chain.mjs} using ONE shared dispatch. Site dispatch-on-poll removed from features/series.js + features/tasks.js (display-only). LIVE-VERIFIED unattended: synthetic completion with zero clients -> chain run 34761619538 wrote part2 files + dispatched real stage-b run 34761630942; failure event -> chain run 34761659843 dispatched nothing (p3 404, halt works). Pages project clipforge-dashboard created + deployed: https://clipforge-dashboard-3sp.pages.dev (deploy https://aa071fe2.clipforge-dashboard-3sp.pages.dev), verified serving ClipForge Dashboard HTML. STILL PENDING: full feature-parity pass vs live Pages, then Bot A/B Workers + CLIPFORGE_BOT_D1 + KV deletion, archive bot/, delete deploy-bots.yml/telegram-relay.yml, ARCHITECTURE.md/README update, re-verify, then build_complete."
     }
-  ]
+  ],
+  "hyakkano7_p5_repair": {
+    "path_taken": "direct metadata.txt recovery + upload (no Stage B re-render)",
+    "why": "Run 36185847477 rendered the video cleanly and uploaded 2 of 3 release assets; only metadata.txt was lost to a transient connection drop (\"other side closed\"). Both existing assets were downloaded and verified intact (zip CRC OK, contains final.mp4 + metadata.txt + production.json; final.mp4 probes at 32.0s). metadata.txt was extracted verbatim from the verified zip and uploaded to release clipforge-hyakkano7-p5, then status.json set to complete. A re-render would have been wasteful.",
+    "also_fixed": [
+      "stage-b.yml: release upload step now has overwrite_files: true + continue-on-error with a 3-attempt gh --clobber retry (backoff) for transient network drops",
+      "stage-a.yml: release gate now attempts a 3-attempt transient retry before classifying a failure",
+      "site/js/features/tasks.js: Restart Stage B no longer keyed off error-message wording alone; presence of production.json also enables it"
+    ],
+    "date": "2026-09-25"
+  }
 }

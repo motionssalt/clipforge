@@ -683,7 +683,18 @@ jobs:
       # The hourly cleanup workflow removes the whole release at job expiry.
       # ---------------------------------------------------------------------
 
+      # ---------------------------------------------------------------------
+      # TRANSIENT-UPLOAD RETRY (hyakkano7-p5 incident): a dropped connection
+      # mid-upload ("other side closed") used to fail the whole job even
+      # though the render itself succeeded. The action step is now
+      # continue-on-error with overwrite_files: true (so a re-upload of an
+      # already-landed asset is a safe overwrite, never a 422), and the bash
+      # step after it retries the full upload up to 3 times with backoff via
+      # `gh release upload --clobber` before the job is allowed to fail.
+      # ---------------------------------------------------------------------
       - name: Upload final zip + the finished video to the SAME release
+        id: release_upload
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.jid.outputs.release_tag }}
@@ -707,12 +718,36 @@ jobs:
             This release is automatically deleted when the job expires.
           make_latest: "false"
           prerelease: true
+          overwrite_files: true
           files: |
             work/out/clipforge-${{ steps.jid.outputs.job_id }}-final.zip
             work/out/final.mp4
             work/out/metadata.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Retry the release upload on transient network failure
+        if: ${{ steps.release_upload.outcome == 'failure' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.jid.outputs.release_tag }}"
+          echo "Release upload step failed (transient network drop?) — retrying via gh with backoff."
+          for attempt in 1 2 3; do
+            echo "Upload attempt $attempt..."
+            # --clobber overwrites same-named assets left over from the
+            # partially-succeeded first attempt, so this is fully idempotent.
+            if gh release upload "$tag"                 "work/out/clipforge-${{ steps.jid.outputs.job_id }}-final.zip"                 work/out/final.mp4                 work/out/metadata.txt                 --clobber; then
+              echo "Retry upload succeeded on attempt $attempt."
+              exit 0
+            fi
+            echo "Attempt $attempt failed — backing off before the next try." >&2
+            sleep $((attempt * 15))
+          done
+          echo "FATAL: release upload failed after the action attempt + 3 retries." >&2
+          exit 1
 
       - name: Resolve final asset URLs
         id: finalasset

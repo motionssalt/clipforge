@@ -576,6 +576,34 @@ jobs:
           tag="${{ steps.req.outputs.release_tag }}"
           echo "Full-bundle release attempt failed — inspecting the release to classify the cause."
 
+          # -----------------------------------------------------------------
+          # TRANSIENT-UPLOAD RETRY (hyakkano7-p5 incident): a dropped
+          # connection mid-upload ("other side closed") is not a real failure.
+          # Before classifying anything, if the release itself exists, retry
+          # the whole bundle upload up to 3 times with backoff via
+          # `gh release upload --clobber` (idempotent: same-named assets left
+          # over from the partial first attempt are overwritten, never
+          # duplicated). If the retry succeeds, the failure was transient and
+          # we are done. If it still fails (e.g. source_input.bin genuinely
+          # exceeds the 2 GiB per-asset limit), fall through to the existing
+          # classification below unchanged.
+          # -----------------------------------------------------------------
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" > /dev/null 2>&1; then
+            for attempt in 1 2 3; do
+              echo "Transient-retry upload attempt $attempt..."
+              if gh release upload "$tag" work/bundle/* --clobber; then
+                echo "Retry upload succeeded on attempt $attempt — the original failure was transient."
+                echo "source_omitted=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "Transient-retry attempt $attempt failed — backing off." >&2
+              sleep $((attempt * 15))
+            done
+            echo "Transient retries exhausted — falling through to failure classification."
+          else
+            echo "Release $tag does not exist yet (action crashed before creation) — skipping transient retry."
+          fi
+
           # CLASSIFY: only treat this as the 2 GiB per-asset limit when the
           # evidence actually says so. The gate is: source_input.bin is oversized
           # (> 2 GiB) AND every asset that must have been uploaded BEFORE it was
