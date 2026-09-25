@@ -3,14 +3,14 @@
   "job_id": "manual-1790363888240",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 2 of 6 running (hyakkano7-p2) — chained from part 1's completion.",
-  "updated_at_epoch": 1790366230,
+  "message": "Super Series part 3 of 6 running (hyakkano7-p3) — chained from part 2's completion.",
+  "updated_at_epoch": 1790366842,
   "series": {
     "enabled": true,
     "series_id": "hyakkano7",
-    "part": 2,
+    "part": 3,
     "start_seconds": 0
   },
-  "active_part_job_id": "hyakkano7-p2",
+  "active_part_job_id": "hyakkano7-p3",
   "super_stage_a_complete": true
 }
