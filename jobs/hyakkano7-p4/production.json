@@ -1,0 +1,76 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "Her Side Effects Escape The Lab — Part 4",
+  "hashtags": [
+    "#anime",
+    "#100girlfriends",
+    "#hyakkano",
+    "#kusuri",
+    "#shizuka",
+    "#animecomedy"
+  ],
+  "youtube_tags": [
+    "100 girlfriends side effects",
+    "shizuka rabbit ears",
+    "hakari anime",
+    "nano hair scene",
+    "hyakkano comedy"
+  ],
+  "series": {
+    "series_id": "hyakkano7",
+    "start_seconds": 700,
+    "end_seconds": 1000,
+    "is_final": false,
+    "summary": "Kusuri's experiments spread to the rest of the girlfriends: Hakari sniffing the ground, rabbit ears on Shizuka, Nano's hair binding Rentarou. Kusuri just keeps brewing.",
+    "part": 4
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 864,
+      "end_seconds": 886,
+      "voiceover_text": "The potions do not stay in the lab. Hakari ends up crouched on the ground, sniffing the air like an animal, while Kusuri throws a proud thumbs up. Nobody asked for this.",
+      "keywords": [
+        {
+          "word": "sniffing",
+          "color": "#FF8AC5"
+        },
+        {
+          "word": "proud",
+          "color": "#FFD166"
+        }
+      ]
+    },
+    {
+      "start_seconds": 896,
+      "end_seconds": 914,
+      "voiceover_text": "Shizuka sprouts rabbit ears. Rentarou touches one and she nearly detonates from embarrassment, hiding behind her phone. Kusuri's side effects are getting louder by the hour.",
+      "keywords": [
+        {
+          "word": "rabbit",
+          "color": "#B07CFF"
+        },
+        {
+          "word": "detonates",
+          "color": "#FF3B3B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 955,
+      "end_seconds": 976,
+      "voiceover_text": "Nano's hair wraps around Rentarou like rope and he is helpless. Behind them, Kusuri is already cradling a fistful of fresh green tubes. She has learned absolutely nothing from any of this.",
+      "keywords": [
+        {
+          "word": "helpless",
+          "color": "#7AA7FF"
+        },
+        {
+          "word": "fistful",
+          "color": "#3BD16F"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano7-p4"
+}
