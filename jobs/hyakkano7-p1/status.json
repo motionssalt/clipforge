@@ -2,13 +2,27 @@
   "version": 1,
   "job_id": "hyakkano7-p1",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 1 queued for Stage B.",
-  "updated_at_epoch": 1790365609,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1790365626,
   "series": {
     "enabled": true,
     "series_id": "hyakkano7",
     "part": 1,
     "start_seconds": 0
-  }
+  },
+  "assets": {},
+  "run": {
+    "workflow_run_id": 36181762981,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/36181762981",
+    "code_ref": "52741f563b9d0f36b3986cdacbf7ac944ee95f4e"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "release_tag": "clipforge-hyakkano7-p1",
+  "release_url": "",
+  "expires_at_epoch": 1790408826
 }
