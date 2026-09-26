@@ -2,14 +2,15 @@
   "version": 1,
   "job_id": "manual-1790102858883",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 6 of 6 running (hyakkano6-p6) — chained from part 5's completion.",
-  "updated_at_epoch": 1790196488,
+  "state": "complete",
+  "message": "Super Series complete \u2014 all 6 parts rendered.",
+  "updated_at_epoch": 1790382587,
   "series": {
     "enabled": true,
     "series_id": "hyakkano6",
     "part": 6,
-    "start_seconds": 0
+    "start_seconds": 0,
+    "is_final": true
   },
   "active_part_job_id": "hyakkano6-p6",
   "super_stage_a_complete": true
