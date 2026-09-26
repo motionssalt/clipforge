@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "hyakkano8-p5",
+  "saved_at_epoch": 1790408179,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1790383363141/source.torrent",
+    "torrent_file_index": "8"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano8",
+    "source_job_id": "manual-1790383363141",
+    "part": 5,
+    "start_seconds": 900,
+    "context": "Prior events (Part 1): Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed.\nPrior events (Part 2): Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed.\nPrior events (Part 3): Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed.\nPrior events (Part 4): Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+  },
+  "music": {
+    "ref": "audio-library/Dj_Quads_-_its_near_[No_Copyright_Music].m4a",
+    "source": "explicit_library"
+  }
+}
