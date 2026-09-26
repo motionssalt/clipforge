@@ -346,6 +346,12 @@ def series_is_complete(root: str | Path, series_id: str, *, now: int | None = No
             saw_final = True
     if saw_final:
         return True
+        # Priority 2: reaching this point means EVERY part is terminal. A real terminal
+        # state on every part is the strongest completion signal there is; a missing
+        # is_final marker (an author omitted it, or an anchor already closed/reaped) must
+        # NOT hold a finished series forever. Reap the finished series now. The
+        # quiet-grace below remains only as a guard for a not-yet-terminal part.
+        return True
     # No is_final-marked part: reap only once the whole series has been
     # terminal AND quiet for the full grace window.
     if now is None:

@@ -59,14 +59,30 @@ if (outcome.action === 'done') {
   // produced. Its status.json is repurposed during the run to track parts; now
   // that every part is complete, write the anchor's OWN terminal state so the
   // app/dashboard stop showing the anchor as ongoing forever.
-  await putJson(credentials, credentials.repo, STATUS_PATH(anchorId), {
-    version: 1, job_id: anchorId, mode: 'manual', state: 'complete',
-    message: `Super Series complete — all ${state.total_parts} parts rendered.`,
-    updated_at_epoch: now(),
-    series: { enabled: true, series_id: state.series_id, part: state.total_parts, start_seconds: 0, is_final: true },
-    super_stage_a_complete: true,
-  }, `clipforge: super series ${state.series_id} complete — anchor ${anchorId} closed`).catch((e) =>
-    console.log(`[chain] anchor final status update failed (non-fatal): ${e && e.message}`));
+  // Priority 1 root-cause fix: the anchor TERMINAL close-out is the single write that
+  // ends the phantom "ongoing" row. The old .catch() swallowed a transient failure and
+  // left the anchor at stage_b_queued forever (personating the last part) — and because
+  // the anchor shares the series_id with a non-terminal state, cleanup's series
+  // protection then pinned every part (Priority 2). Retry (transient 409/5xx/network),
+  // then FAIL LOUDLY so the run is visibly retriable instead of silent-forever.
+  let closed = false, lastErr = null;
+  for (let attempt = 1; attempt <= 3 && !closed; attempt += 1) {
+    try {
+      await putJson(credentials, credentials.repo, STATUS_PATH(anchorId), {
+        version: 1, job_id: anchorId, mode: 'manual', state: 'complete',
+        message: `Super Series complete — all ${state.total_parts} parts rendered.`,
+        updated_at_epoch: now(),
+        series: { enabled: true, series_id: state.series_id, part: state.total_parts, start_seconds: 0, is_final: true },
+        super_stage_a_complete: true,
+      }, `clipforge: super series ${state.series_id} complete — anchor ${anchorId} closed`);
+      closed = true;
+    } catch (e) { lastErr = e; console.log(`[chain] anchor close-out attempt ${attempt} failed: ${e && e.message}`); }
+  }
+  if (!closed) {
+    console.error(`[chain] FATAL: could not write anchor ${anchorId} terminal status after 3 attempts: ${lastErr && lastErr.message}. Re-run super-chain.yml to close the series.`);
+    process.exit(1);
+  }
+  console.log(`[chain] anchor ${anchorId} closed with a terminal status (state=complete, is_final=true).`);
   process.exit(0);
 }
 if (outcome.action !== 'queue') { console.log(`[chain] action=${outcome.action} — nothing to dispatch.`); process.exit(0); }
@@ -140,7 +156,7 @@ await putJson(credentials, credentials.repo, STATUS_PATH(anchorId), {
   updated_at_epoch: now(),
   series: {
     enabled: true, series_id: state.series_id, part: outcome.part,
-    start_seconds: 0,
+    start_seconds: 0, is_final: false,
   },
   active_part_job_id: outcome.jobId,
   // Issue 2 fix: explicit marker that the anchor's Stage A genuinely finished
