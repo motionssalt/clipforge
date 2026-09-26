@@ -1,0 +1,46 @@
+{
+  "title": "One Voice Cuts Through The Chaos — Part 3",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#animeedit",
+    "#romcom",
+    "#kusuri",
+    "#rentarou"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends",
+    "the 100 girlfriends who really love you",
+    "anime recap",
+    "anime edit",
+    "romcom anime",
+    "kusuri yakuzen",
+    "rentarou aijou",
+    "anime episode 8"
+  ],
+  "series": {
+    "series_id": "hyakkano8",
+    "part": 3,
+    "start_seconds": 520,
+    "end_seconds": 700,
+    "is_final": false,
+    "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+  },
+  "segments": [
+    {
+      "start_seconds": 588,
+      "end_seconds": 616,
+      "voiceover_text": "By the window, Rentarou finally breaks. He laughs, he cries, he rubs his eyes like a kid, because one voice cut straight through the chaos and simply told him that she believed in him, no matter how impossible his situation looked from the outside."
+    },
+    {
+      "start_seconds": 616,
+      "end_seconds": 640,
+      "voiceover_text": "That is the whole trick of being loved by a hundred girls. The noise is enormous, but the thing that saves him is one plain sentence, said by someone who trusts him completely, without conditions, without asking him to choose between anyone at all."
+    }
+  ],
+  "job_id": "hyakkano8-p3"
+}
