@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1790383363141",
+  "series_id": "hyakkano8",
+  "total_parts": 6,
+  "video_duration_seconds": 1422,
+  "plan": {
+    "version": 2,
+    "series_id": "hyakkano8",
+    "video_duration_seconds": 1422,
+    "target_total_duration_seconds": 30,
+    "title": "The 100 Girlfriends Love Potion Disaster",
+    "hashtags": [
+      "#hyakkano",
+      "#100girlfriends",
+      "#anime",
+      "#animeedit",
+      "#romcom",
+      "#kusuri",
+      "#rentarou"
+    ],
+    "youtube_tags": [
+      "hyakkano",
+      "100 girlfriends",
+      "the 100 girlfriends who really love you",
+      "anime recap",
+      "anime edit",
+      "romcom anime",
+      "kusuri yakuzen",
+      "rentarou aijou",
+      "anime episode 8"
+    ],
+    "parts": [
+      {
+        "title": "The Day The Whole School Fell In Love",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#animeedit",
+          "#romcom",
+          "#kusuri",
+          "#rentarou"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "the 100 girlfriends who really love you",
+          "anime recap",
+          "anime edit",
+          "romcom anime",
+          "kusuri yakuzen",
+          "rentarou aijou",
+          "anime episode 8"
+        ],
+        "series": {
+          "series_id": "hyakkano8",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 360,
+          "is_final": false,
+          "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+        },
+        "segments": [
+          {
+            "start_seconds": 300,
+            "end_seconds": 336,
+            "voiceover_text": "A whole school quietly loses its mind, and Rentarou is the only one who notices. He sprints down a sunlit corridor and finds Shizuka crumpled on the floor, barely able to lift her head. Something in the air has changed. Every girl he passes is burning up, and nobody can explain why."
+          },
+          {
+            "start_seconds": 336,
+            "end_seconds": 360,
+            "voiceover_text": "He kneels, a hand on her back, and the truth lands hard: this is not a fever. Someone has dosed the entire campus with a love drug, and the first casualty is the smallest girl he knows. And it is only getting worse by the minute."
+          }
+        ]
+      },
+      {
+        "title": "The Kiss That Wasn't Real",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#animeedit",
+          "#romcom",
+          "#kusuri",
+          "#rentarou"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "the 100 girlfriends who really love you",
+          "anime recap",
+          "anime edit",
+          "romcom anime",
+          "kusuri yakuzen",
+          "rentarou aijou",
+          "anime episode 8"
+        ],
+        "series": {
+          "series_id": "hyakkano8",
+          "part": 2,
+          "start_seconds": 360,
+          "end_seconds": 520,
+          "is_final": false,
+          "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+        },
+        "segments": [
+          {
+            "start_seconds": 384,
+            "end_seconds": 420,
+            "voiceover_text": "In the nurse's office the curtains glow orange and the room has gone far too quiet. A dark-haired classmate leans over him, eyes half closed, and kisses him before he can speak. Rentarou freezes. This is not her. This is the drug talking, wearing her face."
+          },
+          {
+            "start_seconds": 420,
+            "end_seconds": 448,
+            "voiceover_text": "All he can manage is an apology to Shizuka, somewhere behind him, still burning up. He wanted every one of these feelings to be real. Instead he has to refuse all of them, one after another, while the whole building burns with it."
+          }
+        ]
+      },
+      {
+        "title": "One Voice Cuts Through The Chaos",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#animeedit",
+          "#romcom",
+          "#kusuri",
+          "#rentarou"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "the 100 girlfriends who really love you",
+          "anime recap",
+          "anime edit",
+          "romcom anime",
+          "kusuri yakuzen",
+          "rentarou aijou",
+          "anime episode 8"
+        ],
+        "series": {
+          "series_id": "hyakkano8",
+          "part": 3,
+          "start_seconds": 520,
+          "end_seconds": 700,
+          "is_final": false,
+          "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+        },
+        "segments": [
+          {
+            "start_seconds": 588,
+            "end_seconds": 616,
+            "voiceover_text": "By the window, Rentarou finally breaks. He laughs, he cries, he rubs his eyes like a kid, because one voice cut straight through the chaos and simply told him that she believed in him, no matter how impossible his situation looked from the outside."
+          },
+          {
+            "start_seconds": 616,
+            "end_seconds": 640,
+            "voiceover_text": "That is the whole trick of being loved by a hundred girls. The noise is enormous, but the thing that saves him is one plain sentence, said by someone who trusts him completely, without conditions, without asking him to choose between anyone at all."
+          }
+        ]
+      },
+      {
+        "title": "The Genius Who Poisoned Everyone",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#animeedit",
+          "#romcom",
+          "#kusuri",
+          "#rentarou"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "the 100 girlfriends who really love you",
+          "anime recap",
+          "anime edit",
+          "romcom anime",
+          "kusuri yakuzen",
+          "rentarou aijou",
+          "anime episode 8"
+        ],
+        "series": {
+          "series_id": "hyakkano8",
+          "part": 4,
+          "start_seconds": 700,
+          "end_seconds": 900,
+          "is_final": false,
+          "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+        },
+        "segments": [
+          {
+            "start_seconds": 792,
+            "end_seconds": 828,
+            "voiceover_text": "Then the source steps out of the dark. A tiny red-haired girl in a lab coat, green eyes shining, a bottle of her own invention in her hands. The genius chemist who brewed the potion, and never once stopped to consider what it would actually do to people."
+          },
+          {
+            "start_seconds": 828,
+            "end_seconds": 860,
+            "voiceover_text": "He asks her to say it again. She does, cheerfully, without a trace of guilt. She only wanted to be noticed by him, so she drugged an entire school to make it happen, and she still cannot see the problem with any of it."
+          }
+        ]
+      },
+      {
+        "title": "Hunted Through A Dark School",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#animeedit",
+          "#romcom",
+          "#kusuri",
+          "#rentarou"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "the 100 girlfriends who really love you",
+          "anime recap",
+          "anime edit",
+          "romcom anime",
+          "kusuri yakuzen",
+          "rentarou aijou",
+          "anime episode 8"
+        ],
+        "series": {
+          "series_id": "hyakkano8",
+          "part": 5,
+          "start_seconds": 900,
+          "end_seconds": 1150,
+          "is_final": false,
+          "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+        },
+        "segments": [
+          {
+            "start_seconds": 924,
+            "end_seconds": 960,
+            "voiceover_text": "Night falls and the hallway turns into a hunting ground. Rentarou presses himself flat against a classroom door, sweating, listening. Footsteps in the corridor. Then a face in the dark, pink light burning in one eye, smiling at him with absolutely nobody home behind it."
+          },
+          {
+            "start_seconds": 960,
+            "end_seconds": 996,
+            "voiceover_text": "So he runs. The drug has no limiter and no off switch, and the only antidote in the world exists inside the head of the girl who started all of this, and she is still skipping around campus enjoying the results."
+          }
+        ]
+      },
+      {
+        "title": "She Forgave Herself Instantly",
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#animeedit",
+          "#romcom",
+          "#kusuri",
+          "#rentarou"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "the 100 girlfriends who really love you",
+          "anime recap",
+          "anime edit",
+          "romcom anime",
+          "kusuri yakuzen",
+          "rentarou aijou",
+          "anime episode 8"
+        ],
+        "series": {
+          "series_id": "hyakkano8",
+          "part": 6,
+          "start_seconds": 1150,
+          "end_seconds": 1422,
+          "is_final": true,
+          "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+        },
+        "segments": [
+          {
+            "start_seconds": 1254,
+            "end_seconds": 1290,
+            "voiceover_text": "Morning, and the corridor is gold again. Beside him stands the same tiny chemist, cheeks red, eyes shut, already forgiven. He never got an apology worth the damage she caused. He made room for her in his life anyway, because that is simply who he is."
+          },
+          {
+            "start_seconds": 1290,
+            "end_seconds": 1320,
+            "voiceover_text": "So she does the only thing she knows how to do. She grins, lifts two fresh beakers, and starts brewing all over again. Loving this boy was never going to be safe. Part of him already knew that, and he stayed anyway."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
