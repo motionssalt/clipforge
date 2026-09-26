@@ -1,0 +1,46 @@
+{
+  "title": "The Day The Whole School Fell In Love — Part 1",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#animeedit",
+    "#romcom",
+    "#kusuri",
+    "#rentarou"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends",
+    "the 100 girlfriends who really love you",
+    "anime recap",
+    "anime edit",
+    "romcom anime",
+    "kusuri yakuzen",
+    "rentarou aijou",
+    "anime episode 8"
+  ],
+  "series": {
+    "series_id": "hyakkano8",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 360,
+    "is_final": false,
+    "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+  },
+  "segments": [
+    {
+      "start_seconds": 300,
+      "end_seconds": 336,
+      "voiceover_text": "A whole school quietly loses its mind, and Rentarou is the only one who notices. He sprints down a sunlit corridor and finds Shizuka crumpled on the floor, barely able to lift her head. Something in the air has changed. Every girl he passes is burning up, and nobody can explain why."
+    },
+    {
+      "start_seconds": 336,
+      "end_seconds": 360,
+      "voiceover_text": "He kneels, a hand on her back, and the truth lands hard: this is not a fever. Someone has dosed the entire campus with a love drug, and the first casualty is the smallest girl he knows. And it is only getting worse by the minute."
+    }
+  ],
+  "job_id": "hyakkano8-p1"
+}
