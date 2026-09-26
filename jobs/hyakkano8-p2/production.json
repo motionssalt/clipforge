@@ -1,0 +1,46 @@
+{
+  "title": "The Kiss That Wasn't Real — Part 2",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#animeedit",
+    "#romcom",
+    "#kusuri",
+    "#rentarou"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends",
+    "the 100 girlfriends who really love you",
+    "anime recap",
+    "anime edit",
+    "romcom anime",
+    "kusuri yakuzen",
+    "rentarou aijou",
+    "anime episode 8"
+  ],
+  "series": {
+    "series_id": "hyakkano8",
+    "part": 2,
+    "start_seconds": 360,
+    "end_seconds": 520,
+    "is_final": false,
+    "summary": "Episode 8: a genius chemist's love drug floods the school, Rentarou has to survive a campus of drugged girls, and the girl who caused it just wants to be noticed."
+  },
+  "segments": [
+    {
+      "start_seconds": 384,
+      "end_seconds": 420,
+      "voiceover_text": "In the nurse's office the curtains glow orange and the room has gone far too quiet. A dark-haired classmate leans over him, eyes half closed, and kisses him before he can speak. Rentarou freezes. This is not her. This is the drug talking, wearing her face."
+    },
+    {
+      "start_seconds": 420,
+      "end_seconds": 448,
+      "voiceover_text": "All he can manage is an apology to Shizuka, somewhere behind him, still burning up. He wanted every one of these feelings to be real. Instead he has to refuse all of them, one after another, while the whole building burns with it."
+    }
+  ],
+  "job_id": "hyakkano8-p2"
+}
