@@ -182,6 +182,13 @@ export function sliceSuperPart(document, partIndex, jobId) {
   const part = JSON.parse(JSON.stringify(source));
   const series = isPlainObject(part.series) ? part.series : {};
   series.part = partIndex + 1;
+  // Re-stamp is_final POSITIONALLY: the last part of the super-plan is the
+  // final one. A plan whose last part is not marked is_final (e.g. an author
+  // omitted the marker — hyakkano7, final part 5 sliced with is_final=false)
+  // used to spawn a final part with is_final=false, which made cleanup's
+  // bug-66 guard protect the whole finished series forever (Priority 2). The
+  // positional number is the single source of truth, same as `part` above.
+  series.is_final = partIndex === document.parts.length - 1;
   part.series = series;
   part.job_id = String(jobId || '');
   // feature-01: guarantee the rendered title banner carries "Part N",
