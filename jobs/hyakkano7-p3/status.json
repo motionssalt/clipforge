@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1790367442,
+  "updated_at_epoch": 1790495320,
   "series": {
     "enabled": true,
     "series_id": "hyakkano7",
@@ -24,12 +24,12 @@
     "code_ref": "71c5a795e6a56bdbcd9623ad29420d70c48f3cb7"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "published",
     "posts": [
       {
-        "post_id": "6ab6d6d07383979b44ffb7c0",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-27T06:00:00.000Z",
+        "post_id": "6ab8ca4546cea0f52cd36e2f",
+        "status": "published",
+        "scheduled_for": "2026-09-27T07:48:20.102Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -39,20 +39,22 @@
               "platform": "tiktok",
               "username": ".chimeravfx",
               "displayName": "CHIMERAVFX",
-              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=4a96e6a6&x-expires=1790485200&x-signature=lzTFGXYsVeox3oB%2BlCoomi1%2BsVc%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my2",
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=506f75a1&x-expires=1790654400&x-signature=TC2WdGdKKNrdLpOoGfR9UfLENnU%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my",
               "isActive": true,
               "profileId": "6a23f22dba1bebcaf7982ef3"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7690118159378188289",
+            "platformPostUrl": ""
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-auto-hyakkano7-p3-dafcf6fe-7c38-4f8e-a4f7-8a03bf2a40b8-tiktok"
+        "request_id": "android-hyakkano7-p3-publish_now-1790495286336-tiktok"
       },
       {
-        "post_id": "6ab6d6d162c4b6f943dce7e4",
-        "status": "scheduled",
-        "scheduled_for": "2026-09-27T06:00:00.000Z",
+        "post_id": "6ab8ca540a7a08dc9b41923f",
+        "status": "published",
+        "scheduled_for": "2026-09-27T07:48:35.035Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -66,14 +68,16 @@
               "isActive": true,
               "profileId": "6a23f22dba1bebcaf7982ef3"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "pmI9u8eF5Xo",
+            "platformPostUrl": "https://www.youtube.com/watch?v=pmI9u8eF5Xo"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-hyakkano7-p3-dafcf6fe-7c38-4f8e-a4f7-8a03bf2a40b8-youtube"
+        "request_id": "android-hyakkano7-p3-publish_now-1790495286336-youtube"
       }
     ],
-    "idempotency_key": "clipforge-auto-hyakkano7-p3-dafcf6fe-7c38-4f8e-a4f7-8a03bf2a40b8"
+    "idempotency_key": "android-hyakkano7-p3-publish_now-1790495286336"
   },
   "expires_at_epoch": 1790410051
 }
