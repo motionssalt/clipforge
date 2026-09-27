@@ -1,0 +1,513 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1790450221034",
+  "series_id": "hyakkano9",
+  "total_parts": 7,
+  "video_duration_seconds": 1421,
+  "plan": {
+    "version": 2,
+    "series_id": "hyakkano9",
+    "video_duration_seconds": 1421,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "title": "The Banners Nobody Wanted To See",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 249,
+          "is_final": false,
+          "summary": "Rentaro's morning with his girlfriends is effortless until the group reaches a crowded park and unfamiliar banners rise over the treeline."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#rentaroaijo",
+          "#hakari",
+          "#animeedit"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "rentaro aijo",
+          "hakari hanazono",
+          "anime recap",
+          "romcom anime"
+        ],
+        "segments": [
+          {
+            "start_seconds": 117,
+            "end_seconds": 133,
+            "voiceover_text": "Rentaro stretches awake in an empty room with a love meter pinned near a hundred, and the morning already looks too easy for him.",
+            "keywords": [
+              "rentaro",
+              "morning",
+              "love meter"
+            ]
+          },
+          {
+            "start_seconds": 174,
+            "end_seconds": 190,
+            "voiceover_text": "Breakfast arrives from every direction at once. Spoons, chopsticks, medicine, all aimed straight at his mouth. He barely chews anything himself.",
+            "keywords": [
+              "breakfast",
+              "girlfriends",
+              "feeding"
+            ]
+          },
+          {
+            "start_seconds": 190,
+            "end_seconds": 226,
+            "voiceover_text": "Then Shizuka goes quiet at the back of the group. Something about today unsettles her, and nobody slows down enough to ask.",
+            "keywords": [
+              "shizuka",
+              "worry",
+              "walking out"
+            ]
+          },
+          {
+            "start_seconds": 233,
+            "end_seconds": 249,
+            "voiceover_text": "At the park the crowd parts around them. Yellow banners climb over the treeline, carrying a family name nobody here wanted to read.",
+            "keywords": [
+              "park",
+              "crowd",
+              "banners"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "A Contest With Barely Any Rules",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 2,
+          "start_seconds": 249,
+          "end_seconds": 504,
+          "is_final": false,
+          "summary": "A contest for the right to stand beside Rentaro turns physical, and a towering woman in purple starts throwing grown men into the sky."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#animefight",
+          "#rentaroaijo",
+          "#animeedit",
+          "#romcom"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "anime contest",
+          "rentaro aijo",
+          "anime recap",
+          "romcom anime"
+        ],
+        "segments": [
+          {
+            "start_seconds": 253,
+            "end_seconds": 294,
+            "voiceover_text": "A contest is announced in front of the whole crowd, and the rules are barely rules. The winner gets to stand beside Rentaro.",
+            "keywords": [
+              "contest",
+              "announcement",
+              "crowd"
+            ]
+          },
+          {
+            "start_seconds": 342,
+            "end_seconds": 383,
+            "voiceover_text": "One woman steps out in purple, arms bare, braid swinging, grinning far too wide. She did not come here to play anything gentle.",
+            "keywords": [
+              "challenger",
+              "purple",
+              "grin"
+            ]
+          },
+          {
+            "start_seconds": 387,
+            "end_seconds": 421,
+            "voiceover_text": "She lifts a grown man off the grass and throws him. He spirals up past the clouds until only his red coat is left.",
+            "keywords": [
+              "throw",
+              "sky",
+              "power"
+            ]
+          },
+          {
+            "start_seconds": 425,
+            "end_seconds": 456,
+            "voiceover_text": "A girlfriend catches that grip and holds it. Hands lock, knuckles whiten, and neither one gives a single inch on the open field.",
+            "keywords": [
+              "grapple",
+              "standoff",
+              "hands"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Hakari Steps Into The Light",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 3,
+          "start_seconds": 504,
+          "end_seconds": 764,
+          "is_final": false,
+          "summary": "The chaos collapses into comedy, then Hakari takes the center of the crowd and her bright smile starts drifting somewhere far away."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#hakarihanazono",
+          "#animeedit",
+          "#anime",
+          "#romcom"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "hakari hanazono",
+          "anime recap",
+          "romcom anime",
+          "anime moments"
+        ],
+        "segments": [
+          {
+            "start_seconds": 516,
+            "end_seconds": 550,
+            "voiceover_text": "The whole competition dissolves into nonsense around him. Rentaro stares dead ahead, sweating quietly, and decides the safest move is saying nothing.",
+            "keywords": [
+              "chaos",
+              "rentaro",
+              "deadpan"
+            ]
+          },
+          {
+            "start_seconds": 562,
+            "end_seconds": 601,
+            "voiceover_text": "Then one voice cuts clean through it. Hakari steps forward with her fists at her chest, and every head in the crowd turns.",
+            "keywords": [
+              "hakari",
+              "speaking up",
+              "crowd"
+            ]
+          },
+          {
+            "start_seconds": 645,
+            "end_seconds": 695,
+            "voiceover_text": "A small girl drops flat onto the bricks, laughing so hard she cannot stand up. For a moment nothing here hurts anybody.",
+            "keywords": [
+              "laughing",
+              "warmth",
+              "kusuri"
+            ]
+          },
+          {
+            "start_seconds": 717,
+            "end_seconds": 763,
+            "voiceover_text": "Hakari gathers her in close and looks out across the hills. The smile stays put, but her eyes have already gone somewhere else.",
+            "keywords": [
+              "hakari",
+              "embrace",
+              "distant look"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Talking Through The Iron Gates",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 4,
+          "start_seconds": 764,
+          "end_seconds": 1021,
+          "is_final": false,
+          "summary": "Hakari's daydream of a wedding gives way to a silent mansion, a locked gate, and a phone call that ends when a hand lands on her shoulder."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#hakarihanazono",
+          "#animeedit",
+          "#anime",
+          "#weddingdress"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "hakari hanazono",
+          "wedding dress",
+          "anime recap",
+          "romcom anime"
+        ],
+        "segments": [
+          {
+            "start_seconds": 777,
+            "end_seconds": 822,
+            "voiceover_text": "She pictures a veil, falling petals, and a white suit standing beside her on a hilltop. The daydream is finished down to the guests.",
+            "keywords": [
+              "wedding",
+              "daydream",
+              "petals"
+            ]
+          },
+          {
+            "start_seconds": 827,
+            "end_seconds": 885,
+            "voiceover_text": "Reality is a hushed mansion instead. Rentaro shrugs on a jacket, walks an empty hallway, and a woman in black is already waiting.",
+            "keywords": [
+              "mansion",
+              "hallway",
+              "waiting"
+            ]
+          },
+          {
+            "start_seconds": 889,
+            "end_seconds": 942,
+            "voiceover_text": "He ends up outside tall iron gates, waving up from the pavement. Inside the glass, Hakari presses one finger to her lips.",
+            "keywords": [
+              "gate",
+              "waving",
+              "secret"
+            ]
+          },
+          {
+            "start_seconds": 956,
+            "end_seconds": 1021,
+            "voiceover_text": "They talk through the bars on their phones. Then a hand closes around her shoulder from behind, and her voice stops mid-sentence.",
+            "keywords": [
+              "phone call",
+              "shoulder",
+              "interrupted"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Her Mother Never Raises Her Voice",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 5,
+          "start_seconds": 1021,
+          "end_seconds": 1141,
+          "is_final": false,
+          "summary": "Hakari begs to be let out of her own house while her mother stays calmly seated and decides she will not leave until high school ends."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#hakarihanazono",
+          "#animedrama",
+          "#animeedit",
+          "#anime"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "hakari hanazono",
+          "anime drama",
+          "anime recap",
+          "romcom anime"
+        ],
+        "segments": [
+          {
+            "start_seconds": 1022,
+            "end_seconds": 1042,
+            "voiceover_text": "Hakari turns from the window and says she is going home now. The refusal reaches her before she even gets near the door.",
+            "keywords": [
+              "hakari",
+              "refusal",
+              "window"
+            ]
+          },
+          {
+            "start_seconds": 1042,
+            "end_seconds": 1071,
+            "voiceover_text": "Now she is begging out loud, held back by hands she cannot shake off, while a voice lists everything she is supposedly worth.",
+            "keywords": [
+              "begging",
+              "held back",
+              "confrontation"
+            ]
+          },
+          {
+            "start_seconds": 1071,
+            "end_seconds": 1105,
+            "voiceover_text": "Her mother stays seated through all of it, unhurried, one finger resting at her lip. She never raises her voice. She never needs to.",
+            "keywords": [
+              "mother",
+              "seated",
+              "calm"
+            ]
+          },
+          {
+            "start_seconds": 1105,
+            "end_seconds": 1141,
+            "voiceover_text": "Then she pulls Hakari's head against her chest and shuts her eyes. Hakari stays inside this house until high school is over.",
+            "keywords": [
+              "embrace",
+              "confinement",
+              "verdict"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Rentaro Breaks Against A Wall",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 6,
+          "start_seconds": 1141,
+          "end_seconds": 1258,
+          "is_final": false,
+          "summary": "Shut out of the house, Rentaro collapses against a wall, drowns in memories of Hakari, and by nightfall says something the others refuse to argue with."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#rentaroaijo",
+          "#animedrama",
+          "#animeedit",
+          "#anime"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "rentaro aijo",
+          "anime drama",
+          "anime recap",
+          "romcom anime"
+        ],
+        "segments": [
+          {
+            "start_seconds": 1141,
+            "end_seconds": 1156,
+            "voiceover_text": "Rentaro hits the wall and folds over it. His palm flattens against the stone and the sound tears straight out of his chest.",
+            "keywords": [
+              "rentaro",
+              "collapse",
+              "wall"
+            ]
+          },
+          {
+            "start_seconds": 1156,
+            "end_seconds": 1180,
+            "voiceover_text": "Memories wash in white behind him. A child's hand inside his. A kiss. A photograph with every single one of them together.",
+            "keywords": [
+              "memories",
+              "flashback",
+              "photograph"
+            ]
+          },
+          {
+            "start_seconds": 1188,
+            "end_seconds": 1232,
+            "voiceover_text": "By nightfall he is upright again and saying it out loud. The others look up at him, and not one of them argues.",
+            "keywords": [
+              "night",
+              "resolve",
+              "girlfriends"
+            ]
+          },
+          {
+            "start_seconds": 1232,
+            "end_seconds": 1258,
+            "voiceover_text": "They gather under a single lamp in an empty playground, standing close, waiting for him to finish the sentence he just started.",
+            "keywords": [
+              "park",
+              "lamp",
+              "gathering"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Everyone Goes To Get Her Tonight",
+        "video_duration_seconds": 1421,
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hyakkano9",
+          "part": 7,
+          "start_seconds": 1258,
+          "end_seconds": 1421,
+          "is_final": true,
+          "summary": "Rentaro states the plan plainly in the dark playground, the girlfriends agree without argument, and the whole group sets off toward the gates for Hakari."
+        },
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#rentaroaijo",
+          "#hakarihanazono",
+          "#animeedit",
+          "#anime"
+        ],
+        "youtube_tags": [
+          "hyakkano",
+          "100 girlfriends",
+          "rentaro aijo",
+          "hakari hanazono",
+          "anime recap",
+          "romcom anime"
+        ],
+        "segments": [
+          {
+            "start_seconds": 1260,
+            "end_seconds": 1294,
+            "voiceover_text": "Rentaro says it plainly under the lamp. Everyone here loves Hakari, so everyone here goes tonight and brings her out of that house.",
+            "keywords": [
+              "plan",
+              "declaration",
+              "night"
+            ]
+          },
+          {
+            "start_seconds": 1294,
+            "end_seconds": 1313,
+            "voiceover_text": "Eyes go wide in the dark around him. Nobody argues with it, and a striped phone case tightens inside two very small hands.",
+            "keywords": [
+              "reaction",
+              "wide eyes",
+              "phone"
+            ]
+          },
+          {
+            "start_seconds": 1313,
+            "end_seconds": 1330,
+            "voiceover_text": "One of them reaches over and takes another's hand without saying a word. That quiet grip is the entire agreement between them.",
+            "keywords": [
+              "hands",
+              "agreement",
+              "quiet"
+            ]
+          },
+          {
+            "start_seconds": 1330,
+            "end_seconds": 1348,
+            "voiceover_text": "Then Rentaro turns toward the gates, and every girlfriend moves out of the lamplight behind him, straight down the road to her house.",
+            "keywords": [
+              "departure",
+              "gates",
+              "together"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
