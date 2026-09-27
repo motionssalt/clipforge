@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hyakkano9-p7",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1790494298,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1790494875,
   "series": {
     "enabled": true,
     "series_id": "hyakkano9",
@@ -13,12 +13,15 @@
     "is_final": true
   },
   "release_tag": "clipforge-hyakkano9-p7",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano9-p7",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano9-p7/clipforge-hyakkano9-p7-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano9-p7/final.mp4"
+  },
   "run": {
     "workflow_run_id": 36303236786,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/36303236786",
-    "code_ref": "8db0890d3772118f7e13ddbaebe046314826194b"
+    "code_ref": "4dbbf583e2bb489daf678472c22e21496e2ea5d6"
   },
   "publishing": {
     "status": "not_requested",
