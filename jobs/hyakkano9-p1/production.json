@@ -1,0 +1,72 @@
+{
+  "title": "The Banners Nobody Wanted To See — Part 1",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hyakkano9",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 249,
+    "is_final": false,
+    "summary": "Rentaro's morning with his girlfriends is effortless until the group reaches a crowded park and unfamiliar banners rise over the treeline."
+  },
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#rentaroaijo",
+    "#hakari",
+    "#animeedit"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends",
+    "rentaro aijo",
+    "hakari hanazono",
+    "anime recap",
+    "romcom anime"
+  ],
+  "segments": [
+    {
+      "start_seconds": 117,
+      "end_seconds": 133,
+      "voiceover_text": "Rentaro stretches awake in an empty room with a love meter pinned near a hundred, and the morning already looks too easy for him.",
+      "keywords": [
+        "rentaro",
+        "morning",
+        "love meter"
+      ]
+    },
+    {
+      "start_seconds": 174,
+      "end_seconds": 190,
+      "voiceover_text": "Breakfast arrives from every direction at once. Spoons, chopsticks, medicine, all aimed straight at his mouth. He barely chews anything himself.",
+      "keywords": [
+        "breakfast",
+        "girlfriends",
+        "feeding"
+      ]
+    },
+    {
+      "start_seconds": 190,
+      "end_seconds": 226,
+      "voiceover_text": "Then Shizuka goes quiet at the back of the group. Something about today unsettles her, and nobody slows down enough to ask.",
+      "keywords": [
+        "shizuka",
+        "worry",
+        "walking out"
+      ]
+    },
+    {
+      "start_seconds": 233,
+      "end_seconds": 249,
+      "voiceover_text": "At the park the crowd parts around them. Yellow banners climb over the treeline, carrying a family name nobody here wanted to read.",
+      "keywords": [
+        "park",
+        "crowd",
+        "banners"
+      ]
+    }
+  ],
+  "job_id": "hyakkano9-p1"
+}
