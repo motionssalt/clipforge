@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "hyakkano9-p5",
+  "saved_at_epoch": 1790492128,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1790450221034/source.torrent",
+    "torrent_file_index": "9"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano9",
+    "source_job_id": "manual-1790450221034",
+    "part": 5,
+    "start_seconds": 1021,
+    "context": "Prior events (Part 1): Rentaro's morning with his girlfriends is effortless until the group reaches a crowded park and unfamiliar banners rise over the treeline.\nPrior events (Part 2): A contest for the right to stand beside Rentaro turns physical, and a towering woman in purple starts throwing grown men into the sky.\nPrior events (Part 3): The chaos collapses into comedy, then Hakari takes the center of the crowd and her bright smile starts drifting somewhere far away.\nPrior events (Part 4): Hakari's daydream of a wedding gives way to a silent mansion, a locked gate, and a phone call that ends when a hand lands on her shoulder."
+  },
+  "music": {
+    "ref": "audio-library/Dj_Quads_-_its_near_[No_Copyright_Music].m4a",
+    "source": "explicit_library"
+  }
+}
