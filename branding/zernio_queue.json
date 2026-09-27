@@ -1489,6 +1489,18 @@
         "6ab8b21281f3a2dc8def926e"
       ],
       "updated_at_epoch": 1790489106
+    },
+    {
+      "job_id": "hyakkano9-p2",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-09-28T18:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ab8b58dfb7dd52f2825343f",
+        "6ab8b58f3a57ee6937c22ac2"
+      ],
+      "updated_at_epoch": 1790489999
     }
   ]
 }
