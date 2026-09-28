@@ -1,0 +1,42 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "Hakari Says the Cruelest Lie — Part 6",
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#hakari",
+    "#heartbreak",
+    "#plotwist"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "hyakkano",
+    "hakari hanazono",
+    "hakari rescue",
+    "anime reunion",
+    "hahari appears"
+  ],
+  "series": {
+    "series_id": "hyakkano10",
+    "part": 6,
+    "start_seconds": 942,
+    "end_seconds": 1069,
+    "is_final": false,
+    "summary": "The team finally reaches Hakari's room, but their reunion lasts seconds before her mother appears — and Hakari protects everyone by pretending to choose exile with her mother."
+  },
+  "segments": [
+    {
+      "start_seconds": 966,
+      "end_seconds": 1032,
+      "voiceover_text": "One last patrol sweeps the hedges — the girls freeze flat in the grass until the light passes. Then a door slides open, and there she is: Hakari, alone on her bed, eyes red. The reunion lasts three seconds. Then someone else enters the room."
+    },
+    {
+      "start_seconds": 1032,
+      "end_seconds": 1069,
+      "voiceover_text": "It is Hakari's mother. And Hakari twists the knife herself: she says she is fine, tells Rentarou not to give up, and claims she will leave with her mother forever. Her hands press against the glass between them, sobbing. This goodbye is a lie — and it is destroying her. Her mother is already waiting on her throne."
+    }
+  ],
+  "job_id": "hyakkano10-p6"
+}
