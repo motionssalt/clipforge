@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hyakkano10-p9",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 9 of 9 — Stage B dispatched (chained from part 8's completion).",
-  "updated_at_epoch": 1790605047,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1790605061,
   "series": {
     "enabled": true,
     "series_id": "hyakkano10",
@@ -13,5 +13,17 @@
     "is_final": true
   },
   "release_tag": "clipforge-hyakkano10-p9",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano10-p9"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano10-p9",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 36434870847,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/36434870847",
+    "code_ref": "193a7b17139abce09ad8f866bbe2419cd7ce6fe3"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1790648261
 }
