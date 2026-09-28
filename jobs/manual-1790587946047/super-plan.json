@@ -1,0 +1,395 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1790587946047",
+  "series_id": "hyakkano10",
+  "total_parts": 9,
+  "video_duration_seconds": 1422,
+  "plan": {
+    "version": 2,
+    "series_id": "hyakkano10",
+    "video_duration_seconds": 1422,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "Five Girls Storm a Mansion at Midnight",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#rentarou",
+          "#rescuemission",
+          "#animemoments"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "rentarou aijou",
+          "hakari rescue",
+          "anime mansion infiltration",
+          "romance anime"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 161,
+          "is_final": false,
+          "summary": "Rentarou gathers all four of Hakari's fellow girlfriends at midnight and leads them over the walls of the Hanazono mansion to take Hakari back."
+        },
+        "segments": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 36,
+            "voiceover_text": "One boy. Five girls charging into the night behind him. And a mother watching from her mansion window, certain she has already won. Hakari's love is about to be tested like never before."
+          },
+          {
+            "start_seconds": 108,
+            "end_seconds": 145,
+            "voiceover_text": "Rentarou's eyes burn white with desperation. By midnight he has gathered Karane, Shizuka, Nano and Kusuri at the playground. Every girlfriend answered the call. They race to the Hanazono mansion, its iron fence towering over them. Nobody hesitates."
+          },
+          {
+            "start_seconds": 145,
+            "end_seconds": 161,
+            "voiceover_text": "Rentarou drops inside first, then lifts each girl over the spikes. Five hands stack into one circle on the cold tiles. But the mansion is already watching — what waits for them in the dark?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "One Grumpy Cat Almost Ruins Everything",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#comedy",
+          "#infiltration",
+          "#karane"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "mansion infiltration",
+          "karane inda",
+          "anime comedy",
+          "sneaking mission"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 2,
+          "start_seconds": 161,
+          "end_seconds": 326,
+          "is_final": false,
+          "summary": "The rescue team's stealth mission nearly collapses when the mansion's pet cat bolts and walks straight into a guard's flashlight, before Nano picks the lock and the team slips inside."
+        },
+        "segments": [
+          {
+            "start_seconds": 161,
+            "end_seconds": 247,
+            "voiceover_text": "The plan almost dies immediately — the mansion's cat bolts, and Karane faceplants chasing it. Worse, the cat strolls straight into a guard's flashlight. But he just crouches down to pet it, completely fooled. The team slips past the hedges, hearts pounding."
+          },
+          {
+            "start_seconds": 252,
+            "end_seconds": 326,
+            "voiceover_text": "Deeper in the grounds, Nano spreads her arms as a human shield while the others huddle in the bushes. At the mansion door, her lockpick turns the deadbolt — open. Inside the dark hallway, Rentarou gently takes her hand. A quiet promise: nobody gets left behind tonight. They have no idea the mansion's deadliest guard walks on four legs."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "Shizuka Sacrifices Herself to a Giant Dog",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#shizuka",
+          "#guarddog",
+          "#sacrifice"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "shizuka yoshimoto",
+          "guard dog anime",
+          "kusuri potion",
+          "anime sacrifice"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 3,
+          "start_seconds": 326,
+          "end_seconds": 561,
+          "is_final": false,
+          "summary": "Tiny Shizuka faces down a hound the size of a horse and offers herself as the sacrifice, then beats the beast by drinking Kusuri's sleeping potion herself."
+        },
+        "segments": [
+          {
+            "start_seconds": 326,
+            "end_seconds": 349,
+            "voiceover_text": "The team swears to take this seriously — tonight they save Hakari's light. Nano remembers her flustered and kind at the waterpark. That is who is waiting for them."
+          },
+          {
+            "start_seconds": 360,
+            "end_seconds": 433,
+            "voiceover_text": "Then the mansion's real guard appears: a hound the size of a horse, towering over tiny Shizuka. She is terrified. Still, she bows flat and offers herself as the sacrifice, tears shining. The beast leans down toward her — gently."
+          },
+          {
+            "start_seconds": 496,
+            "end_seconds": 546,
+            "voiceover_text": "But the dog corners her again — no way out. So Shizuka pulls Kusuri's sleeping potion from her collar and drinks it herself. She drifts off smiling. And the worst trap still waits ahead, made of light."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "Nano Learns What Teammates Are For",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#nano",
+          "#friendship",
+          "#teamwork"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "nano eiai",
+          "karane inda",
+          "anime friendship",
+          "team members"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 4,
+          "start_seconds": 561,
+          "end_seconds": 749,
+          "is_final": false,
+          "summary": "While the guards fuss over the cat, the team finds a dropped airmail letter, and Karane confronts lone-wolf Nano about what friends on a team are actually for."
+        },
+        "segments": [
+          {
+            "start_seconds": 561,
+            "end_seconds": 641,
+            "voiceover_text": "The hallway patrol never spots them — the guards are too busy babying that same grumpy cat. Then the team finds a dropped airmail letter on the floor, sent from overseas. Whatever it says, it matters to this mansion."
+          },
+          {
+            "start_seconds": 664,
+            "end_seconds": 749,
+            "voiceover_text": "The letter reveals Nano's path — a top student bound for a university abroad, convinced she works best alone. Karane will not hear it. Friends who share everything are what make a team. You are going to be a good team too, she insists — and Nano's cool mask finally cracks. Good thing, too — because the next hallway aims a hundred red eyes straight at them."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "Tied Together Under a Laser Grid",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#karane",
+          "#lasertrap",
+          "#tsundere"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "laser hallway",
+          "rentarou and karane",
+          "tied together anime",
+          "karane crying"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 5,
+          "start_seconds": 749,
+          "end_seconds": 942,
+          "is_final": false,
+          "summary": "Rentarou and Karane crawl tied back-to-back beneath a web of security lasers, and halfway through Karane breaks down sobbing before her tsundere fire snaps her back."
+        },
+        "segments": [
+          {
+            "start_seconds": 749,
+            "end_seconds": 816,
+            "voiceover_text": "The next hallway is a trap — a web of glowing red security lasers from floor to ceiling. The only way through: Rentarou and Karane, tied back-to-back, sliding beneath the beams. Karane is mortified by the plan. She volunteers anyway."
+          },
+          {
+            "start_seconds": 816,
+            "end_seconds": 942,
+            "voiceover_text": "Inch by inch they crawl, Karane riding his back, laser beams kissing their hair. Halfway through, Karane breaks — sobbing for the friend waiting above them. Then she explodes at her own tears, furious at herself for doubting. That fire is exactly why they will make it. Now all that stands between them and Hakari is one last door."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "Hakari Says the Cruelest Lie",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#hakari",
+          "#heartbreak",
+          "#plotwist"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "hakari hanazono",
+          "hakari rescue",
+          "anime reunion",
+          "hahari appears"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 6,
+          "start_seconds": 942,
+          "end_seconds": 1069,
+          "is_final": false,
+          "summary": "The team finally reaches Hakari's room, but their reunion lasts seconds before her mother appears — and Hakari protects everyone by pretending to choose exile with her mother."
+        },
+        "segments": [
+          {
+            "start_seconds": 966,
+            "end_seconds": 1032,
+            "voiceover_text": "One last patrol sweeps the hedges — the girls freeze flat in the grass until the light passes. Then a door slides open, and there she is: Hakari, alone on her bed, eyes red. The reunion lasts three seconds. Then someone else enters the room."
+          },
+          {
+            "start_seconds": 1032,
+            "end_seconds": 1069,
+            "voiceover_text": "It is Hakari's mother. And Hakari twists the knife herself: she says she is fine, tells Rentarou not to give up, and claims she will leave with her mother forever. Her hands press against the glass between them, sobbing. This goodbye is a lie — and it is destroying her. Her mother is already waiting on her throne."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "Why Hakari's Mother Locked Her Away",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#hahari",
+          "#backstory",
+          "#tragedy"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "hahari hanazono",
+          "hahari backstory",
+          "anime mother",
+          "tragic past"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 7,
+          "start_seconds": 1069,
+          "end_seconds": 1213,
+          "is_final": false,
+          "summary": "Dragged before Hahari's throne, Rentarou stares her down, and the ice queen's past surfaces: first love, baby Hakari, and a grave at sunset that explains everything."
+        },
+        "segments": [
+          {
+            "start_seconds": 1069,
+            "end_seconds": 1141,
+            "voiceover_text": "Dragged before Hahari's throne, Rentarou does not beg. He stares her down with burning green eyes and demands Hakari's freedom. The queen of this mansion barely blinks. But when she sighs and closes her eyes, something buried flickers across her face."
+          },
+          {
+            "start_seconds": 1162,
+            "end_seconds": 1213,
+            "voiceover_text": "Years ago, Hahari loved someone too — rose petals, a first dance, a baby girl warm in her arms. Then a grave at sunset, and Hahari standing alone in black. Hakari became her whole world. That is exactly why she locked her away from everyone. So what happens when that frozen heart meets Rentarou's eyes?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "The Mother Falls for Her Daughter's Boyfriend",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#hahari",
+          "#soulmate",
+          "#plotwist"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "soulmate shock",
+          "hahari falls",
+          "rentarou zing",
+          "anime twist"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 8,
+          "start_seconds": 1213,
+          "end_seconds": 1330,
+          "is_final": false,
+          "summary": "Rentarou bows and begs for Hakari's happiness, and when his eyes meet Hahari's the soulmate shock hits her too — sixteen years of loneliness detonate in front of everyone."
+        },
+        "segments": [
+          {
+            "start_seconds": 1213,
+            "end_seconds": 1270,
+            "voiceover_text": "Back in the present, Rentarou bows until his forehead nearly touches the rug — begging for Hakari's happiness, not his own. Karane plants herself in front of him, blazing, ready to fight the entire mansion. Hahari finally leans forward to really look at the boy who walked through her walls."
+          },
+          {
+            "start_seconds": 1278,
+            "end_seconds": 1330,
+            "voiceover_text": "Then it happens. Their eyes meet — and the soulmate shock hits Hahari like lightning. Rentarou's destined connection... includes her. Sixteen years of loneliness detonate at once. The ice queen melts into a trembling, blushing, teary mess, right in front of everyone. And this shock does not just free Hakari — it rewrites the entire family."
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1422,
+        "target_total_duration_seconds": 30,
+        "title": "The Family That Refused to Break",
+        "hashtags": [
+          "#hyakkano",
+          "#100girlfriends",
+          "#anime",
+          "#family",
+          "#happyending",
+          "#harem"
+        ],
+        "youtube_tags": [
+          "100 girlfriends",
+          "hyakkano",
+          "rentarou family",
+          "anime ending",
+          "harem anime",
+          "hakari saved"
+        ],
+        "series": {
+          "series_id": "hyakkano10",
+          "part": 9,
+          "start_seconds": 1330,
+          "end_seconds": 1422,
+          "is_final": true,
+          "summary": "The destined bond turns Hakari's mother from enemy into family, and the night that nearly broke the Rentarou family ends with it bigger and stronger than ever."
+        },
+        "segments": [
+          {
+            "start_seconds": 1330,
+            "end_seconds": 1382,
+            "voiceover_text": "That single look changes everything. The mother who locked Hakari away now carries a destined bond of her own — with her daughter's boyfriend. The war for Hakari does not end in battle. It ends with the family growing by one very flustered queen."
+          },
+          {
+            "start_seconds": 1382,
+            "end_seconds": 1422,
+            "voiceover_text": "Because this was never about stealing a girl back. It is about a boy whose heart keeps making room — for Hakari, Karane, Shizuka, Nano, Kusuri, and now, unbelievably, Hahari too. One hundred girlfriends. And this wild night was truly, honestly only the beginning."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
