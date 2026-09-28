@@ -3,15 +3,15 @@
   "job_id": "manual-1790587946047",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 4 of 9 running (hyakkano10-p4) — chained from part 3's completion.",
-  "updated_at_epoch": 1790600227,
+  "message": "Super Series part 5 of 9 running (hyakkano10-p5) — chained from part 4's completion.",
+  "updated_at_epoch": 1790601169,
   "series": {
     "enabled": true,
     "series_id": "hyakkano10",
-    "part": 4,
+    "part": 5,
     "start_seconds": 0,
     "is_final": false
   },
-  "active_part_job_id": "hyakkano10-p4",
+  "active_part_job_id": "hyakkano10-p5",
   "super_stage_a_complete": true
 }
