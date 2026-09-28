@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "hyakkano10-p9",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 9 of 9 — Stage B dispatched (chained from part 8's completion).",
+  "updated_at_epoch": 1790605047,
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano10",
+    "part": 9,
+    "start_seconds": 1330,
+    "is_final": true
+  },
+  "release_tag": "clipforge-hyakkano10-p9",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano10-p9"
+}
