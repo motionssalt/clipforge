@@ -1,0 +1,42 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "One Grumpy Cat Almost Ruins Everything — Part 2",
+  "hashtags": [
+    "#hyakkano",
+    "#100girlfriends",
+    "#anime",
+    "#comedy",
+    "#infiltration",
+    "#karane"
+  ],
+  "youtube_tags": [
+    "100 girlfriends",
+    "hyakkano",
+    "mansion infiltration",
+    "karane inda",
+    "anime comedy",
+    "sneaking mission"
+  ],
+  "series": {
+    "series_id": "hyakkano10",
+    "part": 2,
+    "start_seconds": 161,
+    "end_seconds": 326,
+    "is_final": false,
+    "summary": "The rescue team's stealth mission nearly collapses when the mansion's pet cat bolts and walks straight into a guard's flashlight, before Nano picks the lock and the team slips inside."
+  },
+  "segments": [
+    {
+      "start_seconds": 161,
+      "end_seconds": 247,
+      "voiceover_text": "The plan almost dies immediately — the mansion's cat bolts, and Karane faceplants chasing it. Worse, the cat strolls straight into a guard's flashlight. But he just crouches down to pet it, completely fooled. The team slips past the hedges, hearts pounding."
+    },
+    {
+      "start_seconds": 252,
+      "end_seconds": 326,
+      "voiceover_text": "Deeper in the grounds, Nano spreads her arms as a human shield while the others huddle in the bushes. At the mansion door, her lockpick turns the deadbolt — open. Inside the dark hallway, Rentarou gently takes her hand. A quiet promise: nobody gets left behind tonight. They have no idea the mansion's deadliest guard walks on four legs."
+    }
+  ],
+  "job_id": "hyakkano10-p2"
+}
