@@ -1,0 +1,75 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "He Ran Past A Wall Of Guards — Part 2",
+  "hashtags": [
+    "#anime",
+    "#hyakkano",
+    "#100girlfriends",
+    "#animeromance",
+    "#romcom",
+    "#animeclips"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends who really love you",
+    "rentarou aijou",
+    "anime romcom",
+    "anime interrogation scene",
+    "anime lie detector",
+    "anime moments explained",
+    "romance anime recap"
+  ],
+  "series": {
+    "series_id": "hyakkano11",
+    "start_seconds": 330,
+    "end_seconds": 560,
+    "is_final": false,
+    "summary": "The interrogation grinds on and stops being funny. Cornered in the chair, Rentarou stops defending himself and starts pushing back, and later, on a dark swing set, the blonde girl admits she cannot keep waiting on him. Back in the mansion hall he makes a decision and bolts straight through her mother's security line.",
+    "part": 2
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 452,
+      "end_seconds": 494,
+      "voiceover_text": "The questions keep coming and the room stops laughing. He is pinned in that chair, arguing his own feelings out loud to strangers. Every answer becomes evidence against him. He is humiliated. He answers anyway, because folding here means losing her.",
+      "keywords": [
+        {
+          "word": "humiliated",
+          "color": "#E23B3B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 499,
+      "end_seconds": 519,
+      "voiceover_text": "Later, on a dark swing set, her bravado is gone. She says she cannot keep waiting for him. That is the part that hurts. She is not angry. She is tired.",
+      "keywords": [
+        {
+          "word": "waiting",
+          "color": "#6AA9FF"
+        },
+        {
+          "word": "tired",
+          "color": "#9B8BFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 520,
+      "end_seconds": 549,
+      "voiceover_text": "So he stops negotiating. Back in the hall, with her mother watching from the throne, he runs straight at a wall of guards. Hands grab him. He does not stop. He has to reach her first.",
+      "keywords": [
+        {
+          "word": "guards",
+          "color": "#E23B3B"
+        },
+        {
+          "word": "runs",
+          "color": "#FF8A3D"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano11-p2"
+}
