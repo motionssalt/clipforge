@@ -1,0 +1,64 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "The Promise She Made In The Rain — Part 3",
+  "hashtags": [
+    "#anime",
+    "#hyakkano",
+    "#100girlfriends",
+    "#animefeels",
+    "#romcom",
+    "#animeedit"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends who really love you",
+    "rentarou aijou",
+    "anime romcom",
+    "anime interrogation scene",
+    "anime lie detector",
+    "anime moments explained",
+    "romance anime recap"
+  ],
+  "series": {
+    "series_id": "hyakkano11",
+    "start_seconds": 560,
+    "end_seconds": 780,
+    "is_final": false,
+    "summary": "The story drops into the memory the whole mansion standoff is built on: a crimson-haired girl in tears promising she will always stay with him. The promise does not hold. She breaks away, and the night ends with her on the ground and him left waiting at a door he is not allowed through.",
+    "part": 3
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 652,
+      "end_seconds": 688,
+      "voiceover_text": "Then the story goes back. A crimson-haired girl, lit blue by the dark, is crying so hard she can barely speak. She says she loves him. She promises she will always be with him. It is the sweetest line in the episode and it lands like a warning.",
+      "keywords": [
+        {
+          "word": "promises",
+          "color": "#FF6FA5"
+        },
+        {
+          "word": "warning",
+          "color": "#E23B3B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 726,
+      "end_seconds": 764,
+      "voiceover_text": "Because promises like that get tested. She tells him it is fine, she will wait, and then she is gone from the frame and down on the pavement, tears streaking sideways. He is left at a doorway that is not his to open, told to clear off.",
+      "keywords": [
+        {
+          "word": "tested",
+          "color": "#E23B3B"
+        },
+        {
+          "word": "doorway",
+          "color": "#6AA9FF"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano11-p3"
+}
