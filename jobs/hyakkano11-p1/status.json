@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "job_id": "hyakkano11-p1",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 1 queued for Stage B.",
+  "updated_at_epoch": 1790830277,
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano11",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  }
+}
