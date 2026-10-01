@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hyakkano11-p1",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1790830430,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1790831451,
   "series": {
     "enabled": true,
     "series_id": "hyakkano11",
@@ -12,11 +12,14 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "assets": {},
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano11-p1/clipforge-hyakkano11-p1-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hyakkano11-p1/final.mp4"
+  },
   "run": {
     "workflow_run_id": 36817048226,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/36817048226",
-    "code_ref": "563815e97ed18b37821b5a1330e5fad6a4de9372"
+    "code_ref": "8a4fc9aa0bda5ceb176d48d475c088f3634c61f5"
   },
   "publishing": {
     "status": "not_requested",
