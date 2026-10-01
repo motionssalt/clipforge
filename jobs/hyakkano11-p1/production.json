@@ -1,0 +1,64 @@
+{
+  "video_duration_seconds": 1421,
+  "title": "They Put Him In An Interrogation Chair — Part 1",
+  "hashtags": [
+    "#anime",
+    "#hyakkano",
+    "#100girlfriends",
+    "#romcom",
+    "#animeedit",
+    "#animemoments"
+  ],
+  "youtube_tags": [
+    "hyakkano",
+    "100 girlfriends who really love you",
+    "rentarou aijou",
+    "anime romcom",
+    "anime interrogation scene",
+    "anime lie detector",
+    "anime moments explained",
+    "romance anime recap"
+  ],
+  "series": {
+    "series_id": "hyakkano11",
+    "start_seconds": 0,
+    "end_seconds": 330,
+    "is_final": false,
+    "summary": "Rentarou visits a girlfriend's enormous family mansion and discovers the visit is actually a test: a hidden interrogation chair rises out of the floor and he is strapped in under a lie-detector lamp, where the first question is whether he really likes her. He answers honestly, she screams that he is lying, and the machine keeps judging him.",
+    "part": 1
+  },
+  "target_total_duration_seconds": 30,
+  "segments": [
+    {
+      "start_seconds": 168,
+      "end_seconds": 202,
+      "voiceover_text": "The mansion floor splits open and something rises out of it. It is a red interrogation chair. Rentarou came here to meet a girlfriend's family. Nobody told him he would be the one on trial. The blonde girl with the green ribbons clings to his shoulder, scarlet to the ears, and says nothing useful at all.",
+      "keywords": [
+        {
+          "word": "interrogation",
+          "color": "#E23B3B"
+        },
+        {
+          "word": "trial",
+          "color": "#FF8A3D"
+        }
+      ]
+    },
+    {
+      "start_seconds": 285,
+      "end_seconds": 314,
+      "voiceover_text": "Strapped in, lamp glowing over his head, he gets the only question that matters. Does he like her. She panics and insists it is a perfectly normal thing to ask. He says yes. She shrieks that he is lying. The lamp does not blink. It never had to.",
+      "keywords": [
+        {
+          "word": "lying",
+          "color": "#E23B3B"
+        },
+        {
+          "word": "lamp",
+          "color": "#3DD68C"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano11-p1"
+}
