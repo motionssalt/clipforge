@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "hyakkano12-p4",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 4 of 8 — Stage B dispatched (chained from part 3's completion).",
+  "updated_at_epoch": 1790923461,
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano12",
+    "part": 4,
+    "start_seconds": 720,
+    "is_final": false
+  },
+  "release_tag": "clipforge-hyakkano12-p4",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hyakkano12-p4"
+}
