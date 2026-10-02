@@ -1,0 +1,77 @@
+{
+  "video_duration_seconds": 1422,
+  "title": "A Mother's Impossible Question About Love — Part 4",
+  "hashtags": [
+    "#hyakkano",
+    "#100kanojo",
+    "#anime",
+    "#hahari",
+    "#truelove",
+    "#animefeels"
+  ],
+  "youtube_tags": [
+    "hyakkano episode 12",
+    "hahari grief",
+    "real love question",
+    "rentarou vow",
+    "hakari father",
+    "emotional anime scene"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hyakkano12",
+    "part": 4,
+    "start_seconds": 720,
+    "end_seconds": 845,
+    "is_final": false,
+    "summary": "At the altar, Hahari asks why Rentarou faced her alone, then exposes the wound underneath: her first love died, and she has wondered ever since whether that love was real. Rentarou answers with a vow to believe and prove it."
+  },
+  "segments": [
+    {
+      "start_seconds": 724,
+      "end_seconds": 754,
+      "voiceover_text": "Hahari studies the boy in front of her. Why did he come alone? She lets him speak, but her loneliness leaks out first. She has been waiting so long.",
+      "keywords": [
+        {
+          "word": "alone",
+          "color": "#5C8AFF"
+        },
+        {
+          "word": "waiting",
+          "color": "#FF9F43"
+        }
+      ]
+    },
+    {
+      "start_seconds": 774,
+      "end_seconds": 809,
+      "voiceover_text": "Then the real question lands. If there had been two of him, one love would be a lie. So which was real? Her voice shakes. Sixteen years of grief sit underneath it. This is the wound that started everything.",
+      "keywords": [
+        {
+          "word": "lie",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "grief",
+          "color": "#5C8AFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 814,
+      "end_seconds": 845,
+      "voiceover_text": "Rentarou does not flinch. He takes her shoulders and answers. All he can do is believe the love is real. All he can do is love. So be patient, he says, and let him prove it.",
+      "keywords": [
+        {
+          "word": "real",
+          "color": "#FF5C8A"
+        },
+        {
+          "word": "love",
+          "color": "#FF5C8A"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano12-p4"
+}
