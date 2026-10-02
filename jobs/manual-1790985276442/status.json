@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "awaiting_torrent_selection",
-  "message": "Source has 14 video files — pick one to continue.",
+  "state": "error",
+  "message": "Stage A failed. See workflow run for logs: https://github.com/motionssalt/clipforge/actions/runs/37079769206",
   "created_at_epoch": 1790985276,
-  "updated_at_epoch": 1790985332,
+  "updated_at_epoch": 1790985342,
   "expires_at_epoch": 1791158076,
   "release_tag": "clipforge-manual-1790985276442",
   "release_url": "",
