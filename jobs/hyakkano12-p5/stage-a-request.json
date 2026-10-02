@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "hyakkano12-p5",
+  "saved_at_epoch": 1790924132,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1790840907285/source.torrent",
+    "torrent_file_index": "12"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hyakkano12",
+    "source_job_id": "manual-1790840907285",
+    "part": 5,
+    "start_seconds": 845,
+    "context": "Prior events (Part 1): Hakari breaks down in tears and tells Rentarou she cannot go on, right as her mother Hahari appears. Hahari has been quietly worrying for a long time and gently delivers her verdict on the relationship, while Hakari's small denial shows the first crack.\nPrior events (Part 2): With Hakari pulled away, the other girlfriends gather at the mansion. The mood swings from uneasy comedy to desperation, a girl collapses in the hallway, and the group realizes winning Hakari back will take an actual operation.\nPrior events (Part 3): Rentarou rallies the girls and wins an audience with Hahari. The meeting turns tense fast, and inside the family altar room he discovers the portrait of Hakari's late father smiling down at him.\nPrior events (Part 4): At the altar, Hahari asks why Rentarou faced her alone, then exposes the wound underneath: her first love died, and she has wondered ever since whether that love was real. Rentarou answers with a vow to believe and prove it."
+  },
+  "music": {
+    "ref": "audio-library/yung_kai_-_blue_(official_audio).m4a",
+    "source": "explicit_library"
+  }
+}
