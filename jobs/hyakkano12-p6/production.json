@@ -1,0 +1,73 @@
+{
+  "video_duration_seconds": 1422,
+  "title": "She Loves Him Too, Out Loud — Part 6",
+  "hashtags": [
+    "#hyakkano",
+    "#100kanojo",
+    "#anime",
+    "#kiss",
+    "#loveconfession",
+    "#animecouple"
+  ],
+  "youtube_tags": [
+    "hyakkano episode 12",
+    "rentarou kiss",
+    "hahari joins girlfriends",
+    "i love you too",
+    "anime kiss scene",
+    "100 girlfriends"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hyakkano12",
+    "part": 6,
+    "start_seconds": 930,
+    "end_seconds": 1090,
+    "is_final": false,
+    "summary": "Back with the girls, exhaustion and relief hit at once. Hahari formally asks to join them for a day, then tells Rentarou she loves him too in front of everyone, and this time nobody stops the kiss."
+  },
+  "segments": [
+    {
+      "start_seconds": 940,
+      "end_seconds": 972,
+      "voiceover_text": "Back with the others, the exhaustion hits all at once. Nothing feels real anymore. Someone is ready to sleep standing up. That is what fighting a mother all night does to a person.",
+      "keywords": [
+        {
+          "word": "exhaustion",
+          "color": "#5C8AFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 982,
+      "end_seconds": 1032,
+      "voiceover_text": "Then Hahari asks for something nobody expected. A meeting. Just for today. She wants to stand in the same club as the girls she fought. The answer is yes. Of course it is yes.",
+      "keywords": [
+        {
+          "word": "meeting",
+          "color": "#FF9F43"
+        },
+        {
+          "word": "yes",
+          "color": "#FF5C8A"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1036,
+      "end_seconds": 1068,
+      "voiceover_text": "And then she says it again, in front of everyone. Rentarou, she loves him too. There is so much she wants to say to her family. This time, nobody stops the kiss.",
+      "keywords": [
+        {
+          "word": "loves",
+          "color": "#FF5C8A"
+        },
+        {
+          "word": "kiss",
+          "color": "#FF5C5C"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano12-p6"
+}
