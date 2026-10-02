@@ -1,0 +1,62 @@
+{
+  "video_duration_seconds": 1422,
+  "title": "The Father Who Watched Sixteen Years — Part 7",
+  "hashtags": [
+    "#hyakkano",
+    "#100kanojo",
+    "#anime",
+    "#ghost",
+    "#father",
+    "#animefeels"
+  ],
+  "youtube_tags": [
+    "hyakkano episode 12",
+    "hakari father ghost",
+    "sixteen years watching",
+    "family altar ghost",
+    "anime emotional",
+    "father blessing"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hyakkano12",
+    "part": 7,
+    "start_seconds": 1090,
+    "end_seconds": 1240,
+    "is_final": false,
+    "summary": "A white-haired figure appears in the dark hallway: the spirit of Hakari's father, who has watched over the family for sixteen years. He gives Rentarou his blessing, entrusts him with his children's future, and fades as Hahari renews the promise she once made him."
+  },
+  "segments": [
+    {
+      "start_seconds": 1096,
+      "end_seconds": 1150,
+      "voiceover_text": "The hallway goes cold. A white-haired young man stands in the dark, smiling. The same face as the portrait. He has watched over this family for sixteen years. He is happy to finally see them smiling together. Rentarou stares, stunned silent. Hahari whispers one word. Father.",
+      "keywords": [
+        {
+          "word": "ghost",
+          "color": "#5C8AFF"
+        },
+        {
+          "word": "Father",
+          "color": "#FF9F43"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1153,
+      "end_seconds": 1184,
+      "voiceover_text": "Then it is time to go. He leaves them the future of his precious children. Hahari answers the promise she once made him. She wanted this child. She would choose the same again. The ghost fades, and the blessing stays.",
+      "keywords": [
+        {
+          "word": "future",
+          "color": "#FF9F43"
+        },
+        {
+          "word": "blessing",
+          "color": "#FF5C8A"
+        }
+      ]
+    }
+  ],
+  "job_id": "hyakkano12-p7"
+}
