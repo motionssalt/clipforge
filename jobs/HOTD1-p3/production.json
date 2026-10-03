@@ -1,0 +1,108 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "Desperate Fight Through the Bloody Hallways — Part 3",
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#animestruggles",
+    "#zombiesurvival",
+    "#animeaction",
+    "#apocalypseescape",
+    "#horrorscene"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd part 3",
+    "hallway massacre",
+    "zombie battle",
+    "rooftop barricade",
+    "hisashi bitten"
+  ],
+  "series": {
+    "series_id": "HOTD1",
+    "part": 3,
+    "start_seconds": 644,
+    "end_seconds": 911,
+    "is_final": false,
+    "summary": "The school corridors become a slaughterhouse as the undead swarm the fleeing student body. Takashi, Hisashi, and Rei fight their way through the upper landing, striking down attackers with their makeshift weapons. When an infected lunges at Rei, Hisashi shields her body and takes the brunt of the assault against the railing. After Takashi clubs the monster away, the three manage to barricade themselves on the rooftop, unaware of the grim toll the clash took on Hisashi."
+  },
+  "segments": [
+    {
+      "start_seconds": 645,
+      "end_seconds": 658,
+      "voiceover_text": "The hallways have become a slaughterhouse. Trapped students are dragged down as the infection spreads through every corridor.",
+      "keywords": [
+        {
+          "word": "slaughterhouse",
+          "color": "#FF3333"
+        },
+        {
+          "word": "infection",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 801,
+      "end_seconds": 814,
+      "voiceover_text": "Takashi, Hisashi, and Rei fight through the upper stairs, striking down attackers to reach the roof.",
+      "keywords": [
+        {
+          "word": "fight",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "roof",
+          "color": "#55AAFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 820,
+      "end_seconds": 831,
+      "voiceover_text": "An infected charges Rei. Hisashi throws himself in front of her, wrestling the beast against the metal railing.",
+      "keywords": [
+        {
+          "word": "charges",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "wrestling",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 874,
+      "end_seconds": 902,
+      "voiceover_text": "Takashi crushes the attacker with his bat. They burst through the heavy fire door and barricade it shut.",
+      "keywords": [
+        {
+          "word": "crushes",
+          "color": "#FF3333"
+        },
+        {
+          "word": "barricade",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 902,
+      "end_seconds": 911,
+      "voiceover_text": "Rei weeps with relief, believing they are safe. But Hisashi slumps against the wall, trembling and clutching his bleeding arm.",
+      "keywords": [
+        {
+          "word": "relief",
+          "color": "#55AAFF"
+        },
+        {
+          "word": "bleeding",
+          "color": "#FF3333"
+        }
+      ]
+    }
+  ],
+  "job_id": "HOTD1-p3"
+}
