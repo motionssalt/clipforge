@@ -1,0 +1,93 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "A Devastating Strike in the New World — Part 5",
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#animefinale",
+    "#zombieclimax",
+    "#emotionalanime",
+    "#survivalkid",
+    "#animeending"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd part 5",
+    "takashi kills hisashi",
+    "zombie reanimation",
+    "rei breakdown",
+    "spring of the dead finale"
+  ],
+  "series": {
+    "series_id": "HOTD1",
+    "part": 5,
+    "start_seconds": 1184,
+    "end_seconds": 1422,
+    "is_final": true,
+    "summary": "Moments after his death, Hisashi reanimates as a mindless zombie and lunges straight for Rei's throat. Pushing through his own heartbreak, Takashi steps in with the baseball bat and crushes Hisashi's skull to save her life. Overwhelmed by grief, Rei lashes out at Takashi in fury, accusing him of killing his best friend out of jealousy. Takashi forces her to face the brutal reality of their survival, and together on the rooftop, they vow to endure whatever horrors this new world brings."
+  },
+  "segments": [
+    {
+      "start_seconds": 1186,
+      "end_seconds": 1285,
+      "voiceover_text": "Hisashi's corpse suddenly twitches. His eyes snap open, completely milky and lifeless. With a guttural snarl, he lunges straight for Rei's throat.",
+      "keywords": [
+        {
+          "word": "twitches",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "lunges",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1285,
+      "end_seconds": 1309,
+      "voiceover_text": "Rei freezes in paralyzing horror. Takashi swallows his grief, steps forward with the bat, and crushes his best friend's skull to save her life.",
+      "keywords": [
+        {
+          "word": "horror",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "crushes",
+          "color": "#FF0000"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1313,
+      "end_seconds": 1344,
+      "voiceover_text": "Overcome by shock and trauma, Rei collapses beside the body. She furiously strikes Takashi, weeping that he only killed Hisashi out of spite.",
+      "keywords": [
+        {
+          "word": "trauma",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "weeping",
+          "color": "#55AAFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1403,
+      "end_seconds": 1422,
+      "voiceover_text": "Takashi refuses to apologize for keeping her alive. Holding Rei tight against the rooftop fence, he resolves that they will survive this apocalypse together.",
+      "keywords": [
+        {
+          "word": "apologize",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "survive",
+          "color": "#00FF88"
+        }
+      ]
+    }
+  ],
+  "job_id": "HOTD1-p5"
+}
