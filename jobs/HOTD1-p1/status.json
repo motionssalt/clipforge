@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1791017491,
+  "updated_at_epoch": 1791018119,
   "series": {
     "enabled": true,
     "series_id": "HOTD1",
@@ -22,12 +22,12 @@
     "code_ref": "be4796de546e872b2f80583bed782c46a3101acd"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "published",
     "posts": [
       {
-        "post_id": "6ac0c2115da2749f509dfaff",
-        "status": "scheduled",
-        "scheduled_for": "2026-10-03T17:00:00.000Z",
+        "post_id": "6ac0c4737242b80fac3c6519",
+        "status": "published",
+        "scheduled_for": "2026-10-03T09:01:38.090Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -41,16 +41,18 @@
               "isActive": true,
               "profileId": "6a23f22dba1bebcaf7982ef3"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7692364006027282450",
+            "platformPostUrl": ""
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-auto-HOTD1-p1-4c1df4f0-8571-41fb-9c3c-1acfb9a79125-tiktok"
+        "request_id": "android-HOTD1-p1-publish_now-1791018085154-tiktok"
       },
       {
-        "post_id": "6ac0c2125da2749f509dfb67",
-        "status": "scheduled",
-        "scheduled_for": "2026-10-03T17:00:00.000Z",
+        "post_id": "6ac0c482f12d2187d180ad35",
+        "status": "published",
+        "scheduled_for": "2026-10-03T09:01:53.608Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -64,14 +66,16 @@
               "isActive": true,
               "profileId": "6a23f22dba1bebcaf7982ef3"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "hVrRwyXDtlw",
+            "platformPostUrl": "https://www.youtube.com/watch?v=hVrRwyXDtlw"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-HOTD1-p1-4c1df4f0-8571-41fb-9c3c-1acfb9a79125-youtube"
+        "request_id": "android-HOTD1-p1-publish_now-1791018085154-youtube"
       }
     ],
-    "idempotency_key": "clipforge-auto-HOTD1-p1-4c1df4f0-8571-41fb-9c3c-1acfb9a79125"
+    "idempotency_key": "android-HOTD1-p1-publish_now-1791018085154"
   },
   "release_tag": "clipforge-HOTD1-p1",
   "release_url": "",
