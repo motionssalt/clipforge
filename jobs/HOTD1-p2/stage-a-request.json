@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "HOTD1-p2",
+  "saved_at_epoch": 1791017476,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1791013266243/source.torrent",
+    "torrent_file_index": "6"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "HOTD1",
+    "source_job_id": "manual-1791013266243",
+    "part": 2,
+    "start_seconds": 424,
+    "context": "Prior events (Part 1): On an ordinary school afternoon, Takashi skips class on the outdoor staircase while Saya mocks him for slacking. Down below, an unsettling stranger repeatedly rams his body against the locked front gate. When physical education teachers confront the intruder, he savagely bites Mr. Hayashi through the iron bars. Within seconds of dying, the teacher reanimates into a bloodthirsty monster, tearing into his colleagues right before Takashi's eyes."
+  },
+  "music": {
+    "ref": "audio-library/yung_kai_-_blue_(official_audio).m4a",
+    "source": "explicit_library"
+  }
+}
