@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "HOTD1-p5",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 5 of 5 — Stage B dispatched (chained from part 4's completion).",
+  "updated_at_epoch": 1791019515,
+  "series": {
+    "enabled": true,
+    "series_id": "HOTD1",
+    "part": 5,
+    "start_seconds": 1184,
+    "is_final": true
+  },
+  "release_tag": "clipforge-HOTD1-p5",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-HOTD1-p5"
+}
