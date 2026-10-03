@@ -1,0 +1,93 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "A Tragic Infection Claims Their Best Friend — Part 4",
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#animeheartbreak",
+    "#zombievirus",
+    "#tragicanime",
+    "#animedeath",
+    "#darkanime"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd part 4",
+    "hisashi bite",
+    "zombie infection",
+    "anime tragedy",
+    "rooftop farewell"
+  ],
+  "series": {
+    "series_id": "HOTD1",
+    "part": 4,
+    "start_seconds": 911,
+    "end_seconds": 1184,
+    "is_final": false,
+    "summary": "From the safety of the rooftop, the three teenagers witness pillars of black smoke rising across their destroyed city. When Rei checks on Hisashi, he reluctantly rolls back his sleeve to reveal a deep human bite wound. As Rei desperately denies the truth, Hisashi's fever spikes, dark veins spiderweb across his skin, and he begins coughing blood. Knowing the transformation into an undead beast is inevitable, Hisashi begs Takashi to smash his skull before he loses control and attacks Rei."
+  },
+  "segments": [
+    {
+      "start_seconds": 950,
+      "end_seconds": 966,
+      "voiceover_text": "Looking out across the skyline, black smoke and screaming sirens reveal a chilling truth. It is not just their school. The entire city has fallen.",
+      "keywords": [
+        {
+          "word": "sirens",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "fallen",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 966,
+      "end_seconds": 978,
+      "voiceover_text": "Hisashi collapses against the wall. When Rei pulls back his torn sleeve, she is horrified to find a deep human bite mark.",
+      "keywords": [
+        {
+          "word": "collapses",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "bite",
+          "color": "#FF0000"
+        }
+      ]
+    },
+    {
+      "start_seconds": 988,
+      "end_seconds": 1020,
+      "voiceover_text": "Rei frantically denies the danger, but Hisashi knows the truth. A burning fever takes hold, and he begins vomiting blood.",
+      "keywords": [
+        {
+          "word": "denies",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "fever",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1168,
+      "end_seconds": 1184,
+      "voiceover_text": "With his final breath, Hisashi begs Takashi to smash his skull before he turns and hurts Rei. Moments later, his body goes limp.",
+      "keywords": [
+        {
+          "word": "smash",
+          "color": "#FF3333"
+        },
+        {
+          "word": "limp",
+          "color": "#888888"
+        }
+      ]
+    }
+  ],
+  "job_id": "HOTD1-p4"
+}
