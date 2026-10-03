@@ -1,0 +1,93 @@
+{
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "title": "The Dead Breach the School Gate — Part 1",
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#anime",
+    "#zombies",
+    "#apocalypse",
+    "#actionanime",
+    "#survival"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd episode 1",
+    "anime zombie outbreak",
+    "takashi komuro",
+    "spring of the dead",
+    "anime apocalypse"
+  ],
+  "series": {
+    "series_id": "HOTD1",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 424,
+    "is_final": false,
+    "summary": "On an ordinary school afternoon, Takashi skips class on the outdoor staircase while Saya mocks him for slacking. Down below, an unsettling stranger repeatedly rams his body against the locked front gate. When physical education teachers confront the intruder, he savagely bites Mr. Hayashi through the iron bars. Within seconds of dying, the teacher reanimates into a bloodthirsty monster, tearing into his colleagues right before Takashi's eyes."
+  },
+  "segments": [
+    {
+      "start_seconds": 265,
+      "end_seconds": 281,
+      "voiceover_text": "Takashi thinks this afternoon is just another boring day to skip. He broods on the staircase while Saya mocks him. Neither realizes normal life has only minutes left.",
+      "keywords": [
+        {
+          "word": "skipping",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "minutes",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 340,
+      "end_seconds": 367,
+      "voiceover_text": "Down at the front entrance, an eerie stranger pounds violently against the locked gate. The teachers confront him, expecting a simple trespasser.",
+      "keywords": [
+        {
+          "word": "stranger",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "gate",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 382,
+      "end_seconds": 414,
+      "voiceover_text": "A teacher grabs him through the bars, but the man tears into his arm. The teacher collapses, dies, and instantly reanimates to butcher his colleagues.",
+      "keywords": [
+        {
+          "word": "bites",
+          "color": "#FF3333"
+        },
+        {
+          "word": "reanimates",
+          "color": "#FF0000"
+        }
+      ]
+    },
+    {
+      "start_seconds": 416,
+      "end_seconds": 424,
+      "voiceover_text": "Watching the slaughter from above, Takashi is terrified. He turns and bolts inside before the gates give way.",
+      "keywords": [
+        {
+          "word": "slaughter",
+          "color": "#FF3333"
+        },
+        {
+          "word": "bolts",
+          "color": "#FFAA00"
+        }
+      ]
+    }
+  ],
+  "job_id": "HOTD1-p1"
+}
