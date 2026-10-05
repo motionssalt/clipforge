@@ -3,7 +3,8 @@
   "job_id": "manual-1791200929665",
   "source": {
     "kind": "torrent_file",
-    "value": "path:jobs\/manual-1791200929665\/source.torrent"
+    "value": "path:jobs\/manual-1791200929665\/source.torrent",
+    "torrent_file_index": "8"
   },
   "options": {
     "whisper_model": "base",
@@ -27,5 +28,5 @@
     "ref": "audio-library\/yung_kai_-_blue_(official_audio).m4a",
     "source": "explicit_library"
   },
-  "saved_at_epoch": 1791200929
+  "saved_at_epoch": 1791201307
 }
