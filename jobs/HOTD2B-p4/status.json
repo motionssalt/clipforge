@@ -3,8 +3,8 @@
   "job_id": "HOTD2B-p4",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1791210478,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1791210652,
   "series": {
     "enabled": true,
     "series_id": "HOTD2B",
@@ -18,7 +18,7 @@
   "run": {
     "workflow_run_id": 37324895257,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37324895257",
-    "code_ref": "609e47082bfb9cdff76be6fa49e338820d7df144"
+    "code_ref": "87f8f4e91c1e55d1a6f6b096baa1bae7b9aa5c57"
   },
   "publishing": {
     "status": "not_requested",
