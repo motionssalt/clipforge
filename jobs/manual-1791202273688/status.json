@@ -3,36 +3,24 @@
   "job_id": "manual-1791202273688",
   "mode": "manual",
   "series": {
-    "enabled": true,
-    "series_id": "HOTD2B",
-    "part": 1,
+    "enabled": false,
+    "series_id": "",
+    "part": 0,
     "start_seconds": 0,
     "is_final": false
   },
   "state": "stage_a_running",
-<<<<<<< Updated upstream
-  "message": "Video file #7 selected — resuming ingest.",
-  "created_at_epoch": 1791202273,
-  "updated_at_epoch": 1791202372,
-=======
-  "message": "Stage A run started on GitHub Actions — setting up.",
-  "created_at_epoch": 1791202273,
-  "updated_at_epoch": 1791202419,
->>>>>>> Stashed changes
-  "expires_at_epoch": 1791375073,
+  "message": "Stage A starting — ingesting source (torrent_file)",
+  "created_at_epoch": 1791202459,
+  "updated_at_epoch": 1791202459,
+  "expires_at_epoch": 1791375259,
   "release_tag": "clipforge-manual-1791202273688",
   "release_url": "",
   "assets": {},
   "run": {
-<<<<<<< Updated upstream
-    "workflow_run_id": 37307801642,
-    "workflow_run_url": "https:\/\/github.com\/motionssalt\/clipforge\/actions\/runs\/37307801642",
-    "code_ref": "e40577b0a834c179c0e7811ef3b76aaf887d12a0"
-=======
     "workflow_run_id": 37307974276,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37307974276",
-    "code_ref": "56081d6a9246407c66f6dc145f44f0fdde807cde"
->>>>>>> Stashed changes
+    "code_ref": "f39ceb4746b90be6b7f0abb22a3ae42871109a97"
   },
   "publishing": {
     "status": "not_requested",
