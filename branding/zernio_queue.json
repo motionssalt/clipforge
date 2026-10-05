@@ -1825,6 +1825,18 @@
         "6ac0cd3fbc7536eb797c9f59"
       ],
       "updated_at_epoch": 1791020352
+    },
+    {
+      "job_id": "HOTD2B-p1",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-10-05T17:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ac3ae496d37f0f2d5b4285f",
+        "6ac3ae4b348f981bc62489f2"
+      ],
+      "updated_at_epoch": 1791209035
     }
   ]
 }
