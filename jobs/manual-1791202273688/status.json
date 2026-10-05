@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "job_id": "manual-1791202273688",
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "HOTD2B",
+    "part": 1,
+    "start_seconds": 0,
+    "is_final": false
+  },
+  "state": "queued",
+  "message": "Task queued",
+  "created_at_epoch": 1791202273,
+  "updated_at_epoch": 1791202273,
+  "expires_at_epoch": 1791375073,
+  "release_tag": "",
+  "release_url": "",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 0,
+    "workflow_run_url": "",
+    "code_ref": ""
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  }
+}
