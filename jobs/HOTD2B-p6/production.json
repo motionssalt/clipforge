@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "job_id": "HOTD2B-p6",
+  "title": "The Final Broadcast of a Collapsing World — Part 6",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#animefinale",
+    "#endtimes",
+    "#zombieapocalypse",
+    "#finalbroadcast",
+    "#darkanime"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd part 6",
+    "emergency broadcast",
+    "world collapse",
+    "minibus escape",
+    "hotd season 1 episode 2"
+  ],
+  "series": {
+    "series_id": "HOTD2B",
+    "part": 6,
+    "start_seconds": 1184,
+    "end_seconds": 1422,
+    "is_final": true,
+    "summary": "Barricading themselves inside the faculty staff room, the six survivors catch their breath and search the room for a means of escape. Nurse Shizuka locates the keys to the high school minibus parked in the school lot, and the group agrees on a coordinated escape plan: fight their way to the vehicle and rescue their families in order of geographic proximity. But when Takashi turns on the television, a horrifying emergency news report shatters any hope of outside rescue. The broadcast confirms over 10,000 casualties in Saitama, declaring nationwide martial law as screaming infected overrun police barricades and breach the television studio live on air, slaughtering the anchors before static engulfs the screen. Facing the chilling truth that society has permanently collapsed, the students lock hands, steel their resolve, and prepare for their desperate breakout into the new world."
+  },
+  "segments": [
+    {
+      "start_seconds": 1283,
+      "end_seconds": 1313,
+      "voiceover_text": "Inside the faculty lounge, the six students barricade the heavy door. Catching their breath, they urgently search the desks for vehicle keys to escape campus.",
+      "keywords": [
+        {
+          "word": "barricade",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "urgently",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1314,
+      "end_seconds": 1344,
+      "voiceover_text": "Nurse Shizuka locates the keys to the school minibus. The group maps out a route, agreeing to check on each member's family in order of proximity.",
+      "keywords": [
+        {
+          "word": "minibus",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "route",
+          "color": "#00FF88"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1352,
+      "end_seconds": 1383,
+      "voiceover_text": "Takashi switches on the television. An emergency broadcast reports over ten thousand casualties in Saitama alone, revealing that police and government authority have utterly collapsed.",
+      "keywords": [
+        {
+          "word": "casualties",
+          "color": "#FF3333"
+        },
+        {
+          "word": "collapsed",
+          "color": "#FF0000"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1383,
+      "end_seconds": 1420,
+      "voiceover_text": "On live television, zombies swarm the news desk and butcher the anchors before the broadcast cuts. Knowing civilization is gone, the survivors resolve to fight their way to the bus.",
+      "keywords": [
+        {
+          "word": "butcher",
+          "color": "#FF3333"
+        },
+        {
+          "word": "resolve",
+          "color": "#00FF88"
+        }
+      ]
+    }
+  ]
+}
