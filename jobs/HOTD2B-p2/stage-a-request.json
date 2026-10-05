@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "HOTD2B-p2",
+  "saved_at_epoch": 1791209022,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1791202273688/source.torrent",
+    "torrent_file_index": "7"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "HOTD2B",
+    "source_job_id": "manual-1791202273688",
+    "part": 2,
+    "start_seconds": 261,
+    "context": "Prior events (Part 1): Following Hisashi's tragic death on the school rooftop, Rei collapses in overwhelming grief beside his corpse. Takashi refuses to let her give up, forcing her to choose between surrendering to death or fighting for survival. Choosing to live, Rei attempts to contact her father, a senior police detective, for rescue. But with telecommunication networks completely severed and no emergency sirens sounding across the city, the two students realize civilization is paralyzed and they are entirely on their own."
+  },
+  "music": {
+    "ref": "audio-library/yung_kai_-_blue_(official_audio).m4a",
+    "source": "explicit_library"
+  }
+}
