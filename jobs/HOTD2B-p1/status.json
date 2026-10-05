@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "HOTD2B-p1",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1791208605,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1791209013,
   "series": {
     "enabled": true,
     "series_id": "HOTD2B",
@@ -12,11 +12,14 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "assets": {},
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-HOTD2B-p1/clipforge-HOTD2B-p1-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-HOTD2B-p1/final.mp4"
+  },
   "run": {
     "workflow_run_id": 37320403835,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37320403835",
-    "code_ref": "2e8c92a298525868626466016675707cfa8d6a64"
+    "code_ref": "20a2e1ab80b829654b4ebf69b217880566345b13"
   },
   "publishing": {
     "status": "not_requested",
