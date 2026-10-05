@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "job_id": "HOTD2B-p4",
+  "title": "Descent from the Sanctuary into the Shadows — Part 4",
+  "video_duration_seconds": 1422,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#takashikomuro",
+    "#reimiyamoto",
+    "#rooftopescape",
+    "#zombieapocalypse",
+    "#survivalhorrorgame"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd part 4",
+    "takashi and rei",
+    "rooftop water scene",
+    "stairwell descent",
+    "anime survival"
+  ],
+  "series": {
+    "series_id": "HOTD2B",
+    "part": 4,
+    "start_seconds": 644,
+    "end_seconds": 892,
+    "is_final": false,
+    "summary": "Exhausted and covered in gore on the school rooftop, Takashi turns on a high-pressure water valve. The cool spray washes away the dried blood of their fallen friends, providing Takashi and Rei a fleeting sanctuary of sanity and relief. But staring out across the skyline, black smoke and distant explosions reveal that help is never coming. Remaining on the rooftop ensures eventual starvation. Refusing to die waiting, Takashi and Rei make a pact to break through the infested school and search for their families. Armed with a metal baseball bat and a reinforced spear fashioned from a broom handle, the two teenagers push open the heavy fire door and descend into the bloodstained stairwells below."
+  },
+  "segments": [
+    {
+      "start_seconds": 710,
+      "end_seconds": 739,
+      "voiceover_text": "Up on the rooftop, Takashi cranks open a water valve. Cold water washes the gore from Rei's face and hands, granting them a brief moment of quiet relief.",
+      "keywords": [
+        {
+          "word": "valve",
+          "color": "#55AAFF"
+        },
+        {
+          "word": "relief",
+          "color": "#00FF88"
+        }
+      ]
+    },
+    {
+      "start_seconds": 796,
+      "end_seconds": 827,
+      "voiceover_text": "Looking out over rising smoke columns, they realize staying on the roof means slowly starving. Both resolve to fight through the apocalypse to locate their families.",
+      "keywords": [
+        {
+          "word": "starving",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "families",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 831,
+      "end_seconds": 854,
+      "voiceover_text": "Takashi tightens his grip on his baseball bat, while Rei sharpens a broomstick into a spear. They prepare their bodies and minds for close combat.",
+      "keywords": [
+        {
+          "word": "bat",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "spear",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 868,
+      "end_seconds": 891,
+      "voiceover_text": "Opening the reinforced door, Takashi and Rei descend into the darkness of the school stairwell, unaware that corridors below are already teeming with the dead.",
+      "keywords": [
+        {
+          "word": "descend",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "teeming",
+          "color": "#FF0000"
+        }
+      ]
+    }
+  ]
+}
