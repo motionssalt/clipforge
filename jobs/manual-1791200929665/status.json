@@ -9,10 +9,10 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "stage_a_running",
-  "message": "Stage A starting — ingesting source (torrent_file)",
+  "state": "awaiting_torrent_selection",
+  "message": "Source has 26 video files — pick one to continue.",
   "created_at_epoch": 1791200929,
-  "updated_at_epoch": 1791201010,
+  "updated_at_epoch": 1791201012,
   "expires_at_epoch": 1791373729,
   "release_tag": "clipforge-manual-1791200929665",
   "release_url": "",

@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "job_id": "manual-1791200929665",
+  "torrent_name": "High School of the Dead S01 + OAV (2010) MULTi 1080p 10bits BluRay AV1 Opus -Punisher694",
+  "video_candidates": [
+    {
+      "index": 4,
+      "path": "High School of the Dead S00E01 (OAV) VOSTFR 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 275766313
+    },
+    {
+      "index": 6,
+      "path": "High School of the Dead S01E01 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 480412256
+    },
+    {
+      "index": 7,
+      "path": "High School of the Dead S01E02 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 369080294
+    },
+    {
+      "index": 8,
+      "path": "High School of the Dead S01E03 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 443009229
+    },
+    {
+      "index": 9,
+      "path": "High School of the Dead S01E04 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 382630495
+    },
+    {
+      "index": 10,
+      "path": "High School of the Dead S01E05 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 396143790
+    },
+    {
+      "index": 11,
+      "path": "High School of the Dead S01E06 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 385410020
+    },
+    {
+      "index": 12,
+      "path": "High School of the Dead S01E07 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 333317614
+    },
+    {
+      "index": 13,
+      "path": "High School of the Dead S01E08 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 434282400
+    },
+    {
+      "index": 14,
+      "path": "High School of the Dead S01E09 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 368734552
+    },
+    {
+      "index": 15,
+      "path": "High School of the Dead S01E10 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 328030996
+    },
+    {
+      "index": 16,
+      "path": "High School of the Dead S01E11 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 323754804
+    },
+    {
+      "index": 17,
+      "path": "High School of the Dead S01E12 MULTi 1080p 10bits BluRay AV1 Opus -Punisher694.mkv",
+      "length": 428055057
+    },
+    {
+      "index": 18,
+      "path": "Bonus/NCED (EP.01) Kimi to Taiyou ga Shinda hi [4A7CF927].mkv",
+      "length": 40176734
+    },
+    {
+      "index": 19,
+      "path": "Bonus/NCED (EP.02) Color Me Dark [90321478].mkv",
+      "length": 38176951
+    },
+    {
+      "index": 20,
+      "path": "Bonus/NCED (EP.03) Return to Destiny [04284CBF].mkv",
+      "length": 34348478
+    },
+    {
+      "index": 21,
+      "path": "Bonus/NCED (EP.04) Cold Bullet Blues [723449B1].mkv",
+      "length": 34327452
+    },
+    {
+      "index": 22,
+      "path": "Bonus/NCED (EP.05) Memories of Days Gone By [A1C57D12].mkv",
+      "length": 32488400
+    },
+    {
+      "index": 23,
+      "path": "Bonus/NCED (EP.06) Under The Honey Shine [E930A62F].mkv",
+      "length": 32392224
+    },
+    {
+      "index": 24,
+      "path": "Bonus/NCED (EP.07) fuss fuzz [8D530E11].mkv",
+      "length": 28557535
+    },
+    {
+      "index": 25,
+      "path": "Bonus/NCED (EP.08) The place of hope [D1D59FD5].mkv",
+      "length": 32828438
+    },
+    {
+      "index": 26,
+      "path": "Bonus/NCED (EP.09) Houseki no Spy [8D507735].mkv",
+      "length": 32434388
+    },
+    {
+      "index": 27,
+      "path": "Bonus/NCED (EP.10) THE last pain [075CFCC0].mkv",
+      "length": 30452995
+    },
+    {
+      "index": 28,
+      "path": "Bonus/NCED (EP.11) Hollow Men [37DAEC58].mkv",
+      "length": 36230536
+    },
+    {
+      "index": 29,
+      "path": "Bonus/NCED (EP.12) The Eternal Song [CD146D2D].mkv",
+      "length": 42871401
+    },
+    {
+      "index": 30,
+      "path": "Bonus/NCOP HIGHSCHOOL OF THE DEAD [5ECDBFF6].mkv",
+      "length": 78335862
+    }
+  ],
+  "selected_index": null,
+  "stage_a_inputs": {
+    "whisper_model": "base",
+    "language": "auto",
+    "target_duration_seconds": "30",
+    "focus": ""
+  }
+}
