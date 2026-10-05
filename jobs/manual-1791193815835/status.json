@@ -10,9 +10,9 @@
     "is_final": false
   },
   "state": "stage_a_running",
-  "message": "Stage A run started on GitHub Actions — setting up.",
+  "message": "Stage A starting — ingesting source (torrent_file)",
   "created_at_epoch": 1791193815,
-  "updated_at_epoch": 1791193835,
+  "updated_at_epoch": 1791193870,
   "expires_at_epoch": 1791366615,
   "release_tag": "clipforge-manual-1791193815835",
   "release_url": "",
@@ -20,7 +20,7 @@
   "run": {
     "workflow_run_id": 37292670713,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37292670713",
-    "code_ref": "e53d710c992beb86dbf0252a2322fea35e9f8931"
+    "code_ref": "c09691b8beebfca1c5a7464334a657c012942d6a"
   },
   "publishing": {
     "status": "not_requested",
