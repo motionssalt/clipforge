@@ -9,18 +9,18 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "queued",
-  "message": "Task queued",
+  "state": "stage_a_running",
+  "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1791324584,
-  "updated_at_epoch": 1791324584,
+  "updated_at_epoch": 1791324599,
   "expires_at_epoch": 1791497384,
-  "release_tag": "",
+  "release_tag": "clipforge-manual-1791324584553",
   "release_url": "",
   "assets": {},
   "run": {
-    "workflow_run_id": 0,
-    "workflow_run_url": "",
-    "code_ref": ""
+    "workflow_run_id": 37538801021,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37538801021",
+    "code_ref": "efcaf534090d26976b2d6b156f1eafdf24daf1f5"
   },
   "publishing": {
     "status": "not_requested",
