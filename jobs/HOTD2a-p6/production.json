@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "job_id": "HOTD2a-p6",
+  "title": "The Ruptured Road into the Apocalypse — Part 6",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#anime",
+    "#motorcycleescape",
+    "#zombies",
+    "#apocalypse",
+    "#seriesfinale"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "takashi and rei motorcycle",
+    "highway zombie horde",
+    "hotd episode 3 ending",
+    "anime apocalypse survival",
+    "final stand"
+  ],
+  "series": {
+    "series_id": "HOTD2a",
+    "part": 6,
+    "start_seconds": 1106,
+    "end_seconds": 1421,
+    "is_final": true,
+    "summary": "Takashi and Rei exit the minibus, choosing the deadly perils of the outside world over Shido's insidious tyranny. Finding an abandoned motorcycle on the elevated expressway, Takashi prepares to navigate the congested roadways. Suddenly, a massive multi-vehicle explosion and collapsing wreckage trigger an overwhelming surge of zombies that cuts off the highway, permanently severing Takashi and Rei from the school bus. Standing united against the apocalyptic skyline of a burning metropolis, Takashi and Rei ignite the motorcycle engine, resolved to survive together no matter the cost."
+  },
+  "segments": [
+    {
+      "start_seconds": 1107,
+      "end_seconds": 1126,
+      "voiceover_text": "Takashi and Rei step off the bus onto the desolate highway. Choosing independence over Shido's dictatorship, they prepare to make their way on foot.",
+      "keywords": [
+        {
+          "word": "desolate",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "dictatorship",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1168,
+      "end_seconds": 1181,
+      "voiceover_text": "Ahead on the bridge, a fiery multi-car pileup blocks the roadway. Swarms of ravenous undead surround the burning wreckage, cutting off the path forward.",
+      "keywords": [
+        {
+          "word": "pileup",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "ravenous",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1188,
+      "end_seconds": 1216,
+      "voiceover_text": "Spotting an abandoned motorcycle, Takashi kicks it into gear with Rei holding tight. The collapsing highway crushes the gap, permanently severing them from the bus.",
+      "keywords": [
+        {
+          "word": "motorcycle",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "severing",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1368,
+      "end_seconds": 1421,
+      "voiceover_text": "Under the glowing embers of the skyline, Takashi and Rei pause on the open highway. The civilized world has vanished, but together, they ride into the apocalypse.",
+      "keywords": [
+        {
+          "word": "embers",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "apocalypse",
+          "color": "#FF3333"
+        }
+      ]
+    }
+  ]
+}
