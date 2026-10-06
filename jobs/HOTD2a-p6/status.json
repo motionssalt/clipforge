@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "HOTD2a-p6",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 6 of 6 — Stage B dispatched (chained from part 5's completion).",
+  "updated_at_epoch": 1791268124,
+  "series": {
+    "enabled": true,
+    "series_id": "HOTD2a",
+    "part": 6,
+    "start_seconds": 1106,
+    "is_final": true
+  },
+  "release_tag": "clipforge-HOTD2a-p6",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-HOTD2a-p6"
+}
