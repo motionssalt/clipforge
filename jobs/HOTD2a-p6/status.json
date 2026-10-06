@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "HOTD2a-p6",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1791268289,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1791268842,
   "series": {
     "enabled": true,
     "series_id": "HOTD2a",
@@ -13,12 +13,15 @@
     "is_final": true
   },
   "release_tag": "clipforge-HOTD2a-p6",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-HOTD2a-p6",
-  "assets": {},
+  "release_url": "",
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-HOTD2a-p6/clipforge-HOTD2a-p6-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-HOTD2a-p6/final.mp4"
+  },
   "run": {
     "workflow_run_id": 37423953537,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37423953537",
-    "code_ref": "62931ec767f5a01dea49ca17eb3bd6048a95dd4c"
+    "code_ref": "9ea6489f151d6f1a6df4ca3bf61a87c8a41d55c8"
   },
   "publishing": {
     "status": "not_requested",
