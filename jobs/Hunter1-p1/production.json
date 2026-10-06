@@ -1,0 +1,92 @@
+{
+  "version": 2,
+  "title": "The Legend of the Swamp — Part 1",
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#hunterxhunter",
+    "#gonfreecss",
+    "#anime",
+    "#hunterexam",
+    "#shonenanime",
+    "#whaleisland"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon freecss",
+    "hunter exam",
+    "hxh episode 1",
+    "anime"
+  ],
+  "series": {
+    "series_id": "Hunter1",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 265,
+    "is_final": false,
+    "summary": "On Whale Island, twelve-year-old Gon Freecss dreams of taking the perilous Hunter Exam, but Aunt Mito forbids it unless he completes an impossible challenge: catching the mythical Lord of the Swamp. Perched in a giant tree with his father's rod, Gon battles the colossal monster fish and lands it before the stunned villagers, proving his unshakable resolve."
+  },
+  "segments": [
+    {
+      "start_seconds": 105,
+      "end_seconds": 126,
+      "voiceover_text": "A twelve-year-old boy wagers his future on one impossible catch. Perched high above the swamp, Gon Freecss waits to earn his ticket to the deadly Hunter Exam.",
+      "keywords": [
+        {
+          "word": "impossible",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "Hunter",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 141,
+      "end_seconds": 160,
+      "voiceover_text": "Aunt Mito set an uncompromising rule: catch the mythical swamp monster, or stay home forever. Five grown fishermen failed. She prays the beast never bites.",
+      "keywords": [
+        {
+          "word": "uncompromising",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "monster",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 178,
+      "end_seconds": 233,
+      "voiceover_text": "Suddenly, the lake boils. The line snaps taut. The colossal creature thrashes, violently pulling Gon toward the water, but his grip never falters.",
+      "keywords": [
+        {
+          "word": "colossal",
+          "color": "#FF3333"
+        },
+        {
+          "word": "falters",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 236,
+      "end_seconds": 265,
+      "voiceover_text": "Gon wrenches the titanic beast onto the shore. The crowd is stunned. He won his ticket, but can he survive the painful secret Aunt Mito is hiding?",
+      "keywords": [
+        {
+          "word": "titanic",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "stunned",
+          "color": "#FFAA00"
+        }
+      ]
+    }
+  ],
+  "job_id": "Hunter1-p1"
+}
