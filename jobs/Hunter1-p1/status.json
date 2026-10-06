@@ -2,14 +2,28 @@
   "version": 1,
   "job_id": "Hunter1-p1",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 1 queued for Stage B.",
-  "updated_at_epoch": 1791330374,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1791330392,
   "series": {
     "enabled": true,
     "series_id": "Hunter1",
     "part": 1,
     "start_seconds": 0,
     "is_final": false
-  }
+  },
+  "assets": {},
+  "run": {
+    "workflow_run_id": 37548377975,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37548377975",
+    "code_ref": "bc663a050fc40e353a03aded4ec972677f722727"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "release_tag": "clipforge-Hunter1-p1",
+  "release_url": "",
+  "expires_at_epoch": 1791373592
 }
