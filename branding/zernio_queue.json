@@ -1945,6 +1945,18 @@
         "6ac4929969b1869b41ad7589"
       ],
       "updated_at_epoch": 1791267482
+    },
+    {
+      "job_id": "HOTD2a-p5",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-10-07T09:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ac49521edc2c6b25cca6bee",
+        "6ac495230fd76eed8e132399"
+      ],
+      "updated_at_epoch": 1791268131
     }
   ]
 }
