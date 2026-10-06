@@ -580,6 +580,10 @@
     {
       "part": 2,
       "job_id": "HOTD2a-p2"
+    },
+    {
+      "part": 3,
+      "job_id": "HOTD2a-p3"
     }
   ]
 }
