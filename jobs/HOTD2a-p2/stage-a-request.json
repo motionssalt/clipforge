@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "HOTD2a-p2",
+  "saved_at_epoch": 1791265536,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1791200929665/source.torrent",
+    "torrent_file_index": "8"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "HOTD2a",
+    "source_job_id": "manual-1791200929665",
+    "part": 2,
+    "start_seconds": 240,
+    "context": "Prior events (Part 1): Inside the barricaded high school faculty lounge, Takashi, Rei, Saya, and the surviving students watch live television in stunned horror. Special news bulletins report that riot police in major metropolitan areas are being overwhelmed by assailants who are already biologically deceased. The broadcast escalates into global catastrophe: the American president flees the White House to an airborne command aircraft, contact with Moscow is completely lost, Beijing burns, and nuclear retaliation protocols are considered. Realizing that civilization has collapsed worldwide, the survivors realize no outside rescue is coming."
+  },
+  "music": {
+    "ref": "audio-library/yung_kai_-_blue_(official_audio).m4a",
+    "source": "explicit_library"
+  }
+}
