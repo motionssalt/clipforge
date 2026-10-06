@@ -12,7 +12,11 @@
   "state": "stage_a_running",
   "message": "Stage A run started on GitHub Actions — setting up.",
   "created_at_epoch": 1791326280,
+<<<<<<< Updated upstream
   "updated_at_epoch": 1791326296,
+=======
+  "updated_at_epoch": 1791326957,
+>>>>>>> Stashed changes
   "expires_at_epoch": 1791499080,
   "release_tag": "clipforge-manual-1791326280059",
   "release_url": "",
