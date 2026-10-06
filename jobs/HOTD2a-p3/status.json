@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "HOTD2a-p3",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 3 of 6 — Stage B dispatched (chained from part 2's completion).",
-  "updated_at_epoch": 1791266213,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1791266227,
   "series": {
     "enabled": true,
     "series_id": "HOTD2a",
@@ -13,5 +13,17 @@
     "is_final": false
   },
   "release_tag": "clipforge-HOTD2a-p3",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-HOTD2a-p3"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-HOTD2a-p3",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 37421103434,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37421103434",
+    "code_ref": "1ab0b8b8243eb617d451baa2453074b850786b1d"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1791309427
 }
