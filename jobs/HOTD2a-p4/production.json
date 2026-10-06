@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "job_id": "HOTD2a-p4",
+  "title": "The Cruel Betrayal in the Courtyard — Part 4",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#anime",
+    "#betrayal",
+    "#zombies",
+    "#animevillain",
+    "#survival"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "koichi shido betrayal",
+    "teacher sacrifices student",
+    "hotd episode 3",
+    "anime villain moment",
+    "school bus rescue"
+  ],
+  "series": {
+    "series_id": "HOTD2a",
+    "part": 4,
+    "start_seconds": 721,
+    "end_seconds": 882,
+    "is_final": false,
+    "summary": "The desperate screams belong to a second group of surviving students, led by teacher Koichi Shido. As they frantically dash across the zombie-swarmed courtyard toward the waiting bus, an injured student stumbles and falls, pleading desperately for his teacher's hand. Instead of helping, Shido flashes a chilling smile and kicks the helpless boy straight into the ravenous undead, declaring coldly that the weak do not deserve survival. While the horde devours the abandoned teenager, Shido scrambles safely aboard the minibus, immediately asserting his authority over Takashi's stunned group."
+  },
+  "segments": [
+    {
+      "start_seconds": 726,
+      "end_seconds": 752,
+      "voiceover_text": "A second wave of students bursts into the yard, led by teacher Koichi Shido. They sprint frantically toward the waiting minibus.",
+      "keywords": [
+        {
+          "word": "frantically",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "minibus",
+          "color": "#00FF66"
+        }
+      ]
+    },
+    {
+      "start_seconds": 764,
+      "end_seconds": 795,
+      "voiceover_text": "When an injured student collapses, he begs for help. Shido smiles coldly and kicks the boy into the grasping horde, declaring the weak must be abandoned.",
+      "keywords": [
+        {
+          "word": "coldly",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "abandoned",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 796,
+      "end_seconds": 828,
+      "voiceover_text": "The zombies tear into the sacrificed student while Shido scrambles aboard. Takashi and Rei watch in pure disgust at their teacher's remorseless betrayal.",
+      "keywords": [
+        {
+          "word": "sacrificed",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "disgust",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 852,
+      "end_seconds": 882,
+      "voiceover_text": "Shido assumes command of the cabin, claiming survival demands ruthless leadership. He glares at Takashi—what horrifying games will this sociopath play with the survivors?",
+      "keywords": [
+        {
+          "word": "ruthless",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "sociopath",
+          "color": "#FF3333"
+        }
+      ]
+    }
+  ]
+}
