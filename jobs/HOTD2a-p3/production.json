@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "job_id": "HOTD2a-p3",
+  "title": "The Silent Breakout Through the Courtyard — Part 3",
+  "video_duration_seconds": 1421,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#highschoolofthedead",
+    "#hotd",
+    "#anime",
+    "#actionanime",
+    "#zombiefight",
+    "#animeescape",
+    "#survival"
+  ],
+  "youtube_tags": [
+    "highschool of the dead",
+    "hotd bus escape",
+    "saeko busujima kendo",
+    "kohta hirano nailgun",
+    "anime zombie action",
+    "courtyard battle"
+  ],
+  "series": {
+    "series_id": "HOTD2a",
+    "part": 3,
+    "start_seconds": 435,
+    "end_seconds": 721,
+    "is_final": false,
+    "summary": "Takashi steps forward to test Saya's auditory hypothesis, with kendo champion Saeko Busujima volunteering to stand at his side as vanguard. Creating a noise diversion down the hall, the group watches as the zombies shamble toward the sound, completely ignoring the quiet teenagers right beside them. With the theory proven, the group mounts a coordinated breakout. Takashi bludgeons through the corridor, Saeko slices with lethal sword strikes, and Kohta provides suppressing fire with his modified nail gun. Reaching the parking area, Nurse Shizuka starts the minibus engine just as screams ring out."
+  },
+  "segments": [
+    {
+      "start_seconds": 452,
+      "end_seconds": 476,
+      "voiceover_text": "Takashi volunteers to test the sound hypothesis firsthand. Saeko steps up beside him, ready to lead the vanguard with her wooden sword.",
+      "keywords": [
+        {
+          "word": "vanguard",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "sword",
+          "color": "#FF5C5C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 519,
+      "end_seconds": 541,
+      "voiceover_text": "They create a distraction down the hall. The zombies shuffle toward the noise, proving the theory: the monsters cannot see them in total silence.",
+      "keywords": [
+        {
+          "word": "distraction",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "silence",
+          "color": "#00FF66"
+        }
+      ]
+    },
+    {
+      "start_seconds": 571,
+      "end_seconds": 609,
+      "voiceover_text": "The breakout begins. Saeko strikes with lethal precision while Kohta lays down cover fire with his nail gun, carving a bloody path toward the parking lot.",
+      "keywords": [
+        {
+          "word": "precision",
+          "color": "#00D4FF"
+        },
+        {
+          "word": "bloody",
+          "color": "#FF3333"
+        }
+      ]
+    },
+    {
+      "start_seconds": 681,
+      "end_seconds": 721,
+      "voiceover_text": "Nurse Shizuka fires up the minibus engine. But just as the doors open, terrified screams echo from the building. Who else is racing toward their only escape?",
+      "keywords": [
+        {
+          "word": "engine",
+          "color": "#00FF66"
+        },
+        {
+          "word": "screams",
+          "color": "#FF5C5C"
+        }
+      ]
+    }
+  ]
+}
