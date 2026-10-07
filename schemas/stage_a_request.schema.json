@@ -16,7 +16,7 @@
       "properties": {
         "kind": {
           "type": "string",
-          "enum": ["url", "drive", "magnet", "torrent_file", "telegram_channel", "telegram_relay"]
+          "enum": ["url", "youtube", "drive", "magnet", "torrent_file", "telegram_channel", "telegram_relay"]
         },
         "value": { "type": "string" },
         "relay": {

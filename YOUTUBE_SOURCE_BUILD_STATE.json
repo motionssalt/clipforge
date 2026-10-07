@@ -3,7 +3,7 @@
   "purpose": "Add public-YouTube-video source support across Stage A ingest, Stage B re-fetch, schema, GitHub Actions workflows, and dashboard UI",
   "build_complete": false,
   "updated_by": "forgebuild-ai",
-  "current_task": "task-01",
+  "current_task": "task-03",
   "decisions": [
     "Introduce explicit source kind \"youtube\" in schemas/stage_a_request.schema.json and ingest dispatch for clarity and consistency across schema, refetch, wizard, and docs.",
     "Layered runner strategy for yt-dlp: (1) Run latest yt-dlp binary with player client fallback list (e.g. android, ios, web); (2) Optional repo secret YOUTUBE_COOKIES written to secure temp file with 0600 permissions; (3) Optional proxy YOUTUBE_PROXY_URL; (4) Actionable error messages for bot-check, age-restriction, members-only, private, removed, livestreams; (5) Merge video+audio via ffmpeg capped at 1080p by default (configurable via CLIPFORGE_YT_MAX_HEIGHT); (6) Enforce MAX_VIDEO_BYTES (12 GiB) and free disk space check."
@@ -21,17 +21,17 @@
     {
       "id": "task-02",
       "title": "Update schema & ARCHITECTURE.md for \"youtube\" source kind",
-      "status": "pending",
+      "status": "done",
       "files_touched": [
         "schemas/stage_a_request.schema.json",
         "ARCHITECTURE.md"
       ],
-      "notes": "Add \"youtube\" to enum and document in ARCHITECTURE.md \u00a75 and \u00a77.1"
+      "notes": "Added youtube to enum in schemas/stage_a_request.schema.json; updated ARCHITECTURE.md \u00a75 and \u00a77.1. Validated via jsonschema."
     },
     {
       "id": "task-03",
       "title": "Implement YouTube download in pipeline/stage_a/ingest.py with layered strategy",
-      "status": "pending",
+      "status": "in_progress",
       "files_touched": [
         "pipeline/stage_a/ingest.py"
       ],

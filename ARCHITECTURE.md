@@ -205,15 +205,16 @@ them into a single `source` object (§7.1).
 |---|---|---|---|
 | Direct video to bot | User forwards/uploads a video message to Bot A | Private relay (§9.2): Bot A → internal group → Bot B → `telegram-relay.yml` → temporary release asset in the clone → Stage A downloads it | All clones |
 | Public Telegram channel post | `https://t.me/<channel>/<msg_id>` link | MTProto user-authorized download (§9.1) | **Original repo only** |
+| YouTube video | Public single-video link (`https://youtube.com/watch?v=…`, `youtu.be/…`, `shorts/…`) | `yt-dlp` download with layered fallback (clients, optional cookies, optional proxy) merged to ≤1080p | All clones |
 | Direct file URL | `https://…/video.mp4` | Plain HTTP(S) download | All clones |
 | Google Drive | anyone-with-link URL or file id | Drive download with confirm-token handling | All clones |
 | Magnet URI | `magnet:?…` | aria2 metadata fetch → video candidate list → user picks one → torrent download | All clones |
 | `.torrent` file | Upload `.torrent` (≤ 1 MB) to the bot | Torrent metadata parsed → video candidate list → user picks one → torrent download | All clones |
 
-**Deliberately disabled** (unchanged from old): YouTube, TikTok, Instagram,
-Facebook, X/Twitter, Vimeo, Reddit page links. The user is directed to put the
-video on a public Telegram channel or send it directly. The bot rejects these
-hosts at intake with a helpful message.
+**Deliberately disabled**: TikTok, Instagram, Facebook, X/Twitter, Vimeo,
+Reddit page links. The intake rejects these hosts with a helpful message
+directing the user to use YouTube, a direct file link, or a public Telegram
+channel. (Public single-video YouTube links are fully supported via ).
 
 **Torrent/magnet selection flow:** when the source resolves to multiple video
 files, Stage A does *not* pick one. It writes a `torrent-selection.json` into
@@ -353,7 +354,7 @@ restart. This is the durable record of "what the user asked for."
   "version": 2,
   "job_id": "manual-1787692652625",
   "source": {
-    "kind": "url | drive | magnet | torrent_file | telegram_channel | telegram_relay",
+    "kind": "url | youtube | drive | magnet | torrent_file | telegram_channel | telegram_relay",
     "value": "https://…  | magnet:… | path:jobs/<id>/source.torrent | relay:private",
     "relay": {
       "release_tag": "",
