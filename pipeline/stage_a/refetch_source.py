@@ -8,6 +8,8 @@ original source reference already durably committed in
 ``pipeline/stage_a/ingest.py``'s existing resolution logic — no new download
 code, and no re-prompting of the operator:
 
+  * ``youtube``           -> :func:`ingest.download_youtube` on the saved
+                             canonical video URL.
   * ``url``               -> :func:`ingest.download_direct` (or the §9.1
                              Telegram public-post path for t.me post URLs).
   * ``drive``             -> :func:`ingest.download_drive` on the saved file id.
@@ -185,12 +187,17 @@ def refetch_source(
     tmp_source = work / "source_input.bin"
 
     try:
-        if kind == "url":
+        if kind == "youtube":
+            ingest.download_youtube(str(value), str(tmp_source))
+
+        elif kind == "url":
             raw = str(value)
             if "%" in raw and "http" in raw:
                 import urllib.parse
                 raw = urllib.parse.unquote(raw)
-            if ingest.telegram_public_post_url(raw):
+            if ingest.is_youtube_host(raw):
+                ingest.download_youtube(raw, str(tmp_source))
+            elif ingest.telegram_public_post_url(raw):
                 ingest._download_telegram_channel(raw, str(tmp_source))
             else:
                 disabled = ingest.disabled_social_host(raw)

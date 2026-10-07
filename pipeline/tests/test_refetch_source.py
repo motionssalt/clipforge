@@ -500,3 +500,41 @@ def test_refetch_non_spawned_job_unchanged(tmp_path):
     with pytest.raises(ingest.IngestError) as exc:
         refetch_source.refetch_source("ghost", str(tmp_path / "work"), root=str(jobs_root))
     assert "no stage-a-request.json found" in str(exc.value)
+
+
+def test_refetch_youtube_kind(tmp_path, monkeypatch):
+    """YouTube source re-fetches cleanly via download_youtube."""
+    called = {}
+
+    def fake_download_youtube(url, dest):
+        called["url"] = url
+        Path(dest).write_bytes(b"RIFF....AVI ")
+
+    monkeypatch.setattr(ingest, "download_youtube", fake_download_youtube)
+    monkeypatch.setattr(ingest, "detect_container_ext", lambda p: "mp4")
+
+    jobs_root = tmp_path / "jobs"
+    _write_request(jobs_root, "job-yt", {"kind": "youtube", "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"})
+    rec = refetch_source.refetch_source("job-yt", str(tmp_path / "work"), root=str(jobs_root))
+    assert called["url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    assert rec["source_kind"] == "youtube"
+    assert rec["refetch"] is True
+
+
+def test_refetch_url_with_youtube_host(tmp_path, monkeypatch):
+    """kind == 'url' containing a YouTube URL also delegates to download_youtube."""
+    called = {}
+
+    def fake_download_youtube(url, dest):
+        called["url"] = url
+        Path(dest).write_bytes(b"RIFF....AVI ")
+
+    monkeypatch.setattr(ingest, "download_youtube", fake_download_youtube)
+    monkeypatch.setattr(ingest, "detect_container_ext", lambda p: "mkv")
+
+    jobs_root = tmp_path / "jobs"
+    _write_request(jobs_root, "job-yt-url", {"kind": "url", "value": "https://youtu.be/dQw4w9WgXcQ"})
+    rec = refetch_source.refetch_source("job-yt-url", str(tmp_path / "work"), root=str(jobs_root))
+    assert called["url"] == "https://youtu.be/dQw4w9WgXcQ"
+    assert rec["source_kind"] == "url"
+    assert rec["refetch"] is True

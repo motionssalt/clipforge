@@ -3,7 +3,7 @@
   "purpose": "Add public-YouTube-video source support across Stage A ingest, Stage B re-fetch, schema, GitHub Actions workflows, and dashboard UI",
   "build_complete": false,
   "updated_by": "forgebuild-ai",
-  "current_task": "task-04",
+  "current_task": "task-05",
   "decisions": [
     "Introduce explicit source kind \"youtube\" in schemas/stage_a_request.schema.json and ingest dispatch for clarity and consistency across schema, refetch, wizard, and docs.",
     "Layered runner strategy for yt-dlp: (1) Run latest yt-dlp binary with player client fallback list (e.g. android, ios, web); (2) Optional repo secret YOUTUBE_COOKIES written to secure temp file with 0600 permissions; (3) Optional proxy YOUTUBE_PROXY_URL; (4) Actionable error messages for bot-check, age-restriction, members-only, private, removed, livestreams; (5) Merge video+audio via ffmpeg capped at 1080p by default (configurable via CLIPFORGE_YT_MAX_HEIGHT); (6) Enforce MAX_VIDEO_BYTES (12 GiB) and free disk space check."
@@ -40,16 +40,17 @@
     {
       "id": "task-04",
       "title": "Implement YouTube branch in pipeline/stage_a/refetch_source.py",
-      "status": "in_progress",
+      "status": "done",
       "files_touched": [
-        "pipeline/stage_a/refetch_source.py"
+        "pipeline/stage_a/refetch_source.py",
+        "pipeline/tests/test_refetch_source.py"
       ],
-      "notes": "Support re-fetching YouTube sources when original omitted source_input.bin (>2 GiB)"
+      "notes": "Added youtube branch and youtube URL detection to refetch_source.py; verified with 21 unit tests passing."
     },
     {
       "id": "task-05",
       "title": "Update GitHub workflows to install latest yt-dlp and handle optional YOUTUBE_COOKIES / YOUTUBE_PROXY_URL",
-      "status": "pending",
+      "status": "in_progress",
       "files_touched": [
         ".github/workflows/stage-a.yml",
         ".github/workflows/stage-b.yml"
