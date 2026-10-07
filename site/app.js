@@ -1,3 +1,26 @@
+
+// Theme Management (Light & Dark with auto-preference + toggle)
+function initTheme() {
+  const saved = localStorage.getItem('clipforge_theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initialTheme = saved || (prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', initialTheme);
+
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    toggle.textContent = initialTheme === 'dark' ? '☀️' : '🌙';
+    toggle.setAttribute('aria-label', initialTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    toggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('clipforge_theme', next);
+      toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+      toggle.setAttribute('aria-label', next === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    });
+  }
+}
+initTheme();
 /**
  * ClipForge Dashboard — app shell: hash router + auth gate.
  * Modern responsive app shell with live routing, clone resume, and notification region.

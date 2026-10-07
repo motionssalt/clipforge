@@ -90,24 +90,47 @@ function taskRowHtml(entry, pendingDelete, selected) {
   const state = unreadable ? '' : String(entry.status.state || 'queued');
   const text = describeState(entry.status, unreadable);
   const series = entry.status && entry.status.series && entry.status.series.enabled === true
-    ? ` · part ${Number(entry.status.series.part) || 1}` : '';
+    ? ('Part ' + (Number(entry.status.series.part) || 1)) : '';
+  const isActive = !unreadable && !isTerminal(state);
+
   if (pendingDelete === entry.jobId) {
     return `
-      <div class="task-row" data-job="${escapeHtml(entry.jobId)}">
-        <div class="grow"><b>⚠ ${escapeHtml(entry.label)}</b> — Confirm Delete?</div>
-        <button type="button" class="danger small" data-delconfirm="${escapeHtml(entry.jobId)}">Yes, delete</button>
-        <button type="button" class="ghost small" data-delcancel>Cancel</button>
+      <div class="task-card-item task-row-confirm-del" data-job="${escapeHtml(entry.jobId)}">
+        <div class="grow">
+          <div style="font-weight:700; color:var(--err);">⚠ Delete Task ${escapeHtml(entry.label)} (${escapeHtml(entry.jobId)})?</div>
+          <div class="muted small">This permanently removes job files and releases on GitHub.</div>
+        </div>
+        <div class="btn-row" style="margin:0;">
+          <button type="button" class="btn btn-danger btn-small" data-delconfirm="${escapeHtml(entry.jobId)}">Yes, delete</button>
+          <button type="button" class="btn btn-ghost btn-small" data-delcancel>Cancel</button>
+        </div>
       </div>`;
   }
   return `
-    <div class="task-row" data-job="${escapeHtml(entry.jobId)}">
-      <label class="task-check-wrap" title="Select for bulk actions"><input type="checkbox" class="task-check" data-check="${escapeHtml(entry.jobId)}"${selected && selected.has(entry.jobId) ? ' checked' : ''}></label>
-      <div class="grow">
-        <b>${escapeHtml(entry.label)}</b> <span class="muted mono">${escapeHtml(entry.jobId)}</span>${escapeHtml(series)}
-        <div class="muted small">${escapeHtml((entry.status && entry.status.message) || '')}</div>
+    <div class="task-card-item ${isActive ? 'task-card-active' : ''}" data-job="${escapeHtml(entry.jobId)}">
+      <div class="task-card-top">
+        <label class="task-check-wrap" title="Select task" onclick="event.stopPropagation();">
+          <input type="checkbox" class="task-check custom-checkbox" data-check="${escapeHtml(entry.jobId)}"${selected && selected.has(entry.jobId) ? ' checked' : ''}>
+        </label>
+        <div class="task-title-group grow">
+          <div class="task-headline">
+            <span class="task-label-badge">${escapeHtml(entry.label)}</span>
+            <span class="task-job-id mono">${escapeHtml(entry.jobId)}</span>
+            ${series ? `<span class="task-part-badge">${escapeHtml(series)}</span>` : ''}
+          </div>
+          <div class="task-status-msg muted small">${escapeHtml((entry.status && entry.status.message) || 'Task queued or initializing…')}</div>
+        </div>
+        <div class="task-meta-group">
+          <span class="state-pill pill-${escapeHtml(state)} ${isActive ? 'active' : ''}">
+            ${isActive ? '<span class="pulse-dot"></span> ' : ''}${escapeHtml(text)}
+          </span>
+          <button type="button" class="btn-icon danger-ghost" data-delete="${escapeHtml(entry.jobId)}" title="Delete task" onclick="event.stopPropagation();">🗑</button>
+        </div>
       </div>
-      <span class="state-pill ${escapeHtml(state)}">${escapeHtml(text)}</span>
-      <button type="button" class="ghost small" data-delete="${escapeHtml(entry.jobId)}" title="Delete task">🗑</button>
+      ${isActive ? `
+        <div class="task-progress-mini">
+          <div class="progress-track"><div class="progress-fill indeterminate"></div></div>
+        </div>` : ''}
     </div>`;
 }
 
@@ -135,12 +158,21 @@ async function renderList(app, { completed }) {
         <button type="button" class="danger small${selected.size ? '' : ' hidden'}" id="sel-delete">Delete selected (<span id="sel-n">${selected.size}</span>)</button>
       </div>` : '';
     app.innerHTML = `
-      <div class="card">
-        <h2>${title}</h2>
-        ${anyActive ? '<p class="muted"><i>working — open a task for its live progress</i></p>' : ''}
+      <div class="card card-elevated">
+        <div class="card-header-row" style="margin-bottom: 16px;">
+          <div>
+            <h2 style="margin:0; font-size:22px;">${title}</h2>
+            ${anyActive ? '<p class="muted small" style="margin:4px 0 0;"><span class="pulse-dot"></span> Pipeline active — tap any task to inspect real GitHub Actions logs</p>' : '<p class="muted small" style="margin:4px 0 0;">Pipeline task queue and executions</p>'}
+          </div>
+          <div class="btn-row" style="margin:0;">
+            <a class="btn btn-primary btn-small" href="#/new">✨ New Video</a>
+            <a class="btn btn-secondary btn-small" href="${completed ? '#/tasks' : '#/done'}">${completed ? 'Active Tasks' : 'Completed'}</a>
+          </div>
+        </div>
         ${selBar}
-        ${rows || `<p class="muted">${completed ? 'Nothing completed yet.' : 'No tasks yet. Start one from New video.'}</p>`}
-        ${completed ? '' : '<div class="btn-row"><a class="btn primary" href="#/new">New video</a><a class="btn ghost" href="#/done">Completed</a></div>'}
+        <div class="task-card-list">
+          ${rows || `<div class="empty-state-box"><div class="empty-icon">${completed ? '🎬' : '📥'}</div><div class="empty-title">${completed ? 'Nothing completed yet.' : 'No active tasks.'}</div><p class="muted small">${completed ? 'Completed video renders will appear here with instant download links.' : 'Start your first video render to watch automated pipeline execution.'}</p><div class="btn-row" style="justify-content:center; margin-top:14px;"><a class="btn btn-primary btn-small" href="#/new">✨ Create First Video</a></div></div>`}
+        </div>
       </div>`;
 
     // --- task-09: multi-select wiring (no redraw on toggle — poll-safe) --- //
