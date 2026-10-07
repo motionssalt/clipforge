@@ -1,0 +1,92 @@
+{
+  "version": 2,
+  "title": "Plunge into the Raging Abyss — Part 6",
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#hunterxhunter",
+    "#gonfreecss",
+    "#kurapika",
+    "#leorio",
+    "#anime",
+    "#hunterexam"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon rescue",
+    "kurapika and leorio",
+    "hxh episode 1",
+    "passed"
+  ],
+  "series": {
+    "series_id": "Hunter1",
+    "part": 6,
+    "start_seconds": 1217,
+    "end_seconds": 1358,
+    "is_final": true,
+    "summary": "As Gon and the sailor plummet toward the sea, Kurapika and Leorio lunge over the railing and grab Gon's ankles, pulling them both back to safety. Shamed by Gon's pure bravery, Leorio reveals he wants money to become a doctor after his impoverished friend died, and Kurapika apologizes for misjudging him. Thrilled by their courage and unity, the Captain passes all three applicants."
+  },
+  "segments": [
+    {
+      "start_seconds": 1218,
+      "end_seconds": 1240,
+      "voiceover_text": "Two rivals forget their feud in a heartbeat. Diving to the railing, Kurapika and Leorio catch Gon's ankles, hauling him and the deckhand safely back aboard.",
+      "keywords": [
+        {
+          "word": "heartbeat",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "safely",
+          "color": "#5CFF88"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1241,
+      "end_seconds": 1266,
+      "voiceover_text": "Gon grins, confident they would catch him. Humbled, Leorio confesses his true secret: he wants money to become a doctor after losing his impoverished best friend.",
+      "keywords": [
+        {
+          "word": "Humbled",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "doctor",
+          "color": "#5C9DFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1267,
+      "end_seconds": 1308,
+      "voiceover_text": "Kurapika softens and sincerely apologizes for misjudging him. Watching their bond form, the Captain bursts into hearty laughter and announces they have passed his test.",
+      "keywords": [
+        {
+          "word": "apologizes",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "passed",
+          "color": "#5CFF88"
+        }
+      ]
+    },
+    {
+      "start_seconds": 1309,
+      "end_seconds": 1358,
+      "voiceover_text": "The storm breaks as morning light bathes the calm ocean. Once bitter rivals, the three companions stand united, ready to conquer the deadly trials of the Hunter Exam.",
+      "keywords": [
+        {
+          "word": "united",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "Hunter",
+          "color": "#FF5C5C"
+        }
+      ]
+    }
+  ],
+  "job_id": "Hunter1-p6"
+}
