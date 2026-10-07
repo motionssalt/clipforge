@@ -3,8 +3,8 @@
   "job_id": "Hunter1-p4",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1791332929,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1791333107,
   "series": {
     "enabled": true,
     "series_id": "Hunter1",
@@ -18,7 +18,7 @@
   "run": {
     "workflow_run_id": 37552163689,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/37552163689",
-    "code_ref": "adc10959b82e76cf0bbeb6cb50d693503d65691d"
+    "code_ref": "1de0d371f67ce6c9468072d17388476de718676a"
   },
   "publishing": {
     "status": "not_requested",
