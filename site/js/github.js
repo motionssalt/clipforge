@@ -13,7 +13,7 @@ export const CLONE_STATUS_PATH = '.clipforge-clone-status.json';
 
 export const CLONE_COPY_POLL_MS = 4000;
 export const CLONE_COPY_FIRST_WAIT_MS = 120000;
-export const CLONE_COPY_START_MS = 120000;
+export const CLONE_COPY_START_MS = 240000;
 export const CLONE_COPY_STALL_MS = 360000;
 export const CLONE_COPY_DEADLINE_MS = 600000;
 
@@ -72,7 +72,7 @@ export async function githubRequest(credentials, path, options = {}) {
   if (credentials && credentials.githubPat) {
     headers['Authorization'] = `Bearer ${credentials.githubPat}`;
   }
-  const init = { method: options.method || 'GET', headers };
+  const init = { method: options.method || 'GET', headers, cache: 'no-store' };
   if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     init.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
@@ -361,12 +361,12 @@ export async function deleteClipforgeJob(credentials, repo, jobId) {
 
 // -------------------------------------------------------------- actions //
 
-export async function dispatchWorkflow(credentials, repo, workflow, inputs) {
+export async function dispatchWorkflow(credentials, repo, workflow, inputs, ref = DEFAULT_BRANCH) {
   const { owner, name } = parseRepo(repo);
   return githubRequest(credentials,
     `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/actions/workflows/${encodeURIComponent(workflow)}/dispatches`, {
       method: 'POST',
-      body: { ref: DEFAULT_BRANCH, inputs: inputs || {} }
+      body: { ref: ref || DEFAULT_BRANCH, inputs: inputs || {} }
     });
 }
 

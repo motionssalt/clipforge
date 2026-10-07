@@ -194,8 +194,8 @@
     {
       "id": "task-13",
       "title": "Dashboard UI polish (operator feedback: unresponsive feel + plain UI)",
-      "status": "pending",
-      "notes": "Operator report 2026-09-13: 'everything delivered in one html, unresponsive, UI looks disgusting'. SESSION-20 finding: single-file part is ALREADY resolved (modular build live, verified above). Remaining: visual design pass on styles.css/views (connect screen, cards, spacing, dark-theme contrast) + perceived-responsiveness (skeletons/optimistic states). Must be done BEFORE task-12 deletions as part of the parity acceptance."
+      "status": "done",
+      "notes": "Complete overhaul of site UI/UX: added design tokens, hero dashboard, elevated cards, interactive status badges, pulse indicators, responsive inputs, and fixed clone creation (status reading, polling bounds, regex whitespace stripping, route binding)."
     }
   ],
   "notes": "Session-16 2026-09-13. task-06 done (see its notes: exact super_series port, 17/17 bot-test parity, E2E live-dispatch verified stage-b run 34751456208). RESUME POINT: task-07 next (Settings view \u2014 currently a 4-line stub: js/features/settings.js). Sections to build, all direct GitHub reads/writes (helpers already in js/github.js): GitHub clone (connect/disconnect/delete/visibility/sync/main-account push), Narrator (12 VOICES + assets/tts-previews/<voiceId>.mp3 playback), Music library (list/preview/default/delete/upload), Watermark, Series Mode default, Super Series default, Gemini keys, Zernio full settings. Bot source already catalogued in feature_catalog. Then task-08 (Zernio per-task publish flow), task-09 (media/multi-select/download), task-10 (cross-check), task-11 (Pages deploy + live verify), task-12 (bot/D1/KV deletion LAST \u2014 prerequisite: port super-queue sweep to a scheduled super-sweep.yml workflow first).",

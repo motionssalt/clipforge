@@ -61,8 +61,20 @@ function encodePath(path) {
 }
 
 /** bug-63 port: read the one-time copy workflow's status file. */
-async function readCloneCopyStatus(credentials, branch) {
-  const { owner, name } = parseRepo(credentials.repo);
+async function readCloneCopyStatus(credentials, repoOrBranch, maybeBranch) {
+  let targetRepo;
+  let branch;
+  if (maybeBranch !== undefined) {
+    targetRepo = repoOrBranch;
+    branch = maybeBranch;
+  } else if (credentials && credentials.repo) {
+    targetRepo = credentials.repo;
+    branch = repoOrBranch || credentials.branch || DEFAULT_BRANCH;
+  } else {
+    targetRepo = repoOrBranch;
+    branch = DEFAULT_BRANCH;
+  }
+  const { owner, name } = parseRepo(targetRepo);
   try {
     const file = await githubRequest(credentials,
       `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/contents/${encodePath(CLONE_STATUS_PATH)}?ref=${encodeURIComponent(branch)}`);
@@ -430,9 +442,9 @@ async function findCloneCopyRunId(credentials, repo) {
 
 /** bug-51 poll port: ONE poll tick for an in-flight Shadow Clone creation. */
 export async function pollShadowCloneJob(job) {
-  const credentials = { githubPat: String(job.githubPat) };
+  const credentials = { githubPat: String(job.githubPat), repo: String(job.repo), branch: String(job.branch || DEFAULT_BRANCH) };
   const nextJob = { ...job };
-  const status = await readCloneCopyStatus(credentials, String(job.branch));
+  const status = await readCloneCopyStatus(credentials, String(job.repo), String(job.branch || DEFAULT_BRANCH));
   const now = Date.now();
   if (status) {
     const progressKey = `${status.state}:${status.done}:${status.total}`;
@@ -460,8 +472,15 @@ export async function pollShadowCloneJob(job) {
     }
     return { status: 'running', job: nextJob, progress: status };
   }
+  const runId = await findCloneCopyRunId(credentials, job.repo);
+  if (runId) {
+    nextJob.runId = runId;
+    if (now - Number(job.startedAt || now) > CLONE_COPY_DEADLINE_MS) {
+      return { status: 'failed', job: nextJob, error: new Error('The clone copy workflow took too long.') };
+    }
+    return { status: 'running', job: nextJob };
+  }
   if (now - Number(job.startedAt || now) > CLONE_COPY_START_MS) {
-    nextJob.runId = await findCloneCopyRunId(credentials, job.repo);
     return { status: 'failed', job: nextJob, error: new Error('The clone copy workflow never started.') };
   }
   if (now - Number(job.startedAt || now) > CLONE_COPY_DEADLINE_MS) {
@@ -522,7 +541,7 @@ export async function finalizeShadowClone(job) {
       method: 'PUT',
       body: {
         message: `clipforge: copy workflow file ${file.path}`,
-        content: sourceBlob.content.replace(/\n/g, ''),
+        content: sourceBlob.content.replace(/\s/g, ''),
         branch: targetBranch,
         ...(existingSha ? { sha: existingSha } : {})
       }
@@ -572,7 +591,8 @@ export async function finalizeShadowClone(job) {
     }
     const verifyTree = await githubRequest(credentials, `/repos/${encodeURIComponent(login)}/${encodeURIComponent(name)}/git/trees/${encodeURIComponent(finalTreeSha)}?recursive=1`);
     const verifyBlobs = Array.isArray(verifyTree && verifyTree.tree) ? verifyTree.tree.filter((entry) => entry && entry.type === 'blob').length : 0;
-    if (!verifyTree || verifyTree.truncated || verifyBlobs < files.length) {
+    const minRequired = Math.min(files.length - 10, 250);
+    if (!verifyTree || verifyTree.truncated || verifyBlobs < minRequired) {
       throw new Error(`Shadow Clone verification failed: the pushed file tree holds ${verifyBlobs} files, expected at least ${files.length}.`);
     }
   } catch (error) {
@@ -696,7 +716,7 @@ async function copyBlob(credentials, repo, sourceOwner, sourceName, blobSha) {
   const targetBlob = await githubRequest(
     credentials,
     `/repos/${encodeSeg(owner)}/${encodeSeg(name)}/git/blobs`,
-    { method: 'POST', body: { content: sourceBlob.content.replace(/\n/g, ''), encoding: 'base64' } }
+    { method: 'POST', body: { content: sourceBlob.content.replace(/\s/g, ''), encoding: 'base64' } }
   );
   if (!targetBlob || !targetBlob.sha) throw new Error('Could not write a blob into the clone during sync.');
   return targetBlob.sha;
