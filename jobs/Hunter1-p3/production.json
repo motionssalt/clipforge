@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "title": "The Storm That Breaks the Weak — Part 3",
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#hunterxhunter",
+    "#gonfreecss",
+    "#anime",
+    "#hunterexam",
+    "#kurapika",
+    "#leorio"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon",
+    "kurapika",
+    "leorio",
+    "hxh episode 1",
+    "anime storm"
+  ],
+  "series": {
+    "series_id": "Hunter1",
+    "part": 3,
+    "start_seconds": 461,
+    "end_seconds": 855,
+    "is_final": false,
+    "summary": "Out on the turbulent sea, a ferocious storm violently rolls the passenger vessel, incapacitating dozens of hopeful applicants with agonizing seasickness. Amid the groaning wreckage in the hold, only Kurapika, Leorio, and Gon remain totally unaffected. Observing the cabin, the grizzled sea Captain recognizes their extraordinary resilience and summons them into his quarters."
+  },
+  "segments": [
+    {
+      "start_seconds": 462,
+      "end_seconds": 491,
+      "voiceover_text": "Black skies and towering waves turn a routine voyage into a nightmare. Violent winds hammer the wooden hull, threatening to tear the vessel apart.",
+      "keywords": [
+        {
+          "word": "nightmare",
+          "color": "#FF3333"
+        },
+        {
+          "word": "hammer",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 527,
+      "end_seconds": 568,
+      "voiceover_text": "Below deck, pure agony reigns. Brutal rolling swells slam dozens of muscular applicants into the walls, leaving them puking and sobbing in helpless seasickness.",
+      "keywords": [
+        {
+          "word": "agony",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "helpless",
+          "color": "#FFAA00"
+        }
+      ]
+    },
+    {
+      "start_seconds": 618,
+      "end_seconds": 702,
+      "voiceover_text": "Yet three strangers remain totally unaffected. Kurapika calmly reads in his hammock, Leorio lounges with an apple, and energetic Gon rushes to nurse the suffering.",
+      "keywords": [
+        {
+          "word": "unaffected",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "reads",
+          "color": "#5C9DFF"
+        }
+      ]
+    },
+    {
+      "start_seconds": 748,
+      "end_seconds": 855,
+      "voiceover_text": "The grizzled Captain strides through the ruined cabin, stunned by the only three survivors still standing. He orders them to his quarters, hiding a ruthless test they never anticipated.",
+      "keywords": [
+        {
+          "word": "survivors",
+          "color": "#FFAA00"
+        },
+        {
+          "word": "ruthless",
+          "color": "#FF3333"
+        }
+      ]
+    }
+  ],
+  "job_id": "Hunter1-p3"
+}
