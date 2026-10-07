@@ -64,10 +64,12 @@ MAX_TELEGRAM_MEDIA_BYTES = 5 * 1024 * 1024 * 1024
 
 TELEGRAM_PUBLIC_HOSTS = ("t.me", "telegram.me")
 DISABLED_SOCIAL_HOSTS = (
-    "youtube-nocookie.com", "youtu.be", "youtube.com",
     "vm.tiktok.com", "vt.tiktok.com", "tiktok.com",
     "fb.watch", "facebook.com", "instagram.com", "twitter.com", "x.com",
     "vimeo.com", "redd.it", "reddit.com",
+)
+YOUTUBE_HOSTS = (
+    "youtube.com", "youtu.be", "youtube-nocookie.com",
 )
 PUBLIC_CHANNEL_RE = re.compile(r"^[A-Za-z0-9_]{5,64}$")
 
@@ -89,7 +91,7 @@ _HEX_INFOHASH_RE = re.compile(r"[0-9a-fA-F]{40}\Z")
 _BASE32_INFOHASH_RE = re.compile(r"[A-Z2-7a-z2-7]{32}\Z")
 
 # Source kinds this module fully resolves itself.
-_SELF_SERVE_KINDS = ("url", "drive", "magnet", "torrent_file")
+_SELF_SERVE_KINDS = ("url", "youtube", "drive", "magnet", "torrent_file")
 # Preserved subsystems (§9.1 / §9.2), wired to their own download paths.
 _PRESERVED_KINDS = ("telegram_channel", "telegram_relay")
 ALL_KINDS = _SELF_SERVE_KINDS + _PRESERVED_KINDS
@@ -264,6 +266,272 @@ def download_direct(url: str, output_path: str) -> int:
     if "text/html" in content_type or content_type.startswith("text/"):
         raise IngestError(f"the URL returned {content_type or 'a text response'} instead of a file — this does not look like a direct video download link.")
     return _stream_to_file(response, output_path, f"URL={url}")
+
+
+def is_youtube_host(url: str) -> bool:
+    """True if the given URL belongs to a known YouTube host."""
+    if not url or not isinstance(url, str):
+        return False
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+        host = (parsed.hostname or "").lower().rstrip(".")
+        for yth in YOUTUBE_HOSTS:
+            if host == yth or host.endswith(f".{yth}"):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def extract_youtube_video_id(url: str) -> str | None:
+    """Extract an 11-character YouTube video ID from various YouTube URL formats.
+    
+    Supports:
+    - https://www.youtube.com/watch?v=VIDEO_ID (and m., music., www.youtube-nocookie.com)
+    - https://youtu.be/VIDEO_ID
+    - https://www.youtube.com/shorts/VIDEO_ID
+    - https://www.youtube.com/embed/VIDEO_ID
+    - https://www.youtube.com/v/VIDEO_ID
+    """
+    if not url or not isinstance(url, str):
+        return None
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except Exception:
+        return None
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if not (host in YOUTUBE_HOSTS or any(host.endswith(f".{h}") for h in YOUTUBE_HOSTS)):
+        return None
+
+    # youtu.be/<id>
+    if host == "youtu.be" or host.endswith(".youtu.be"):
+        path = parsed.path.lstrip("/")
+        parts = path.split("/")
+        if parts and parts[0]:
+            candidate = parts[0].split("?")[0].split("&")[0]
+            if re.fullmatch(r"[A-Za-z0-9_-]{11}", candidate):
+                return candidate
+
+    # youtube.com/watch?v=<id>
+    qs = urllib.parse.parse_qs(parsed.query)
+    if "v" in qs and qs["v"]:
+        candidate = qs["v"][0]
+        if re.fullmatch(r"[A-Za-z0-9_-]{11}", candidate):
+            return candidate
+
+    # youtube.com/shorts/<id> or /embed/<id> or /v/<id>
+    path_parts = [p for p in parsed.path.split("/") if p]
+    if len(path_parts) >= 2 and path_parts[0] in ("shorts", "embed", "v"):
+        candidate = path_parts[1].split("?")[0].split("&")[0]
+        if re.fullmatch(r"[A-Za-z0-9_-]{11}", candidate):
+            return candidate
+
+    return None
+
+
+def normalize_youtube_url(url: str) -> str:
+    """Normalize a YouTube link to canonical https://www.youtube.com/watch?v=<id>.
+    
+    Strips playlist, radio, tracking, and timestamp parameters.
+    Raises IngestError if the URL is not a recognized single YouTube video.
+    """
+    video_id = extract_youtube_video_id(url)
+    if not video_id:
+        raise IngestError(
+            f"Could not extract a valid YouTube video ID from {url!r}. "
+            "Please provide a direct public YouTube video link (e.g. https://www.youtube.com/watch?v=... or https://youtu.be/...)."
+        )
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+def _map_ytdlp_error(stderr_text: str, canonical_url: str, has_cookies: bool) -> IngestError:
+    """Map yt-dlp stderr output to plain, actionable IngestError."""
+    low = (stderr_text or "").lower()
+    if any(phrase in low for phrase in [
+        "sign in to confirm you’re not a bot",
+        "sign in to confirm you're not a bot",
+        "bot-check",
+        "bot check",
+        "use --cookies",
+        "confirm you’re not a bot",
+        "confirm you're not a bot",
+    ]):
+        if not has_cookies:
+            return IngestError(
+                f"YouTube blocked the runner with a bot-check challenge ('Sign in to confirm you’re not a bot') for {canonical_url}. "
+                "To resolve this, export cookies from a throwaway Google account (Netscape format cookies.txt) "
+                "and set them as the repo secret YOUTUBE_COOKIES (or configure YOUTUBE_PROXY_URL)."
+            )
+        else:
+            return IngestError(
+                f"YouTube rejected the request with a bot-check challenge despite cookies for {canonical_url}. "
+                "The YOUTUBE_COOKIES secret may be expired or flagged — please refresh it from an active browser session, "
+                "or configure YOUTUBE_PROXY_URL."
+            )
+
+    if any(phrase in low for phrase in ["private video", "this video is private"]):
+        return IngestError(f"YouTube video is private: {canonical_url}. Only public videos can be ingested.")
+
+    if any(phrase in low for phrase in ["video unavailable", "this video has been removed", "has been terminated"]):
+        return IngestError(f"YouTube video is unavailable or removed: {canonical_url}.")
+
+    if any(phrase in low for phrase in ["members-only", "join this channel", "channel members"]):
+        return IngestError(f"YouTube video requires channel membership ('members-only'): {canonical_url}. Only public videos are supported.")
+
+    if any(phrase in low for phrase in ["age-restricted", "sign in to confirm your age"]):
+        return IngestError(
+            f"YouTube video is age-restricted: {canonical_url}. "
+            "Add the repo secret YOUTUBE_COOKIES from an age-verified account to ingest age-restricted content."
+        )
+
+    if any(phrase in low for phrase in ["is currently live", "live stream", "premiere"]):
+        return IngestError(f"Active live streams or scheduled premieres cannot be ingested: {canonical_url}. Wait for the broadcast to end.")
+
+    if any(phrase in low for phrase in ["not available in your country", "blocked it in your country", "georestricted", "geo-restricted"]):
+        return IngestError(f"YouTube video is geo-restricted: {canonical_url}. Configure YOUTUBE_PROXY_URL to route traffic through an allowed region.")
+
+    if any(phrase in low for phrase in ["no video formats", "requested format is not available"]):
+        return IngestError(f"No downloadable video formats found for {canonical_url}.")
+
+    for line in (stderr_text or "").splitlines():
+        line = line.strip()
+        if line.startswith("ERROR:"):
+            return IngestError(f"YouTube download failed: {line}")
+
+    return IngestError(f"YouTube download failed: {str(stderr_text or '').strip()[:300]}")
+
+
+def download_youtube(url: str, output_path: str) -> int:
+    """Download a public YouTube video using yt-dlp with layered fallback.
+    
+    Applies quality cap (CLIPFORGE_YT_MAX_HEIGHT, default 1080p), merges audio+video,
+    enforces MAX_VIDEO_BYTES (12 GiB) and available disk space, supports optional
+    YOUTUBE_COOKIES (or YOUTUBE_COOKIES_PATH) and YOUTUBE_PROXY_URL.
+    """
+    import tempfile
+    canonical_url = normalize_youtube_url(url)
+    out_dir = os.path.dirname(os.path.abspath(output_path)) or "."
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Disk space check: ensure at least 2 GiB free before starting
+    try:
+        free_bytes = shutil.disk_usage(out_dir).free
+        if free_bytes < 2 * 1024 * 1024 * 1024:
+            raise IngestError(f"Insufficient runner disk space ({free_bytes // (1024*1024)} MB free) to download YouTube video.")
+    except OSError:
+        pass
+
+    # Resolve yt-dlp binary
+    ytdlp_bin = shutil.which("yt-dlp")
+    if ytdlp_bin:
+        cmd_base = [ytdlp_bin]
+    else:
+        cmd_base = [sys.executable, "-m", "yt_dlp"]
+
+    max_height = os.environ.get("CLIPFORGE_YT_MAX_HEIGHT", "1080").strip()
+    try:
+        int(max_height)
+    except ValueError:
+        max_height = "1080"
+
+    format_spec = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]/best"
+
+    # JS runtime args
+    js_args = []
+    node_bin = shutil.which("node")
+    deno_bin = shutil.which("deno")
+    if node_bin:
+        js_args = ["--js-runtimes", f"node:{node_bin}"]
+    elif deno_bin:
+        js_args = ["--js-runtimes", f"deno:{deno_bin}"]
+
+    proxy_url = os.environ.get("YOUTUBE_PROXY_URL", "").strip()
+
+    temp_dir = tempfile.mkdtemp(prefix="clipforge_yt_")
+    out_template = os.path.join(temp_dir, "downloaded.%(ext)s")
+
+    cookies_file = None
+    cleanup_cookies = False
+    raw_cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
+    cookies_path_env = os.environ.get("YOUTUBE_COOKIES_PATH", "").strip()
+
+    if cookies_path_env and os.path.isfile(cookies_path_env):
+        cookies_file = cookies_path_env
+    elif raw_cookies:
+        cookies_file = os.path.join(temp_dir, ".yt_cookies.txt")
+        fd = os.open(cookies_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with open(fd, "w", encoding="utf-8") as f:
+            f.write(raw_cookies)
+        cleanup_cookies = True
+
+    try:
+        common_args = [
+            "--no-playlist",
+            "--no-check-certificates",
+            "--merge-output-format", "mp4/mkv",
+            "-f", format_spec,
+            "-o", out_template,
+            *js_args,
+        ]
+        if proxy_url:
+            common_args.extend(["--proxy", proxy_url])
+
+        if cookies_file:
+            run_cmd = [*cmd_base, *common_args, "--cookies", cookies_file, canonical_url]
+            proc = subprocess.run(run_cmd, capture_output=True, text=True)
+            if proc.returncode != 0:
+                raise _map_ytdlp_error(proc.stderr or proc.stdout, canonical_url, True)
+        else:
+            # Layered strategy without cookies: try player clients
+            clients_to_try = ["android,web", "ios,web", "mweb", "web"]
+            last_err = ""
+            success = False
+            for client in clients_to_try:
+                run_cmd = [
+                    *cmd_base,
+                    *common_args,
+                    "--extractor-args", f"youtube:player_client={client}",
+                    canonical_url,
+                ]
+                proc = subprocess.run(run_cmd, capture_output=True, text=True)
+                if proc.returncode == 0:
+                    success = True
+                    break
+                last_err = proc.stderr or proc.stdout
+                low_err = last_err.lower()
+                if any(w in low_err for w in ["private video", "this video has been removed", "members-only"]):
+                    break
+
+            if not success:
+                raise _map_ytdlp_error(last_err, canonical_url, False)
+
+        # Locate downloaded output
+        candidates = [
+            os.path.join(temp_dir, f)
+            for f in os.listdir(temp_dir)
+            if not f.startswith(".") and os.path.isfile(os.path.join(temp_dir, f))
+        ]
+        if not candidates:
+            raise IngestError(f"yt-dlp exited cleanly but no video file was written for {canonical_url}")
+
+        downloaded = candidates[0]
+        size = os.path.getsize(downloaded)
+        if size == 0:
+            raise IngestError(f"downloaded 0 bytes from YouTube for {canonical_url}")
+        if size > MAX_VIDEO_BYTES:
+            raise IngestError(f"downloaded YouTube video ({size / (1024**3):.2f} GiB) exceeds the 12 GiB maximum limit")
+
+        shutil.move(downloaded, output_path)
+        print(f"Successfully downloaded YouTube video: {canonical_url} -> {output_path} ({size} bytes)")
+        return size
+
+    finally:
+        if cleanup_cookies and cookies_file and os.path.isfile(cookies_file):
+            try:
+                os.remove(cookies_file)
+            except OSError:
+                pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -836,6 +1104,28 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
         # §9.1 preserved-subsystem path (legacy dispatch semantics preserved:
         # download_drive.py's main() routes any t.me post URL to the MTProto
         # path regardless of how the source was classified).
+        if is_youtube_host(raw):
+            download_youtube(raw, tmp_source)
+            ext = detect_container_ext(tmp_source)
+            original_path = os.path.join(work_dir, f"original.{ext}")
+            shutil.copyfile(tmp_source, original_path)
+            size_bytes = os.path.getsize(original_path)
+            record = {
+                "version": 1,
+                "job_id": job_id,
+                "source_kind": "youtube",
+                "original_path": original_path,
+                "original_asset_name": f"original.{ext}",
+                "size_bytes": size_bytes,
+                "container": ext,
+                "ingested_at_epoch": int(time.time()),
+            }
+            (Path(root) / job_id).mkdir(parents=True, exist_ok=True)
+            (Path(root) / job_id / "ingest.json").write_text(
+                json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print(f"Ingested youtube source -> {original_path} ({size_bytes} bytes)")
+            return record
+
         if telegram_public_post_url(raw):
             canonical = _download_telegram_channel(raw, tmp_source)
             print(f"Telegram channel post ingested via §9.1 path: {canonical}")
@@ -871,6 +1161,9 @@ def ingest(job_id: str, work_dir: str, *, root: os.PathLike[str] | str = "jobs")
                 "links are not supported."
             )
         download_direct(raw, tmp_source)
+
+    elif kind == "youtube":
+        download_youtube(value, tmp_source)
 
     elif kind == "drive":
         file_id = extract_file_id(value)
