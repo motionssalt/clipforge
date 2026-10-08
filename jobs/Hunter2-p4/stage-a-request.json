@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "Hunter2-p4",
+  "saved_at_epoch": 1791498399,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1791493294668/source.torrent",
+    "torrent_file_index": "2"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "Hunter2",
+    "source_job_id": "manual-1791493294668",
+    "part": 4,
+    "start_seconds": 774,
+    "context": "Prior events (Part 1): Gon, Kurapika, and Leorio arrive at Port Dolle. Following the captains clue, Gon and Kurapika take the mountain path while Leorio narrowly avoids a fraudulent bus trap.\nPrior events (Part 2): In a deserted town, an eerie examiner tests applicants with an unforgiving two-choice quiz. Arrogant applicant Matthew answers selfishly and is led into a lethal beast den.\nPrior events (Part 3): Faced with a cruel question between saving a son or daughter, Leorio nearly attacks the examiner before Kurapika stops him, proving silence is the only acceptable answer."
+  },
+  "music": {
+    "ref": "",
+    "source": "default"
+  }
+}
