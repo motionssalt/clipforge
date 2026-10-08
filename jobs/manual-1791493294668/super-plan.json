@@ -1,0 +1,402 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1791493294668",
+  "series_id": "Hunter2",
+  "total_parts": 5,
+  "video_duration_seconds": 1358,
+  "plan": {
+    "version": 2,
+    "series_id": "Hunter2",
+    "video_duration_seconds": 1358,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "The Captains Clue and the Bus Trap",
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#HunterxHunter",
+          "#AnimeShorts",
+          "#GonFreecss",
+          "#HunterExam",
+          "#PortDolle",
+          "#AnimeAdventure"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hunter exam",
+          "gon freecss",
+          "kurapika",
+          "leorio",
+          "port dolle",
+          "bus trap"
+        ],
+        "series": {
+          "series_id": "Hunter2",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 355,
+          "is_final": false,
+          "summary": "Gon, Kurapika, and Leorio arrive at Port Dolle. Following the captains clue, Gon and Kurapika take the mountain path while Leorio narrowly avoids a fraudulent bus trap."
+        },
+        "segments": [
+          {
+            "start_seconds": 141,
+            "end_seconds": 165,
+            "voiceover_text": "Gon steps onto the docks of Port Dolle with his map in hand. Following the sea captains advice, he sets his sights on the lone cedar tree on the mountain.",
+            "keywords": [
+              {
+                "word": "cedar",
+                "color": "#2ECC71"
+              }
+            ]
+          },
+          {
+            "start_seconds": 235,
+            "end_seconds": 251,
+            "voiceover_text": "Leorio laughs at the idea of a brutal hike. He points eagerly to a direct bus to Zaban City, convinced he found the easy way.",
+            "keywords": [
+              {
+                "word": "bus",
+                "color": "#F39C12"
+              }
+            ]
+          },
+          {
+            "start_seconds": 271,
+            "end_seconds": 304,
+            "voiceover_text": "Kurapika follows Gon anyway. But when Leorio overhears that the bus is a trap to eliminate lazy applicants, he panics and sprints up the road to catch them.",
+            "keywords": [
+              {
+                "word": "trap",
+                "color": "#E74C3C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 332,
+            "end_seconds": 355,
+            "voiceover_text": "Reunited on the trail, the trio enters an eerily silent town, completely unaware of the ambush waiting ahead.",
+            "keywords": [
+              {
+                "word": "ambush",
+                "color": "#9B59B6"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "The Abandoned Town and the Two Choice Quiz",
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#HunterxHunter",
+          "#AnimeShorts",
+          "#TwoChoiceQuiz",
+          "#HunterExam",
+          "#AnimeMystery",
+          "#Kurapika"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hunter exam",
+          "two choice quiz",
+          "examiner",
+          "matthew",
+          "anime riddle"
+        ],
+        "series": {
+          "series_id": "Hunter2",
+          "part": 2,
+          "start_seconds": 355,
+          "end_seconds": 553,
+          "is_final": false,
+          "summary": "In a deserted town, an eerie examiner tests applicants with an unforgiving two-choice quiz. Arrogant applicant Matthew answers selfishly and is led into a lethal beast den."
+        },
+        "segments": [
+          {
+            "start_seconds": 355,
+            "end_seconds": 386,
+            "voiceover_text": "Bizarre masked figures emerge from the shadows as an elderly examiner blocks the road. She presents an unforgiving two-choice quiz: one wrong answer means instant disqualification.",
+            "keywords": [
+              {
+                "word": "disqualification",
+                "color": "#E74C3C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 420,
+            "end_seconds": 448,
+            "voiceover_text": "An arrogant applicant named Matthew, who was secretly stalking them, shoves his way to the front to take the test first.",
+            "keywords": [
+              {
+                "word": "stalking",
+                "color": "#E67E22"
+              }
+            ]
+          },
+          {
+            "start_seconds": 452,
+            "end_seconds": 492,
+            "voiceover_text": "The examiner poses the riddle: villains hold your mother and your lover captive. Which one do you save? Matthew confidently picks his mother, arguing lovers can always be replaced.",
+            "keywords": [
+              {
+                "word": "mother",
+                "color": "#3498DB"
+              }
+            ]
+          },
+          {
+            "start_seconds": 513,
+            "end_seconds": 553,
+            "voiceover_text": "The examiner sends him through a side door. But Matthew walked right into a den of ravenous beasts—and now the examiner points her finger directly at Gons trio.",
+            "keywords": [
+              {
+                "word": "beasts",
+                "color": "#C0392B"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "The Impossible Riddle and the Silence Answer",
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#HunterxHunter",
+          "#AnimeShorts",
+          "#Leorio",
+          "#AnimeTwist",
+          "#SilenceAnswer",
+          "#Gon"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hunter exam",
+          "silence answer",
+          "leorio rage",
+          "kurapika",
+          "impossible quiz"
+        ],
+        "series": {
+          "series_id": "Hunter2",
+          "part": 3,
+          "start_seconds": 553,
+          "end_seconds": 774,
+          "is_final": false,
+          "summary": "Faced with a cruel question between saving a son or daughter, Leorio nearly attacks the examiner before Kurapika stops him, proving silence is the only acceptable answer."
+        },
+        "segments": [
+          {
+            "start_seconds": 556,
+            "end_seconds": 589,
+            "voiceover_text": "The examiner drops an impossible dilemma: if kidnappers take your son and daughter, which child do you rescue? They have five seconds to choose.",
+            "keywords": [
+              {
+                "word": "dilemma",
+                "color": "#E67E22"
+              }
+            ]
+          },
+          {
+            "start_seconds": 601,
+            "end_seconds": 620,
+            "voiceover_text": "As the timer ticks down, Leorio snaps. Furious at the cruel riddle, he grabs a heavy wooden club and charges to strike the examiner down.",
+            "keywords": [
+              {
+                "word": "snaps",
+                "color": "#E74C3C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 621,
+            "end_seconds": 650,
+            "voiceover_text": "Kurapika blocks the blow at the final second with his twin wooden blades. Silence was the true answer—and the examiner chimes the buzzer, passing them all.",
+            "keywords": [
+              {
+                "word": "silence",
+                "color": "#2ECC71"
+              }
+            ]
+          },
+          {
+            "start_seconds": 712,
+            "end_seconds": 774,
+            "voiceover_text": "While the others celebrate, Gon sits frozen in thought, troubled by what he would do if life ever forced him to make that choice.",
+            "keywords": [
+              {
+                "word": "frozen",
+                "color": "#3498DB"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "The Cabin Attack and the Kiriko Chase",
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#HunterxHunter",
+          "#AnimeAction",
+          "#KirikoBeast",
+          "#ForestChase",
+          "#HunterExam",
+          "#AnimeMoments"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "kiriko beast",
+          "cedar tree",
+          "cabin attack",
+          "gon fishing rod",
+          "forest chase"
+        ],
+        "series": {
+          "series_id": "Hunter2",
+          "part": 4,
+          "start_seconds": 774,
+          "end_seconds": 983,
+          "is_final": false,
+          "summary": "At the lone cedar tree, the boys discover a ransacked cabin where a monstrous Kiriko beast kidnaps a woman. Leorio tends to the wounded husband while Gon pursues the monster."
+        },
+        "segments": [
+          {
+            "start_seconds": 774,
+            "end_seconds": 821,
+            "voiceover_text": "Following the examiners directions through dense mountain fog, the trio reaches the towering cedar tree and discovers an isolated cabin.",
+            "keywords": [
+              {
+                "word": "isolated",
+                "color": "#95A5A6"
+              }
+            ]
+          },
+          {
+            "start_seconds": 822,
+            "end_seconds": 859,
+            "voiceover_text": "Inside, a gruesome scene awaits: a man lies bleeding on the floor, while a ferocious winged beast clutches a screaming woman.",
+            "keywords": [
+              {
+                "word": "beast",
+                "color": "#C0392B"
+              }
+            ]
+          },
+          {
+            "start_seconds": 864,
+            "end_seconds": 906,
+            "voiceover_text": "The beast smashes through the window into the woods. Leorio stays behind to bandage the dying husband, while Gon and Kurapika sprint in pursuit.",
+            "keywords": [
+              {
+                "word": "pursuit",
+                "color": "#E67E22"
+              }
+            ]
+          },
+          {
+            "start_seconds": 938,
+            "end_seconds": 983,
+            "voiceover_text": "Leaping through the trees, Gon whips his fishing rod forward, smashing the monster across the face and freeing the captive woman. But as the creature flees into a clearing, Gon notices something bizarre about its face.",
+            "keywords": [
+              {
+                "word": "bizarre",
+                "color": "#9B59B6"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "job_id": "",
+        "title": "The Shapeshifter Secret and the True Flight",
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "hashtags": [
+          "#HunterxHunter",
+          "#AnimeFinale",
+          "#ShapeshifterReveal",
+          "#Navigators",
+          "#ZabanCity",
+          "#GonFreecss"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "kiriko navigator",
+          "navigator test",
+          "shapeshifters",
+          "zaban city",
+          "hunter exam pass"
+        ],
+        "series": {
+          "series_id": "Hunter2",
+          "part": 5,
+          "start_seconds": 983,
+          "end_seconds": 1358,
+          "is_final": true,
+          "summary": "Gon distinguishes the two identical beasts while Kurapika discovers the truth about the woman. The Kiriko reveal they are exam navigators and fly the trio toward Zaban City."
+        },
+        "segments": [
+          {
+            "start_seconds": 985,
+            "end_seconds": 1057,
+            "voiceover_text": "Gon corners the monster in a clearing, but notices something strange. Looking closely, he realizes this beasts face and voice are different from the one he struck earlier.",
+            "keywords": [
+              {
+                "word": "different",
+                "color": "#3498DB"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1058,
+            "end_seconds": 1164,
+            "voiceover_text": "Kurapika arrives with the woman, while Leorio carries the bandaged husband. The monsters drop their act and reveal they are the Kiriko, shapeshifters conducting the official Navigator exam.",
+            "keywords": [
+              {
+                "word": "shapeshifters",
+                "color": "#9B59B6"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1182,
+            "end_seconds": 1276,
+            "voiceover_text": "The Kiriko praise Kurapikas sharp intellect, Leorios selfless medical compassion, and Gons uncanny instincts. All three applicants have officially passed.",
+            "keywords": [
+              {
+                "word": "passed",
+                "color": "#2ECC71"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1277,
+            "end_seconds": 1308,
+            "voiceover_text": "Spreading their massive wings, the Kiriko carry Gon, Kurapika, and Leorio into the skies, soaring directly toward Zaban City for the real Hunter Exam.",
+            "keywords": [
+              {
+                "word": "soaring",
+                "color": "#F1C40F"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
