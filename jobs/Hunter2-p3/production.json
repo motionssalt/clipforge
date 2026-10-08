@@ -1,0 +1,77 @@
+{
+  "version": 2,
+  "job_id": "Hunter2-p3",
+  "title": "The Impossible Riddle and the Silence Answer — Part 3",
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "hashtags": [
+    "#HunterxHunter",
+    "#AnimeShorts",
+    "#Leorio",
+    "#AnimeTwist",
+    "#SilenceAnswer",
+    "#Gon"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "hunter exam",
+    "silence answer",
+    "leorio rage",
+    "kurapika",
+    "impossible quiz"
+  ],
+  "series": {
+    "series_id": "Hunter2",
+    "part": 3,
+    "start_seconds": 553,
+    "end_seconds": 774,
+    "is_final": false,
+    "summary": "Faced with a cruel question between saving a son or daughter, Leorio nearly attacks the examiner before Kurapika stops him, proving silence is the only acceptable answer."
+  },
+  "segments": [
+    {
+      "start_seconds": 556,
+      "end_seconds": 589,
+      "voiceover_text": "The examiner drops an impossible dilemma: if kidnappers take your son and daughter, which child do you rescue? They have five seconds to choose.",
+      "keywords": [
+        {
+          "word": "dilemma",
+          "color": "#E67E22"
+        }
+      ]
+    },
+    {
+      "start_seconds": 601,
+      "end_seconds": 620,
+      "voiceover_text": "As the timer ticks down, Leorio snaps. Furious at the cruel riddle, he grabs a heavy wooden club and charges to strike the examiner down.",
+      "keywords": [
+        {
+          "word": "snaps",
+          "color": "#E74C3C"
+        }
+      ]
+    },
+    {
+      "start_seconds": 621,
+      "end_seconds": 650,
+      "voiceover_text": "Kurapika blocks the blow at the final second with his twin wooden blades. Silence was the true answer—and the examiner chimes the buzzer, passing them all.",
+      "keywords": [
+        {
+          "word": "silence",
+          "color": "#2ECC71"
+        }
+      ]
+    },
+    {
+      "start_seconds": 712,
+      "end_seconds": 774,
+      "voiceover_text": "While the others celebrate, Gon sits frozen in thought, troubled by what he would do if life ever forced him to make that choice.",
+      "keywords": [
+        {
+          "word": "frozen",
+          "color": "#3498DB"
+        }
+      ]
+    }
+  ]
+}
