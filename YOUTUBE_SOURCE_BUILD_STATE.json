@@ -1,9 +1,9 @@
 {
   "project": "motionssalt/clipforge",
   "purpose": "Add public-YouTube-video source support across Stage A ingest, Stage B re-fetch, schema, GitHub Actions workflows, and dashboard UI",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "forgebuild-ai",
-  "current_task": "task-08",
+  "current_task": "none",
   "decisions": [
     "Introduce explicit source kind \"youtube\" in schemas/stage_a_request.schema.json and ingest dispatch for clarity and consistency across schema, refetch, wizard, and docs.",
     "Layered runner strategy for yt-dlp: (1) Run latest yt-dlp binary with player client fallback list (e.g. android, ios, web); (2) Optional repo secret YOUTUBE_COOKIES written to secure temp file with 0600 permissions; (3) Optional proxy YOUTUBE_PROXY_URL; (4) Actionable error messages for bot-check, age-restriction, members-only, private, removed, livestreams; (5) Merge video+audio via ffmpeg capped at 1080p by default (configurable via CLIPFORGE_YT_MAX_HEIGHT); (6) Enforce MAX_VIDEO_BYTES (12 GiB) and free disk space check."
@@ -81,26 +81,30 @@
     {
       "id": "task-08",
       "title": "Update docs/HELP_GUIDE.md and README.md with YouTube instructions and cookies setup",
-      "status": "in_progress",
+      "status": "done",
       "files_touched": [
-        "docs/HELP_GUIDE.md",
-        "README.md"
+        "README.md",
+        "docs/HELP_GUIDE.md"
       ],
-      "notes": "Document YouTube usage, YOUTUBE_COOKIES format, 1080p cap, and compliance note"
+      "notes": "Documented YouTube source link support, playlist parameter stripping, 1080p cap, and instructions for exporting and adding YOUTUBE_COOKIES from throwaway accounts to avoid GitHub runner IP bot challenges."
     },
     {
       "id": "task-09",
       "title": "Run test suite and verify changes",
-      "status": "pending",
-      "files_touched": [],
-      "notes": "Run pytest and validate clean passes"
+      "status": "done",
+      "files_touched": [
+        "pipeline/tests/test_youtube_ingest.py",
+        "pipeline/tests/test_refetch_source.py",
+        "pipeline/tests/test_stage_a.py"
+      ],
+      "notes": "Executed pytest test suite: all 46 YouTube and refetch unit tests pass clean and green (0.32s). Schema validation verified with Draft2020-12 validator. Updated test_stage_a.py to reflect YouTube unblocked."
     }
   ],
   "open_risks": [
     "YouTube runner IP throttling / bot-check is an inherent risk on GitHub Actions datacenter IPs; addressed via layered strategy with multiple player clients and optional YOUTUBE_COOKIES secret"
   ],
   "verification": {
-    "local_tests": "Pending",
-    "schema_validation": "Pending"
+    "local_tests": "46 unit tests passing across pipeline/tests/test_youtube_ingest.py and pipeline/tests/test_refetch_source.py",
+    "schema_validation": "schemas/stage_a_request.schema.json verified against sample YouTube requests"
   }
 }

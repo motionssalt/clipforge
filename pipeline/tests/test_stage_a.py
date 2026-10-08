@@ -35,7 +35,8 @@ def test_telegram_public_post_url_rejects_non_posts():
 
 
 def test_disabled_social_hosts():
-    assert ingest.disabled_social_host("https://youtu.be/abc") == "youtu.be"
+    assert ingest.disabled_social_host("https://youtu.be/abc") is None
+    assert ingest.disabled_social_host("https://www.youtube.com/watch?v=123") is None
     assert ingest.disabled_social_host("https://www.tiktok.com/@x/video/1") == "tiktok.com"
     assert ingest.disabled_social_host("https://cdn.example.com/v.mp4") is None
 

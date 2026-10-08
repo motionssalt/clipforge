@@ -27,3 +27,22 @@ The previous page (…Complete-User-Guide-08-27-2) was replaced:
 6. When the task finishes
 7. Commands
 Good to know
+
+## YouTube video sources & optional YOUTUBE_COOKIES secret
+
+ClipForge supports ingesting public YouTube videos directly:
+- **Supported links**: `youtube.com/watch?v=...`, `youtu.be/...`, `youtube.com/shorts/...`, `m.youtube.com`, `music.youtube.com` (video pages).
+- **Parameters**: Playlist and radio mix parameters (`list=`, `index=`, `start_radio=`) are automatically stripped, ingesting only the chosen video.
+- **Limits**: Single public videos only (max 1080p default, up to 12 GiB). Livestreams, private/members-only videos, and DRM protected videos are not supported.
+- **Compliance**: For public videos the operator is entitled to use. Does not bypass DRM or paywalls.
+
+### Handling YouTube bot-checks on GitHub Actions (YOUTUBE_COOKIES)
+GitHub-hosted Actions runners use datacenter IPs that YouTube may challenge with "Sign in to confirm you're not a bot".
+
+To ensure reliable downloads:
+1. Export cookies in Netscape format (`cookies.txt`) from a **throwaway Google account** (never your personal main account, to prevent account flagging).
+2. Go to your repo: **Settings → Secrets and variables → Actions → New repository secret**.
+3. Name: `YOUTUBE_COOKIES`
+4. Value: Paste the text of your exported `cookies.txt`.
+5. Stage A and Stage B will pass the cookies securely with restrictive permissions (0600) and wipe them immediately after download.
+

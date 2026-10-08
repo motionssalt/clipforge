@@ -78,6 +78,8 @@ secret**.
 | Secret | Feature it enables | Used by |
 |---|---|---|
 | `ZERNIO_API_KEY` | Social publishing via Zernio. Absent → publish steps skip/fail only when you actually trigger them. | `stage-b.yml`, `publish.yml` |
+| `YOUTUBE_COOKIES` | Netscape-format cookies.txt from a throwaway Google account. Enables downloading YouTube videos when GitHub Actions runner IPs trigger bot-checks ("Sign in to confirm you're not a bot"), as well as age-restricted videos. | `stage-a.yml`, `stage-b.yml` |
+| `YOUTUBE_PROXY_URL` | Optional HTTP/SOCKS proxy (e.g. `http://user:pass@host:port`) for YouTube requests to avoid datacenter IP bot challenges or regional restrictions. | `stage-a.yml`, `stage-b.yml` |
 
 **Not needed on a clone (central-only):** `BOTB_MTPROTO_*`,
 `CLIPFORGE_TELEGRAM_*`, `DEPLOY_ALERT_CHAT_ID`, and `RELAY_ENCRYPTION_KEY` live only on the central
