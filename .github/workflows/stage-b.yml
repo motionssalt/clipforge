@@ -164,6 +164,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip wheel setuptools
+          python -m pip install -U -q "yt-dlp[default]"
           pip install -r pipeline/requirements.txt
 
       # ---------------------------------------------------------------------
@@ -386,6 +387,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+          YOUTUBE_PROXY_URL: ${{ secrets.YOUTUBE_PROXY_URL }}
+          CLIPFORGE_YT_MAX_HEIGHT: ${{ vars.CLIPFORGE_YT_MAX_HEIGHT }}
         run: |
           set -euo pipefail
           mkdir -p work

@@ -30,3 +30,6 @@ edge-tts==7.2.8
 
 # --- Automatic Mode analysis (Gemini Developer API; GEMINI_API_KEYS secret) ---
 google-genai>=1.66,<2
+
+# --- YouTube video downloader (yt-dlp) -------------------------
+yt-dlp[default]>=2025.1.0
