@@ -341,7 +341,7 @@ async function renderStep(app, mainAccount) {
       }
 
       const res = classifySourceText(text);
-      if (res.kind === 'unknown') {
+      if (res.error || res.kind === 'unknown' || !res.kind) {
         badge.innerHTML = `<span class="badge badge-warn">⚠ ${escapeHtml(res.error || 'Unrecognized source link')}</span>`;
         previewArea.innerHTML = '';
       } else {
@@ -381,7 +381,7 @@ async function renderStep(app, mainAccount) {
     }
 
     const accept = (result) => {
-      if (result.kind === 'unknown') {
+      if (result.error || result.kind === 'unknown' || !result.kind) {
         toast(result.error || 'Unrecognized source link.', 'err');
         return;
       }

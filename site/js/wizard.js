@@ -18,11 +18,55 @@ export const TARGET_DURATIONS = [30, 60, 120, 180, 300];
 // §5 "Deliberately disabled" hosts — rejected at intake with a helpful
 // message (ported verbatim).
 export const DISABLED_SOCIAL_HOSTS = [
-  'youtube-nocookie.com', 'youtu.be', 'youtube.com',
   'vm.tiktok.com', 'vt.tiktok.com', 'tiktok.com',
   'fb.watch', 'facebook.com', 'instagram.com',
   'twitter.com', 'x.com', 'vimeo.com', 'redd.it', 'reddit.com'
 ];
+
+export const YOUTUBE_HOSTS = ['youtube.com', 'youtu.be', 'youtube-nocookie.com'];
+
+export function extractYoutubeVideoId(url) {
+  if (!url || typeof url !== 'string') return null;
+  let parsed;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase().replace(/\.+$/, '');
+  const isYtHost = YOUTUBE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  if (!isYtHost) return null;
+
+  // youtu.be/<id>
+  if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+    const parts = parsed.pathname.replace(/^\/+/, '').split('/');
+    if (parts.length > 0 && parts[0]) {
+      const candidate = parts[0].split('?')[0].split('&')[0];
+      if (/^[A-Za-z0-9_-]{11}$/.test(candidate)) return candidate;
+    }
+  }
+
+  // youtube.com/watch?v=<id>
+  const v = parsed.searchParams.get('v');
+  if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) {
+    return v;
+  }
+
+  // youtube.com/shorts/<id> or /embed/<id> or /v/<id>
+  const pathParts = parsed.pathname.split('/').filter(Boolean);
+  if (pathParts.length >= 2 && ['shorts', 'embed', 'v'].includes(pathParts[0])) {
+    const candidate = pathParts[1].split('?')[0].split('&')[0];
+    if (/^[A-Za-z0-9_-]{11}$/.test(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+export function normalizeYoutubeUrl(url) {
+  const id = extractYoutubeVideoId(url);
+  if (!id) return null;
+  return `https://www.youtube.com/watch?v=${id}`;
+}
 
 export const TELEGRAM_PUBLIC_POST_RE = /^https?:\/\/(?:t\.me|telegram\.me)\/(?:s\/)?[A-Za-z0-9_]{5,64}\/[1-9][0-9]*(?:[/?#]|$)/i;
 const DRIVE_RE = /^https?:\/\/(?:drive|docs)\.google\.com\//i;
@@ -71,7 +115,7 @@ function hostOf(url) {
  */
 export function classifySourceText(text) {
   const value = String(text || '').trim();
-  if (!value) return { error: 'Paste a direct link, a magnet URI, or upload a .torrent file.' };
+  if (!value) return { kind: 'unknown', error: 'Paste a YouTube video link, a direct link, a magnet URI, or upload a .torrent file.' };
   if (MAGNET_RE.test(value)) return { kind: 'magnet', value };
   if (TELEGRAM_PUBLIC_POST_RE.test(value)) return { kind: 'telegram_channel', value };
   if (URL_RE.test(value)) {
@@ -79,14 +123,20 @@ export function classifySourceText(text) {
     const blocked = DISABLED_SOCIAL_HOSTS.find((entry) => host === entry || host.endsWith(`.${entry}`));
     if (blocked) {
       return {
-        error: `Links from ${blocked} are not supported. Put the video on a public Telegram channel and paste the t.me link (main account only), or use a direct file link.`
+        kind: 'unknown',
+        error: `Links from ${blocked} are not supported. Supported sources are public YouTube videos, direct video links, Google Drive links, magnets, .torrent files, or public Telegram channel posts.`
       };
+    }
+    const ytNormalized = normalizeYoutubeUrl(value);
+    if (ytNormalized) {
+      return { kind: 'youtube', value: ytNormalized };
     }
     if (DRIVE_RE.test(value)) return { kind: 'drive', value };
     return { kind: 'url', value };
   }
   return {
-    error: 'That does not look like a supported source. Paste a direct video URL (https://…), a Google Drive link, a magnet URI, a public t.me channel-post link, or upload a .torrent file.'
+    kind: 'unknown',
+    error: 'That does not look like a supported source. Paste a public YouTube video link, a direct video URL (https://…), a Google Drive link, a magnet URI, a public t.me channel-post link, or upload a .torrent file.'
   };
 }
 
@@ -94,6 +144,7 @@ export function classifySourceText(text) {
 export function describeSource(source) {
   if (!source) return '—';
   switch (source.kind) {
+    case 'youtube': return `YouTube: ${source.value}`;
     case 'url': return `Direct link: ${source.value}`;
     case 'drive': return `Google Drive: ${source.value}`;
     case 'magnet': return 'Magnet URI';
