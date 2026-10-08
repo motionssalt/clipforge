@@ -3,7 +3,8 @@
   "job_id": "manual-1791493294668",
   "source": {
     "kind": "torrent_file",
-    "value": "path:jobs\/manual-1791493294668\/source.torrent"
+    "value": "path:jobs\/manual-1791493294668\/source.torrent",
+    "torrent_file_index": "2"
   },
   "options": {
     "whisper_model": "base",
@@ -27,5 +28,5 @@
     "ref": "",
     "source": "default"
   },
-  "saved_at_epoch": 1791493294
+  "saved_at_epoch": 1791493979
 }
