@@ -2041,6 +2041,18 @@
         "6ac59f54c2ff2a0097adda1b"
       ],
       "updated_at_epoch": 1791336276
+    },
+    {
+      "job_id": "Hunter2-p2",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-10-09T05:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ac81403d6ff288e98615212",
+        "6ac81405d6ff288e98615222"
+      ],
+      "updated_at_epoch": 1791497221
     }
   ]
 }
