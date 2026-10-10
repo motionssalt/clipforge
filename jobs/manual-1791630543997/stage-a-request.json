@@ -3,7 +3,8 @@
   "job_id": "manual-1791630543997",
   "source": {
     "kind": "torrent_file",
-    "value": "path:jobs\/manual-1791630543997\/source.torrent"
+    "value": "path:jobs\/manual-1791630543997\/source.torrent",
+    "torrent_file_index": "5"
   },
   "options": {
     "whisper_model": "base",
@@ -27,5 +28,5 @@
     "ref": "audio-library\/Dj_Quads_-_its_near_[No_Copyright_Music].m4a",
     "source": "explicit_library"
   },
-  "saved_at_epoch": 1791630543
+  "saved_at_epoch": 1791632957
 }
