@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1791602297,
+  "updated_at_epoch": 1791602325,
   "series": {
     "enabled": true,
     "series_id": "Hunter4",
@@ -24,9 +24,56 @@
     "code_ref": "c54b325b0ccf3b533f516116c6e723b706a36f28"
   },
   "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
+    "status": "scheduled",
+    "posts": [
+      {
+        "post_id": "6ac9ae931d5875b716e3fe3d",
+        "status": "scheduled",
+        "scheduled_for": "2026-10-11T01:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "tiktok",
+            "accountId": {
+              "_id": "6a9e0ce977555aae01e7ae22",
+              "platform": "tiktok",
+              "username": ".chimeravfx",
+              "displayName": "CHIMERAVFX",
+              "profilePicture": "https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/3b94e2ca0cb68b0b4d82c0d1f9ab87b9~tplv-tiktokx-cropcenter:168:168.jpeg?dr=14577&refresh_token=752c38c9&x-expires=1791694800&x-signature=IlA%2FqPIspT12hQwSa8x%2B5JtEY30%3D&t=4d5b0474&ps=13740610&shp=a5d48078&shcp=8aecc5ac&idc=my",
+              "isActive": true,
+              "profileId": "6a23f22dba1bebcaf7982ef3"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "tiktok",
+        "request_id": "clipforge-auto-Hunter4-p6-7694aba6-3c95-4631-b61b-670c99f4fe41-tiktok"
+      },
+      {
+        "post_id": "6ac9ae951d5875b716e3fe45",
+        "status": "scheduled",
+        "scheduled_for": "2026-10-11T01:00:00.000Z",
+        "timezone": "UTC",
+        "platforms": [
+          {
+            "platform": "youtube",
+            "accountId": {
+              "_id": "6a8e09b877555aae01785097",
+              "platform": "youtube",
+              "username": "chimera_vfx",
+              "displayName": "CHIMERAVFX ",
+              "profilePicture": "https://yt3.ggpht.com/-5ajcAdex-JmQIsF322GpaXUNkek8qLl94bASEQ69J-zMVS6Koa0E1s_Cy7QwgAe9cSVaQi_Xg=s88-c-k-c0x00ffffff-no-rj",
+              "isActive": true,
+              "profileId": "6a23f22dba1bebcaf7982ef3"
+            },
+            "status": "pending"
+          }
+        ],
+        "platform": "youtube",
+        "request_id": "clipforge-auto-Hunter4-p6-7694aba6-3c95-4631-b61b-670c99f4fe41-youtube"
+      }
+    ],
+    "idempotency_key": "clipforge-auto-Hunter4-p6-7694aba6-3c95-4631-b61b-670c99f4fe41"
   },
   "expires_at_epoch": 1791644792
 }
