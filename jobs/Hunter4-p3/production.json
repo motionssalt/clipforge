@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "Scarlet Eyes and the Stolen Dream — Part 3",
+  "hashtags": [
+    "#HunterxHunter",
+    "#Kurapika",
+    "#Leorio",
+    "#ScarletEyes",
+    "#Anime",
+    "#AnimeClips"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "kurapika scarlet eyes",
+    "leorio backstory",
+    "phantom troupe",
+    "anime",
+    "hxh"
+  ],
+  "series": {
+    "series_id": "Hunter4",
+    "part": 3,
+    "start_seconds": 512,
+    "end_seconds": 765,
+    "is_final": false,
+    "summary": "Kurapika confides his mission to avenge the slaughtered Kurta clan and recover their stolen scarlet eyes from the Phantom Troupe. Leorio reveals his own heartbreak over a friend lost to curable illness, before collapsing unconscious onto the stone floor."
+  },
+  "segments": [
+    {
+      "start_seconds": 559,
+      "end_seconds": 608,
+      "voiceover_text": "Kurapika reveals his tragic past: the Kurta Clan's scarlet eyes. Five years ago, the Phantom Troupe slaughtered his entire family to sell their eyes, and he lives only for revenge."
+    },
+    {
+      "start_seconds": 638,
+      "end_seconds": 666,
+      "voiceover_text": "Leorio fires back with his own heartbreaking secret: his best friend died of a curable illness simply because they were poor. He needs money to become a doctor and save lives."
+    },
+    {
+      "start_seconds": 685,
+      "end_seconds": 726,
+      "voiceover_text": "Kurapika is humbled by Leorio's noble ambition and quietly apologizes, realizing his friend is anything but greedy."
+    },
+    {
+      "start_seconds": 742,
+      "end_seconds": 765,
+      "voiceover_text": "Having bared his soul, Leorio's body gives out. He collapses face-down on the cold floor, completely unconscious as the runners leave him behind."
+    }
+  ],
+  "job_id": "Hunter4-p3"
+}
