@@ -1,41 +1,16 @@
 {
-  "version": 2,
+  "version": 1,
   "job_id": "manual-1791630543997",
   "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 1\/6 dispatched (hunter5-p1). The chain updates this anchor when the part completes.",
+  "updated_at_epoch": 1791662062,
   "series": {
-    "enabled": false,
-    "series_id": "",
-    "part": 0,
+    "enabled": true,
+    "series_id": "hunter5",
+    "part": 1,
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "awaiting_plan",
-  "message": "Stage A complete. Get the agent prompt from the release, run your agent, then upload production.json to start Stage B.",
-  "created_at_epoch": 1791633002,
-  "updated_at_epoch": 1791633443,
-  "expires_at_epoch": 1791805802,
-  "release_tag": "clipforge-manual-1791630543997",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-manual-1791630543997",
-  "assets": {
-    "00_READ_THIS_FIRST.txt": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/00_READ_THIS_FIRST.txt",
-    "event_composites.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/event_composites.zip",
-    "key_moments.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/key_moments.json",
-    "manifest.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/manifest.json",
-    "scene_index.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/scene_index.json",
-    "screenshots.zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/screenshots.zip",
-    "source_input.bin": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/source_input.bin",
-    "transcript.json": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/transcript.json",
-    "validator.py": "https://github.com/motionssalt/clipforge/releases/download/clipforge-manual-1791630543997/validator.py",
-    "analysis_bundle_url": ""
-  },
-  "run": {
-    "workflow_run_id": 38049758824,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/38049758824",
-    "code_ref": "9c26583da54a142f3628c0ce4823b326c1ec7112"
-  },
-  "publishing": {
-    "status": "not_requested",
-    "posts": [],
-    "idempotency_key": ""
-  }
+  "active_part_job_id": "hunter5-p1"
 }
