@@ -397,5 +397,10 @@
       }
     ]
   },
-  "spawned": []
+  "spawned": [
+    {
+      "part": 1,
+      "job_id": "Hunter3-p1"
+    }
+  ]
 }
