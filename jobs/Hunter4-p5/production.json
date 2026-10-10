@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "The Endless Stairs and the Race — Part 5",
+  "hashtags": [
+    "#HunterxHunter",
+    "#GonFreecss",
+    "#Killua",
+    "#HunterExam",
+    "#AnimeRivals",
+    "#Anime"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon vs killua race",
+    "endless stairs",
+    "hunter exam exit",
+    "anime",
+    "hxh"
+  ],
+  "series": {
+    "series_id": "Hunter4",
+    "part": 5,
+    "start_seconds": 987,
+    "end_seconds": 1173,
+    "is_final": false,
+    "summary": "The applicants encounter a massive, punishing staircase leading out of the tunnel. Gon and Killua wager a dinner bet and race up hundreds of stairs at breakneck speed, bursting across the finish line into the sunlight simultaneously."
+  },
+  "segments": [
+    {
+      "start_seconds": 994,
+      "end_seconds": 1024,
+      "voiceover_text": "The flat tunnel ends, revealing a monstrous staircase climbing into the dark. Satotz accelerates, and exhausted applicants collapse in agony on the punishing stone steps."
+    },
+    {
+      "start_seconds": 1059,
+      "end_seconds": 1086,
+      "voiceover_text": "Gon and Killua surge to the front of the pack. Killua dares Gon to a race to the summit, betting that the loser must buy dinner."
+    },
+    {
+      "start_seconds": 1110,
+      "end_seconds": 1142,
+      "voiceover_text": "The two twelve-year-olds sprint up the brutal stairs side by side at breakneck speed, leaving the gasping crowd far behind as daylight appears overhead."
+    },
+    {
+      "start_seconds": 1145,
+      "end_seconds": 1173,
+      "voiceover_text": "They burst into the sunlight at the exact same instant. They laugh and bicker over who won, while the massive stone door slams shut behind them."
+    }
+  ],
+  "job_id": "Hunter4-p5"
+}
