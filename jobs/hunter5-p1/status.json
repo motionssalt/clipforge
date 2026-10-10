@@ -4,7 +4,7 @@
   "mode": "manual",
   "state": "complete",
   "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
-  "updated_at_epoch": 1791662688,
+  "updated_at_epoch": 1791662919,
   "series": {
     "enabled": true,
     "series_id": "hunter5",
@@ -22,12 +22,12 @@
     "code_ref": "d661993ed65ccc0b4e2d9f3a0e47f6c7c15d8061"
   },
   "publishing": {
-    "status": "scheduled",
+    "status": "published",
     "posts": [
       {
-        "post_id": "6aca9a5e1c9055895b756a10",
-        "status": "scheduled",
-        "scheduled_for": "2026-10-11T05:00:00.000Z",
+        "post_id": "6aca9b2d87378c08f544dd97",
+        "status": "published",
+        "scheduled_for": "2026-10-10T20:08:11.226Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -41,16 +41,18 @@
               "isActive": true,
               "profileId": "6a23f22dba1bebcaf7982ef3"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "v_pub_url~v2-1.7695133438248830982",
+            "platformPostUrl": ""
           }
         ],
         "platform": "tiktok",
-        "request_id": "clipforge-auto-hunter5-p1-577214c0-39c2-45d6-a147-fc22641305f9-tiktok"
+        "request_id": "android-hunter5-p1-publish_now-1791662876463-tiktok"
       },
       {
-        "post_id": "6aca9a6036c4b584c3072835",
-        "status": "scheduled",
-        "scheduled_for": "2026-10-11T05:00:00.000Z",
+        "post_id": "6aca9b439d17659688bf7b3b",
+        "status": "published",
+        "scheduled_for": "2026-10-10T20:08:32.408Z",
         "timezone": "UTC",
         "platforms": [
           {
@@ -64,14 +66,16 @@
               "isActive": true,
               "profileId": "6a23f22dba1bebcaf7982ef3"
             },
-            "status": "pending"
+            "status": "published",
+            "platformPostId": "mkE7IVx-ggg",
+            "platformPostUrl": "https://www.youtube.com/watch?v=mkE7IVx-ggg"
           }
         ],
         "platform": "youtube",
-        "request_id": "clipforge-auto-hunter5-p1-577214c0-39c2-45d6-a147-fc22641305f9-youtube"
+        "request_id": "android-hunter5-p1-publish_now-1791662876463-youtube"
       }
     ],
-    "idempotency_key": "clipforge-auto-hunter5-p1-577214c0-39c2-45d6-a147-fc22641305f9"
+    "idempotency_key": "android-hunter5-p1-publish_now-1791662876463"
   },
   "release_tag": "clipforge-hunter5-p1",
   "release_url": "",
