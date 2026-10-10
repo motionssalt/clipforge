@@ -2113,6 +2113,18 @@
         "6ac9a1bc8ebefde0475cbad5"
       ],
       "updated_at_epoch": 1791599036
+    },
+    {
+      "job_id": "Hunter4-p3",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-10-10T13:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ac9a4c4903e4c88ea169546",
+        "6ac9a4c7d43dff6a74f8f5a8"
+      ],
+      "updated_at_epoch": 1791599815
     }
   ]
 }
