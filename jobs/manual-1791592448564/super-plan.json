@@ -328,6 +328,10 @@
     {
       "part": 1,
       "job_id": "Hunter4-p1"
+    },
+    {
+      "part": 2,
+      "job_id": "Hunter4-p2"
     }
   ]
 }
