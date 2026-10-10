@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hunter5-p2",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 2 of 6 — Stage B dispatched (chained from part 1's completion).",
-  "updated_at_epoch": 1791662670,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1791662685,
   "series": {
     "enabled": true,
     "series_id": "hunter5",
@@ -13,5 +13,17 @@
     "is_final": false
   },
   "release_tag": "clipforge-hunter5-p2",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hunter5-p2"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hunter5-p2",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 38082306711,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/38082306711",
+    "code_ref": "9fb992abf3d5a8125272ce5770ba4d57420ceddc"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1791705885
 }
