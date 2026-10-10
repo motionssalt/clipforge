@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "Hunter4-p1",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1791597546,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1791598145,
   "series": {
     "enabled": true,
     "series_id": "Hunter4",
@@ -12,11 +12,14 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "assets": {},
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-Hunter4-p1/clipforge-Hunter4-p1-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-Hunter4-p1/final.mp4"
+  },
   "run": {
     "workflow_run_id": 38015110271,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/38015110271",
-    "code_ref": "10d8cf981e987c5faea7b52d5e163a2d8ee176ba"
+    "code_ref": "b31cb4c313b1603b74cc9ec00ec2057b21e8fe1d"
   },
   "publishing": {
     "status": "not_requested",
