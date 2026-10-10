@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "The Desperate Sprint and the Briefcase — Part 4",
+  "hashtags": [
+    "#HunterxHunter",
+    "#GonFreecss",
+    "#Leorio",
+    "#Killua",
+    "#HunterExam",
+    "#Anime"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "leorio sprint",
+    "gon fishing rod",
+    "ging freecss",
+    "anime",
+    "hxh"
+  ],
+  "series": {
+    "series_id": "Hunter4",
+    "part": 4,
+    "start_seconds": 765,
+    "end_seconds": 987,
+    "is_final": false,
+    "summary": "Refusing to give up, Leorio surges back to his feet with an explosive roar and sprints forward in pure desperation. Gon snags Leorio's forgotten briefcase with his fishing rod, catching up to Killua as they discuss Gon's mysterious Hunter father."
+  },
+  "segments": [
+    {
+      "start_seconds": 777,
+      "end_seconds": 818,
+      "voiceover_text": "Gon pauses beside his fallen friend, refusing to leave him behind. Suddenly, Leorio roars with fury, leaps up, and sprints forward in a manic burst of pure willpower."
+    },
+    {
+      "start_seconds": 818,
+      "end_seconds": 849,
+      "voiceover_text": "Leorio leaves his briefcase behind in his sprint. Gon whips out his fishing rod, snags the handle with a perfect cast, and reels it in while running."
+    },
+    {
+      "start_seconds": 883,
+      "end_seconds": 922,
+      "voiceover_text": "Gon catches up to Killua at the front. Fascinated by Gon's loyalty, Killua asks why he wants to become a Hunter so badly."
+    },
+    {
+      "start_seconds": 928,
+      "end_seconds": 973,
+      "voiceover_text": "Gon explains his father left him to be a Hunter, so the job must be incredible. Killua smiles, intrigued by his weird logic."
+    }
+  ],
+  "job_id": "Hunter4-p4"
+}
