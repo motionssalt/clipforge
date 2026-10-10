@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "The Skateboard and the Twelve Year Olds — Part 1",
+  "hashtags": [
+    "#HunterxHunter",
+    "#GonFreecss",
+    "#Killua",
+    "#HunterExam",
+    "#Anime",
+    "#AnimeClips"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon meets killua",
+    "killua skateboard",
+    "hunter exam phase 1",
+    "anime",
+    "hxh"
+  ],
+  "series": {
+    "series_id": "Hunter4",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 244,
+    "is_final": false,
+    "summary": "Gon, Kurapika, and Leorio run through the endless underground tunnel in the First Phase of the Hunter Exam. A silver-haired boy named Killua joins Gon on a skateboard, sparking an instant friendship and rivalry between the two twelve-year-olds."
+  },
+  "segments": [
+    {
+      "start_seconds": 126,
+      "end_seconds": 162,
+      "voiceover_text": "Two hours into the first phase, examiner Satotz leads hundreds of applicants through a pitch-black tunnel with no finish line in sight."
+    },
+    {
+      "start_seconds": 180,
+      "end_seconds": 206,
+      "voiceover_text": "A silver-haired boy named Killua glides alongside on a skateboard. Leorio explodes in fury, shouting that using wheels in an endurance test is blatant cheating."
+    },
+    {
+      "start_seconds": 206,
+      "end_seconds": 219,
+      "voiceover_text": "Gon defends him, pointing out that the examiner only said to follow him. Killua grins, amused by the boy's quick thinking."
+    },
+    {
+      "start_seconds": 219,
+      "end_seconds": 244,
+      "voiceover_text": "Killua asks Gon's age and discovers they are both twelve years old. He kickflips his skateboard into his hand and matches Gon stride for stride, leaving Leorio fuming."
+    }
+  ],
+  "job_id": "Hunter4-p1"
+}
