@@ -1,0 +1,569 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1791630543997",
+  "series_id": "hunter5",
+  "total_parts": 6,
+  "video_duration_seconds": 1358,
+  "plan": {
+    "version": 2,
+    "series_id": "hunter5",
+    "video_duration_seconds": 1358,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "version": 2,
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "The Swindlers Swamp and the Fog — Part 1",
+        "hashtags": [
+          "#HunterxHunter",
+          "#GonFreecss",
+          "#Killua",
+          "#HunterExam",
+          "#Satotz",
+          "#Anime"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "numere wetlands",
+          "swindlers swamp",
+          "satotz",
+          "hunter exam phase 1",
+          "gon freecss",
+          "killua zoldyck"
+        ],
+        "series": {
+          "series_id": "hunter5",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 245,
+          "is_final": false,
+          "summary": "Examiner Satotz leads the applicants to the entrance of the foggy Numere Wetlands, warning them that deceitful monsters roam the marsh. The massive gates shut behind them, cutting off retreat as the runners plunge into the blinding mist."
+        },
+        "segments": [
+          {
+            "start_seconds": 125,
+            "end_seconds": 140,
+            "voiceover_text": "Examiner Satotz halts the applicants before the mist-covered Numere Wetlands. He warns that bizarre predators roam here, mimicking humans to deceive and butcher their prey.",
+            "keywords": [
+              {
+                "word": "Satotz",
+                "color": "#00E5FF"
+              },
+              {
+                "word": "predators",
+                "color": "#FF5252"
+              }
+            ]
+          },
+          {
+            "start_seconds": 154,
+            "end_seconds": 173,
+            "voiceover_text": "Suddenly, the massive exit gate crashes shut behind the runners, sealing off retreat. Thick fog pours in from all sides, completely swallowing the treacherous landscape.",
+            "keywords": [
+              {
+                "word": "gate",
+                "color": "#FFB300"
+              },
+              {
+                "word": "fog",
+                "color": "#90CAF9"
+              }
+            ]
+          },
+          {
+            "start_seconds": 178,
+            "end_seconds": 204,
+            "voiceover_text": "Satotz breaks into an uncanny, rapid stride directly into the whiteout. His command is chilling: match his pace or get permanently abandoned.",
+            "keywords": [
+              {
+                "word": "stride",
+                "color": "#69F0AE"
+              },
+              {
+                "word": "chilling",
+                "color": "#80D8FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 207,
+            "end_seconds": 245,
+            "voiceover_text": "Hundreds sprint blindly into the murk as visibility drops to nothing. But in the disorientation, Killua senses a far darker predator stalking them from the rear.",
+            "keywords": [
+              {
+                "word": "sprint",
+                "color": "#FFD700"
+              },
+              {
+                "word": "Killua",
+                "color": "#80D8FF"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "Deceptive Beasts of the Numere Wetlands — Part 2",
+        "hashtags": [
+          "#HunterxHunter",
+          "#GonFreecss",
+          "#Killua",
+          "#Leorio",
+          "#Kurapika",
+          "#HunterExam"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "numere wetlands beasts",
+          "killua warning",
+          "leorio exhausted",
+          "kurapika",
+          "hxh episode 5"
+        ],
+        "series": {
+          "series_id": "hunter5",
+          "part": 2,
+          "start_seconds": 245,
+          "end_seconds": 522,
+          "is_final": false,
+          "summary": "Killua warns Gon to move toward the front because Hisoka is lingering in the rear looking for blood. As Leorio falls behind from exhaustion, deceptive predators attack the applicants through the mist, leaving Kurapika and Leorio isolated."
+        },
+        "segments": [
+          {
+            "start_seconds": 245,
+            "end_seconds": 284,
+            "voiceover_text": "Killua urges Gon to push up toward the front of the pack. He warns that Hisoka is lurking behind them, radiating a sickening thirst for blood.",
+            "keywords": [
+              {
+                "word": "Killua",
+                "color": "#80D8FF"
+              },
+              {
+                "word": "Hisoka",
+                "color": "#FF1744"
+              }
+            ]
+          },
+          {
+            "start_seconds": 286,
+            "end_seconds": 325,
+            "voiceover_text": "Leorio falls behind, gasping for breath and drenched in sweat. Pride flaring, he waves Gon forward and stubbornly refuses to let anyone pity him.",
+            "keywords": [
+              {
+                "word": "Leorio",
+                "color": "#FFD700"
+              },
+              {
+                "word": "Pride",
+                "color": "#FF9100"
+              }
+            ]
+          },
+          {
+            "start_seconds": 340,
+            "end_seconds": 420,
+            "voiceover_text": "Soon the swamp unleashes its horrors. Hypnosis butterflies lull runners to sleep, while ravenous subterranean monsters erupt from the mud to swallow applicants alive.",
+            "keywords": [
+              {
+                "word": "horrors",
+                "color": "#D50000"
+              },
+              {
+                "word": "monsters",
+                "color": "#FF5252"
+              }
+            ]
+          },
+          {
+            "start_seconds": 452,
+            "end_seconds": 522,
+            "voiceover_text": "Terrified shrieks echo through the whiteout before dying into dead silence. Kurapika and Leorio find themselves stranded alone, with something murderous closing in.",
+            "keywords": [
+              {
+                "word": "silence",
+                "color": "#B0BEC5"
+              },
+              {
+                "word": "stranded",
+                "color": "#FF5252"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "The Ambush and the Magicians Bloodbath — Part 3",
+        "hashtags": [
+          "#HunterxHunter",
+          "#Hisoka",
+          "#Kurapika",
+          "#Leorio",
+          "#HunterExam",
+          "#AnimeFights"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hisoka fight",
+          "hisoka cards",
+          "hisoka examiner",
+          "kurapika and leorio",
+          "hxh anime"
+        ],
+        "series": {
+          "series_id": "hunter5",
+          "part": 3,
+          "start_seconds": 522,
+          "end_seconds": 781,
+          "is_final": false,
+          "summary": "A squad of armed applicants corners Hisoka in the fog, attempting to assassinate the magician before he strikes. Hisoka effortlessly slaughters them with razor-sharp cards, leaving Kurapika and Leorio frozen in terror when they witness the massacre."
+        },
+        "segments": [
+          {
+            "start_seconds": 527,
+            "end_seconds": 561,
+            "voiceover_text": "Deep in the fog, a desperate ambush squad of armed applicants corners Hisoka. Brandishing swords and spears, they plot to assassinate the magician before he strikes.",
+            "keywords": [
+              {
+                "word": "ambush",
+                "color": "#FF9100"
+              },
+              {
+                "word": "Hisoka",
+                "color": "#FF1744"
+              }
+            ]
+          },
+          {
+            "start_seconds": 576,
+            "end_seconds": 615,
+            "voiceover_text": "Hisoka is not intimidated. Smiling with cold amusement, he draws a deck of playing cards and offers to play examiner to test their qualifications.",
+            "keywords": [
+              {
+                "word": "cards",
+                "color": "#EA80FC"
+              },
+              {
+                "word": "examiner",
+                "color": "#00E5FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 649,
+            "end_seconds": 727,
+            "voiceover_text": "What follows is pure butchery. Moving faster than sight, Hisoka whips razor-sharp cards through the mist, slaughtering the entire squad in seconds.",
+            "keywords": [
+              {
+                "word": "butchery",
+                "color": "#D50000"
+              },
+              {
+                "word": "razor-sharp",
+                "color": "#FFD700"
+              }
+            ]
+          },
+          {
+            "start_seconds": 749,
+            "end_seconds": 781,
+            "voiceover_text": "Kurapika and Leorio stumble straight into the blood-soaked clearing. Freezing in horror, they find Hisoka standing among the corpses, his golden eyes locking onto them.",
+            "keywords": [
+              {
+                "word": "horror",
+                "color": "#D50000"
+              },
+              {
+                "word": "corpses",
+                "color": "#B0BEC5"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "Leorios Defiance and the Fishing Rod — Part 4",
+        "hashtags": [
+          "#HunterxHunter",
+          "#GonFreecss",
+          "#Leorio",
+          "#Hisoka",
+          "#HunterExam",
+          "#AnimeMoment"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "leorio vs hisoka",
+          "gon saves leorio",
+          "gon fishing rod",
+          "hisoka hit",
+          "hxh episode 5"
+        ],
+        "series": {
+          "series_id": "hunter5",
+          "part": 4,
+          "start_seconds": 781,
+          "end_seconds": 952,
+          "is_final": false,
+          "summary": "Kurapika urges Leorio to flee, but Leorio refuses to run from a monster and attacks Hisoka with a wooden club. Just as Hisoka readies a fatal counter, Gon's fishing rod strikes Hisoka square in the face from above."
+        },
+        "segments": [
+          {
+            "start_seconds": 781,
+            "end_seconds": 804,
+            "voiceover_text": "Kurapika whispers a desperate strategy to Leorio. Knowing fighting this monster is suicide, they must sprint in opposite directions to divide Hisoka's focus.",
+            "keywords": [
+              {
+                "word": "Kurapika",
+                "color": "#FFD700"
+              },
+              {
+                "word": "suicide",
+                "color": "#FF5252"
+              }
+            ]
+          },
+          {
+            "start_seconds": 805,
+            "end_seconds": 839,
+            "voiceover_text": "Kurapika dashes into the trees, but Leorio stops dead. Grabbing a heavy wooden branch, his pride boils over—refusing to run like a coward from a killer.",
+            "keywords": [
+              {
+                "word": "Leorio",
+                "color": "#00E5FF"
+              },
+              {
+                "word": "branch",
+                "color": "#FFB300"
+              }
+            ]
+          },
+          {
+            "start_seconds": 843,
+            "end_seconds": 894,
+            "voiceover_text": "Leorio roars and charges Hisoka with everything he has. But Hisoka effortlessly slips past the strike, vanishing into the fog to deliver a lethal counter.",
+            "keywords": [
+              {
+                "word": "charges",
+                "color": "#FF3D00"
+              },
+              {
+                "word": "counter",
+                "color": "#D50000"
+              }
+            ]
+          },
+          {
+            "start_seconds": 896,
+            "end_seconds": 950,
+            "voiceover_text": "Right before Hisoka delivers the fatal blow, a fishing bobber whips through the mist! Gon's weighted hook smashes squarely into Hisoka's face, staggering the magician.",
+            "keywords": [
+              {
+                "word": "Gon",
+                "color": "#00E676"
+              },
+              {
+                "word": "staggering",
+                "color": "#FFD700"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "The Chokehold and the Magicians Test — Part 5",
+        "hashtags": [
+          "#HunterxHunter",
+          "#GonFreecss",
+          "#Hisoka",
+          "#Leorio",
+          "#HunterExam",
+          "#AnimeScene"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "gon vs hisoka",
+          "hisoka chokes gon",
+          "leorio knocked out",
+          "hisoka passes gon",
+          "hxh anime"
+        ],
+        "series": {
+          "series_id": "hunter5",
+          "part": 5,
+          "start_seconds": 952,
+          "end_seconds": 1157,
+          "is_final": false,
+          "summary": "Hisoka evaluates Gon after the boy's strike. When Gon attacks again, Hisoka seizes him by the throat, admiring his fearless glare. After knocking out an intervening Leorio, Hisoka spares both boys and carries Leorio toward the finish line."
+        },
+        "segments": [
+          {
+            "start_seconds": 953,
+            "end_seconds": 990,
+            "voiceover_text": "Hisoka studies the boy with dark amusement. Gon lunges again, whipping his fishing rod in fierce strikes, but Hisoka slips past every blow like smoke.",
+            "keywords": [
+              {
+                "word": "amusement",
+                "color": "#EA80FC"
+              },
+              {
+                "word": "strikes",
+                "color": "#00E676"
+              }
+            ]
+          },
+          {
+            "start_seconds": 993,
+            "end_seconds": 1042,
+            "voiceover_text": "Hisoka closes the distance and clamps a hand around Gon's throat, lifting him into the air. Despite suffocating, Gon glares back with furious, unbroken defiance.",
+            "keywords": [
+              {
+                "word": "throat",
+                "color": "#D50000"
+              },
+              {
+                "word": "defiance",
+                "color": "#FFD700"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1044,
+            "end_seconds": 1087,
+            "voiceover_text": "Leorio charges back to protect his friend, but Hisoka casually decks him with a thunderous right hook, knocking Leorio out cold on the grass.",
+            "keywords": [
+              {
+                "word": "protect",
+                "color": "#00E5FF"
+              },
+              {
+                "word": "hook",
+                "color": "#FF1744"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1107,
+            "end_seconds": 1157,
+            "voiceover_text": "Rather than killing them, Hisoka smiles and declares both boys have passed his test. He slings Leorio over his shoulder and strolls into the fog.",
+            "keywords": [
+              {
+                "word": "passed",
+                "color": "#00E676"
+              },
+              {
+                "word": "fog",
+                "color": "#90CAF9"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "version": 2,
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "Tracking the Scent to Phase Two — Part 6",
+        "hashtags": [
+          "#HunterxHunter",
+          "#GonFreecss",
+          "#Killua",
+          "#Kurapika",
+          "#Menchi",
+          "#HunterExam"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "biska forest park",
+          "second phase hunter exam",
+          "gourmet hunters",
+          "menchi and buhara",
+          "hxh episode 5 ending"
+        ],
+        "series": {
+          "series_id": "hunter5",
+          "part": 6,
+          "start_seconds": 1157,
+          "end_seconds": 1358,
+          "is_final": true,
+          "summary": "Gon confesses to Kurapika the terrifying thrill of confronting Hisoka. Tracking Leorio's cologne through the mist, they reach the Second Phase site at Biska Forest Park, where Gourmet Hunters Menchi and Buhara unveil an unexpected cooking exam."
+        },
+        "segments": [
+          {
+            "start_seconds": 1157,
+            "end_seconds": 1208,
+            "voiceover_text": "Rejoining Kurapika on the mossy ground, a trembling Gon catches his breath. He confesses that facing Hisoka brought paralyzing terror, but also an intoxicating rush of excitement.",
+            "keywords": [
+              {
+                "word": "trembling",
+                "color": "#80D8FF"
+              },
+              {
+                "word": "excitement",
+                "color": "#FFD700"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1216,
+            "end_seconds": 1266,
+            "voiceover_text": "With the examiner long gone, Gon uses his sharp sense of smell to track Leorio's cologne, guiding Kurapika straight through the thinning swamp fog.",
+            "keywords": [
+              {
+                "word": "smell",
+                "color": "#00E676"
+              },
+              {
+                "word": "fog",
+                "color": "#90CAF9"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1266,
+            "end_seconds": 1307,
+            "voiceover_text": "They emerge into the sunlight of Biska Forest Park, reuniting with Killua. Nearby, Leorio nurses a black eye, completely baffled about how he arrived.",
+            "keywords": [
+              {
+                "word": "reuniting",
+                "color": "#FFD700"
+              },
+              {
+                "word": "Killua",
+                "color": "#80D8FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1308,
+            "end_seconds": 1355,
+            "voiceover_text": "The estate gates swing open to reveal Gourmet Hunters Menchi and Buhara. To everyone's shock, the second phase of the exam is a cooking test.",
+            "keywords": [
+              {
+                "word": "gates",
+                "color": "#FF9100"
+              },
+              {
+                "word": "cooking",
+                "color": "#FF4081"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
