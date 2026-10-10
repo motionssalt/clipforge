@@ -3,15 +3,15 @@
   "job_id": "manual-1791592448564",
   "mode": "manual",
   "state": "stage_b_queued",
-  "message": "Super Series part 2 of 6 running (Hunter4-p2) — chained from part 1's completion.",
-  "updated_at_epoch": 1791598159,
+  "message": "Super Series part 3 of 6 running (Hunter4-p3) — chained from part 2's completion.",
+  "updated_at_epoch": 1791599034,
   "series": {
     "enabled": true,
     "series_id": "Hunter4",
-    "part": 2,
+    "part": 3,
     "start_seconds": 0,
     "is_final": false
   },
-  "active_part_job_id": "Hunter4-p2",
+  "active_part_job_id": "Hunter4-p3",
   "super_stage_a_complete": true
 }
