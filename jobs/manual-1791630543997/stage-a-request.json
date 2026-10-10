@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "job_id": "manual-1791630543997",
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs\/manual-1791630543997\/source.torrent"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hunter5",
+    "source_job_id": "manual-1791630543997",
+    "part": 1,
+    "start_seconds": 0,
+    "context": "",
+    "super_series": true
+  },
+  "music": {
+    "ref": "audio-library\/Dj_Quads_-_its_near_[No_Copyright_Music].m4a",
+    "source": "explicit_library"
+  },
+  "saved_at_epoch": 1791630543
+}
