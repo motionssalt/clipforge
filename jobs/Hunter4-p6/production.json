@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "The Impostor Examiner and Hisokas Test — Part 6",
+  "hashtags": [
+    "#HunterxHunter",
+    "#Hisoka",
+    "#Satotz",
+    "#NumereWetlands",
+    "#HunterExam",
+    "#Anime"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "hisoka card throw",
+    "satotz fake examiner",
+    "numere wetlands",
+    "anime",
+    "hxh"
+  ],
+  "series": {
+    "series_id": "Hunter4",
+    "part": 6,
+    "start_seconds": 1173,
+    "end_seconds": 1358,
+    "is_final": true,
+    "summary": "Emerging into the misty Numere Wetlands, the applicants are confronted by a mysterious man claiming examiner Satotz is a deceptive monster. Hisoka tests them with lethal playing cards, killing the impostor and allowing the true trial to proceed."
+  },
+  "segments": [
+    {
+      "start_seconds": 1197,
+      "end_seconds": 1220,
+      "voiceover_text": "The survivors emerge into the foggy Numere Wetlands. Satotz warns that deceptive monsters inhabit the swamp, mimicking humans to lead victims to their doom."
+    },
+    {
+      "start_seconds": 1226,
+      "end_seconds": 1266,
+      "voiceover_text": "Suddenly, a battered man drags out a dead ape with Satotz's exact face. The stranger claims Satotz is an impostor, throwing the crowd into total paranoia."
+    },
+    {
+      "start_seconds": 1266,
+      "end_seconds": 1299,
+      "voiceover_text": "Without warning, Hisoka flings razor-sharp playing cards at both figures. Satotz catches the blades effortlessly between his fingers, while the accuser drops dead instantly."
+    },
+    {
+      "start_seconds": 1309,
+      "end_seconds": 1342,
+      "voiceover_text": "Hisoka smiles, declaring that a real Hunter examiner would never fail to defend himself. Satotz warns against future attacks, leading the survivors deeper into the perilous mist."
+    }
+  ],
+  "job_id": "Hunter4-p6"
+}
