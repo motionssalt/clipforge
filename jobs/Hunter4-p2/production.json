@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "The Eighty Kilometer Wall — Part 2",
+  "hashtags": [
+    "#HunterxHunter",
+    "#Leorio",
+    "#Tonpa",
+    "#HunterExam",
+    "#AnimeMoments",
+    "#Anime"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "tonpa rookie crusher",
+    "leorio running",
+    "80km marathon",
+    "anime",
+    "hxh"
+  ],
+  "series": {
+    "series_id": "Hunter4",
+    "part": 2,
+    "start_seconds": 244,
+    "end_seconds": 512,
+    "is_final": false,
+    "summary": "As the underground marathon exceeds eighty kilometers, the oppressive humidity and grueling pace begin breaking the applicants. Tonpa fakes exhaustion to lure others into quitting, while Leorio strips off his suit and pushes his body to the brink of collapse."
+  },
+  "segments": [
+    {
+      "start_seconds": 244,
+      "end_seconds": 274,
+      "voiceover_text": "The underground marathon passes forty kilometers, and the damp air begins breaking minds and bodies as exhausted runners collapse along the tunnel floor."
+    },
+    {
+      "start_seconds": 344,
+      "end_seconds": 369,
+      "voiceover_text": "Past sixty kilometers, veteran applicant Tonpa fakes total collapse. He sprawls onto the stone ground, hoping to lure desperate rookies into quitting alongside him."
+    },
+    {
+      "start_seconds": 378,
+      "end_seconds": 416,
+      "voiceover_text": "Leorio is drenched in sweat and gasping for breath. He rips off his jacket and necktie, clutching his pounding chest as his stamina completely evaporates."
+    },
+    {
+      "start_seconds": 451,
+      "end_seconds": 512,
+      "voiceover_text": "At eighty kilometers, Kurapika drops back to keep pace with his failing friend. He questions why Leorio would torture himself for mere wealth, sparking a bitter confrontation."
+    }
+  ],
+  "job_id": "Hunter4-p2"
+}
