@@ -585,6 +585,10 @@
     {
       "part": 5,
       "job_id": "hunter5-p5"
+    },
+    {
+      "part": 6,
+      "job_id": "hunter5-p6"
     }
   ]
 }
