@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "Hunter4-p6",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 6 of 6 — Stage B dispatched (chained from part 5's completion).",
+  "updated_at_epoch": 1791601580,
+  "series": {
+    "enabled": true,
+    "series_id": "Hunter4",
+    "part": 6,
+    "start_seconds": 1173,
+    "is_final": true
+  },
+  "release_tag": "clipforge-Hunter4-p6",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-Hunter4-p6"
+}
