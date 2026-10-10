@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "Leorios Defiance and the Fishing Rod — Part 4",
+  "hashtags": [
+    "#HunterxHunter",
+    "#GonFreecss",
+    "#Leorio",
+    "#Hisoka",
+    "#HunterExam",
+    "#AnimeMoment"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "leorio vs hisoka",
+    "gon saves leorio",
+    "gon fishing rod",
+    "hisoka hit",
+    "hxh episode 5"
+  ],
+  "series": {
+    "series_id": "hunter5",
+    "part": 4,
+    "start_seconds": 781,
+    "end_seconds": 952,
+    "is_final": false,
+    "summary": "Kurapika urges Leorio to flee, but Leorio refuses to run from a monster and attacks Hisoka with a wooden club. Just as Hisoka readies a fatal counter, Gon's fishing rod strikes Hisoka square in the face from above."
+  },
+  "segments": [
+    {
+      "start_seconds": 781,
+      "end_seconds": 804,
+      "voiceover_text": "Kurapika whispers a desperate strategy to Leorio. Knowing fighting this monster is suicide, they must sprint in opposite directions to divide Hisoka's focus.",
+      "keywords": [
+        {
+          "word": "Kurapika",
+          "color": "#FFD700"
+        },
+        {
+          "word": "suicide",
+          "color": "#FF5252"
+        }
+      ]
+    },
+    {
+      "start_seconds": 805,
+      "end_seconds": 839,
+      "voiceover_text": "Kurapika dashes into the trees, but Leorio stops dead. Grabbing a heavy wooden branch, his pride boils over—refusing to run like a coward from a killer.",
+      "keywords": [
+        {
+          "word": "Leorio",
+          "color": "#00E5FF"
+        },
+        {
+          "word": "branch",
+          "color": "#FFB300"
+        }
+      ]
+    },
+    {
+      "start_seconds": 843,
+      "end_seconds": 894,
+      "voiceover_text": "Leorio roars and charges Hisoka with everything he has. But Hisoka effortlessly slips past the strike, vanishing into the fog to deliver a lethal counter.",
+      "keywords": [
+        {
+          "word": "charges",
+          "color": "#FF3D00"
+        },
+        {
+          "word": "counter",
+          "color": "#D50000"
+        }
+      ]
+    },
+    {
+      "start_seconds": 896,
+      "end_seconds": 950,
+      "voiceover_text": "Right before Hisoka delivers the fatal blow, a fishing bobber whips through the mist! Gon's weighted hook smashes squarely into Hisoka's face, staggering the magician.",
+      "keywords": [
+        {
+          "word": "Gon",
+          "color": "#00E676"
+        },
+        {
+          "word": "staggering",
+          "color": "#FFD700"
+        }
+      ]
+    }
+  ],
+  "job_id": "hunter5-p4"
+}
