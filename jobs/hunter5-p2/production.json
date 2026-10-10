@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "Deceptive Beasts of the Numere Wetlands — Part 2",
+  "hashtags": [
+    "#HunterxHunter",
+    "#GonFreecss",
+    "#Killua",
+    "#Leorio",
+    "#Kurapika",
+    "#HunterExam"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "numere wetlands beasts",
+    "killua warning",
+    "leorio exhausted",
+    "kurapika",
+    "hxh episode 5"
+  ],
+  "series": {
+    "series_id": "hunter5",
+    "part": 2,
+    "start_seconds": 245,
+    "end_seconds": 522,
+    "is_final": false,
+    "summary": "Killua warns Gon to move toward the front because Hisoka is lingering in the rear looking for blood. As Leorio falls behind from exhaustion, deceptive predators attack the applicants through the mist, leaving Kurapika and Leorio isolated."
+  },
+  "segments": [
+    {
+      "start_seconds": 245,
+      "end_seconds": 284,
+      "voiceover_text": "Killua urges Gon to push up toward the front of the pack. He warns that Hisoka is lurking behind them, radiating a sickening thirst for blood.",
+      "keywords": [
+        {
+          "word": "Killua",
+          "color": "#80D8FF"
+        },
+        {
+          "word": "Hisoka",
+          "color": "#FF1744"
+        }
+      ]
+    },
+    {
+      "start_seconds": 286,
+      "end_seconds": 325,
+      "voiceover_text": "Leorio falls behind, gasping for breath and drenched in sweat. Pride flaring, he waves Gon forward and stubbornly refuses to let anyone pity him.",
+      "keywords": [
+        {
+          "word": "Leorio",
+          "color": "#FFD700"
+        },
+        {
+          "word": "Pride",
+          "color": "#FF9100"
+        }
+      ]
+    },
+    {
+      "start_seconds": 340,
+      "end_seconds": 420,
+      "voiceover_text": "Soon the swamp unleashes its horrors. Hypnosis butterflies lull runners to sleep, while ravenous subterranean monsters erupt from the mud to swallow applicants alive.",
+      "keywords": [
+        {
+          "word": "horrors",
+          "color": "#D50000"
+        },
+        {
+          "word": "monsters",
+          "color": "#FF5252"
+        }
+      ]
+    },
+    {
+      "start_seconds": 452,
+      "end_seconds": 522,
+      "voiceover_text": "Terrified shrieks echo through the whiteout before dying into dead silence. Kurapika and Leorio find themselves stranded alone, with something murderous closing in.",
+      "keywords": [
+        {
+          "word": "silence",
+          "color": "#B0BEC5"
+        },
+        {
+          "word": "stranded",
+          "color": "#FF5252"
+        }
+      ]
+    }
+  ],
+  "job_id": "hunter5-p2"
+}
