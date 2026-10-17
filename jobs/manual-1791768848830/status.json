@@ -9,17 +9,17 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "state": "awaiting_torrent_selection",
-  "message": "Source has 146 video files — pick one to continue.",
+  "state": "stage_a_running",
+  "message": "Video file #6 selected — resuming ingest.",
   "created_at_epoch": 1791768848,
-  "updated_at_epoch": 1791768916,
+  "updated_at_epoch": 1792270047,
   "expires_at_epoch": 1791941648,
   "release_tag": "clipforge-manual-1791768848830",
   "release_url": "",
   "assets": {},
   "run": {
     "workflow_run_id": 38192419664,
-    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/38192419664",
+    "workflow_run_url": "https:\/\/github.com\/motionssalt\/clipforge\/actions\/runs\/38192419664",
     "code_ref": "4373e11160cacccd4ff7d353cabc60b55e6105ee"
   },
   "publishing": {
