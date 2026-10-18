@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hxh6-p8",
   "mode": "manual",
-  "state": "stage_b_queued",
-  "message": "Super Series part 8 of 9 — Stage B dispatched (chained from part 7's completion).",
-  "updated_at_epoch": 1792354658,
+  "state": "stage_b_running",
+  "message": "Stage B run started on GitHub Actions — setting up.",
+  "updated_at_epoch": 1792354669,
   "series": {
     "enabled": true,
     "series_id": "hxh6",
@@ -13,5 +13,17 @@
     "is_final": false
   },
   "release_tag": "clipforge-hxh6-p8",
-  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hxh6-p8"
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hxh6-p8",
+  "assets": {},
+  "run": {
+    "workflow_run_id": 39162644631,
+    "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/39162644631",
+    "code_ref": "34c5696c2b3b79be2cdf683bd5cdb982dd67e8a0"
+  },
+  "publishing": {
+    "status": "not_requested",
+    "posts": [],
+    "idempotency_key": ""
+  },
+  "expires_at_epoch": 1792397869
 }
