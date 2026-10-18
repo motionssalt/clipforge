@@ -1,0 +1,41 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "One Ball Makes Confidence Look Dangerous — Part 3",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "killua movement technique",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 3,
+    "start_seconds": 690,
+    "end_seconds": 780,
+    "is_final": false,
+    "summary": "The game is to take Netero's ball before arrival. Killua opens with a movement technique that creates overlapping figures, impressing Gon but failing to disturb Netero. The next part tests whether that display can actually penetrate his defense."
+  },
+  "segments": [
+    {
+      "start_seconds": 694,
+      "end_seconds": 734,
+      "voiceover_text": "One ball stands between these boys and becoming Hunters. Netero spins it on his finger. The rule is brutally simple: take it from him before the airship arrives. Gon looks eager. Killua sizes him up. Killua is completely confident. That relaxed smile makes the challenge look almost insulting."
+    },
+    {
+      "start_seconds": 738,
+      "end_seconds": 780,
+      "voiceover_text": "Killua moves first. His footsteps become a procession of overlapping figures. Gon is stunned. This is no ordinary attempt to grab a toy. But Netero keeps the ball balanced and watches without panic. If Killua can confuse Gon's eyes, why is the chairman still completely unbothered?"
+    }
+  ],
+  "job_id": "hxh6-p3"
+}
