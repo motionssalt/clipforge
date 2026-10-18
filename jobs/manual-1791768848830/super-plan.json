@@ -1,0 +1,410 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1791768848830",
+  "series_id": "hunter6",
+  "total_parts": 5,
+  "video_duration_seconds": 1358,
+  "plan": {
+    "version": 2,
+    "series_id": "hunter6",
+    "video_duration_seconds": 1358,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "The Monster Every Hunter Dreams Of",
+        "hashtags": [
+          "#hunterxhunter",
+          "#hxh",
+          "#anime",
+          "#hunterexam",
+          "#gon",
+          "#shonen",
+          "#animeedit"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hxh hunter exam",
+          "gon freecss",
+          "hunter exam phase one",
+          "kuroro kaijin",
+          "anime shorts",
+          "hxh episode"
+        ],
+        "series": {
+          "series_id": "hunter6",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 249,
+          "is_final": false,
+          "summary": "The tunnel run: Gon pushes through the nightmare stretch where runners start breaking, and the legend of what a Hunter actually is gets planted."
+        },
+        "segments": [
+          {
+            "start_seconds": 0,
+            "end_seconds": 32,
+            "voiceover_text": "There is one creature every Hunter secretly dreams of chasing. Its name is whispered at the start of the deadliest exam on Earth. A monster so prized that men die just looking for it. And right now, a boy named Gon is running toward that dream.",
+            "keywords": [
+              {
+                "word": "monster",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "Hunter",
+                "color": "#5CB3FF"
+              },
+              {
+                "word": "Gon",
+                "color": "#7CE86B"
+              }
+            ]
+          },
+          {
+            "start_seconds": 38,
+            "end_seconds": 72,
+            "voiceover_text": "This is the tunnel that breaks people. The run never ends. The walls never change. Gon admits it himself. He thought about running away. He could not even do that. Hundreds of candidates are already cooked, and the test has barely started. So what is waiting at the end of it?",
+            "keywords": [
+              {
+                "word": "breaks",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "tunnel",
+                "color": "#C9A227"
+              }
+            ]
+          },
+          {
+            "start_seconds": 196,
+            "end_seconds": 234,
+            "voiceover_text": "Then the survivors get their first real reward, and it is a gut punch. A mountain of a man steps out. This is Buhara, one of the examiners. His demand is simple and horrifying. Feed me. He wants a whole roast pig each, and he wants it now. But the exam has a second judge, and she is about to make everyone furious.",
+            "keywords": [
+              {
+                "word": "Buhara",
+                "color": "#C9A227"
+              },
+              {
+                "word": "horrifying",
+                "color": "#FF5C5C"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "Fifty Survivors, And The Examiners Revolt",
+        "hashtags": [
+          "#hunterxhunter",
+          "#hxh",
+          "#anime",
+          "#hunterexam",
+          "#menchi",
+          "#shonen",
+          "#animefight"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hxh second phase",
+          "menchi hxh",
+          "hunter exam cooking test",
+          "buhara",
+          "anime shorts",
+          "gourmet hunters"
+        ],
+        "series": {
+          "series_id": "hunter6",
+          "part": 2,
+          "start_seconds": 249,
+          "end_seconds": 614,
+          "is_final": false,
+          "summary": "Menchi's cooking test detonates: the Gourmet Hunter examiners snap at the rioting candidates and launch a counter-attack, cutting fifty survivors to a promised ten."
+        },
+        "segments": [
+          {
+            "start_seconds": 249,
+            "end_seconds": 287,
+            "voiceover_text": "Fifty candidates survived. The examiners think that is fifty too many. Buhara's appetite is one thing, but then the green-haired examiner loses it. She grabs a bald candidate by the scarf, teeth bared, screaming in his face. This is the counter-attack. They are not here to pass anyone.",
+            "keywords": [
+              {
+                "word": "counter-attack",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "fifty",
+                "color": "#C9A227"
+              }
+            ]
+          },
+          {
+            "start_seconds": 289,
+            "end_seconds": 312,
+            "voiceover_text": "Her name is Menchi, and she drops the number that empties the room. Of the fifty standing here, she plans to pass ten. Maybe fewer. The candidates' hope curdles on the spot. And the way she judges their cooking next makes that threat feel generous.",
+            "keywords": [
+              {
+                "word": "Menchi",
+                "color": "#7CE86B"
+              },
+              {
+                "word": "ten",
+                "color": "#FF5C5C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 600,
+            "end_seconds": 614,
+            "voiceover_text": "Menchi tastes dish after dish and flunks everything in seconds. This is not a cooking test anymore. It is an execution. And the angrier the crowd gets, the closer this exam comes to a full riot.",
+            "keywords": [
+              {
+                "word": "riot",
+                "color": "#FF5C5C"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "Menchi Fails Everyone, The Crowd Explodes",
+        "hashtags": [
+          "#hunterxhunter",
+          "#hxh",
+          "#anime",
+          "#menchi",
+          "#hunterexam",
+          "#shonen",
+          "#animerage"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "menchi fails everyone",
+          "hxh cooking exam",
+          "hunter exam riot",
+          "anime shorts",
+          "hxh episode",
+          "gon hxh"
+        ],
+        "series": {
+          "series_id": "hunter6",
+          "part": 3,
+          "start_seconds": 614,
+          "end_seconds": 774,
+          "is_final": false,
+          "summary": "The riot breaks open: Menchi declares every dish a failure, a candidate's pride detonates into open defiance, and the exam teeters on violence."
+        },
+        "segments": [
+          {
+            "start_seconds": 615,
+            "end_seconds": 633,
+            "voiceover_text": "It starts with arrogance. Menchi calls this whole exam a gift, and claims her palate is something special. One candidate's sushi gets mocked as raw fish on rice. Then she announces the result. Nobody passed. Fifty cooks, zero survivors. The yard goes dead quiet.",
+            "keywords": [
+              {
+                "word": "zero",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "gift",
+                "color": "#C9A227"
+              }
+            ]
+          },
+          {
+            "start_seconds": 650,
+            "end_seconds": 677,
+            "voiceover_text": "Then one man's pride cracks. A candidate in the crowd starts shouting about his dream, about the moment he was supposed to take the main stage. His voice is shaking. His friend tries to pull him away before it gets ugly. He does not move. He is done being polite.",
+            "keywords": [
+              {
+                "word": "pride",
+                "color": "#C9A227"
+              },
+              {
+                "word": "shouting",
+                "color": "#FF5C5C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 694,
+            "end_seconds": 774,
+            "voiceover_text": "And now the dream of becoming a Hunter turns into a threat. The furious candidate swears that if they lay a hand on him, he will end them. Menchi does not even flinch. That is when the real problem arrives, dropped from the sky itself, because someone has been watching this exam fall apart.",
+            "keywords": [
+              {
+                "word": "threat",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "sky",
+                "color": "#5CB3FF"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "I'm Still A Hunter, Old Man Arrives",
+        "hashtags": [
+          "#hunterxhunter",
+          "#hxh",
+          "#anime",
+          "#netero",
+          "#hunterexam",
+          "#shonen",
+          "#animeedit"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "netero entrance",
+          "hxh hunter association chairman",
+          "hunter exam netero",
+          "anime shorts",
+          "hxh second phase",
+          "menchi netero"
+        ],
+        "series": {
+          "series_id": "hunter6",
+          "part": 4,
+          "start_seconds": 774,
+          "end_seconds": 1099,
+          "is_final": false,
+          "summary": "A broken candidate's last stand collides with the Chairman's arrival: Netero falls from the sky, hears Menchi's verdict, and decides the exam gets one more answer."
+        },
+        "segments": [
+          {
+            "start_seconds": 774,
+            "end_seconds": 834,
+            "voiceover_text": "The shouting candidate finally lets it out. His bad habit, his ruined dream, the shame he cannot go home with. Then he plants his feet and screams it. He is a Hunter. Cornered, humiliated, and still a Hunter. Menchi's answer is ice cold. He is done here. But the sky has other plans.",
+            "keywords": [
+              {
+                "word": "Hunter",
+                "color": "#5CB3FF"
+              },
+              {
+                "word": "humiliated",
+                "color": "#FF5C5C"
+              }
+            ]
+          },
+          {
+            "start_seconds": 864,
+            "end_seconds": 912,
+            "voiceover_text": "High above the exam site, something falls off the airship. A tiny figure drops straight down and lands in a crater of dust. The crowd goes silent. It is an old man in a white getup. This is Netero, chairman of the entire Hunter Association. He came down personally because the exam just failed everyone.",
+            "keywords": [
+              {
+                "word": "Netero",
+                "color": "#C9A227"
+              },
+              {
+                "word": "chairman",
+                "color": "#5CB3FF"
+              }
+            ]
+          },
+          {
+            "start_seconds": 974,
+            "end_seconds": 1016,
+            "voiceover_text": "Netero hears Menchi out, and even he did not expect this. Her new answer is simple. Cook for me again, properly this time. The task: a boiled egg. Sounds easy. Then he points at a ravine behind the candidates, where something enormous is circling in the mist. The eggs they need belong to it.",
+            "keywords": [
+              {
+                "word": "egg",
+                "color": "#C9A227"
+              },
+              {
+                "word": "ravine",
+                "color": "#FF5C5C"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "target_total_duration_seconds": 30,
+        "title": "The Spider-Eagle Egg Drop",
+        "hashtags": [
+          "#hunterxhunter",
+          "#hxh",
+          "#anime",
+          "#hunterexam",
+          "#gon",
+          "#shonen",
+          "#animemoment"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "spider eagle eggs hxh",
+          "split mountain hxh",
+          "hunter exam egg challenge",
+          "gon spider eagle",
+          "anime shorts",
+          "hxh episode"
+        ],
+        "series": {
+          "series_id": "hunter6",
+          "part": 5,
+          "start_seconds": 1099,
+          "end_seconds": 1358,
+          "is_final": true,
+          "summary": "The retest resolves: candidates hurl themselves into the ravine for Spider-Eagle eggs, and Gon's team discovers the wind is the trick that makes the catch possible."
+        },
+        "segments": [
+          {
+            "start_seconds": 1099,
+            "end_seconds": 1131,
+            "voiceover_text": "This is the retest, and it is insane. The Spider-Eagle builds its nest on a web strung across a bottomless ravine. To get one egg, you jump into the void, grab it, and pray the web holds. One candidate snatches his egg mid-fall and vanishes into the fog below, grinning like a maniac. Gon goes next.",
+            "keywords": [
+              {
+                "word": "egg",
+                "color": "#C9A227"
+              },
+              {
+                "word": "void",
+                "color": "#FF5C5C"
+              },
+              {
+                "word": "Gon",
+                "color": "#7CE86B"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1131,
+            "end_seconds": 1158,
+            "voiceover_text": "Then Gon notices what nobody else saw. A wind keeps blowing up from the ravine, at the same moment, every time. That gust is the whole trick. It tells you exactly when the eagle leaves the nest. The scariest exam of the day was never about courage. It was about watching. And Gon was watching.",
+            "keywords": [
+              {
+                "word": "wind",
+                "color": "#5CB3FF"
+              },
+              {
+                "word": "trick",
+                "color": "#C9A227"
+              }
+            ]
+          },
+          {
+            "start_seconds": 1300,
+            "end_seconds": 1358,
+            "voiceover_text": "One by one, they ride the gust, snatch the eggs, and come back alive. Menchi tastes the boiled Spider-Eagle egg, and for the first time all day, she has no insult left. The exam that failed everyone finally has survivors. Gon just passed the test that was designed to break him.",
+            "keywords": [
+              {
+                "word": "survivors",
+                "color": "#7CE86B"
+              },
+              {
+                "word": "passed",
+                "color": "#5CB3FF"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
