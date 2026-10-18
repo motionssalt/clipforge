@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "job_id": "hxh6-p9",
+  "mode": "manual",
+  "state": "stage_b_queued",
+  "message": "Super Series part 9 of 9 — Stage B dispatched (chained from part 8's completion).",
+  "updated_at_epoch": 1792355419,
+  "series": {
+    "enabled": true,
+    "series_id": "hxh6",
+    "part": 9,
+    "start_seconds": 1204,
+    "is_final": true
+  },
+  "release_tag": "clipforge-hxh6-p9",
+  "release_url": "https://github.com/motionssalt/clipforge/releases/tag/clipforge-hxh6-p9"
+}
