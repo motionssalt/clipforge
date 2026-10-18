@@ -1307,7 +1307,8 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
   "cuts": [
     {{
       "start_seconds": 142,
-      "end_seconds": 170,
+      "end_seconds": 158,
+      "visual_anchor_seconds": 143,  // exact source timestamp of the on-screen action this cut describes
       "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. CORE PRINCIPLE — INTERESTINGNESS DENSITY, NOT INFORMATION DENSITY: the footage already shows the viewer what is happening. Your job is never to re-describe what is already visible — it is to supply the INVISIBLE layer: why it matters, what it means, what the character feels, and what question it raises. A weak narrator writes 'Kurapika raises his hand. A chain appears. The attackers fall.' — the viewer can already see all of that; restating it wastes the one thing narration is for. A strong narrator asks what the footage alone cannot answer: why is this happening, what does it cost the character, what happens next. Concretely: 'Two men in black approach him and take him away' just restates the shot. 'It turned out his time outside was up, and two men in black had taken him away' tells the viewer what the moment MEANS — that's the standard to write every line to. Apply this filter to every sentence: does this explain significance, advance a question, reveal a feeling, or create a new question — or does it just restate what the frame already shows? If it's the latter, cut it or replace it with the interpretation instead. This applies most strongly to WHO is present and HOW they look: never inventory people in a scene by appearance or posture ('a woman in a dark coat stands with one hand on her hip, while a black-haired woman watches through round glasses' is exactly the wrong instinct) — name only who actually matters to what happens next, with only the detail the moment needs ('Hisoka is here' beats 'a masked figure and a red-haired woman fill the frame' when Hisoka's arrival is the actual point). Structure the cut as escalation, not report: each beat should make the last one MORE interesting, ideally by opening a small question the next beat answers or deepens (a strange coincidence, a doubt, a decision, a consequence) rather than a flat 'then this happened, then this happened' sequence. State a character's internal reaction — hesitation, surprise, doubt, resolve — as its own short beat wherever the source supports it; a character's THOUGHTS and FEELINGS are part of the invisible layer too, not just plot mechanics. Use SHORT sentences (one beat per sentence, not clause-stacked run-ons), chronological order, confident third person present tense by default. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events, meaning, or internal reactions unsupported by the source — every interpretation must still be earned by what the transcript/screenshots actually show. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts.",
       "keywords": [
         {{"word": "one genuinely noteworthy word from this cut's voiceover_text", "color": "#FF5C5C"}}
@@ -1322,6 +1323,58 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
   // any cut's footage or on `end_seconds` (the PICKING end_seconds rules
   // and the NARRATION DURATION CONTRACT are the sole authorities there).
 }}
+
+--------------------------------------------------------------------------------
+NARRATION-TO-PICTURE VISUAL ANCHORING (CRITICAL — PREVENTS DRIFT)
+--------------------------------------------------------------------------------
+Every cut in `cuts` MUST include `visual_anchor_seconds`:
+- `visual_anchor_seconds`: the exact source timestamp in seconds (from the
+  screenshots and transcript) of the primary visual action, expression, or event
+  that this cut's `voiceover_text` describes.
+- RULE: Narration describes what is visible AT the anchor time, NOT what
+  happened earlier or later.
+- RULE: Narration begins at or slightly before the visual moment, never after it.
+  Therefore, `start_seconds` must be set right around the visual anchor (0.0 to
+  0.5s before `visual_anchor_seconds`). Setting `start_seconds` seconds before
+  the anchor will cause the narration to talk about the event long after the
+  screen already passed it!
+- TIME BASE: All timestamps (`start_seconds`, `end_seconds`,
+  `visual_anchor_seconds`) use the source video time base (the exact seconds
+  shown in the screenshot filenames, e.g. frame_000142.jpg, and in transcript.json).
+
+HOW TO LOOK UP SCREENSHOTS BY TIMESTAMP:
+  For any candidate timestamp T (in seconds):
+  Baseline window file: frame_{{window_start:06d}}.jpg where window_start = (T // {window_seconds}) * {window_seconds}.
+  Panel grid layout (3x2, left-to-right, top-to-bottom):
+    Row 1: window_start + 0s | window_start + 1s | window_start + 2s
+    Row 2: window_start + 3s | window_start + 4s | window_start + 5s
+  Inspect the exact panel where the event happens to record `visual_anchor_seconds`.
+
+WORKED EXAMPLES:
+1. CORRECT ANCHORING:
+   Looking at frame_000142.jpg, at second 143.0 Kurapika's chain appears.
+   The voiceover describes the chain appearing:
+   {{
+     "start_seconds": 142,
+     "end_seconds": 155,
+     "visual_anchor_seconds": 143,
+     "voiceover_text": "A conjured chain wraps his fingers. Kurapika does not hesitate."
+   }}
+   Result: Speech starts at 0.0s, the chain appears on screen at ~0.15s. The viewer
+   hears and sees the moment simultaneously!
+
+2. WRONG ANCHORING (DRIFT / LAG):
+   The chain appears at second 143.0, but the cut is started at 120.0 (23 seconds earlier):
+   {{
+     "start_seconds": 120,
+     "end_seconds": 155,
+     "visual_anchor_seconds": 143, // WRONG: 23-second gap before the anchor!
+     "voiceover_text": "Before the fight, everyone was watching Kurapika. The room grew silent. Then a conjured chain wraps his fingers."
+   }}
+   Result: Because the footage is retimed and the cut began at 120, the chain
+   appears on screen at second 1.5, but the TTS does not say 'conjured chain wraps
+   his fingers' until second 8! The narration is 6.5 seconds late and out of sync!
+--------------------------------------------------------------------------------
 
 NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   ORDER OF OPERATIONS — read this first, it overrides any other reading:
@@ -1435,6 +1488,16 @@ NARRATION DURATION CONTRACT — REQUIRED FOR EVERY CUT
   video in any way.
 
 CONSTRAINTS
+  - `visual_anchor_seconds` is a REQUIRED number (integer or float) for EVERY cut:
+    the exact source timestamp (in seconds, matching screenshot filenames and
+    transcript.json) of the primary visual action, expression, or event that
+    this cut's `voiceover_text` describes.
+    * Narration describes what is visible AT the anchor time, NOT what happened
+      earlier or later.
+    * Narration begins at or slightly before the visual moment, never after it.
+      Therefore, `start_seconds` must be chosen right at or slightly before
+      `visual_anchor_seconds` (0.0 to 0.5s lead-in). Never start a cut 10-20s
+      before the anchor — that causes the narration to lag the picture and drift!
   - `start_seconds` and `end_seconds` are integers, in seconds since the
     start of the video. `end_seconds > start_seconds`. Both must lie
     within [0, {duration_seconds}].

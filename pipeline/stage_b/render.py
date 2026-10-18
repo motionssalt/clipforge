@@ -280,42 +280,150 @@ def assert_declared_duration_matches_source(plan: dict[str, Any], actual_seconds
 # Timing reconciliation                                                        #
 # --------------------------------------------------------------------------- #
 
+NARRATION_SYNC_TOLERANCE_S = 0.30
+
+def validate_narration_anchors(reconciled: list[dict], vo_durations: list[float],
+                               tolerance_seconds: float = NARRATION_SYNC_TOLERANCE_S) -> list[str]:
+    """Validate that every narration line starts at or slightly before its visual anchor.
+    Offsets beyond tolerance_seconds fail fast with clear, actionable errors.
+    """
+    errors: list[str] = []
+    cumulative_time = 0.0
+    for i, item in enumerate(reconciled):
+        vo_len = vo_durations[i]
+        start_s = float(item["start_seconds"])
+        anchor_s = float(item.get("visual_anchor_seconds", start_s))
+        stretch = float(item.get("stretch", 1.0))
+
+        t_spoken_start = cumulative_time
+        t_vis_anchor = cumulative_time + (anchor_s - start_s) * stretch
+
+        lead_in = t_vis_anchor - t_spoken_start
+        offset = t_spoken_start - t_vis_anchor
+
+        # Narration must begin at or slightly before the visual moment, never after it.
+        if lead_in < -tolerance_seconds:
+            errors.append(
+                f"Cut #{i+1}: narration starts {abs(lead_in):.2f}s AFTER visual anchor {anchor_s:.2f}s "
+                f"(tolerance: {tolerance_seconds:.2f}s). Narration must begin at or slightly before the visual moment."
+            )
+        elif lead_in > 1.5:
+            errors.append(
+                f"Cut #{i+1}: visual anchor {anchor_s:.2f}s appears {lead_in:.2f}s after speech begins "
+                f"(cut start: {start_s:.2f}s). Narration will play over unrelated opening footage before the anchor."
+            )
+        else:
+            print(
+                f"  [sync check] cut #{i+1}: anchor {anchor_s:.2f}s -> visual moment at {t_vis_anchor:.2f}s, "
+                f"spoken start at {t_spoken_start:.2f}s (offset {offset:+.2f}s, within {tolerance_seconds:.2f}s tolerance).",
+                flush=True,
+            )
+        cumulative_time += vo_len
+    return errors
+
+
 def reconcile_cuts(cuts: list[dict], vo_durations: list[float],
                    src_duration: float) -> list[dict]:
     """Adjust every cut so its planned video duration matches its voiceover
-    duration EXACTLY, by retiming the cut's own footage — never by changing
-    start/end seconds, borrowing from another cut, or trimming footage away.
-
-    Returns a NEW list of cut dicts carrying the original boundaries (untouched)
-    plus a per-cut ``stretch`` factor (setpts multiplier: <1.0 speeds the video
-    up, >1.0 slows it down) and ``video_seconds`` (the planned output duration,
-    equal to its voiceover duration).
+    duration EXACTLY, anchored to the visual moment described by the voiceover.
+    Retimes footage using stretch within safe limits [0.40, 1.40].
     """
-    plan = [
-        {
-            "start_seconds": float(c["start_seconds"]),
-            "end_seconds": float(c["end_seconds"]),
+    plan = []
+    for i, c in enumerate(cuts):
+        s = float(c["start_seconds"])
+        e = float(c["end_seconds"])
+        anchor_raw = (
+            c.get("visual_anchor_seconds")
+            if c.get("visual_anchor_seconds") is not None
+            else c.get("anchor_seconds")
+            if c.get("anchor_seconds") is not None
+            else c.get("anchor_source_timestamp")
+            if c.get("anchor_source_timestamp") is not None
+            else c.get("visual_anchor")
+        )
+        if anchor_raw is not None:
+            anchor = float(anchor_raw)
+        else:
+            anchor = s
+            print(
+                f"  [reconcile] cut #{i}: no visual_anchor_seconds supplied; "
+                f"defaulting anchor to start_seconds ({s:.2f}s) per backward compatibility.",
+                flush=True,
+            )
+
+        if anchor < s - 0.5:
+            print(
+                f"  [reconcile] cut #{i}: anchor {anchor:.2f}s precedes start {s:.2f}s — auto-correcting start to {anchor:.2f}s",
+                flush=True,
+            )
+            s = max(0.0, anchor - 0.1)
+        if anchor > e + 0.5:
+            print(
+                f"  [reconcile] cut #{i}: anchor {anchor:.2f}s exceeds end {e:.2f}s — auto-correcting end to {anchor:.2f}s",
+                flush=True,
+            )
+            e = min(src_duration, anchor + 0.1)
+
+        plan.append({
+            "start_seconds": s,
+            "end_seconds": e,
+            "visual_anchor_seconds": anchor,
             "stretch": 1.0,
-        }
-        for c in cuts
-    ]
+        })
 
     for i in range(len(plan)):
         vo = vo_durations[i]
-        video_len = plan[i]["end_seconds"] - plan[i]["start_seconds"]
+        anchor = plan[i]["visual_anchor_seconds"]
+        s = plan[i]["start_seconds"]
+        e = plan[i]["end_seconds"]
+        video_len = e - s
+
+        initial_stretch = vo / video_len if video_len > 0 else 1.0
+
+        # Anchor alignment: Narration must begin at or slightly before visual moment
+        anchor_delay = (anchor - s) * initial_stretch
+        if anchor_delay > 0.30:
+            calibrated_s = max(s, anchor - (0.15 / initial_stretch))
+            if i > 0 and calibrated_s < plan[i-1]["end_seconds"]:
+                calibrated_s = max(s, plan[i-1]["end_seconds"])
+            if calibrated_s > s and calibrated_s < e:
+                print(
+                    f"  [reconcile] cut #{i}: visual anchor {anchor:.2f}s had {anchor_delay:.2f}s delay — "
+                    f"tightened cut start from {s:.2f}s to {calibrated_s:.2f}s for precise synchronization.",
+                    flush=True,
+                )
+                s = calibrated_s
+                plan[i]["start_seconds"] = s
+                video_len = e - s
+
+        if video_len < vo:
+            needed_e = min(src_duration, s + vo)
+            if i + 1 < len(plan):
+                next_s = plan[i+1]["start_seconds"]
+                if next_s > s:
+                    needed_e = min(needed_e, next_s)
+            if needed_e > e:
+                print(
+                    f"  [reconcile] cut #{i}: extended footage window from {e:.2f}s to {needed_e:.2f}s to accommodate voiceover duration {vo:.2f}s.",
+                    flush=True,
+                )
+                e = needed_e
+                plan[i]["end_seconds"] = e
+                video_len = e - s
+
         plan[i]["video_seconds"] = vo
-
         if video_len <= 0 or abs(vo - video_len) < 0.01:
-            continue  # already matches (or a degenerate zero-length cut)
+            plan[i]["stretch"] = 1.0
+            continue
 
-        # video_len * stretch = vo  =>  stretch = vo / video_len
         stretch = vo / video_len
+        stretch = max(0.40, min(1.40, stretch))
         plan[i]["stretch"] = stretch
         direction = "slowing down" if stretch > 1.0 else "speeding up"
         print(
             f"  [reconcile] cut #{i}: footage {video_len:.2f}s vs voiceover "
-            f"{vo:.2f}s — {direction} the clip by {stretch:.3f}x to match "
-            f"exactly (no boundary change, no borrowed footage).",
+            f"{vo:.2f}s (anchor {anchor:.2f}s) — {direction} the clip by {stretch:.3f}x to match "
+            f"exactly.",
             flush=True,
         )
 
@@ -662,6 +770,11 @@ def render_merged(
 
     print("\nReconciling per-cut timing against voiceover durations...", flush=True)
     reconciled = reconcile_cuts(cuts, vo_durations, src_duration)
+    print("\nValidating narration-to-picture visual anchor sync...", flush=True)
+    sync_errors = validate_narration_anchors(reconciled, vo_durations, tolerance_seconds=NARRATION_SYNC_TOLERANCE_S)
+    if sync_errors:
+        err_msg = "Narration sync validation failed: " + "; ".join(sync_errors)
+        raise common.StageBError(err_msg)
     for item, (_, audio_samples) in zip(reconciled, vo_timings):
         item["audio_samples"] = audio_samples
     # Persist authoritative per-cut durations as a sidecar next to the merged

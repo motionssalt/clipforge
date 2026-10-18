@@ -212,6 +212,31 @@ export function validateProductionPlan(document, options = {}) {
       errors.push(at + ' overlaps or precedes the prior cut.');
     }
     previousEnd = end;
+
+    // Visual anchor validation (narration-sync constraint)
+    let anchor = cut.visual_anchor_seconds;
+    if (anchor === undefined || anchor === null) anchor = cut.anchor_seconds;
+    if (anchor === undefined || anchor === null) anchor = cut.anchor_source_timestamp;
+    if (anchor === undefined || anchor === null) anchor = cut.visual_anchor;
+
+    if (anchor !== undefined && anchor !== null) {
+      if (typeof anchor === 'number' && Number.isFinite(anchor)) {
+        if (anchor < 0) {
+          errors.push(at + '.visual_anchor_seconds must be at least 0.');
+        } else if (anchor < start - 0.5 || anchor > end + 0.5) {
+          errors.push(
+            at + '.visual_anchor_seconds (' + anchor + 's) is outside cut range [' + start + 's, ' + end + 's]. ' +
+            'Visual anchor must pinpoint the on-screen event inside this cut.'
+          );
+        } else {
+          cut.visual_anchor_seconds = anchor;
+        }
+      } else {
+        errors.push(at + '.visual_anchor_seconds must be a finite number.');
+      }
+    } else {
+      cut.visual_anchor_seconds = start;
+    }
   }
 
   return errors;

@@ -2,7 +2,7 @@
 // Reads a JSON array of production-plan documents from stdin and writes a
 // JSON array of per-document error-string arrays to stdout.
 import { readFileSync } from 'node:fs';
-import { validateProductionPlan } from '../../bot/src/plan.js';
+import { validateProductionPlan } from '../../site/js/plan.js';
 
 const stdinBuf = readFileSync(0, 'utf-8');
 const documents = JSON.parse(stdinBuf);

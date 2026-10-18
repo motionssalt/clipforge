@@ -259,6 +259,33 @@ def validate_production_plan(document: Any, part_number: int | None = None) -> l
             errors.append(f"{at} overlaps or precedes the prior cut.")
         previous_end = e
 
+        # Visual anchor validation (narration-sync constraint)
+        anchor = cut.get("visual_anchor_seconds")
+        if anchor is None:
+            anchor = cut.get("anchor_seconds")
+        if anchor is None:
+            anchor = cut.get("anchor_source_timestamp")
+        if anchor is None:
+            anchor = cut.get("visual_anchor")
+
+        if anchor is not None:
+            if isinstance(anchor, (int, float)) and not isinstance(anchor, bool) and math.isfinite(anchor):
+                anchor_val = float(anchor)
+                if anchor_val < 0:
+                    errors.append(f"{at}.visual_anchor_seconds must be at least 0.")
+                elif anchor_val < float(s) - 0.5 or anchor_val > float(e) + 0.5:
+                    errors.append(
+                        f"{at}.visual_anchor_seconds ({anchor_val:.2f}s) is outside cut range [{s:.1f}s, {e:.1f}s]. "
+                        f"Visual anchor must pinpoint the on-screen event inside this cut."
+                    )
+                else:
+                    cut["visual_anchor_seconds"] = anchor_val
+            else:
+                errors.append(f"{at}.visual_anchor_seconds must be a finite number.")
+        else:
+            # Backward compatibility: default to start_seconds
+            cut["visual_anchor_seconds"] = float(s)
+
     return errors
 
 

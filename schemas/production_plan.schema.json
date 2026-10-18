@@ -58,6 +58,16 @@
           "raw_narration": {
             "type": "string",
             "minLength": 1
+          },
+          "visual_anchor_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Source timestamp in seconds of the primary visual action or expression that this cut's voiceover describes. Narration begins at or slightly before this visual moment."
+          },
+          "anchor_seconds": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Alias for visual_anchor_seconds."
           }
         }
       }
