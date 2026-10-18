@@ -1,0 +1,46 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Killua Quits But Gon Changes The Goal — Part 7",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon changes his goal",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 7,
+    "start_seconds": 1020,
+    "end_seconds": 1129,
+    "is_final": false,
+    "summary": "Killua gives up and leaves while Gon remains. Gon changes his objective from taking the ball to forcing Netero to use his right hand. The story now asks whether that smaller goal is attainable."
+  },
+  "segments": [
+    {
+      "start_seconds": 1020,
+      "end_seconds": 1054,
+      "voiceover_text": "Why is Gon still smiling when Killua has had enough? Killua gets up and abandons the chase. He cannot take the ball. The frustration has beaten his willingness to keep playing."
+    },
+    {
+      "start_seconds": 1054,
+      "end_seconds": 1094,
+      "voiceover_text": "Gon does not follow him out. Killua is exasperated. Gon stays cheerful. They have faced the same opponent, but they are no longer measuring this game the same way. Killua leaves."
+    },
+    {
+      "start_seconds": 1094,
+      "end_seconds": 1129,
+      "voiceover_text": "Now Gon sets a smaller challenge: make Netero use his right hand. Winning the ball can wait. He charges again. Can changing the goal turn an impossible game into a real victory?"
+    }
+  ],
+  "job_id": "hxh6-p7"
+}
