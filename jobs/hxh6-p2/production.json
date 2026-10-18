@@ -1,0 +1,46 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Netero Offers A Dangerously Simple Deal — Part 2",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "hunter exam chairman wager",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 2,
+    "start_seconds": 605,
+    "end_seconds": 690,
+    "is_final": false,
+    "summary": "Netero identifies himself as chairman and offers Hunter status if the boys beat his game. Gon is excited, but Killua remains suspicious. The unanswered question is why this apparently simple offer is so hard to claim."
+  },
+  "segments": [
+    {
+      "start_seconds": 605,
+      "end_seconds": 631,
+      "voiceover_text": "Why is Killua suspicious of an old man offering a game? Killua studies him closely. Gon stays curious. Their reactions split before anyone has even picked up a ball."
+    },
+    {
+      "start_seconds": 631,
+      "end_seconds": 654,
+      "voiceover_text": "Netero introduces himself as the Hunter Exam's chairman. That changes the stakes. This is not some passenger killing time. The man in front of them has authority over the very exam they are trying to pass."
+    },
+    {
+      "start_seconds": 654,
+      "end_seconds": 675,
+      "voiceover_text": "Then he offers a shortcut: beat him at his game and become Hunters. Gon's face lights up. Killua stays guarded. What could make that generous offer so difficult to claim?"
+    }
+  ],
+  "job_id": "hxh6-p2"
+}
