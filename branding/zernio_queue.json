@@ -2245,6 +2245,18 @@
         "6ad520bca4d84089139acc01"
       ],
       "updated_at_epoch": 1792352445
+    },
+    {
+      "job_id": "hxh6-p5",
+      "status": "scheduled",
+      "mode": "smart_schedule",
+      "scheduled_for": "2026-10-19T23:00:00",
+      "timezone": "UTC",
+      "post_ids": [
+        "6ad5239b3b521f4f089f0115",
+        "6ad5239cacb333fd085aacf7"
+      ],
+      "updated_at_epoch": 1792353181
     }
   ]
 }
