@@ -38,20 +38,22 @@
   "notes": "Edge TTS 403 error in Stage B resolved by upgrading edge-tts>=7.3.1 with Sec-MS-GEC v2 support and backoff retry. Verified multiple consecutive green runs: 39155480908 (Stage B hxh6-p1), 39156648736 (Publish Zernio p1), 39156658852 (Stage B hxh6-p2), 39157801530 (Publish Zernio p2), 39157812196 (Stage B hxh6-p3), 39158921199 (Publish Zernio p3).",
   "clipforge_narration_sync": {
     "status": "in_progress",
-    "last_updated": "2026-10-18T21:05:21.780466+00:00",
-    "root_cause_notes": "",
-    "done": [],
+    "last_updated": "2026-10-18T21:39:33.458228+00:00",
+    "root_cause_notes": "1. Visual-Temporal Desync via Speed/Stretch Mismatch: AI authors select wide footage boundaries (e.g. 26s in cut 0 of hxh6-p9: 1204-1230s) containing multiple actions, while writing a paragraph of voiceover (11.088s TTS). Reconcile scales the entire cut by stretch=0.426. Visual action ('Gon throws his arms up') occurs at source 1205.8s (appears at 0.77s on screen), but the spoken sentence describing it starts at audio second 7.20s, resulting in a measured lag of +6.43s. The picture had already moved past the moment 6.4s prior.\n2. Free-floating Narration without Visual Anchors: production.json schema had no visual anchor timestamp field, allowing AI models to guess timing and describe events anywhere within or outside the cut range without temporal binding.\n3. Edited Timeline vs Source Timeline Disconnect: The AI author was not instructed on how source timestamps translate through retiming to the edited timeline, leading to cumulative perceptual lag.\n4. Stage A Prompt lacked structured screenshot-to-timestamp anchoring tables and worked contrastive examples of anchored vs drifted cuts.",
+    "done": [
+      "B3: Pulled real production.json and rendered output from job hxh6-p9 (workflow run 39163606595), measured actual visual-to-narration offset (+6.43s)",
+      "B3: Determined root causes: wide cut boundaries with retiming stretch, lack of visual_anchor_seconds in schema, and free-floating voiceover without timeline derivation"
+    ],
     "pending": [
-      "B3: Pull real production.json and rendered output, measure actual offset",
-      "B3: Determine root cause (edited vs source timestamps, TTS duration drift, audio padding, etc.)",
-      "B4: Schema anchoring: bind narration lines to visual anchors (source timestamps)",
-      "B4: Measured TTS durations & pre-render timeline derivation",
-      "B4: Validation step before rendering with clear actionable error output",
-      "B4: Fix Stage A prompt generator to supply timestamped screenshots and transcript",
-      "B4: Automated regression check for narration sync tolerance",
-      "B5: Verification with measured offset before/after and green workflow run"
+      "B4: Schema anchoring: bind narration lines to visual anchors (visual_anchor_seconds) in schema, python, and JS validators",
+      "B4: Measured TTS durations & timeline derivation in render.py (reconcile_cuts with anchor calibration and clamped stretch)",
+      "B4: Pre-render validation step (validate_narration_anchors) failing fast on unresolvable drift (>0.3s tolerance)",
+      "B4: Fix Stage A prompt generator (prompt.py) with anchoring instructions, screenshot timestamp tables, and worked examples",
+      "B4: Backward compatibility: accept legacy plans lacking anchors with defaulting and warning",
+      "B4: Automated regression check in pipeline/tests/test_narration_sync.py",
+      "B5: Verification with measured offset before vs after and green run"
     ],
     "verified_runs": [],
-    "notes": "Initialized clipforge_narration_sync task."
+    "notes": "Measured hxh6-p9 cut 0: visual event at 0.77s, spoken sentence at 7.20s -> +6.43s offset. Target tolerance: <= 0.3s."
   }
 }
