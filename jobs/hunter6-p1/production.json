@@ -1,0 +1,83 @@
+{
+  "video_duration_seconds": 1358,
+  "target_total_duration_seconds": 30,
+  "title": "The Monster Every Hunter Dreams Of — Part 1",
+  "hashtags": [
+    "#hunterxhunter",
+    "#hxh",
+    "#anime",
+    "#hunterexam",
+    "#gon",
+    "#shonen",
+    "#animeedit"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "hxh hunter exam",
+    "gon freecss",
+    "hunter exam phase one",
+    "kuroro kaijin",
+    "anime shorts",
+    "hxh episode"
+  ],
+  "series": {
+    "series_id": "hunter6",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 249,
+    "is_final": false,
+    "summary": "The tunnel run: Gon pushes through the nightmare stretch where runners start breaking, and the legend of what a Hunter actually is gets planted."
+  },
+  "segments": [
+    {
+      "start_seconds": 0,
+      "end_seconds": 32,
+      "voiceover_text": "There is one creature every Hunter secretly dreams of chasing. Its name is whispered at the start of the deadliest exam on Earth. A monster so prized that men die just looking for it. And right now, a boy named Gon is running toward that dream.",
+      "keywords": [
+        {
+          "word": "monster",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "Hunter",
+          "color": "#5CB3FF"
+        },
+        {
+          "word": "Gon",
+          "color": "#7CE86B"
+        }
+      ]
+    },
+    {
+      "start_seconds": 38,
+      "end_seconds": 72,
+      "voiceover_text": "This is the tunnel that breaks people. The run never ends. The walls never change. Gon admits it himself. He thought about running away. He could not even do that. Hundreds of candidates are already cooked, and the test has barely started. So what is waiting at the end of it?",
+      "keywords": [
+        {
+          "word": "breaks",
+          "color": "#FF5C5C"
+        },
+        {
+          "word": "tunnel",
+          "color": "#C9A227"
+        }
+      ]
+    },
+    {
+      "start_seconds": 196,
+      "end_seconds": 234,
+      "voiceover_text": "Then the survivors get their first real reward, and it is a gut punch. A mountain of a man steps out. This is Buhara, one of the examiners. His demand is simple and horrifying. Feed me. He wants a whole roast pig each, and he wants it now. But the exam has a second judge, and she is about to make everyone furious.",
+      "keywords": [
+        {
+          "word": "Buhara",
+          "color": "#C9A227"
+        },
+        {
+          "word": "horrifying",
+          "color": "#FF5C5C"
+        }
+      ]
+    }
+  ],
+  "job_id": "hunter6-p1"
+}
