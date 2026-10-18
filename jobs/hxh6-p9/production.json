@@ -1,0 +1,46 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Gon Loses The Game And Wins — Part 9",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Netero",
+    "#Determination",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon makes netero use his right hand",
+    "gon versus netero",
+    "netero ball game",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 9,
+    "start_seconds": 1204,
+    "end_seconds": 1358,
+    "is_final": true,
+    "summary": "Gon celebrates forcing Netero to use his right hand despite never taking the ball. His self-chosen objective resolves the challenge and contrasts with Killua's angry withdrawal. The airship continues toward daylight; this is the final part."
+  },
+  "segments": [
+    {
+      "start_seconds": 1204,
+      "end_seconds": 1230,
+      "voiceover_text": "Why does Gon celebrate with the ball in Netero's hand? Because he made the chairman use his right hand. His smaller challenge is complete. Gon throws his arms up, delighted. That grin is earned."
+    },
+    {
+      "start_seconds": 1230,
+      "end_seconds": 1251,
+      "voiceover_text": "Netero looks back at the exhausted boy. Gon has not beaten him. He has found a reason to enjoy trying. After all that frustration, this is a different kind of victory."
+    },
+    {
+      "start_seconds": 1251,
+      "end_seconds": 1262,
+      "voiceover_text": "As the airship reaches daylight, their game is over. Killua walked away angry. Gon ends it satisfied. The ball never changed hands. One defeat exposed two very different boys."
+    }
+  ],
+  "job_id": "hxh6-p9"
+}
