@@ -1,0 +1,46 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Gon's Big Leap Ends In Pain — Part 5",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon jumping challenge",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 5,
+    "start_seconds": 840,
+    "end_seconds": 918,
+    "is_final": false,
+    "summary": "Gon's first leap fails and leaves him clutching his head. He gets up rather than giving in. The individual failures set up the next attempt: Gon and Killua attacking together."
+  },
+  "segments": [
+    {
+      "start_seconds": 840,
+      "end_seconds": 856,
+      "voiceover_text": "Can enthusiasm reach the ball where Killua's technique failed? Gon prepares himself. Then he launches upward. Netero watches him rise, still holding the advantage."
+    },
+    {
+      "start_seconds": 856,
+      "end_seconds": 880,
+      "voiceover_text": "For a heartbeat, Gon looks close enough to make it interesting. Then Netero evades him. Gon comes down clutching his head. It hurts. Killua watches from the floor. That fearless leap has not won anything except a lesson about the gap between them."
+    },
+    {
+      "start_seconds": 880,
+      "end_seconds": 894,
+      "voiceover_text": "But Gon gets back up instead of sulking. Netero studies him with renewed interest. If neither boy can win alone, could attacking together finally change the result?"
+    }
+  ],
+  "job_id": "hxh6-p5"
+}
