@@ -1,0 +1,46 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Two Attackers Still Cannot Take One Ball — Part 6",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "gon killua teamwork",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 6,
+    "start_seconds": 918,
+    "end_seconds": 1020,
+    "is_final": false,
+    "summary": "Gon and Killua attack together with increasingly acrobatic distractions. Netero evades them and keeps the ball. Gon remains delighted, but Killua's frustration deepens, setting up their different responses to defeat."
+  },
+  "segments": [
+    {
+      "start_seconds": 920,
+      "end_seconds": 959,
+      "voiceover_text": "Would two attackers finally be too much for Netero? Killua reaches in again. No luck. Gon joins the chase. They come from different directions, forcing the chairman to twist between them. The ball stays out of reach."
+    },
+    {
+      "start_seconds": 959,
+      "end_seconds": 1007,
+      "voiceover_text": "Gon turns his whole body into a distraction. Killua rushes the opening. Both boys are reaching toward the same prize. Netero slips through again. Their combined attack collapses. Gon lands on the floor. Killua looks furious. Teamwork has not erased the difference."
+    },
+    {
+      "start_seconds": 1007,
+      "end_seconds": 1020,
+      "voiceover_text": "Netero is smiling. Gon smiles too. Why does that same defeat hit Killua so differently?"
+    }
+  ],
+  "job_id": "hxh6-p6"
+}
