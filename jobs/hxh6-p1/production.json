@@ -1,0 +1,46 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "The Old Man Neither Boy Heard — Part 1",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#Friendship"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "netero silent arrival",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 1,
+    "start_seconds": 0,
+    "end_seconds": 605,
+    "is_final": false,
+    "summary": "Gon and Killua share a personal conversation aboard the airship. Netero interrupts without either boy noticing his approach. His unexplained arrival introduces the strength gap that the ball challenge will expose."
+  },
+  "segments": [
+    {
+      "start_seconds": 503,
+      "end_seconds": 550,
+      "voiceover_text": "How does someone sneak up on two boys this alert? Before that shock, Gon and Killua enjoy a quiet conversation above the clouds. Killua talks about his family. His expression grows thoughtful. For a moment, their friendship matters more than the exam."
+    },
+    {
+      "start_seconds": 552,
+      "end_seconds": 581,
+      "voiceover_text": "Then Killua's teasing confidence returns. Gon smiles back. Their conversation feels easy again. Neither boy is braced for an interruption. That comfortable moment is about to break."
+    },
+    {
+      "start_seconds": 581,
+      "end_seconds": 605,
+      "voiceover_text": "Netero is suddenly right beside them. Both boys turn. Killua looks startled. How did this old man get so close without either of them noticing?"
+    }
+  ],
+  "job_id": "hxh6-p1"
+}
