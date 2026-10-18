@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "job_id": "hxh6-p3",
+  "saved_at_epoch": 1792350832,
+  "source": {
+    "kind": "torrent_file",
+    "value": "path:jobs/manual-1792270006310/source.torrent",
+    "torrent_file_index": "7"
+  },
+  "options": {
+    "whisper_model": "base",
+    "language": "auto",
+    "task": "translate_to_english",
+    "target_duration_seconds": 30,
+    "focus": "",
+    "enable_vision_assist": true
+  },
+  "mode": "manual",
+  "series": {
+    "enabled": true,
+    "series_id": "hxh6",
+    "source_job_id": "manual-1792270006310",
+    "part": 3,
+    "start_seconds": 690,
+    "context": "Prior events (Part 1): Gon and Killua share a personal conversation aboard the airship. Netero interrupts without either boy noticing his approach. His unexplained arrival introduces the strength gap that the ball challenge will expose.\nPrior events (Part 2): Netero identifies himself as chairman and offers Hunter status if the boys beat his game. Gon is excited, but Killua remains suspicious. The unanswered question is why this apparently simple offer is so hard to claim."
+  },
+  "music": {
+    "ref": "",
+    "source": "default"
+  }
+}
