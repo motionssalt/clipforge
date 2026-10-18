@@ -17,6 +17,8 @@ from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 RELAY_DIR = Path(__file__).resolve().parents[2] / "relay"
+if not (RELAY_DIR / "telegram_relay.py").exists():
+    RELAY_DIR = Path(__file__).resolve().parents[2] / "_archive" / "scripts"
 sys.path.insert(0, str(RELAY_DIR))
 
 telegram_relay = importlib.import_module("telegram_relay")

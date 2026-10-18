@@ -2,9 +2,30 @@
   "repo": "clipforge",
   "task": "fix-failing-runs",
   "status": "in_progress",
-  "last_updated": "2026-10-18T18:34:57.746338+00:00",
-  "failures_found": [],
-  "fixes_done": [],
+  "last_updated": "2026-10-18T18:42:59.590546+00:00",
+  "failures_found": [
+    {
+      "run_id": 39104649839,
+      "workflow_name": "Stage B \u2014 hxh6-p1",
+      "step_name": "Run the Stage B pipeline",
+      "exact_error": "ERROR: Edge TTS failed after 3 attempts for en-US-BrianNeural: 403, message='Invalid response status'",
+      "root_cause": "edge-tts==7.2.8 pinned in requirements.txt used deprecated Sec-MS-GEC v1 token generation which Microsoft Bing Speech endpoint rejected with HTTP 403. Upgrading to edge-tts>=7.3.1 adds Sec-MS-GEC v2 token support and restores synthesis."
+    },
+    {
+      "run_id": 39082550599,
+      "workflow_name": "Stage B \u2014 hunter6-p1",
+      "step_name": "Run the Stage B pipeline",
+      "exact_error": "ERROR: Edge TTS failed after 3 attempts for en-US-BrianNeural: 403, message='Invalid response status'",
+      "root_cause": "Same Sec-MS-GEC v1 token deprecation in edge-tts 7.2.8."
+    }
+  ],
+  "fixes_done": [
+    {
+      "issue": "Edge TTS 403 in Stage B pipeline",
+      "fix": "Updated pipeline/requirements.txt to edge-tts>=7.3.1,<8; increased retries in voiceover.py to 4 with exponential backoff and fallback voice guard; fixed datetime UTC import in zernio.py.",
+      "status": "committed_and_pushed"
+    }
+  ],
   "fixes_pending": [],
   "verified_runs": [],
   "notes": "Initialized fix-failing-runs task"

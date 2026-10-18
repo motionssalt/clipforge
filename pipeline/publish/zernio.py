@@ -32,7 +32,12 @@ import re
 import sys
 import time
 import uuid
-from datetime import UTC, datetime, time as dtime, timedelta
+from datetime import datetime, time as dtime, timedelta
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
 from pathlib import Path
 from typing import Any, Callable, Iterable
 from urllib.error import HTTPError, URLError

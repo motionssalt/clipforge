@@ -94,7 +94,7 @@ TTS_PRESET_NAME = "edge_commentary_clear_neutral"
 TTS_RATE = "+20%"
 TTS_VOLUME = "+0%"
 TTS_PITCH = "+0Hz"
-EDGE_TTS_MAX_ATTEMPTS = 3
+EDGE_TTS_MAX_ATTEMPTS = 4
 EDGE_TTS_BACKOFF_S = 2.0
 
 
@@ -153,11 +153,17 @@ def synthesize_edge_tts_to_wav(text: str, settings: TtsSettings, output_path: Pa
     last_error: Exception | None = None
     with tempfile.TemporaryDirectory(prefix="clipforge_edge_tts_") as temp_dir:
         mp3_path = Path(temp_dir) / "voice.mp3"
+        active_settings = settings
         for attempt in range(1, EDGE_TTS_MAX_ATTEMPTS + 1):
             try:
                 if mp3_path.exists():
                     mp3_path.unlink()
-                asyncio.run(_save_edge_mp3(spoken_text, settings, mp3_path))
+                # On third retry, try default voice if custom voice is failing
+                if attempt >= 3 and active_settings.voice != DEFAULT_TTS_VOICE:
+                    print(f"Falling back to default narrator {DEFAULT_TTS_VOICE} after repeated voice synthesis errors.", flush=True)
+                    active_settings = TtsSettings(DEFAULT_TTS_VOICE)
+
+                asyncio.run(_save_edge_mp3(spoken_text, active_settings, mp3_path))
                 if not mp3_path.is_file() or mp3_path.stat().st_size == 0:
                     raise common.StageBError("Edge TTS returned an empty audio response.")
                 common.run(
@@ -174,12 +180,13 @@ def synthesize_edge_tts_to_wav(text: str, settings: TtsSettings, output_path: Pa
             except Exception as error:  # Provider and transport errors vary by version.
                 last_error = error
                 if attempt < EDGE_TTS_MAX_ATTEMPTS:
+                    backoff = EDGE_TTS_BACKOFF_S * (2 ** (attempt - 1))
                     print(
                         f"Edge TTS attempt {attempt}/{EDGE_TTS_MAX_ATTEMPTS} failed for "
-                        f"{settings.voice}; retrying in {EDGE_TTS_BACKOFF_S:.0f}s.",
+                        f"{active_settings.voice}: {error}; retrying in {backoff:.0f}s.",
                         flush=True,
                     )
-                    time.sleep(EDGE_TTS_BACKOFF_S * attempt)
+                    time.sleep(backoff)
         raise common.StageBError(
             f"Edge TTS failed after {EDGE_TTS_MAX_ATTEMPTS} attempts for {settings.voice}: {last_error}"
         ) from last_error
