@@ -3,8 +3,8 @@
   "job_id": "hxh6-p1",
   "mode": "manual",
   "state": "stage_b_running",
-  "message": "Stage B run started on GitHub Actions — setting up.",
-  "updated_at_epoch": 1792349029,
+  "message": "Stage B started: producing final video (voiceover, music, captions)",
+  "updated_at_epoch": 1792349181,
   "series": {
     "enabled": true,
     "series_id": "hxh6",
@@ -16,7 +16,7 @@
   "run": {
     "workflow_run_id": 39155480908,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/39155480908",
-    "code_ref": "1f786c657e6df526c15f182b5caaa6a9682663a6"
+    "code_ref": "444b217c9f02205f84c81f4840814553c9c86fa6"
   },
   "publishing": {
     "status": "not_requested",
