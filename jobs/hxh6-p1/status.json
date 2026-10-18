@@ -2,9 +2,9 @@
   "version": 1,
   "job_id": "hxh6-p1",
   "mode": "manual",
-  "state": "stage_b_running",
-  "message": "Stage B started: producing final video (voiceover, music, captions)",
-  "updated_at_epoch": 1792349181,
+  "state": "complete",
+  "message": "Final video is ready (one merged MP4 with voiceover and cinematic captions).",
+  "updated_at_epoch": 1792349940,
   "series": {
     "enabled": true,
     "series_id": "hxh6",
@@ -12,11 +12,14 @@
     "start_seconds": 0,
     "is_final": false
   },
-  "assets": {},
+  "assets": {
+    "final_zip": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hxh6-p1/clipforge-hxh6-p1-final.zip",
+    "final_mp4": "https://github.com/motionssalt/clipforge/releases/download/clipforge-hxh6-p1/final.mp4"
+  },
   "run": {
     "workflow_run_id": 39155480908,
     "workflow_run_url": "https://github.com/motionssalt/clipforge/actions/runs/39155480908",
-    "code_ref": "444b217c9f02205f84c81f4840814553c9c86fa6"
+    "code_ref": "732d8065245d110b3e74c38cc0b10462805fde71"
   },
   "publishing": {
     "status": "not_requested",
