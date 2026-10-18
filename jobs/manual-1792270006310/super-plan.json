@@ -1,0 +1,411 @@
+{
+  "version": 1,
+  "anchor_job_id": "manual-1792270006310",
+  "series_id": "hxh6",
+  "total_parts": 9,
+  "video_duration_seconds": 1358,
+  "plan": {
+    "version": 2,
+    "series_id": "hxh6",
+    "video_duration_seconds": 1358,
+    "target_total_duration_seconds": 30,
+    "parts": [
+      {
+        "video_duration_seconds": 1358,
+        "title": "The Old Man Neither Boy Heard",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#Friendship"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "netero silent arrival",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 1,
+          "start_seconds": 0,
+          "end_seconds": 605,
+          "is_final": false,
+          "summary": "Gon and Killua share a personal conversation aboard the airship. Netero interrupts without either boy noticing his approach. His unexplained arrival introduces the strength gap that the ball challenge will expose."
+        },
+        "segments": [
+          {
+            "start_seconds": 503,
+            "end_seconds": 550,
+            "voiceover_text": "How does someone sneak up on two boys this alert? Before that shock, Gon and Killua enjoy a quiet conversation above the clouds. Killua talks about his family. His expression grows thoughtful. For a moment, their friendship matters more than the exam."
+          },
+          {
+            "start_seconds": 552,
+            "end_seconds": 581,
+            "voiceover_text": "Then Killua's teasing confidence returns. Gon smiles back. Their conversation feels easy again. Neither boy is braced for an interruption. That comfortable moment is about to break."
+          },
+          {
+            "start_seconds": 581,
+            "end_seconds": 605,
+            "voiceover_text": "Netero is suddenly right beside them. Both boys turn. Killua looks startled. How did this old man get so close without either of them noticing?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "Netero Offers A Dangerously Simple Deal",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "hunter exam chairman wager",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 2,
+          "start_seconds": 605,
+          "end_seconds": 690,
+          "is_final": false,
+          "summary": "Netero identifies himself as chairman and offers Hunter status if the boys beat his game. Gon is excited, but Killua remains suspicious. The unanswered question is why this apparently simple offer is so hard to claim."
+        },
+        "segments": [
+          {
+            "start_seconds": 605,
+            "end_seconds": 631,
+            "voiceover_text": "Why is Killua suspicious of an old man offering a game? Killua studies him closely. Gon stays curious. Their reactions split before anyone has even picked up a ball."
+          },
+          {
+            "start_seconds": 631,
+            "end_seconds": 654,
+            "voiceover_text": "Netero introduces himself as the Hunter Exam's chairman. That changes the stakes. This is not some passenger killing time. The man in front of them has authority over the very exam they are trying to pass."
+          },
+          {
+            "start_seconds": 654,
+            "end_seconds": 675,
+            "voiceover_text": "Then he offers a shortcut: beat him at his game and become Hunters. Gon's face lights up. Killua stays guarded. What could make that generous offer so difficult to claim?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "One Ball Makes Confidence Look Dangerous",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "killua movement technique",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 3,
+          "start_seconds": 690,
+          "end_seconds": 780,
+          "is_final": false,
+          "summary": "The game is to take Netero's ball before arrival. Killua opens with a movement technique that creates overlapping figures, impressing Gon but failing to disturb Netero. The next part tests whether that display can actually penetrate his defense."
+        },
+        "segments": [
+          {
+            "start_seconds": 694,
+            "end_seconds": 734,
+            "voiceover_text": "One ball stands between these boys and becoming Hunters. Netero spins it on his finger. The rule is brutally simple: take it from him before the airship arrives. Gon looks eager. Killua sizes him up. Killua is completely confident. That relaxed smile makes the challenge look almost insulting."
+          },
+          {
+            "start_seconds": 738,
+            "end_seconds": 780,
+            "voiceover_text": "Killua moves first. His footsteps become a procession of overlapping figures. Gon is stunned. This is no ordinary attempt to grab a toy. But Netero keeps the ball balanced and watches without panic. If Killua can confuse Gon's eyes, why is the chairman still completely unbothered?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "Killua Finds The Limit Of Speed",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "killua versus netero",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 4,
+          "start_seconds": 780,
+          "end_seconds": 840,
+          "is_final": false,
+          "summary": "Killua's rapid grabs and low kick both fail. Netero remains in control while Killua ends up crouching in frustration. Gon's turn now carries the question of whether a different approach can succeed."
+        },
+        "segments": [
+          {
+            "start_seconds": 780,
+            "end_seconds": 804,
+            "voiceover_text": "What happens when Killua's speed stops being enough? He darts into Netero's reach. The ball slips away from every attempt. Netero twists past him without losing control. Gon watches in amazement. Killua's confident opening has become an embarrassing chase, and the chairman looks comfortable."
+          },
+          {
+            "start_seconds": 804,
+            "end_seconds": 834,
+            "voiceover_text": "Then Killua changes the attack. He drops low and whips a kick toward Netero. Even that opening disappears. Killua ends up crouched on the floor. Netero keeps the ball balanced above him. The frustration is obvious. If speed and a surprise kick cannot do it, what can Gon possibly try?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "Gon's Big Leap Ends In Pain",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "gon jumping challenge",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 5,
+          "start_seconds": 840,
+          "end_seconds": 918,
+          "is_final": false,
+          "summary": "Gon's first leap fails and leaves him clutching his head. He gets up rather than giving in. The individual failures set up the next attempt: Gon and Killua attacking together."
+        },
+        "segments": [
+          {
+            "start_seconds": 840,
+            "end_seconds": 856,
+            "voiceover_text": "Can enthusiasm reach the ball where Killua's technique failed? Gon prepares himself. Then he launches upward. Netero watches him rise, still holding the advantage."
+          },
+          {
+            "start_seconds": 856,
+            "end_seconds": 880,
+            "voiceover_text": "For a heartbeat, Gon looks close enough to make it interesting. Then Netero evades him. Gon comes down clutching his head. It hurts. Killua watches from the floor. That fearless leap has not won anything except a lesson about the gap between them."
+          },
+          {
+            "start_seconds": 880,
+            "end_seconds": 894,
+            "voiceover_text": "But Gon gets back up instead of sulking. Netero studies him with renewed interest. If neither boy can win alone, could attacking together finally change the result?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "Two Attackers Still Cannot Take One Ball",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "gon killua teamwork",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 6,
+          "start_seconds": 918,
+          "end_seconds": 1020,
+          "is_final": false,
+          "summary": "Gon and Killua attack together with increasingly acrobatic distractions. Netero evades them and keeps the ball. Gon remains delighted, but Killua's frustration deepens, setting up their different responses to defeat."
+        },
+        "segments": [
+          {
+            "start_seconds": 920,
+            "end_seconds": 959,
+            "voiceover_text": "Would two attackers finally be too much for Netero? Killua reaches in again. No luck. Gon joins the chase. They come from different directions, forcing the chairman to twist between them. The ball stays out of reach."
+          },
+          {
+            "start_seconds": 959,
+            "end_seconds": 1007,
+            "voiceover_text": "Gon turns his whole body into a distraction. Killua rushes the opening. Both boys are reaching toward the same prize. Netero slips through again. Their combined attack collapses. Gon lands on the floor. Killua looks furious. Teamwork has not erased the difference."
+          },
+          {
+            "start_seconds": 1007,
+            "end_seconds": 1020,
+            "voiceover_text": "Netero is smiling. Gon smiles too. Why does that same defeat hit Killua so differently?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "Killua Quits But Gon Changes The Goal",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "gon changes his goal",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 7,
+          "start_seconds": 1020,
+          "end_seconds": 1129,
+          "is_final": false,
+          "summary": "Killua gives up and leaves while Gon remains. Gon changes his objective from taking the ball to forcing Netero to use his right hand. The story now asks whether that smaller goal is attainable."
+        },
+        "segments": [
+          {
+            "start_seconds": 1020,
+            "end_seconds": 1054,
+            "voiceover_text": "Why is Gon still smiling when Killua has had enough? Killua gets up and abandons the chase. He cannot take the ball. The frustration has beaten his willingness to keep playing."
+          },
+          {
+            "start_seconds": 1054,
+            "end_seconds": 1094,
+            "voiceover_text": "Gon does not follow him out. Killua is exasperated. Gon stays cheerful. They have faced the same opponent, but they are no longer measuring this game the same way. Killua leaves."
+          },
+          {
+            "start_seconds": 1094,
+            "end_seconds": 1129,
+            "voiceover_text": "Now Gon sets a smaller challenge: make Netero use his right hand. Winning the ball can wait. He charges again. Can changing the goal turn an impossible game into a real victory?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "One Defeat Reveals Two Different Boys",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Killua",
+          "#Netero",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "killua frustration gon determination",
+          "hunter exam airship",
+          "gon and killua",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 8,
+          "start_seconds": 1129,
+          "end_seconds": 1204,
+          "is_final": false,
+          "summary": "Killua's frustration becomes a dark thought about killing Netero. Meanwhile Gon persists, surprises Netero, gets caught, and is thrown to the floor. Gon's grin raises the final question: what did he accomplish without taking the ball?"
+        },
+        "segments": [
+          {
+            "start_seconds": 1130,
+            "end_seconds": 1158,
+            "voiceover_text": "How can the same game leave one boy furious and the other determined? In the corridor, Killua's expression hardens. His thoughts turn to killing Netero. The playful confidence is gone. That defeat has exposed something darker."
+          },
+          {
+            "start_seconds": 1158,
+            "end_seconds": 1193,
+            "voiceover_text": "Back in the game, Gon keeps pushing. He feints, changes direction, and drives himself toward Netero. The chairman's eyes widen. Gon is caught, but he grins anyway. He still has not taken the ball. That failed attack has made him happy."
+          },
+          {
+            "start_seconds": 1193,
+            "end_seconds": 1204,
+            "voiceover_text": "Netero throws him down. Gon lands hard. What did that desperate lunge force the chairman to do?"
+          }
+        ]
+      },
+      {
+        "video_duration_seconds": 1358,
+        "title": "Gon Loses The Game And Wins",
+        "hashtags": [
+          "#HunterXHunter",
+          "#Gon",
+          "#Netero",
+          "#Determination",
+          "#Anime",
+          "#AnimeCommentary"
+        ],
+        "youtube_tags": [
+          "hunter x hunter",
+          "gon makes netero use his right hand",
+          "gon versus netero",
+          "netero ball game",
+          "anime commentary"
+        ],
+        "target_total_duration_seconds": 30,
+        "series": {
+          "series_id": "hxh6",
+          "part": 9,
+          "start_seconds": 1204,
+          "end_seconds": 1358,
+          "is_final": true,
+          "summary": "Gon celebrates forcing Netero to use his right hand despite never taking the ball. His self-chosen objective resolves the challenge and contrasts with Killua's angry withdrawal. The airship continues toward daylight; this is the final part."
+        },
+        "segments": [
+          {
+            "start_seconds": 1204,
+            "end_seconds": 1230,
+            "voiceover_text": "Why does Gon celebrate with the ball in Netero's hand? Because he made the chairman use his right hand. His smaller challenge is complete. Gon throws his arms up, delighted. That grin is earned."
+          },
+          {
+            "start_seconds": 1230,
+            "end_seconds": 1251,
+            "voiceover_text": "Netero looks back at the exhausted boy. Gon has not beaten him. He has found a reason to enjoy trying. After all that frustration, this is a different kind of victory."
+          },
+          {
+            "start_seconds": 1251,
+            "end_seconds": 1262,
+            "voiceover_text": "As the airship reaches daylight, their game is over. Killua walked away angry. Gon ends it satisfied. The ball never changed hands. One defeat exposed two very different boys."
+          }
+        ]
+      }
+    ]
+  },
+  "spawned": []
+}
