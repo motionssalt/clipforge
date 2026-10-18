@@ -2,7 +2,7 @@
   "repo": "clipforge",
   "task": "fix-failing-runs",
   "status": "done",
-  "last_updated": "2026-10-18T19:10:47.909294+00:00",
+  "last_updated": "2026-10-18T19:16:48.784865+00:00",
   "failures_found": [
     {
       "run_id": 39104649839,
@@ -29,7 +29,8 @@
   "fixes_pending": [],
   "verified_runs": [
     39155480908,
-    39156648736
+    39156648736,
+    39156658852
   ],
-  "notes": "Stage B Edge-TTS 403 error fixed by upgrading edge-tts>=7.3.1 with Sec-MS-GEC v2 support and exponential backoff retry. Verified green run 39155480908 and 39156648736."
+  "notes": "Edge TTS 403 error in Stage B resolved by upgrading edge-tts>=7.3.1 with Sec-MS-GEC v2 support and backoff retry. Verified green runs: 39155480908 (Stage B hxh6-p1), 39156648736 (Publish Zernio), and 39156658852 (Stage B hxh6-p2)."
 }
