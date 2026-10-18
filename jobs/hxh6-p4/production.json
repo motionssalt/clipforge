@@ -1,0 +1,41 @@
+{
+  "video_duration_seconds": 1358,
+  "title": "Killua Finds The Limit Of Speed — Part 4",
+  "hashtags": [
+    "#HunterXHunter",
+    "#Gon",
+    "#Killua",
+    "#Netero",
+    "#Anime",
+    "#AnimeCommentary"
+  ],
+  "youtube_tags": [
+    "hunter x hunter",
+    "killua versus netero",
+    "hunter exam airship",
+    "gon and killua",
+    "anime commentary"
+  ],
+  "target_total_duration_seconds": 30,
+  "series": {
+    "series_id": "hxh6",
+    "part": 4,
+    "start_seconds": 780,
+    "end_seconds": 840,
+    "is_final": false,
+    "summary": "Killua's rapid grabs and low kick both fail. Netero remains in control while Killua ends up crouching in frustration. Gon's turn now carries the question of whether a different approach can succeed."
+  },
+  "segments": [
+    {
+      "start_seconds": 780,
+      "end_seconds": 804,
+      "voiceover_text": "What happens when Killua's speed stops being enough? He darts into Netero's reach. The ball slips away from every attempt. Netero twists past him without losing control. Gon watches in amazement. Killua's confident opening has become an embarrassing chase, and the chairman looks comfortable."
+    },
+    {
+      "start_seconds": 804,
+      "end_seconds": 834,
+      "voiceover_text": "Then Killua changes the attack. He drops low and whips a kick toward Netero. Even that opening disappears. Killua ends up crouched on the floor. Netero keeps the ball balanced above him. The frustration is obvious. If speed and a surprise kick cannot do it, what can Gon possibly try?"
+    }
+  ],
+  "job_id": "hxh6-p4"
+}
