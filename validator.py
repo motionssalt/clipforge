@@ -205,6 +205,11 @@ def main() -> None:
         )
         raise SystemExit(1)
 
+    from pipeline.plan.keyword_colors import color_warnings
+    for part in (document.get("parts", []) if args.super_plan else [document]):
+        for warning in color_warnings(part):
+            print(f"::warning::{warning}")
+
     print(f"OK: {plan_path} is a valid {kind}. It passes the same validation Stage B runs.")
     raise SystemExit(0)
 
