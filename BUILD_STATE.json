@@ -60,7 +60,7 @@
   },
   "clipforge_keyword_colors": {
     "status": "in_progress",
-    "last_updated": "2026-10-20T07:24:07.972182+00:00",
+    "last_updated": "2026-10-20T07:24:09.351964+00:00",
     "root_cause_notes": "All nine current real jobs hxh6-p1..p9 omit keywords entirely (segments/voiceover_text). Current Stage A prompt explicitly calls keywords optional and says omit field (prompt.py lines 1564-1569); JSON schema does not document keywords. Renderer has supported literal keyword colors since c79fb901 and survived migration 891df026, including raster path. No evidence a renderer commit removed coloring. Normalization preserves cut metadata, card splitting retains words and punctuation matching already normalizes ASCII. Additional defects: missing colors silent; ASS diagnostic does not reset white after colored word; parser errors omit cut index and ignores missing color. Global keyword map can bleed across cuts. Recent real run 39163606595 has no Loaded keyword colors log. Prior state incorrectly cites deployment failure 39169234550 as render verification; not accepted as evidence here.",
     "done": [
       "Implemented canonical keyword validation, legacy dictionary/list/bare-hex compatibility, per-cut style carried through card splitting, Unicode punctuation/case matching, authored lowercase preservation, ASS white reset, required prompt/examples/schema, durable job/site warnings and CLI warning. New pixel+ASS regressions and narration/cross-language suites pass locally (14 tests). Full real-episode Stage B proof workflow dispatched without publishing to Zernio."
@@ -80,6 +80,6 @@
         "visual_check": "proof_003.png opened: red victory visible; source is already captioned so prior white captions also remain underneath. ASS and isolated raster tests independently prove foreground colors."
       }
     ],
-    "notes": "Local targeted suites: 11 tests pass plus 2 legacy keyword parser tests. Full existing stage_b suite has pre-existing narration-reconcile expectation mismatch and local cv2 namespace-package failures; not counted as passing. Cloudflare secrets refreshed using supplied credentials, dashboard deployment 39385799263 succeeded. Full proof run 39385892131 pending; task not marked done until verified."
+    "notes": "Verified full Stage B run 39386028888 success on real episode footage (reused existing rendered video, not an untouched raw source); actual Edge TTS/Whisper, enhancement, compressed final MP4, packaging. proof_003.png opened and red victory confirmed. Keyword raster/ASS, legacy keyword, narration-anchor and existing cross-validation tests pass; warning verified via validator.py jobs/hxh6-p9/production.json. Dashboard deployed successfully in 39385801947. Unrelated pre-existing broad-suite failures recorded earlier; no fabricated all-suite pass. No credentials missing. CastCut is next."
   }
 }
