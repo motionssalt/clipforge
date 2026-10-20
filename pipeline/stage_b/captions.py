@@ -45,6 +45,7 @@ import subprocess
 import sys
 
 from pipeline.stage_b import common, reframe
+from pipeline.plan.keyword_colors import keyword_colors, color_warnings, normalize_word
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
@@ -123,7 +124,7 @@ def _hex_ass(color: str) -> str:
 
 def _norm_token(text: str) -> str:
     """Normalise a token for alignment and metadata lookup, never display."""
-    return re.sub(r"[^0-9a-z]+", "", text.lower())
+    return normalize_word(text)
 
 
 def _ass_time(seconds: float) -> str:
@@ -456,27 +457,12 @@ def script_texts_and_keywords(plan: dict) -> tuple[list[str], dict]:
             )
         texts.append(text)
 
-        raw_kw = c.get("keywords")
-        if isinstance(raw_kw, dict):
-            items = [
-                {"word": word, "color": value.get("color") if isinstance(value, dict) else value}
-                for word, value in raw_kw.items()
-            ]
-        elif isinstance(raw_kw, list):
-            items = [k for k in raw_kw if isinstance(k, dict)]
-        else:
-            items = []
-        for k in items:
-            word = _norm_token(str(k.get("word") or ""))
-            color = _normalise_hex_color(k.get("color"))
-            if not word:
-                continue
-            if color:
-                keyword_map[word] = color
-            elif k.get("color") is not None:
-                raise common.StageBError(
-                    f"Invalid keyword color for {word!r}: {k.get('color')!r}. Use a #RRGGBB literal."
-                )
+        try:
+            keyword_map.update(keyword_colors(c, i))
+        except ValueError as exc:
+            raise common.StageBError(str(exc)) from exc
+    for warning in color_warnings(plan):
+        print(f"::warning::{warning}", flush=True)
     if keyword_map:
         print(f"Loaded {len(keyword_map)} author-selected keyword color(s): {keyword_map}", flush=True)
     return texts, keyword_map
@@ -675,10 +661,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         shadow_parts: list[str] = []
         text_parts: list[str] = []
         for word in words:
-            display_word = str(word["word"]).upper()
-            color = keyword_map.get(_norm_token(word["word"]))
+            display_word = str(word["word"])
+            color = word.get("keyword_color", keyword_map.get(_norm_token(word["word"])))
             shadow_parts.append("{\\c&H000000&}" + _ass_escape(display_word))
-            text_tags = f"{{\\c{_hex_ass(color)}&}}" if color else ""
+            text_tags = f"{{\\c{_hex_ass(color or '#FFFFFF')}&}}"
             text_parts.append(text_tags + _ass_escape(display_word))
 
         lines.append(
@@ -709,7 +695,7 @@ def _caption_layout(sentence: dict, font, width: int, height: int) -> list[dict]
     lines: list[list[dict]] = []
     current: list[dict] = []
     for word in sentence["words"]:
-        item = {"source": word, "display": str(word["word"]).upper()}
+        item = {"source": word, "display": str(word["word"])}
         trial = current + [item]
         trial_text = " ".join(x["display"] for x in trial)
         if current and metrics.textlength(trial_text, font=font) > max_width:
@@ -790,7 +776,7 @@ def _raster_caption_layers(sentences: list[dict], keyword_map: dict,
         draw_by_color: dict[tuple[int, int, int], ImageDraw.ImageDraw] = {}
         for run in _caption_layout(sentence, font, width, height):
             word = run["source"]
-            color = _hex_rgb(keyword_map.get(_norm_token(word["word"])))
+            color = _hex_rgb(word.get("keyword_color", keyword_map.get(_norm_token(word["word"]))))
             if color not in masks:
                 masks[color] = Image.new("L", (width, height), 0)
                 draw_by_color[color] = ImageDraw.Draw(masks[color])
@@ -952,6 +938,15 @@ def render_captions(
     script_texts, keyword_map = script_texts_and_keywords(plan)
     words = align_words_to_script(timed_words, script_texts, cut_durations)
 
+    # Store styles on authoritative aligned words BEFORE splitting. Explicit None
+    # prevents another cut's same word leaking a different color into this cut.
+    cursor = 0
+    for i, cut in enumerate(plan.get("cuts") or []):
+        colors = keyword_colors(cut, i)
+        count = len(script_texts[i].split())
+        for event in words[cursor:cursor + count]:
+            event["keyword_color"] = colors.get(_norm_token(event["word"]))
+        cursor += count
     sentences = split_sentences(words)
     narration_start = min((float(event["start"]) for event in timed_words), default=0.0)
     narration_end = max((float(event["end"]) for event in timed_words), default=0.0)
