@@ -24,9 +24,9 @@ def keyword_colors(cut, index=0):
         color = item.get('color')
         if not word or word not in text_words:
             raise ValueError(f'cuts[{index}] keyword {item.get("word")!r} does not match a word in voiceover_text (case/punctuation ignored).')
-        if not isinstance(color, str) or not re.fullmatch(r'#[0-9a-fA-F]{6}', color.strip()):
+        if not isinstance(color, str) or not re.fullmatch(r'#?[0-9a-fA-F]{6}', color.strip()):
             raise ValueError(f'cuts[{index}] keyword {item.get("word")!r}: invalid color {color!r}; use literal #RRGGBB.')
-        result[word] = color.strip().upper()
+        result[word] = '#' + color.strip().lstrip('#').upper()
     return result
 
 
