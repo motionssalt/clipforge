@@ -80,7 +80,8 @@ export async function ingestProductionPlan(credentials, repo, jobId, rawText) {
     code_ref: codeRef
   });
   if (status) {
-    const next = mergeStatus(status, { state: 'stage_b_queued', message: 'Production plan uploaded — Stage B dispatched.' });
+    const warnings = (document.cuts || []).some(c => Array.isArray(c.keywords) ? c.keywords.length : c.keywords && Object.keys(c.keywords).length) ? [] : ['No colored caption keywords. Paste to your AI: Add keyword colors: cuts[].keywords with meaningful words and literal #RRGGBB colors; other words stay white.'];
+    const next = mergeStatus(status, { state: 'stage_b_queued', warnings, message: 'Production plan uploaded — Stage B dispatched.' });
     await putTextFile(credentials, repo, STATUS_PATH(jobId), `${JSON.stringify(next, null, 2)}\n`, `clipforge: plan uploaded for job ${jobId}`);
   }
   return { ok: true };
