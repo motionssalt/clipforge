@@ -183,6 +183,18 @@ export function validateProductionPlan(document, options = {}) {
       continue;
     }
 
+    if (cut.keywords !== undefined) {
+      const norm = w => String(w).normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+      const words = new Set(String(cut.voiceover_text || cut.raw_narration || '').split(/\s+/).map(norm));
+      const raw = cut.keywords;
+      const entries = Array.isArray(raw) ? raw : raw && typeof raw === 'object' ? Object.entries(raw).map(([word,v]) => ({word,color:typeof v==='object' && v ? v.color : v})) : null;
+      if (!entries) errors.push(at + '.keywords must be a list or legacy word/color dictionary.');
+      else for (const k of entries) {
+        if (!k || typeof k !== 'object') { errors.push(at + '.keywords entry must contain word and color.'); continue; }
+        if (!norm(k.word || '') || !words.has(norm(k.word))) errors.push(at + ' keyword ' + JSON.stringify(k.word) + ' does not match voiceover_text.');
+        if (typeof k.color !== 'string' || !/^#?[0-9a-f]{6}$/i.test(k.color.trim())) errors.push(at + ' keyword ' + JSON.stringify(k.word) + ': invalid color ' + JSON.stringify(k.color) + '; use literal #RRGGBB.');
+      }
+    }
     const start = cut.start_seconds;
     const end = cut.end_seconds;
 
