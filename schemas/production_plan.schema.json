@@ -68,6 +68,35 @@
             "type": "number",
             "minimum": 0,
             "description": "Alias for visual_anchor_seconds."
+          },
+          "keywords": {
+            "description": "AI must author a few meaningful keywords per cut. Literal #RRGGBB. Case-insensitive punctuation-tolerant matching colors all occurrences within that cut; all other words white. Omission accepted for legacy files with warning.",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "word",
+                    "color"
+                  ],
+                  "properties": {
+                    "word": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "color": {
+                      "type": "string",
+                      "pattern": "^#[0-9A-Fa-f]{6}$"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "Legacy word-to-color or word-to-{color} dictionary."
+              }
+            ]
           }
         }
       }
