@@ -152,7 +152,7 @@ def run_stage_b(
     warnings = color_warnings(plan)
     for warning in warnings:
         print(f"::warning::{warning}", flush=True)
-    _write(job_id, enabled=write_status, warnings=warnings, **status_kwargs)
+    _write(job_id, enabled=write_status, state="stage_b_running", message="Stage B: validating production.json", warnings=warnings, **status_kwargs)
 
     # bug-57 (authoritative sync): re-write status.series from the VALIDATED,
     # normalized plan so the block is guaranteed schema-correct from here on.
