@@ -526,6 +526,7 @@ export async function renderTaskDetail(app, jobId) {
           ${series.enabled === true ? ` · Series part ${Number(series.part) || 1}${series.is_final === true ? ' (final)' : ''}` : ''}</p>
         ${state === 'awaiting_torrent_selection' ? '<p class="muted">⏳ Waiting for your file selection — pick the file to process below.</p>' : ''}
         <p class="muted">${escapeHtml(status.message || '')}</p>
+        ${(status.warnings || []).map(w => `<p role="alert">⚠ ${escapeHtml(w)}</p>`).join('')}
         ${publishing ? `<p class="muted">${escapeHtml(publishing)}</p>` : ''}
         ${progress !== null ? `<div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>` : ''}
         <p class="muted small">Created ${escapeHtml(formatEpoch(status.created_at_epoch))} · updated ${escapeHtml(formatEpoch(status.updated_at_epoch))}</p>
