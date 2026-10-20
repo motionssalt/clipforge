@@ -57,5 +57,14 @@
       39169234550
     ],
     "notes": "Measured offset before: +6.43s (hxh6-p9 cut 0: visual event at 0.77s vs spoken start at 7.20s). Measured offset after: <=0.14s across multi-cut sequences (tolerance <= 0.30s). Backward compatibility choice: legacy plans without visual_anchor_seconds default anchor to start_seconds with a logged notice."
+  },
+  "clipforge_keyword_colors": {
+    "status": "in_progress",
+    "last_updated": "2026-10-20T07:16:04.759268+00:00",
+    "root_cause_notes": "",
+    "done": [],
+    "pending": [],
+    "verified_runs": [],
+    "notes": ""
   }
 }
