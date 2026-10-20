@@ -12,7 +12,7 @@ CINEMATIC CAPTION BEHAVIOR
     sentences split into ≤6-word cards at nearby clause breaks).
   * TIMING — each card appears fully at its first aligned word. Consecutive
     close-together cards swap directly with no fade/overlap/animation. Only a
-    long otherwise-empty gap causes the completed card to fade away first.
+    long otherwise-empty gap causes the completed card to disappear after holding.
   * STYLE — compact all-caps Coolvetica text, centred in the frame, with a
     one-pixel dark keyline and a soft gray-black Gaussian drop shadow.
   * KEYWORD COLORING — production.json may mark noteworthy words with an
@@ -734,13 +734,8 @@ def _caption_card_opacity(sentences: list[dict], index: int, time_s: float) -> f
     if gap < CIN_CAPTION_LONG_GAP_SECONDS or time_s < spoken_end:
         return 1.0
 
-    fade_start = min(spoken_end + CIN_CAPTION_LONG_GAP_SECONDS, next_start - CIN_CAPTION_GAP_FADE_SECONDS)
-    fade_end = min(fade_start + CIN_CAPTION_GAP_FADE_SECONDS, next_start)
-    if time_s < fade_start:
-        return 1.0
-    if time_s >= fade_end:
-        return 0.0
-    return max(0.0, min(1.0, (fade_end - time_s) / max(fade_end - fade_start, 0.001)))
+    # Static cards only: hold, then hard-disappear. Never animate alpha.
+    return 1.0 if time_s < spoken_end + CIN_CAPTION_LONG_GAP_SECONDS else 0.0
 
 
 def _apply_mask(canvas: Image.Image, mask: Image.Image,
