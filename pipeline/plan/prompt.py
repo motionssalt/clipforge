@@ -1312,7 +1312,7 @@ OUTPUT SCHEMA — production.json  (return EXACTLY this shape, no extra keys)
       "voiceover_text": "the FINAL, ready-to-speak voiceover line for this cut. This exact text is synthesized to speech by the pipeline and heard VERBATIM in the finished video — write it as spoken narration, not as notes about the video. CORE PRINCIPLE — INTERESTINGNESS DENSITY, NOT INFORMATION DENSITY: the footage already shows the viewer what is happening. Your job is never to re-describe what is already visible — it is to supply the INVISIBLE layer: why it matters, what it means, what the character feels, and what question it raises. A weak narrator writes 'Kurapika raises his hand. A chain appears. The attackers fall.' — the viewer can already see all of that; restating it wastes the one thing narration is for. A strong narrator asks what the footage alone cannot answer: why is this happening, what does it cost the character, what happens next. Concretely: 'Two men in black approach him and take him away' just restates the shot. 'It turned out his time outside was up, and two men in black had taken him away' tells the viewer what the moment MEANS — that's the standard to write every line to. Apply this filter to every sentence: does this explain significance, advance a question, reveal a feeling, or create a new question — or does it just restate what the frame already shows? If it's the latter, cut it or replace it with the interpretation instead. This applies most strongly to WHO is present and HOW they look: never inventory people in a scene by appearance or posture ('a woman in a dark coat stands with one hand on her hip, while a black-haired woman watches through round glasses' is exactly the wrong instinct) — name only who actually matters to what happens next, with only the detail the moment needs ('Hisoka is here' beats 'a masked figure and a red-haired woman fill the frame' when Hisoka's arrival is the actual point). Structure the cut as escalation, not report: each beat should make the last one MORE interesting, ideally by opening a small question the next beat answers or deepens (a strange coincidence, a doubt, a decision, a consequence) rather than a flat 'then this happened, then this happened' sequence. State a character's internal reaction — hesitation, surprise, doubt, resolve — as its own short beat wherever the source supports it; a character's THOUGHTS and FEELINGS are part of the invisible layer too, not just plot mechanics. Use SHORT sentences (one beat per sentence, not clause-stacked run-ons), chronological order, confident third person present tense by default. Written as one scene of a continuous story: when there is a real gap between this cut and the previous one, open with a short connective phrase (e.g. 'Later, …', 'After the fight, …') so the moment lands as part of the same throughline, not as a fresh unrelated clip. Do not invent events, meaning, or internal reactions unsupported by the source — every interpretation must still be earned by what the transcript/screenshots actually show. Refer to recurring characters with the SAME descriptor or name you used in earlier cuts.",
       "keywords": [
         {{"word": "one genuinely noteworthy word from this cut's voiceover_text", "color": "#FF5C5C"}}
-        // optional: choose only the words worth emphasizing and assign each exact #RRGGBB color yourself
+        // REQUIRED: choose a few meaningful words per cut and assign literal #RRGGBB colors
       ]
     }}
     // ... more cuts, ordered chronologically ...
@@ -1561,13 +1561,16 @@ CONSTRAINTS
     the SAME label (real name, or a descriptor only when no name
     evidence exists) across every cut for the same character. Describe
     what is visually happening, not just what is said.
-  - `keywords` is optional and belongs inside an individual cut. When you
-    use it, select only words in that cut's `voiceover_text` that are truly
+  - `keywords` is REQUIRED in every cut: select a few meaningful words in that cut's `voiceover_text` that are truly
     noteworthy to a viewer, then assign each one a literal `#RRGGBB` color
     that fits its emotional weight. You make both editorial decisions: which
     words deserve emphasis and which exact color they receive. Use
-    `[{{"word": "exact script word", "color": "#RRGGBB"}}]` (or omit the
-    field). Never emit a `tone`, sentiment label, color family, or other
+    `[{{"word": "victory", "color": "#FF5C5C"}}]` for a line containing victory.
+    Use only literal six-digit #RRGGBB hex colors (no names or tones).
+    Every case-insensitive, punctuation-tolerant occurrence within that cut is
+    colored, including across split caption cards; other words stay white.
+    For example: {{"voiceover_text":"a victory, at last", "keywords":[{{"word":"victory","color":"#FF5C5C"}}]}}.
+    Do not omit keyword colors from production.json. Never emit a `tone`, sentiment label, color family, or other
     abstract classification; ClipForge applies literal colors and performs no
     tone-to-color interpretation.
   - Across cuts, `voiceover_text` fields must read as consecutive scenes
