@@ -148,6 +148,11 @@ def run_stage_b(
 
     # ---- Boundary validation (§13 invariant #5) ---------------------------- #
     plan = common.load_production_plan(production_json)
+    from pipeline.plan.keyword_colors import color_warnings
+    warnings = color_warnings(plan)
+    for warning in warnings:
+        print(f"::warning::{warning}", flush=True)
+    _write(job_id, enabled=write_status, warnings=warnings, **status_kwargs)
 
     # bug-57 (authoritative sync): re-write status.series from the VALIDATED,
     # normalized plan so the block is guaranteed schema-correct from here on.
