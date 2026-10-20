@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import math
+from pipeline.plan.keyword_colors import keyword_colors
 from typing import Any
 
 
@@ -224,6 +225,11 @@ def validate_production_plan(document: Any, part_number: int | None = None) -> l
         if not isinstance(cut, dict):
             errors.append(f"{at} must be an object.")
             continue
+
+        try:
+            keyword_colors(cut, index)
+        except ValueError as exc:
+            errors.append(str(exc))
 
         start = cut.get("start_seconds")
         end = cut.get("end_seconds")
