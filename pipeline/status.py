@@ -194,6 +194,7 @@ def write_status(
     *,
     state: str | None = None,
     message: str | None = None,
+    warnings: list[str] | None = None,
     mode: str | None = None,
     release_tag: str | None = None,
     release_url: str | None = None,
@@ -240,6 +241,9 @@ def write_status(
         record.setdefault("release_tag", "")
         record.setdefault("release_url", "")
         record.setdefault("message", "")
+
+    if warnings is not None:
+        record["warnings"] = list(warnings)
 
     if mode is not None:
         if mode not in VALID_MODES:
