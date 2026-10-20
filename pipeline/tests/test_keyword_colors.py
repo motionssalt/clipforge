@@ -29,6 +29,11 @@ class KeywordRegression(unittest.TestCase):
             self.assertNotIn(r'\fad', ass)
             self.assertIn('victory,', ass)
 
+    def test_static_opacity(self):
+        cards = [{'start':0,'speak_end':1}, {'start':10,'speak_end':11}]
+        for i in range(110):
+            self.assertIn(captions._caption_card_opacity(cards, 0, i / 10), (0.0,1.0))
+
     def test_legacy_and_specific_error(self):
         self.assertEqual(keyword_colors({'voiceover_text':'win!', 'keywords':{'WIN':{'color':'00ff00'}}}), {'win':'#00FF00'})
         with self.assertRaisesRegex(ValueError, r'cuts\[3\].*win.*invalid color'):
