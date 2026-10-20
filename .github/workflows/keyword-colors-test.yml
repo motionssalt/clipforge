@@ -1,0 +1,37 @@
+name: Verify cinematic keyword colors
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'pipeline/plan/keyword_colors.py'
+      - 'pipeline/stage_b/captions.py'
+      - 'pipeline/tests/test_keyword_colors.py'
+permissions:
+  contents: read
+jobs:
+  color-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - run: pip install 'Pillow>=10.3,<12' numpy 'edge-tts>=7.3.1,<8' faster-whisper opencv-python-headless
+      - run: python -m unittest pipeline.tests.test_keyword_colors pipeline.tests.test_narration_sync pipeline.tests.test_plan_cross_validation -v
+      - name: Real episode full Stage B render and final-frame color assertions
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -m pipeline.tests.verify_keyword_render
+      - uses: actions/upload-artifact@v4
+        if: always() && github.event_name == 'workflow_dispatch'
+        with:
+          name: keyword-color-proof
+          path: |
+            keyword-proof/render/out/*.mp4
+            keyword-proof/render/out/*.zip
+            keyword-proof/production.json
+            keyword-proof/proof_*.png
+            keyword-proof/render/**/subtitles_cinematic.ass
